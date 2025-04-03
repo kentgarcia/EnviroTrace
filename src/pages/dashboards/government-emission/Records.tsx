@@ -1,32 +1,13 @@
 
+import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { RecordTable } from "@/components/dashboard/RecordTable";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Search } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, Search, Filter, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -34,85 +15,108 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
-// Form schema for vehicle lookup
-const lookupSchema = z.object({
-  plateNumber: z.string().min(3, "Plate number must be at least 3 characters"),
-});
+// Current year for default filters
+const currentYear = new Date().getFullYear();
+const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
+const quarters = [1, 2, 3, 4];
 
-// Form schema for adding a new vehicle
-const vehicleSchema = z.object({
-  plateNumber: z.string().min(3, "Plate number is required"),
-  officeName: z.string().min(2, "Office name is required"),
-  wheels: z.enum(["2", "4"], {
-    required_error: "Wheel type is required",
-  }),
-  engineType: z.enum(["Gas", "Diesel"], {
-    required_error: "Engine type is required",
-  }),
-  driverName: z.string().min(3, "Driver name is required"),
-  vehicleType: z.string().min(2, "Vehicle type is required"),
-  contactNumber: z.string().optional(),
-});
+interface Vehicle {
+  id: string;
+  plate_number: string;
+  office_name: string;
+  wheels: number;
+  engine_type: string;
+  driver_name: string;
+  vehicle_type: string;
+  contact_number: string | null;
+}
 
-// Form schema for emission test
-const testSchema = z.object({
-  year: z.string().min(4, "Year is required"),
-  quarter: z.enum(["1", "2", "3", "4"], {
-    required_error: "Quarter is required",
-  }),
-  testDate: z.string().min(1, "Test date is required"),
-  result: z.enum(["pass", "fail"], {
-    required_error: "Result is required",
-  }),
-});
+interface EmissionTest {
+  id: string;
+  vehicle_id: string;
+  year: number;
+  quarter: number;
+  test_date: string;
+  result: boolean;
+  created_at: string;
+  created_by: string | null;
+  vehicle?: Vehicle;
+}
+
+interface VehicleWithTests extends Vehicle {
+  emission_tests: EmissionTest[];
+}
 
 export default function GovernmentEmissionRecords() {
   const navigate = useNavigate();
   const { user, userData, loading } = useAuth();
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [emissionRecords, setEmissionRecords] = useState<any[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentVehicle, setCurrentVehicle] = useState<any>(null);
-  const [isLookupDialogOpen, setIsLookupDialogOpen] = useState(false);
-  const [isNewVehicleDialogOpen, setIsNewVehicleDialogOpen] = useState(false);
-  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
-
-  // Form handling
-  const lookupForm = useForm<z.infer<typeof lookupSchema>>({
-    resolver: zodResolver(lookupSchema),
-    defaultValues: {
-      plateNumber: '',
-    },
-  });
-
-  const vehicleForm = useForm<z.infer<typeof vehicleSchema>>({
-    resolver: zodResolver(vehicleSchema),
-    defaultValues: {
-      plateNumber: '',
-      officeName: '',
-      wheels: "4",
-      engineType: "Gas",
-      driverName: '',
-      vehicleType: '',
-      contactNumber: '',
-    },
-  });
-
-  const testForm = useForm<z.infer<typeof testSchema>>({
-    resolver: zodResolver(testSchema),
-    defaultValues: {
-      year: new Date().getFullYear().toString(),
-      quarter: "1",
-      testDate: new Date().toISOString().split('T')[0],
-      result: "pass",
-    },
-  });
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("vehicles");
+  const [filterOpen, setFilterOpen] = useState(false);
+  
+  // Filters
+  const [yearFilter, setYearFilter] = useState<string>(currentYear.toString());
+  const [quarterFilter, setQuarterFilter] = useState<string>("");
+  const [engineTypeFilter, setEngineTypeFilter] = useState<string>("");
+  const [wheelsFilter, setWheelsFilter] = useState<string>("");
+  const [resultFilter, setResultFilter] = useState<string>("");
+  
+  // Data
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [tests, setTests] = useState<EmissionTest[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleWithTests | null>(null);
+  
+  // Add/Edit vehicle dialog state
+  const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [plateNumber, setPlateNumber] = useState("");
+  const [officeName, setOfficeName] = useState("");
+  const [wheels, setWheels] = useState<string>("4");
+  const [engineType, setEngineType] = useState<string>("Gas");
+  const [driverName, setDriverName] = useState("");
+  const [vehicleType, setVehicleType] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  
+  // Test dialog state
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testVehicle, setTestVehicle] = useState<Vehicle | null>(null);
+  const [testYear, setTestYear] = useState<string>(currentYear.toString());
+  const [testQuarter, setTestQuarter] = useState<string>("1");
+  const [testDate, setTestDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [testResult, setTestResult] = useState<string>("true");
+  
   useEffect(() => {
     if (!loading && !user) {
       navigate("/");
@@ -122,158 +126,251 @@ export default function GovernmentEmissionRecords() {
       navigate("/dashboard-selection");
       toast.error("You don't have access to this dashboard");
     } else if (!loading && user) {
-      fetchEmissionRecords();
+      fetchData();
     }
   }, [user, userData, loading, navigate]);
 
-  const fetchEmissionRecords = async () => {
-    setIsLoadingData(true);
+  const fetchData = async () => {
+    setIsLoading(true);
     
     try {
-      // In a real application, we would fetch actual data
-      // Since the database is newly created, for demonstration we'll use dummy data
-      const dummyRecords = [];
+      // Fetch vehicles
+      const { data: vehiclesData, error: vehiclesError } = await supabase
+        .from('vehicles')
+        .select('*')
+        .order('plate_number');
       
-      for (let i = 1; i <= 10; i++) {
-        const randomDate = new Date();
-        randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 60));
+      if (vehiclesError) throw vehiclesError;
+      
+      // Fetch emission tests
+      const { data: testsData, error: testsError } = await supabase
+        .from('emission_tests')
+        .select(`
+          *,
+          vehicle:vehicles(*)
+        `)
+        .order('test_date', { ascending: false });
+      
+      if (testsError) throw testsError;
+      
+      setVehicles(vehiclesData);
+      setTests(testsData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddVehicle = () => {
+    setIsEditing(false);
+    setPlateNumber("");
+    setOfficeName("");
+    setWheels("4");
+    setEngineType("Gas");
+    setDriverName("");
+    setVehicleType("");
+    setContactNumber("");
+    setVehicleDialogOpen(true);
+  };
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setIsEditing(true);
+    setPlateNumber(vehicle.plate_number);
+    setOfficeName(vehicle.office_name);
+    setWheels(vehicle.wheels.toString());
+    setEngineType(vehicle.engine_type);
+    setDriverName(vehicle.driver_name);
+    setVehicleType(vehicle.vehicle_type);
+    setContactNumber(vehicle.contact_number || "");
+    setSelectedVehicle(vehicle as VehicleWithTests);
+    setVehicleDialogOpen(true);
+  };
+
+  const handleSaveVehicle = async () => {
+    if (!plateNumber || !officeName || !driverName || !vehicleType) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      if (isEditing && selectedVehicle) {
+        // Update existing vehicle
+        const { error } = await supabase
+          .from('vehicles')
+          .update({
+            plate_number: plateNumber,
+            office_name: officeName,
+            wheels: parseInt(wheels),
+            engine_type: engineType,
+            driver_name: driverName,
+            vehicle_type: vehicleType,
+            contact_number: contactNumber || null,
+          })
+          .eq('id', selectedVehicle.id);
         
-        dummyRecords.push({
-          id: `GE${String(i).padStart(3, '0')}`,
-          plate_number: `ABC${Math.floor(Math.random() * 1000)}`,
-          office_name: `Office ${i}`,
-          driver_name: `Driver ${i}`,
-          vehicle_type: Math.random() > 0.5 ? "Sedan" : "SUV",
-          engine_type: Math.random() > 0.5 ? "Gas" : "Diesel",
-          wheels: Math.random() > 0.7 ? "2" : "4",
-          year: 2025,
-          quarter: Math.floor(Math.random() * 4) + 1,
-          test_date: randomDate.toISOString().split('T')[0],
-          result: Math.random() > 0.3,
-          updated_at: new Date().toISOString()
-        });
+        if (error) throw error;
+        toast.success("Vehicle updated successfully");
+      } else {
+        // Add new vehicle
+        const { error } = await supabase
+          .from('vehicles')
+          .insert({
+            plate_number: plateNumber,
+            office_name: officeName,
+            wheels: parseInt(wheels),
+            engine_type: engineType,
+            driver_name: driverName,
+            vehicle_type: vehicleType,
+            contact_number: contactNumber || null,
+          });
+        
+        if (error) throw error;
+        toast.success("Vehicle added successfully");
       }
       
-      setEmissionRecords(dummyRecords);
+      setVehicleDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving vehicle:', error);
+      
+      if (error.code === '23505') {
+        toast.error("A vehicle with this plate number already exists");
+      } else {
+        toast.error("Failed to save vehicle");
+      }
+    }
+  };
+
+  const handleAddTest = (vehicle: Vehicle) => {
+    setTestVehicle(vehicle);
+    setTestYear(currentYear.toString());
+    setTestQuarter("1");
+    setTestDate(new Date().toISOString().split("T")[0]);
+    setTestResult("true");
+    setTestDialogOpen(true);
+  };
+
+  const handleSaveTest = async () => {
+    if (!testVehicle) return;
+    
+    try {
+      // Check if test for this vehicle, year and quarter already exists
+      const { data: existingTests, error: checkError } = await supabase
+        .from('emission_tests')
+        .select('*')
+        .eq('vehicle_id', testVehicle.id)
+        .eq('year', parseInt(testYear))
+        .eq('quarter', parseInt(testQuarter));
+      
+      if (checkError) throw checkError;
+      
+      if (existingTests && existingTests.length > 0) {
+        // Update existing test
+        const { error } = await supabase
+          .from('emission_tests')
+          .update({
+            test_date: testDate,
+            result: testResult === "true",
+          })
+          .eq('id', existingTests[0].id);
+        
+        if (error) throw error;
+        toast.success("Test updated successfully");
+      } else {
+        // Add new test
+        const { error } = await supabase
+          .from('emission_tests')
+          .insert({
+            vehicle_id: testVehicle.id,
+            year: parseInt(testYear),
+            quarter: parseInt(testQuarter),
+            test_date: testDate,
+            result: testResult === "true",
+          });
+        
+        if (error) throw error;
+        toast.success("Test added successfully");
+      }
+      
+      setTestDialogOpen(false);
+      fetchData();
     } catch (error) {
-      console.error('Error fetching emission records:', error);
-      toast.error("Failed to load emission records");
+      console.error('Error saving test:', error);
+      toast.error("Failed to save test");
+    }
+  };
+
+  const handleViewVehicleHistory = async (vehicle: Vehicle) => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch all tests for this vehicle
+      const { data, error } = await supabase
+        .from('emission_tests')
+        .select('*')
+        .eq('vehicle_id', vehicle.id)
+        .order('year', { ascending: false })
+        .order('quarter', { ascending: false });
+      
+      if (error) throw error;
+      
+      const vehicleWithTests: VehicleWithTests = {
+        ...vehicle,
+        emission_tests: data || [],
+      };
+      
+      setSelectedVehicle(vehicleWithTests);
+      setActiveTab("history");
+    } catch (error) {
+      console.error('Error fetching vehicle history:', error);
+      toast.error("Failed to load vehicle history");
     } finally {
-      setIsLoadingData(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSearchVehicle = async (data: z.infer<typeof lookupSchema>) => {
-    try {
-      // In a real app, we would search the database for the vehicle
-      const { plateNumber } = data;
-      
-      // Simulate database lookup with a timeout
-      setIsLoadingData(true);
-      
-      setTimeout(() => {
-        // Check if the plate number exists in our dummy data
-        const vehicle = emissionRecords.find(record => 
-          record.plate_number.toUpperCase() === plateNumber.toUpperCase()
-        );
-        
-        if (vehicle) {
-          setCurrentVehicle(vehicle);
-          setIsLookupDialogOpen(false);
-          setIsTestDialogOpen(true);
-        } else {
-          toast.info("Vehicle not found. Please add a new vehicle.");
-          vehicleForm.setValue("plateNumber", plateNumber);
-          setIsLookupDialogOpen(false);
-          setIsNewVehicleDialogOpen(true);
-        }
-        
-        setIsLoadingData(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error looking up vehicle:', error);
-      toast.error("Failed to lookup vehicle");
-      setIsLoadingData(false);
-    }
+  const exportData = () => {
+    // In a real app, this would generate a CSV or Excel file
+    toast.info("Export functionality would be implemented here");
   };
 
-  const handleAddVehicle = async (data: z.infer<typeof vehicleSchema>) => {
-    try {
-      // In a real app, we would add the vehicle to the database
-      setIsLoadingData(true);
+  // Filter vehicles
+  const filteredVehicles = vehicles.filter(vehicle => {
+    const matchesSearch = 
+      vehicle.plate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.office_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vehicle.driver_name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Simulate adding to database with a timeout
-      setTimeout(() => {
-        const newVehicle = {
-          id: `GE${String(emissionRecords.length + 1).padStart(3, '0')}`,
-          plate_number: data.plateNumber,
-          office_name: data.officeName,
-          driver_name: data.driverName,
-          vehicle_type: data.vehicleType,
-          engine_type: data.engineType,
-          wheels: data.wheels,
-          updated_at: new Date().toISOString()
-        };
-        
-        setCurrentVehicle(newVehicle);
-        setIsNewVehicleDialogOpen(false);
-        setIsTestDialogOpen(true);
-        
-        toast.success("Vehicle added successfully");
-        setIsLoadingData(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error adding vehicle:', error);
-      toast.error("Failed to add vehicle");
-      setIsLoadingData(false);
-    }
-  };
+    const matchesEngineType = !engineTypeFilter || vehicle.engine_type === engineTypeFilter;
+    const matchesWheels = !wheelsFilter || vehicle.wheels.toString() === wheelsFilter;
+    
+    return matchesSearch && matchesEngineType && matchesWheels;
+  });
 
-  const handleAddTest = async (data: z.infer<typeof testSchema>) => {
-    try {
-      // In a real app, we would add the test to the database
-      setIsLoadingData(true);
+  // Filter tests
+  const filteredTests = tests.filter(test => {
+    if (!test.vehicle) return false;
+    
+    const matchesSearch = 
+      test.vehicle.plate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      test.vehicle.office_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      test.vehicle.driver_name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Simulate adding to database with a timeout
-      setTimeout(() => {
-        const newRecord = {
-          ...currentVehicle,
-          year: parseInt(data.year),
-          quarter: parseInt(data.quarter),
-          test_date: data.testDate,
-          result: data.result === 'pass',
-          updated_at: new Date().toISOString()
-        };
-        
-        // Add to existing records
-        setEmissionRecords([newRecord, ...emissionRecords]);
-        
-        setIsTestDialogOpen(false);
-        toast.success("Emission test recorded successfully");
-        setIsLoadingData(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error adding test:', error);
-      toast.error("Failed to record emission test");
-      setIsLoadingData(false);
-    }
-  };
+    const matchesYear = !yearFilter || test.year.toString() === yearFilter;
+    const matchesQuarter = !quarterFilter || test.quarter.toString() === quarterFilter;
+    const matchesResult = resultFilter === "" || 
+      (resultFilter === "pass" && test.result) || 
+      (resultFilter === "fail" && !test.result);
+    const matchesEngineType = !engineTypeFilter || test.vehicle.engine_type === engineTypeFilter;
+    const matchesWheels = !wheelsFilter || test.vehicle.wheels.toString() === wheelsFilter;
+    
+    return matchesSearch && matchesYear && matchesQuarter && matchesResult && 
+           matchesEngineType && matchesWheels;
+  });
 
-  const emissionColumns = [
-    { key: "id", title: "ID" },
-    { key: "plate_number", title: "Plate Number" },
-    { key: "office_name", title: "Office" },
-    { key: "driver_name", title: "Driver" },
-    { key: "engine_type", title: "Engine" },
-    { key: "quarter", title: "Quarter" },
-    { key: "result", title: "Result" },
-    { key: "test_date", title: "Test Date" },
-  ];
-
-  if (loading || isLoadingData) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -287,450 +384,614 @@ export default function GovernmentEmissionRecords() {
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 overflow-auto">
           <div className="p-6">
-            <header className="mb-8 flex flex-wrap justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-semibold">Government Emission Records</h1>
-                <p className="text-muted-foreground">Manage and view emission reports from government vehicles</p>
+            <header className="mb-8">
+              <h1 className="text-3xl font-semibold">Emission Records</h1>
+              <p className="text-muted-foreground">
+                Manage vehicle records and emission tests
+              </p>
+            </header>
+            
+            <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+              <div className="relative w-full sm:w-2/3 md:w-1/2">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by plate number, office, or driver..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full"
+                />
               </div>
               
-              <div className="mt-4 sm:mt-0">
-                <Dialog open={isLookupDialogOpen} onOpenChange={setIsLookupDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" /> New Emission Test
+              <div className="flex gap-2">
+                <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filters
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Vehicle Lookup</DialogTitle>
-                      <DialogDescription>
-                        Enter the plate number to search for an existing vehicle.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...lookupForm}>
-                      <form onSubmit={lookupForm.handleSubmit(handleSearchVehicle)} className="space-y-4">
-                        <FormField
-                          control={lookupForm.control}
-                          name="plateNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Plate Number</FormLabel>
-                              <FormControl>
-                                <div className="flex gap-2">
-                                  <Input {...field} placeholder="ABC123" className="flex-1" />
-                                  <Button type="submit" size="icon" disabled={isLoadingData}>
-                                    <Search className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => {
-                            setIsLookupDialogOpen(false);
-                            setIsNewVehicleDialogOpen(true);
-                          }}>
-                            Add New Vehicle
-                          </Button>
-                          <Button type="submit" disabled={isLoadingData}>
-                            {isLoadingData ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Searching...
-                              </>
-                            ) : "Search"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-                
-                <Dialog open={isNewVehicleDialogOpen} onOpenChange={setIsNewVehicleDialogOpen}>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Add New Vehicle</DialogTitle>
-                      <DialogDescription>
-                        Enter vehicle details to add it to the database.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...vehicleForm}>
-                      <form onSubmit={vehicleForm.handleSubmit(handleAddVehicle)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={vehicleForm.control}
-                            name="plateNumber"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Plate Number</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={vehicleForm.control}
-                            name="officeName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Office Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={vehicleForm.control}
-                            name="wheels"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Wheels</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select wheels" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="2">2 Wheels</SelectItem>
-                                      <SelectItem value="4">4 Wheels</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={vehicleForm.control}
-                            name="engineType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Engine Type</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select engine type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Gas">Gas</SelectItem>
-                                      <SelectItem value="Diesel">Diesel</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={vehicleForm.control}
-                            name="driverName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Driver Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={vehicleForm.control}
-                            name="vehicleType"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Vehicle Type</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="e.g. Sedan, SUV" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <FormField
-                          control={vehicleForm.control}
-                          name="contactNumber"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Contact Number</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsNewVehicleDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={isLoadingData}>
-                            {isLoadingData ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Adding...
-                              </>
-                            ) : "Add Vehicle"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-                
-                <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Record Emission Test</DialogTitle>
-                      <DialogDescription>
-                        Enter test details for {currentVehicle?.plate_number}
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    {currentVehicle && (
-                      <Card className="p-4 bg-muted/50 mb-4">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="font-semibold">Plate:</span> {currentVehicle.plate_number}
-                          </div>
-                          <div>
-                            <span className="font-semibold">Office:</span> {currentVehicle.office_name}
-                          </div>
-                          <div>
-                            <span className="font-semibold">Driver:</span> {currentVehicle.driver_name}
-                          </div>
-                          <div>
-                            <span className="font-semibold">Engine:</span> {currentVehicle.engine_type}
-                          </div>
-                        </div>
-                      </Card>
-                    )}
-                    
-                    <Form {...testForm}>
-                      <form onSubmit={testForm.handleSubmit(handleAddTest)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={testForm.control}
-                            name="year"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Year</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select year" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {[...Array(5)].map((_, i) => {
-                                        const year = new Date().getFullYear() - i;
-                                        return (
-                                          <SelectItem key={i} value={year.toString()}>
-                                            {year}
-                                          </SelectItem>
-                                        );
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={testForm.control}
-                            name="quarter"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Quarter</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select quarter" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="1">Quarter 1</SelectItem>
-                                      <SelectItem value="2">Quarter 2</SelectItem>
-                                      <SelectItem value="3">Quarter 3</SelectItem>
-                                      <SelectItem value="4">Quarter 4</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={testForm.control}
-                            name="testDate"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Test Date</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    type="date" 
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={testForm.control}
-                            name="result"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Test Result</FormLabel>
-                                <FormControl>
-                                  <Select 
-                                    value={field.value} 
-                                    onValueChange={field.onChange}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select result" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="pass">Pass</SelectItem>
-                                      <SelectItem value="fail">Fail</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsTestDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={isLoadingData}>
-                            {isLoadingData ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Saving...
-                              </>
-                            ) : "Save Test Result"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </header>
-
-            <section className="mb-8">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 w-full sm:w-1/3">
-                  <Input
-                    placeholder="Search records..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
-                  />
-                  <Button size="icon">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="border rounded-md overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        {emissionColumns.map((column) => (
-                          <th key={column.key} className="text-left p-3 font-medium text-muted-foreground text-sm">
-                            {column.title}
-                          </th>
-                        ))}
-                        <th className="text-left p-3 font-medium text-muted-foreground text-sm">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {emissionRecords.filter((record) => {
-                        if (!searchTerm) return true;
-                        const searchLower = searchTerm.toLowerCase();
-                        return (
-                          record.plate_number.toLowerCase().includes(searchLower) ||
-                          record.office_name.toLowerCase().includes(searchLower) ||
-                          record.driver_name.toLowerCase().includes(searchLower)
-                        );
-                      }).map((record, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="p-3">{record.id}</td>
-                          <td className="p-3">{record.plate_number}</td>
-                          <td className="p-3">{record.office_name}</td>
-                          <td className="p-3">{record.driver_name}</td>
-                          <td className="p-3">{record.engine_type}</td>
-                          <td className="p-3">Q{record.quarter}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              record.result ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                            }`}>
-                              {record.result ? "Passed" : "Failed"}
-                            </span>
-                          </td>
-                          <td className="p-3">{record.test_date}</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm">View</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  
-                  {emissionRecords.filter((record) => {
-                    if (!searchTerm) return true;
-                    const searchLower = searchTerm.toLowerCase();
-                    return (
-                      record.plate_number.toLowerCase().includes(searchLower) ||
-                      record.office_name.toLowerCase().includes(searchLower) ||
-                      record.driver_name.toLowerCase().includes(searchLower)
-                    );
-                  }).length === 0 && (
-                    <div className="p-8 text-center">
-                      <p className="text-muted-foreground">No emission records found</p>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Filter Records</h4>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="yearFilter">Year</Label>
+                        <Select 
+                          value={yearFilter} 
+                          onValueChange={setYearFilter}
+                        >
+                          <SelectTrigger id="yearFilter">
+                            <SelectValue placeholder="Select year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Any Year</SelectItem>
+                            {availableYears.map(year => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="quarterFilter">Quarter</Label>
+                        <Select 
+                          value={quarterFilter} 
+                          onValueChange={setQuarterFilter}
+                        >
+                          <SelectTrigger id="quarterFilter">
+                            <SelectValue placeholder="Select quarter" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Any Quarter</SelectItem>
+                            {quarters.map(quarter => (
+                              <SelectItem key={quarter} value={quarter.toString()}>
+                                Quarter {quarter}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="engineTypeFilter">Engine Type</Label>
+                        <Select 
+                          value={engineTypeFilter} 
+                          onValueChange={setEngineTypeFilter}
+                        >
+                          <SelectTrigger id="engineTypeFilter">
+                            <SelectValue placeholder="Select engine type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Any Type</SelectItem>
+                            <SelectItem value="Gas">Gas</SelectItem>
+                            <SelectItem value="Diesel">Diesel</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="wheelsFilter">Wheels</Label>
+                        <Select 
+                          value={wheelsFilter} 
+                          onValueChange={setWheelsFilter}
+                        >
+                          <SelectTrigger id="wheelsFilter">
+                            <SelectValue placeholder="Select wheels" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Any</SelectItem>
+                            <SelectItem value="2">2 Wheels</SelectItem>
+                            <SelectItem value="4">4 Wheels</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="resultFilter">Test Result</Label>
+                        <Select 
+                          value={resultFilter} 
+                          onValueChange={setResultFilter}
+                        >
+                          <SelectTrigger id="resultFilter">
+                            <SelectValue placeholder="Select result" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Any Result</SelectItem>
+                            <SelectItem value="pass">Pass</SelectItem>
+                            <SelectItem value="fail">Fail</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="flex justify-between pt-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setYearFilter("");
+                            setQuarterFilter("");
+                            setEngineTypeFilter("");
+                            setWheelsFilter("");
+                            setResultFilter("");
+                          }}
+                        >
+                          Reset
+                        </Button>
+                        <Button onClick={() => setFilterOpen(false)}>
+                          Apply Filters
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
+                  </PopoverContent>
+                </Popover>
+                
+                <Button 
+                  variant="outline" 
+                  className="flex items-center gap-2"
+                  onClick={exportData}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export
+                </Button>
+                
+                <Button onClick={handleAddVehicle}>
+                  Add Vehicle
+                </Button>
               </div>
-            </section>
+            </div>
+            
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+                <TabsTrigger value="tests">Emission Tests</TabsTrigger>
+                {selectedVehicle && (
+                  <TabsTrigger value="history">
+                    Vehicle History
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              
+              <TabsContent value="vehicles" className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Plate Number</TableHead>
+                      <TableHead>Office</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Wheels</TableHead>
+                      <TableHead>Engine</TableHead>
+                      <TableHead>Driver</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredVehicles.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10">
+                          No vehicles found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredVehicles.map((vehicle) => (
+                        <TableRow key={vehicle.id}>
+                          <TableCell className="font-medium">
+                            {vehicle.plate_number}
+                          </TableCell>
+                          <TableCell>{vehicle.office_name}</TableCell>
+                          <TableCell>{vehicle.vehicle_type}</TableCell>
+                          <TableCell>{vehicle.wheels}</TableCell>
+                          <TableCell>{vehicle.engine_type}</TableCell>
+                          <TableCell>{vehicle.driver_name}</TableCell>
+                          <TableCell className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddTest(vehicle)}
+                            >
+                              Add Test
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewVehicleHistory(vehicle)}
+                            >
+                              History
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditVehicle(vehicle)}
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+              
+              <TabsContent value="tests" className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Year</TableHead>
+                      <TableHead>Quarter</TableHead>
+                      <TableHead>Plate Number</TableHead>
+                      <TableHead>Vehicle Type</TableHead>
+                      <TableHead>Engine</TableHead>
+                      <TableHead>Result</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10">
+                          No tests found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredTests.map((test) => (
+                        <TableRow key={test.id}>
+                          <TableCell>
+                            {new Date(test.test_date).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{test.year}</TableCell>
+                          <TableCell>{test.quarter}</TableCell>
+                          <TableCell className="font-medium">
+                            {test.vehicle?.plate_number}
+                          </TableCell>
+                          <TableCell>{test.vehicle?.vehicle_type}</TableCell>
+                          <TableCell>{test.vehicle?.engine_type}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                test.result
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {test.result ? "Pass" : "Fail"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+              
+              <TabsContent value="history" className="space-y-4">
+                {selectedVehicle && (
+                  <>
+                    <div className="p-4 rounded-md border bg-muted/40">
+                      <h3 className="text-xl font-medium mb-4">
+                        Vehicle Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Plate Number
+                          </h4>
+                          <p>{selectedVehicle.plate_number}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Office
+                          </h4>
+                          <p>{selectedVehicle.office_name}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Driver
+                          </h4>
+                          <p>{selectedVehicle.driver_name}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Vehicle Type
+                          </h4>
+                          <p>{selectedVehicle.vehicle_type}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Engine Type
+                          </h4>
+                          <p>{selectedVehicle.engine_type}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-muted-foreground">
+                            Wheels
+                          </h4>
+                          <p>{selectedVehicle.wheels}</p>
+                        </div>
+                        {selectedVehicle.contact_number && (
+                          <div>
+                            <h4 className="text-sm font-medium text-muted-foreground">
+                              Contact Number
+                            </h4>
+                            <p>{selectedVehicle.contact_number}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <h3 className="text-xl font-medium mb-2">Test History</h3>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Year</TableHead>
+                            <TableHead>Quarter</TableHead>
+                            <TableHead>Result</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedVehicle.emission_tests.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-10">
+                                No test history found
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            selectedVehicle.emission_tests.map((test) => (
+                              <TableRow key={test.id}>
+                                <TableCell>
+                                  {new Date(test.test_date).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>{test.year}</TableCell>
+                                <TableCell>{test.quarter}</TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs ${
+                                      test.result
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {test.result ? "Pass" : "Fail"}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => handleAddTest(selectedVehicle)}
+                      >
+                        Add Test
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
+      
+      {/* Add/Edit Vehicle Dialog */}
+      <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {isEditing ? "Edit Vehicle" : "Add New Vehicle"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="plateNumber" className="text-right">
+                Plate Number *
+              </Label>
+              <Input
+                id="plateNumber"
+                value={plateNumber}
+                onChange={(e) => setPlateNumber(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="officeName" className="text-right">
+                Office Name *
+              </Label>
+              <Input
+                id="officeName"
+                value={officeName}
+                onChange={(e) => setOfficeName(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="driverName" className="text-right">
+                Driver Name *
+              </Label>
+              <Input
+                id="driverName"
+                value={driverName}
+                onChange={(e) => setDriverName(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="vehicleType" className="text-right">
+                Vehicle Type *
+              </Label>
+              <Input
+                id="vehicleType"
+                value={vehicleType}
+                onChange={(e) => setVehicleType(e.target.value)}
+                className="col-span-3"
+                required
+                placeholder="e.g. Sedan, Pickup, Motorcycle"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="contactNumber" className="text-right">
+                Contact Number
+              </Label>
+              <Input
+                id="contactNumber"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+                className="col-span-3"
+                placeholder="Optional"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="engineType" className="text-right">
+                Engine Type
+              </Label>
+              <Select value={engineType} onValueChange={setEngineType}>
+                <SelectTrigger id="engineType" className="col-span-3">
+                  <SelectValue placeholder="Select engine type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Gas">Gas</SelectItem>
+                  <SelectItem value="Diesel">Diesel</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="wheels" className="text-right">
+                Wheels
+              </Label>
+              <Select value={wheels} onValueChange={setWheels}>
+                <SelectTrigger id="wheels" className="col-span-3">
+                  <SelectValue placeholder="Select wheels" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 Wheels</SelectItem>
+                  <SelectItem value="4">4 Wheels</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVehicleDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveVehicle}>
+              {isEditing ? "Update Vehicle" : "Add Vehicle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Test Dialog */}
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Record Emission Test
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">
+                Vehicle
+              </Label>
+              <div className="col-span-3 font-medium">
+                {testVehicle?.plate_number}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="testYear" className="text-right">
+                Year
+              </Label>
+              <Select value={testYear} onValueChange={setTestYear}>
+                <SelectTrigger id="testYear" className="col-span-3">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="testQuarter" className="text-right">
+                Quarter
+              </Label>
+              <Select value={testQuarter} onValueChange={setTestQuarter}>
+                <SelectTrigger id="testQuarter" className="col-span-3">
+                  <SelectValue placeholder="Select quarter" />
+                </SelectTrigger>
+                <SelectContent>
+                  {quarters.map(quarter => (
+                    <SelectItem key={quarter} value={quarter.toString()}>
+                      Quarter {quarter}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="testDate" className="text-right">
+                Test Date
+              </Label>
+              <Input
+                id="testDate"
+                type="date"
+                value={testDate}
+                onChange={(e) => setTestDate(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="testResult" className="text-right">
+                Result
+              </Label>
+              <Select value={testResult} onValueChange={setTestResult}>
+                <SelectTrigger id="testResult" className="col-span-3">
+                  <SelectValue placeholder="Select result" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Pass</SelectItem>
+                  <SelectItem value="false">Fail</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTest}>
+              Save Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
   );
 }

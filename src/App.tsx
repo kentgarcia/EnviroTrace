@@ -12,6 +12,7 @@ import TreeManagementOverview from "./pages/dashboards/tree-management/Overview"
 import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
 import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
 import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
+import UserManagement from "./pages/admin/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,13 @@ const App = () => (
           <Route path="/dashboard-selection" element={
             <ProtectedRoute>
               <DashboardSelection />
+            </ProtectedRoute>
+          } />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/user-management" element={
+            <ProtectedRoute>
+              <UserManagement />
             </ProtectedRoute>
           } />
           
