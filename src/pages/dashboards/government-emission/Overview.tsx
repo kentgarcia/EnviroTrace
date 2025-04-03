@@ -13,6 +13,9 @@ import { EmissionHistoryTrend } from "@/components/dashboards/government-emissio
 import { RecentTestsTable } from "@/components/dashboards/government-emission/RecentTestsTable";
 import { YearSelector } from "@/components/dashboards/government-emission/YearSelector";
 import { useEmissionDashboard } from "@/hooks/useEmissionDashboard";
+import { EmissionTestSchedule } from "@/components/dashboards/government-emission/EmissionTestSchedule";
+import { ExportToSheet } from "@/components/dashboards/government-emission/ExportToSheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const currentYear = new Date().getFullYear();
 const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -21,9 +24,11 @@ export default function GovEmissionOverview() {
   const navigate = useNavigate();
   const { user, userData, loading } = useAuth();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(undefined);
+  const [activeTab, setActiveTab] = useState<string>("overview");
   
   // Use our custom hook to fetch and process dashboard data
-  const dashboardData = useEmissionDashboard(selectedYear);
+  const dashboardData = useEmissionDashboard(selectedYear, selectedQuarter);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,6 +43,15 @@ export default function GovEmissionOverview() {
 
   const handleYearChange = (value: string) => {
     setSelectedYear(parseInt(value));
+  };
+
+  const handleQuarterChange = (value: string) => {
+    setSelectedQuarter(value ? parseInt(value) : undefined);
+  };
+
+  const handleScheduleChange = () => {
+    // Refresh dashboard data when schedule changes
+    // Data will refresh automatically through the realtime subscription
   };
 
   if (loading || dashboardData.isLoading) {
@@ -67,45 +81,99 @@ export default function GovEmissionOverview() {
                 </p>
               </div>
               
-              <div className="mt-4 sm:mt-0">
+              <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-4 items-end">
                 <YearSelector 
                   selectedYear={selectedYear} 
+                  selectedQuarter={selectedQuarter}
                   availableYears={availableYears}
                   onYearChange={handleYearChange}
+                  onQuarterChange={handleQuarterChange}
+                  showQuarters={true}
                 />
+                
+                <div className="flex gap-2">
+                  <ExportToSheet 
+                    year={selectedYear} 
+                    quarter={selectedQuarter}
+                    type="tests"
+                  />
+                </div>
               </div>
             </header>
 
-            <section>
-              <h2 className="text-xl font-semibold mb-4">Emission Overview ({selectedYear})</h2>
-              <EmissionStatCards
-                totalVehicles={dashboardData.totalVehicles}
-                totalPassed={dashboardData.totalPassed}
-                totalFailed={dashboardData.totalFailed}
-                complianceRate={dashboardData.complianceRate}
-              />
-            </section>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-6">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="schedules">Testing Schedules</TabsTrigger>
+                <TabsTrigger value="compliance">Compliance</TabsTrigger>
+              </TabsList>
+            
+              <TabsContent value="overview">
+                <section>
+                  <h2 className="text-xl font-semibold mb-4">
+                    Emission Overview ({selectedYear}{selectedQuarter ? ` - Q${selectedQuarter}` : ''})
+                  </h2>
+                  <EmissionStatCards
+                    totalVehicles={dashboardData.totalVehicles}
+                    totalPassed={dashboardData.totalPassed}
+                    totalFailed={dashboardData.totalFailed}
+                    complianceRate={dashboardData.complianceRate}
+                  />
+                </section>
 
-            <EmissionCharts
-              quarterStats={dashboardData.quarterStats}
-              engineTypeData={dashboardData.engineTypeData}
-              vehicleTypeData={dashboardData.vehicleTypeData}
-              selectedYear={selectedYear}
-            />
+                <EmissionCharts
+                  quarterStats={dashboardData.quarterStats}
+                  engineTypeData={dashboardData.engineTypeData}
+                  vehicleTypeData={dashboardData.vehicleTypeData}
+                  selectedYear={selectedYear}
+                />
 
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <OfficeComplianceTable
-                complianceData={dashboardData.complianceByOffice}
-                selectedYear={selectedYear}
-              />
-              <EmissionHistoryTrend 
-                quarterStats={dashboardData.quarterStats} 
-              />
-            </section>
-
-            <RecentTestsTable 
-              recentTests={dashboardData.recentTests} 
-            />
+                <RecentTestsTable 
+                  recentTests={dashboardData.recentTests} 
+                />
+              </TabsContent>
+              
+              <TabsContent value="schedules">
+                <h2 className="text-xl font-semibold mb-4">
+                  Testing Schedules for {selectedYear}
+                </h2>
+                <div className="grid gap-6 mb-6">
+                  {[1, 2, 3, 4].map((quarter) => (
+                    <EmissionTestSchedule
+                      key={quarter}
+                      year={selectedYear}
+                      quarter={quarter}
+                      onScheduleChange={handleScheduleChange}
+                    />
+                  ))}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="compliance">
+                <h2 className="text-xl font-semibold mb-4">
+                  Compliance Reports ({selectedYear}{selectedQuarter ? ` - Q${selectedQuarter}` : ''})
+                </h2>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  <OfficeComplianceTable
+                    complianceData={dashboardData.complianceByOffice}
+                    selectedYear={selectedYear}
+                  />
+                  
+                  <EmissionHistoryTrend 
+                    quarterStats={dashboardData.quarterStats} 
+                  />
+                </div>
+                
+                <div className="flex justify-end mb-4">
+                  <ExportToSheet 
+                    year={selectedYear} 
+                    quarter={selectedQuarter}
+                    type="compliance"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

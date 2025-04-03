@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      emission_test_schedules: {
+        Row: {
+          assigned_personnel: string
+          conducted_on: string
+          created_at: string
+          id: string
+          location: string
+          quarter: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          assigned_personnel: string
+          conducted_on: string
+          created_at?: string
+          id?: string
+          location: string
+          quarter: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          assigned_personnel?: string
+          conducted_on?: string
+          created_at?: string
+          id?: string
+          location?: string
+          quarter?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       emission_tests: {
         Row: {
           created_at: string
@@ -44,6 +77,13 @@ export type Database = {
           year?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "emission_tests_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_summary_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "emission_tests_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -139,7 +179,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vehicle_summary_view: {
+        Row: {
+          contact_number: string | null
+          driver_name: string | null
+          engine_type: string | null
+          id: string | null
+          latest_test_date: string | null
+          latest_test_quarter: number | null
+          latest_test_result: boolean | null
+          latest_test_year: number | null
+          office_name: string | null
+          plate_number: string | null
+          vehicle_type: string | null
+          wheels: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {

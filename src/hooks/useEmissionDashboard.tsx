@@ -14,10 +14,11 @@ export interface DashboardData {
   totalPassed: number;
   totalFailed: number;
   complianceRate: number;
+  schedules: any[];
   isLoading: boolean;
 }
 
-export function useEmissionDashboard(selectedYear: number) {
+export function useEmissionDashboard(selectedYear: number, selectedQuarter?: number) {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     engineTypeData: [],
     vehicleTypeData: [],
@@ -29,6 +30,7 @@ export function useEmissionDashboard(selectedYear: number) {
     totalPassed: 0,
     totalFailed: 0,
     complianceRate: 0,
+    schedules: [],
     isLoading: true
   });
 
@@ -77,16 +79,31 @@ export function useEmissionDashboard(selectedYear: number) {
         if (recentTestsError) throw recentTestsError;
 
         // Fetch compliance by office
-        const { data: complianceData, error: complianceError } = await supabase
+        let complianceQuery = supabase
           .from('vehicles')
           .select(`
             office_name,
             id,
-            emission_tests!inner(result, year)
+            emission_tests!inner(result, year, quarter)
           `)
           .eq('emission_tests.year', selectedYear);
+          
+        if (selectedQuarter) {
+          complianceQuery = complianceQuery.eq('emission_tests.quarter', selectedQuarter);
+        }
+        
+        const { data: complianceData, error: complianceError } = await complianceQuery;
         
         if (complianceError) throw complianceError;
+
+        // Fetch test schedules
+        const { data: schedulesData, error: schedulesError } = await supabase
+          .from('emission_test_schedules')
+          .select('*')
+          .eq('year', selectedYear)
+          .order('quarter');
+        
+        if (schedulesError) throw schedulesError;
 
         // Process data for charts
         const processedEngineTypeData = engineTypeStats?.map(stat => ({
@@ -125,19 +142,20 @@ export function useEmissionDashboard(selectedYear: number) {
         if (complianceData && complianceData.length > 0) {
           complianceData.forEach((item: any) => {
             const officeName = item.office_name;
-            const testResult = item.emission_tests[0]?.result;
             
             if (!officeComplianceMap.has(officeName)) {
               officeComplianceMap.set(officeName, { pass: 0, fail: 0, total: 0 });
             }
             
-            const stats = officeComplianceMap.get(officeName)!;
-            if (testResult) {
-              stats.pass += 1;
-            } else {
-              stats.fail += 1;
-            }
-            stats.total += 1;
+            item.emission_tests.forEach((test: any) => {
+              const stats = officeComplianceMap.get(officeName)!;
+              if (test.result) {
+                stats.pass += 1;
+              } else {
+                stats.fail += 1;
+              }
+              stats.total += 1;
+            });
           });
         }
         
@@ -167,6 +185,7 @@ export function useEmissionDashboard(selectedYear: number) {
           totalPassed,
           totalFailed,
           complianceRate,
+          schedules: schedulesData || [],
           isLoading: false
         });
         
@@ -179,7 +198,39 @@ export function useEmissionDashboard(selectedYear: number) {
 
     setDashboardData(prev => ({...prev, isLoading: true}));
     fetchDashboardData();
-  }, [selectedYear]);
+
+    // Set up realtime subscriptions for dashboard updates
+    const emissionTestsChannel = supabase
+      .channel('emission-tests-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'emission_tests',
+        filter: `year=eq.${selectedYear}` + (selectedQuarter ? `,quarter=eq.${selectedQuarter}` : '')
+      }, () => {
+        // Refetch data when changes occur
+        fetchDashboardData();
+      })
+      .subscribe();
+
+    const vehiclesChannel = supabase
+      .channel('vehicles-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'vehicles'
+      }, () => {
+        // Refetch data when vehicle data changes
+        fetchDashboardData();
+      })
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      supabase.removeChannel(emissionTestsChannel);
+      supabase.removeChannel(vehiclesChannel);
+    };
+  }, [selectedYear, selectedQuarter]);
 
   return dashboardData;
 }
