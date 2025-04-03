@@ -3,41 +3,43 @@ import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Leaf, Wind, TreePine, Factory, LogOut } from "lucide-react";
+import { Leaf, Wind, TreePine, Factory, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth, UserRole } from "@/lib/auth";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();
-  const [availableDashboards, setAvailableDashboards] = useState<string[]>([]);
-  const [user, setUser] = useState<{ email: string } | null>(null);
-
+  const { user, userData, loading, signOut: authSignOut } = useAuth();
+  
   useEffect(() => {
     // Check if user is authenticated
-    const authData = localStorage.getItem("ems-auth");
-    if (!authData) {
+    if (!loading && !user) {
       navigate("/");
-      return;
     }
-
-    const { email, isAuthenticated, role } = JSON.parse(authData);
-    if (!isAuthenticated) {
-      navigate("/");
-      return;
-    }
-
-    setUser({ email });
-    setAvailableDashboards(role);
-  }, [navigate]);
+  }, [user, loading, navigate]);
 
   const handleDashboardSelect = (dashboardType: string) => {
     navigate(`/${dashboardType}/overview`);
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem("ems-auth");
-    toast.success("Signed out successfully");
-    navigate("/");
+  const handleSignOut = async () => {
+    try {
+      await authSignOut();
+      toast.success("Signed out successfully");
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-ems-green-50 to-ems-blue-50">
@@ -57,14 +59,14 @@ export default function DashboardSelection() {
       <main className="flex-1 px-6 py-10">
         <div className="max-w-screen-xl mx-auto">
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-semibold mb-2">Welcome, {user?.email}</h2>
+            <h2 className="text-2xl font-semibold mb-2">Welcome, {userData?.email}</h2>
             <p className="text-muted-foreground">
               Select a dashboard to access environmental data and management tools
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {availableDashboards.includes("air-quality") && (
+            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('air-quality' as UserRole) ? (
               <DashboardCard
                 title="Air Quality"
                 description="Monitor air quality metrics, pollution levels, and compliance data"
@@ -72,9 +74,9 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("air-quality")}
                 className="border-ems-blue-200 hover:border-ems-blue-400"
               />
-            )}
+            ) : null}
             
-            {availableDashboards.includes("tree-management") && (
+            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('tree-management' as UserRole) ? (
               <DashboardCard
                 title="Tree Management"
                 description="Track afforestation efforts, tree health data, and forest coverage"
@@ -82,9 +84,9 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("tree-management")}
                 className="border-ems-green-200 hover:border-ems-green-400"
               />
-            )}
+            ) : null}
             
-            {availableDashboards.includes("government-emission") && (
+            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('government-emission' as UserRole) ? (
               <DashboardCard
                 title="Government Emission"
                 description="Analyze emission data from government facilities and public transportation"
@@ -92,7 +94,7 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("government-emission")}
                 className="border-ems-gray-200 hover:border-ems-gray-400"
               />
-            )}
+            ) : null}
           </div>
         </div>
       </main>

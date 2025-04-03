@@ -18,7 +18,8 @@ const queryClient = new QueryClient();
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = localStorage.getItem("ems-auth") !== null;
+  // Check if user is authenticated from supabase session
+  const isAuthenticated = localStorage.getItem("sb-trjtbptzqqxmnydzknol-auth-token") !== null;
   
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;

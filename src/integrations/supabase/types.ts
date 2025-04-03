@@ -9,16 +9,156 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      emission_tests: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          quarter: number
+          result: boolean
+          test_date: string
+          updated_at: string
+          vehicle_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          quarter: number
+          result: boolean
+          test_date: string
+          updated_at?: string
+          vehicle_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          quarter?: number
+          result?: boolean
+          test_date?: string
+          updated_at?: string
+          vehicle_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emission_tests_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vehicles: {
+        Row: {
+          contact_number: string | null
+          created_at: string
+          driver_name: string
+          engine_type: string
+          id: string
+          office_name: string
+          plate_number: string
+          updated_at: string
+          vehicle_type: string
+          wheels: number
+        }
+        Insert: {
+          contact_number?: string | null
+          created_at?: string
+          driver_name: string
+          engine_type: string
+          id?: string
+          office_name: string
+          plate_number: string
+          updated_at?: string
+          vehicle_type: string
+          wheels: number
+        }
+        Update: {
+          contact_number?: string | null
+          created_at?: string
+          driver_name?: string
+          engine_type?: string
+          id?: string
+          office_name?: string
+          plate_number?: string
+          updated_at?: string
+          vehicle_type?: string
+          wheels?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          requested_role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role:
+        | "admin"
+        | "air-quality"
+        | "tree-management"
+        | "government-emission"
     }
     CompositeTypes: {
       [_ in never]: never

@@ -6,33 +6,49 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Leaf } from "lucide-react";
+import { Leaf, Loader2 } from "lucide-react";
+import { signIn, signUp } from "@/lib/auth";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useForm } from "react-hook-form";
+
+type FormMode = 'sign-in' | 'sign-up';
+
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
+interface SignUpFormData extends SignInFormData {
+  fullName: string;
+  confirmPassword: string;
+}
 
 export function SignInForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<FormMode>('sign-in');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  
+  const {
+    register: registerSignIn,
+    handleSubmit: handleSubmitSignIn,
+    formState: { errors: errorsSignIn }
+  } = useForm<SignInFormData>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register: registerSignUp,
+    handleSubmit: handleSubmitSignUp,
+    formState: { errors: errorsSignUp },
+    watch: watchSignUp
+  } = useForm<SignUpFormData>();
+
+  const password = watchSignUp ? watchSignUp("password") : "";
+
+  const onSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
     
     try {
-      // This is a mock authentication - in a real app, this would connect to a backend
-      // For demonstration, we'll simulate different user roles
-      const role = determineUserRole(email);
-      
-      // Save the authentication state
-      localStorage.setItem("ems-auth", JSON.stringify({ 
-        email, 
-        isAuthenticated: true,
-        role: role
-      }));
-      
+      await signIn(data.email, data.password);
       toast.success("Signed in successfully!");
-      
-      // Navigate to the dashboard selection page
       navigate("/dashboard-selection");
     } catch (error) {
       console.error("Authentication error:", error);
@@ -42,22 +58,19 @@ export function SignInForm() {
     }
   };
 
-  // Mock function to determine user role based on email
-  const determineUserRole = (email: string): string[] => {
-    const domain = email.split("@")[1]?.toLowerCase();
+  const onSignUp = async (data: SignUpFormData) => {
+    setIsLoading(true);
     
-    if (email.includes("admin")) {
-      return ["air-quality", "tree-management", "government-emission"];
-    } else if (email.includes("air") || domain === "airquality.org") {
-      return ["air-quality"];
-    } else if (email.includes("tree") || domain === "forestry.org") {
-      return ["tree-management"];
-    } else if (email.includes("gov") || domain === "government.org") {
-      return ["government-emission"];
+    try {
+      await signUp(data.email, data.password, data.fullName);
+      toast.success("Account created! Please check your email for verification.");
+      setMode('sign-in');
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast.error(error.message || "Failed to create account. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Default role if none of the above match
-    return ["air-quality"];
   };
 
   return (
@@ -68,54 +81,142 @@ export function SignInForm() {
             <Leaf className="h-6 w-6 text-primary-foreground" />
           </div>
         </div>
-        <CardTitle className="text-2xl text-center">Sign in to EMS</CardTitle>
+        <CardTitle className="text-2xl text-center">Environmental Management System</CardTitle>
         <CardDescription className="text-center">
           Enter your credentials to access your dashboard
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <a href="#" className="text-sm text-ems-blue-600 hover:text-ems-blue-500">
-                Forgot password?
-              </a>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
-          </Button>
-        </form>
+        <Tabs defaultValue="sign-in" value={mode} onValueChange={(value) => setMode(value as FormMode)}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="sign-in">Sign In</TabsTrigger>
+            <TabsTrigger value="sign-up">Sign Up</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="sign-in">
+            <form onSubmit={handleSubmitSignIn(onSignIn)} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  {...registerSignIn("email", { 
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address"
+                    }
+                  })}
+                />
+                {errorsSignIn.email && (
+                  <p className="text-sm text-destructive">{errorsSignIn.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <a href="#" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  {...registerSignIn("password", { required: "Password is required" })}
+                />
+                {errorsSignIn.password && (
+                  <p className="text-sm text-destructive">{errorsSignIn.password.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : "Sign in"}
+              </Button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="sign-up">
+            <form onSubmit={handleSubmitSignUp(onSignUp)} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  placeholder="John Doe"
+                  {...registerSignUp("fullName", { required: "Full name is required" })}
+                />
+                {errorsSignUp.fullName && (
+                  <p className="text-sm text-destructive">{errorsSignUp.fullName.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@example.com"
+                  {...registerSignUp("email", { 
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Invalid email address"
+                    }
+                  })}
+                />
+                {errorsSignUp.email && (
+                  <p className="text-sm text-destructive">{errorsSignUp.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...registerSignUp("password", { 
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters"
+                    }
+                  })}
+                />
+                {errorsSignUp.password && (
+                  <p className="text-sm text-destructive">{errorsSignUp.password.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  {...registerSignUp("confirmPassword", { 
+                    required: "Please confirm your password",
+                    validate: value => value === password || "Passwords do not match"
+                  })}
+                />
+                {errorsSignUp.confirmPassword && (
+                  <p className="text-sm text-destructive">{errorsSignUp.confirmPassword.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : "Create account"}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
       </CardContent>
       <CardFooter className="flex flex-col space-y-2">
-        <div className="text-sm text-center text-gray-500 mt-2">
-          Demo credentials for testing:
-        </div>
-        <div className="text-xs text-center text-gray-500">
-          <div>admin@example.com (All access)</div>
-          <div>air@airquality.org (Air Quality)</div>
-          <div>tree@forestry.org (Tree Management)</div>
-          <div>gov@government.org (Government Emission)</div>
-          <div>Password: any password will work</div>
+        <div className="text-sm text-center text-muted-foreground mt-2">
+          By continuing, you agree to our Terms of Service and Privacy Policy.
         </div>
       </CardFooter>
     </Card>

@@ -18,6 +18,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { signOut } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 
 interface SidebarProps {
   dashboardType: "air-quality" | "tree-management" | "government-emission";
@@ -26,20 +28,17 @@ interface SidebarProps {
 export function AppSidebar({ dashboardType }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState<{email: string} | null>(null);
+  const { user, userData } = useAuth();
   
-  useEffect(() => {
-    const authData = localStorage.getItem("ems-auth");
-    if (authData) {
-      const userData = JSON.parse(authData);
-      setUser({ email: userData.email });
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out successfully");
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
     }
-  }, []);
-
-  const handleSignOut = () => {
-    localStorage.removeItem("ems-auth");
-    toast.success("Signed out successfully");
-    navigate("/");
   };
 
   const getMenuItems = () => {
@@ -121,11 +120,11 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-primary-foreground">
-                {user?.email?.charAt(0).toUpperCase() || "U"}
+                {userData?.email?.charAt(0).toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
             <div className="text-xs">
-              <div className="font-medium">{user?.email || "User"}</div>
+              <div className="font-medium">{userData?.email || "User"}</div>
               <Button 
                 variant="link" 
                 className="p-0 h-auto text-xs text-muted-foreground"

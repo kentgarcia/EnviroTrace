@@ -3,20 +3,25 @@ import { SignInForm } from "@/components/auth/SignInForm";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Leaf } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const authData = localStorage.getItem("ems-auth");
-    if (authData) {
-      const { isAuthenticated } = JSON.parse(authData);
-      if (isAuthenticated) {
-        navigate("/dashboard-selection");
-      }
+    if (user && !loading) {
+      navigate("/dashboard-selection");
     }
-  }, [navigate]);
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-ems-green-100 to-ems-blue-100 p-4">
