@@ -77,9 +77,14 @@ export function SignInForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-2">
-          <div className="bg-primary rounded-full p-2">
-            <Leaf className="h-6 w-6 text-primary-foreground" />
-          </div>
+          {/* Placeholder for the first logo */}
+                        <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
+                          Logo 1
+                        </div>
+                        {/* Placeholder for the second logo */}
+                        <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
+                          Logo 2
+                        </div>
         </div>
         <CardTitle className="text-2xl text-center">Environmental Management System</CardTitle>
         <CardDescription className="text-center">
