@@ -38,33 +38,80 @@ export function useEmissionDashboard(selectedYear: number, selectedQuarter?: num
     const fetchDashboardData = async () => {
       try {
         // Fetch vehicles count by engine type
-        const { data: engineTypeStats, error: engineTypeError } = await supabase
+          const { data: engineTypes, error: engineTypesError } = await supabase
           .from('vehicles')
-          .select('engine_type, count')
-          .group('engine_type');
+          .select('engine_type');
         
-        if (engineTypeError) throw engineTypeError;
+        if (engineTypesError) throw engineTypesError;
+        
+        // Process unique types with counts
+        const engineTypeMap = {};
+        engineTypes?.forEach(vehicle => {
+          const type = vehicle.engine_type;
+          engineTypeMap[type] = (engineTypeMap[type] || 0) + 1;
+        });
+        
+        const engineTypeStats = Object.entries(engineTypeMap).map(([type, count]) => ({
+          engine_type: type,
+          count
+        }));
         
         // Fetch vehicles count by wheel type
-        const { data: wheelTypeStats, error: wheelTypeError } = await supabase
+        const { data: wheelTypes, error: wheelTypeError } = await supabase
           .from('vehicles')
-          .select('wheels, count')
-          .group('wheels');
+          .select('wheels');          
         
         if (wheelTypeError) throw wheelTypeError;
 
+        const wheelTypeMap = {};
+        wheelTypes?.forEach(vehicle => {
+          const type = vehicle.wheels;
+          wheelTypeMap[type] = (wheelTypeMap[type] || 0) + 1;
+        });
+        
+        const wheelTypeStats = Object.entries(wheelTypeMap).map(([type, count]) => ({
+          wheels: type,
+          count
+        }));
+
         // Fetch quarterly test results for year
-        const { data: testResults, error: testResultsError } = await supabase
-          .from('emission_tests')
-          .select(`
-            quarter,
-            result,
-            count
-          `)
-          .eq('year', selectedYear)
-          .group('quarter, result');
+        const { data: rawTestResults, error: testResultsError } = await supabase
+        .from('emission_tests')
+        .select(`
+          quarter,
+          result
+        `) 
+        .eq('year', selectedYear);    
         
         if (testResultsError) throw testResultsError;
+
+        const testResultsMap = {};
+        rawTestResults?.forEach(test => {
+          const key = `${test.quarter}_${test.result ? 'pass' : 'fail'}`;
+          testResultsMap[key] = (testResultsMap[key] || 0) + 1;
+        });
+
+        const testResults = [];
+        for (let quarter = 1; quarter <= 4; quarter++) {
+          const passKey = `${quarter}_pass`;
+          const failKey = `${quarter}_fail`;
+          
+          if (testResultsMap[passKey]) {
+            testResults.push({
+              quarter,
+              result: true,
+              count: testResultsMap[passKey]
+            });
+          }
+          
+          if (testResultsMap[failKey]) {
+            testResults.push({
+              quarter,
+              result: false,
+              count: testResultsMap[failKey]
+            });
+          }
+        }
 
         // Fetch recent tests with vehicle data
         const { data: recentTestsData, error: recentTestsError } = await supabase
@@ -108,12 +155,12 @@ export function useEmissionDashboard(selectedYear: number, selectedQuarter?: num
         // Process data for charts
         const processedEngineTypeData = engineTypeStats?.map(stat => ({
           name: stat.engine_type,
-          value: parseInt(stat.count)
+          value: stat.count
         })) || [];
         
         const processedVehicleTypeData = wheelTypeStats?.map(stat => ({
           name: `${stat.wheels}-wheel`,
-          value: parseInt(stat.count)
+          value: stat.count
         })) || [];
         
         // Process quarterly test results
@@ -128,9 +175,9 @@ export function useEmissionDashboard(selectedYear: number, selectedQuarter?: num
           testResults.forEach((result: any) => {
             const quarterIndex = result.quarter - 1;
             if (result.result) {
-              quarters[quarterIndex].passed = parseInt(result.count);
+              quarters[quarterIndex].passed = result.count;
             } else {
-              quarters[quarterIndex].failed = parseInt(result.count);
+              quarters[quarterIndex].failed = result.count;
             }
             quarters[quarterIndex].total = quarters[quarterIndex].passed + quarters[quarterIndex].failed;
           });
@@ -167,7 +214,7 @@ export function useEmissionDashboard(selectedYear: number, selectedQuarter?: num
         }));
 
         // Calculate totals
-        const totalVehicles = processedEngineTypeData.reduce((sum, item) => sum + item.value, 0);
+        const totalVehicles = processedEngineTypeData.reduce((sum, item) => sum + Number(item.value), 0);
         const totalTests = quarters.reduce((sum, q) => sum + q.passed + q.failed, 0);
         const totalPassed = quarters.reduce((sum, q) => sum + q.passed, 0);
         const totalFailed = quarters.reduce((sum, q) => sum + q.failed, 0);

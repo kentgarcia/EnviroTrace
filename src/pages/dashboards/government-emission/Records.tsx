@@ -424,7 +424,7 @@ export default function GovernmentEmissionRecords() {
                             <SelectValue placeholder="Select year" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Any Year</SelectItem>
+                            <SelectItem value="year">Any Year</SelectItem>
                             {availableYears.map(year => (
                               <SelectItem key={year} value={year.toString()}>
                                 {year}
@@ -444,7 +444,7 @@ export default function GovernmentEmissionRecords() {
                             <SelectValue placeholder="Select quarter" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Any Quarter</SelectItem>
+                            <SelectItem value="quarter">Any Quarter</SelectItem>
                             {quarters.map(quarter => (
                               <SelectItem key={quarter} value={quarter.toString()}>
                                 Quarter {quarter}
@@ -464,7 +464,7 @@ export default function GovernmentEmissionRecords() {
                             <SelectValue placeholder="Select engine type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Any Type</SelectItem>
+                            <SelectItem value="Any">Any Type</SelectItem>
                             <SelectItem value="Gas">Gas</SelectItem>
                             <SelectItem value="Diesel">Diesel</SelectItem>
                           </SelectContent>
@@ -481,7 +481,7 @@ export default function GovernmentEmissionRecords() {
                             <SelectValue placeholder="Select wheels" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Any</SelectItem>
+                            <SelectItem value="Any">Any</SelectItem>
                             <SelectItem value="2">2 Wheels</SelectItem>
                             <SelectItem value="4">4 Wheels</SelectItem>
                           </SelectContent>
@@ -498,7 +498,7 @@ export default function GovernmentEmissionRecords() {
                             <SelectValue placeholder="Select result" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Any Result</SelectItem>
+                            <SelectItem value="any">Any Result</SelectItem>
                             <SelectItem value="pass">Pass</SelectItem>
                             <SelectItem value="fail">Fail</SelectItem>
                           </SelectContent>

@@ -60,7 +60,7 @@ export function YearSelector({
                 <SelectItem value="2">Q2</SelectItem>
                 <SelectItem value="3">Q3</SelectItem>
                 <SelectItem value="4">Q4</SelectItem>
-                <SelectItem value="">All Quarters</SelectItem>
+                <SelectItem value="All">All Quarters</SelectItem>
               </SelectContent>
             </Select>
           </div>

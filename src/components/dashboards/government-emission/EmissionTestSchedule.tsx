@@ -123,11 +123,12 @@ export function EmissionTestSchedule({ year, quarter, onScheduleChange }: Emissi
         filter: `year=eq.${year},quarter=eq.${quarter}`
       }, payload => {
         if (payload.new) {
-          setSchedule(payload.new);
+          const newSchedule = payload.new as { id: number; assigned_personnel: string; location: string; conducted_on: string };
+          setSchedule(newSchedule);
           form.reset({
-            assignedPersonnel: payload.new.assigned_personnel,
-            location: payload.new.location,
-            conductedOn: new Date(payload.new.conducted_on),
+            assignedPersonnel: newSchedule.assigned_personnel,
+            location: newSchedule.location,
+            conductedOn: new Date(newSchedule.conducted_on),
           });
         } else if (payload.eventType === 'DELETE') {
           setSchedule(null);
@@ -157,7 +158,7 @@ export function EmissionTestSchedule({ year, quarter, onScheduleChange }: Emissi
             assigned_personnel: values.assignedPersonnel,
             location: values.location,
             conducted_on: values.conductedOn.toISOString().split("T")[0],
-            updated_at: new Date(),
+            updated_at: new Date().toISOString(),
           })
           .eq("id", schedule.id);
 
