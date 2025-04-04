@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -147,7 +148,8 @@ export default function VehiclesPage() {
   }
 
   return (
-    <div className="flex">
+    <SidebarProvider>
+          <div className="flex min-h-screen w-full">
       <AppSidebar dashboardType="government-emission" />
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
@@ -266,5 +268,6 @@ export default function VehiclesPage() {
         </div>
       </div>
     </div>
+    </SidebarProvider>
   );
 }

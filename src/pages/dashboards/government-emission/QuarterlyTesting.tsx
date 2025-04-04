@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Calendar } from "lucide-react";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -141,7 +143,8 @@ export default function QuarterlyTestingPage() {
   }
 
   return (
-    <div className="flex">
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
       <AppSidebar dashboardType="government-emission" />
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
@@ -286,5 +289,6 @@ export default function QuarterlyTestingPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </SidebarProvider>
   );
 }

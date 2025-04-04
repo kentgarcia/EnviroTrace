@@ -46,8 +46,8 @@ export function EmissionCharts({
           },
           {
             name: "Wheel Count",
-            "2-wheels": vehicleTypeData.find(item => item.name === "2-wheel")?.value || 0,
-            "4-wheels": vehicleTypeData.find(item => item.name === "4-wheel")?.value || 0
+            "2-wheels": vehicleTypeData.find(item => item.name === "2")?.value || 0,
+            "4-wheels": vehicleTypeData.find(item => item.name === "4")?.value || 0
           }
         ]}
         type="bar"
