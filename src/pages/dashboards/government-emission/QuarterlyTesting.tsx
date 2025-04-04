@@ -199,6 +199,84 @@ export default function QuarterlyTestingPage() {
     }
   };
 
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+const [newTest, setNewTest] = useState({
+  vehicle_id: "",
+  test_date: "",
+  result: true,
+});
+
+const [vehicleDetails, setVehicleDetails] = useState<null | { id: string; plate_number: string; vehicle_type: string; engine_type: string }> (null);
+const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
+const handleAddVehicleTest = async (vehicle_id: string) => {
+  if (!selectedSchedule || !vehicle_id || !newTest.test_date) {
+    toast.error("Please fill in all fields");
+    return;
+  }
+
+  try {
+    // Check if the vehicle exists in the database
+    const { data: vehicleData, error: vehicleError } = await supabase
+      .from("vehicles")
+      .select("id, plate_number, vehicle_type, engine_type")
+      .eq("plate_number", vehicle_id)
+      .single();
+
+    if (vehicleError && vehicleError.code !== "PGRST116") {
+      // Handle unexpected errors
+      throw vehicleError;
+    }
+
+    if (!vehicleData) {
+      // Vehicle does not exist, prompt to register
+      setConfirmDialogOpen(true);
+      return;
+    }
+
+    // Show vehicle details in a modal for confirmation
+    setVehicleDetails(vehicleData);
+    setConfirmDialogOpen(true);
+  } catch (error) {
+    console.error("Error fetching vehicle details:", error);
+    toast.error("Failed to fetch vehicle details");
+  }
+};
+
+const confirmAddVehicleTest = async () => {
+  if (!vehicleDetails || !selectedSchedule) return;
+
+  // Validate test date
+  if (!newTest.test_date || isNaN(new Date(newTest.test_date).getTime())) {
+    toast.error("Invalid test date. Please select a valid date.");
+    return;
+  }
+
+  try {
+    // Proceed to add the vehicle test
+    const { error } = await supabase
+      .from("emission_tests")
+      .insert({
+        year: selectedSchedule.year,
+        quarter: selectedSchedule.quarter,
+        vehicle_id: vehicleDetails.id,
+        test_date: newTest.test_date,
+        result: newTest.result,
+      });
+
+    if (error) throw error;
+
+    toast.success("Vehicle test added successfully");
+    setTestDialogOpen(false);
+    setConfirmDialogOpen(false);
+    setNewTest({ vehicle_id: "", test_date: "", result: true });
+    handleViewTests(selectedSchedule); // Refresh the tests
+  } catch (error) {
+    console.error("Error adding vehicle test:", error);
+    toast.error("Failed to add vehicle test");
+  }
+};
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -219,10 +297,6 @@ export default function QuarterlyTestingPage() {
               <h1 className="text-2xl font-bold">Quarterly Emissions Testing</h1>
               <p className="text-muted-foreground">Schedule and manage quarterly emission tests</p>
             </div>
-            <Button onClick={() => setOpenAddDialog(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Test Schedule
-            </Button>
           </div>
 
           <div className="mb-6">
@@ -241,131 +315,151 @@ export default function QuarterlyTestingPage() {
             </TabsList>
             
             <TabsContent value="schedule">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle>
-                    {selectedYear} Test Schedules
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-                    </div>
-                  ) : schedules.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No test schedules found for {selectedYear}.
-                    </div>
-                  ) : (
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Quarter</TableHead>
-                            <TableHead>Location</TableHead>
-                            <TableHead>Assigned Personnel</TableHead>
-                            <TableHead>Conducted On</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {schedules.map((schedule) => (
-                            <TableRow key={schedule.id}>
-                              <TableCell>Q{schedule.quarter}</TableCell>
-                              <TableCell>{schedule.location}</TableCell>
-                              <TableCell>{schedule.assigned_personnel}</TableCell>
-                              <TableCell>
-                                {format(new Date(schedule.conducted_on), 'MMMM d, yyyy')}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    onClick={() => handleViewTests(schedule)}
-                                  >
-                                    <Eye className="h-4 w-4 mr-1" />
-                                    View Tests
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => handleEditSchedule(schedule)}
-                                  >
-                                    <Edit className="h-4 w-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+            <Card>
+            <CardHeader className="pb-2">
+  <CardTitle>
+    {selectedYear} Test Schedules
+  </CardTitle>
+  <Button 
+    size="sm" 
+    className="ml-auto"
+    onClick={() => setOpenAddDialog(true)}
+  >
+    <Plus className="mr-2 h-4 w-4" />
+    Add Test Schedule
+  </Button>
+</CardHeader>
+  <CardContent>
+    {isLoading ? (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+      </div>
+    ) : schedules.length === 0 ? (
+      <div className="text-center py-8 text-muted-foreground">
+        No test schedules found for {selectedYear}.
+      </div>
+    ) : (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Quarter</TableHead>
+              <TableHead>Location</TableHead>
+              <TableHead>Assigned Personnel</TableHead>
+              <TableHead>Conducted On</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {schedules.map((schedule) => (
+              <TableRow key={schedule.id}>
+                <TableCell>Q{schedule.quarter}</TableCell>
+                <TableCell>{schedule.location}</TableCell>
+                <TableCell>{schedule.assigned_personnel}</TableCell>
+                <TableCell>
+                  {format(new Date(schedule.conducted_on), 'MMMM d, yyyy')}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewTests(schedule)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Tests
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleEditSchedule(schedule)}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )}
+  </CardContent>
+</Card>
             </TabsContent>
             
             <TabsContent value="tests">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle>
-                    {selectedSchedule ? 
-                      `Q${selectedSchedule.quarter} ${selectedSchedule.year} - Vehicle Tests at ${selectedSchedule.location}` : 
-                      'Vehicle Tests'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingTests ? (
-                    <div className="flex justify-center py-8">
-                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-                    </div>
-                  ) : vehicleTests.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No vehicle tests found for this schedule.
-                    </div>
-                  ) : (
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Plate Number</TableHead>
-                            <TableHead>Vehicle Type</TableHead>
-                            <TableHead>Engine Type</TableHead>
-                            <TableHead>Test Date</TableHead>
-                            <TableHead>Result</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {vehicleTests.map((test) => (
-                            <TableRow key={test.id}>
-                              <TableCell>{test.plate_number}</TableCell>
-                              <TableCell>{test.vehicle_type}</TableCell>
-                              <TableCell>{test.engine_type}</TableCell>
-                              <TableCell>
-                                {format(new Date(test.test_date), 'MMMM d, yyyy')}
-                              </TableCell>
-                              <TableCell>
-                                {test.result ? (
-                                  <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    Passed
-                                  </span>
-                                ) : (
-                                  <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    Failed
-                                  </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+  <Card>
+    <CardHeader className="pb-2">
+      <CardTitle>
+        {selectedSchedule
+          ? `Q${selectedSchedule.quarter} ${selectedSchedule.year} - Vehicle Tests at ${selectedSchedule.location}`
+          : "Vehicle Tests"}
+      </CardTitle>
+      {selectedSchedule && (
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={() => {
+            setTestDialogOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Vehicle Test
+        </Button>
+      )}
+    </CardHeader>
+    <CardContent>
+      {isLoadingTests ? (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : vehicleTests.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No vehicle tests found for this schedule.
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Plate Number</TableHead>
+                <TableHead>Vehicle Type</TableHead>
+                <TableHead>Engine Type</TableHead>
+                <TableHead>Test Date</TableHead>
+                <TableHead>Result</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {vehicleTests.map((test) => (
+                <TableRow key={test.id}>
+                  <TableCell>{test.plate_number}</TableCell>
+                  <TableCell>{test.vehicle_type}</TableCell>
+                  <TableCell>{test.engine_type}</TableCell>
+                  <TableCell>
+                    {format(new Date(test.test_date), "MMMM d, yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    {test.result ? (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Passed
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Failed
+                      </span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
           </Tabs>
         </div>
       </div>
@@ -456,6 +550,117 @@ export default function QuarterlyTestingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add Vehicle Test Dialog */}
+<Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Add Vehicle Test</DialogTitle>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+      <div>
+        <Label htmlFor="vehicle">Vehicle</Label>
+        <Input
+          id="vehicle"
+          placeholder="Enter vehicle ID or plate number"
+          value={newTest.vehicle_id}
+          onChange={(e) => setNewTest({ ...newTest, vehicle_id: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="testDate">Test Date</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !newTest.test_date && "text-muted-foreground"
+              )}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              {newTest.test_date ? format(new Date(newTest.test_date), "PPP") : "Select a date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <CalendarUI
+              mode="single"
+              selected={newTest.test_date ? new Date(newTest.test_date) : undefined}
+              onSelect={(date) => date && setNewTest({ ...newTest, test_date: date.toISOString() })}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div>
+        <Label htmlFor="result">Result</Label>
+        <select
+          id="result"
+          className="w-full border rounded-md p-2"
+          value={newTest.result ? "pass" : "fail"}
+          onChange={(e) => setNewTest({ ...newTest, result: e.target.value === "pass" })}
+        >
+          <option value="pass">Pass</option>
+          <option value="fail">Fail</option>
+        </select>
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setTestDialogOpen(false)}>
+        Cancel
+      </Button>
+      <Button onClick={() => handleAddVehicleTest(newTest.vehicle_id)}>Save Test</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+<Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Confirm Add Vehicle Test</DialogTitle>
+    </DialogHeader>
+    {vehicleDetails ? (
+      <div className="grid gap-4 py-4">
+        <div>
+          <Label>Plate Number</Label>
+          <p>{vehicleDetails.plate_number}</p>
+        </div>
+        <div>
+          <Label>Vehicle Type</Label>
+          <p>{vehicleDetails.vehicle_type}</p>
+        </div>
+        <div>
+          <Label>Engine Type</Label>
+          <p>{vehicleDetails.engine_type}</p>
+        </div>
+        <div>
+          <Label>Test Date</Label>
+          <p>
+            {newTest.test_date
+              ? format(new Date(newTest.test_date), "PPP")
+              : "Invalid or missing test date"}
+          </p>
+        </div>
+        <div>
+          <Label>Result</Label>
+          <p>{newTest.result ? "Pass" : "Fail"}</p>
+        </div>
+      </div>
+    ) : (
+      <p>The vehicle does not exist. Would you like to register it?</p>
+    )}
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+        Cancel
+      </Button>
+      {vehicleDetails ? (
+        <Button onClick={confirmAddVehicleTest}>Confirm</Button>
+      ) : (
+        <Button onClick={() => navigate("/vehicles")}>Register Vehicle</Button>
+      )}
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     </div>
     </SidebarProvider>
   );
