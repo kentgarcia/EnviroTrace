@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Leaf, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { signIn, signUp } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
@@ -78,13 +78,13 @@ export function SignInForm() {
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-2">
           {/* Placeholder for the first logo */}
-                        <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                          Logo 1
-                        </div>
-                        {/* Placeholder for the second logo */}
-                        <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-                          Logo 2
-                        </div>
+          <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
+            Logo 1
+          </div>
+          {/* Placeholder for the second logo */}
+          <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
+            Logo 2
+          </div>
         </div>
         <CardTitle className="text-2xl text-center">Environmental Management System</CardTitle>
         <CardDescription className="text-center">
@@ -119,12 +119,7 @@ export function SignInForm() {
                 )}
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"

@@ -29,7 +29,6 @@ export default function SignIn() {
     >
       <div className="w-full max-w-md animate-fade-in">
         <div className="bg-white/90 backdrop-blur-md p-8 rounded-xl shadow-lg">
-
           <SignInForm />
         </div>
       </div>

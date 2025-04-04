@@ -54,7 +54,7 @@ export default function GovEmissionOverview() {
     // Data will refresh automatically through the realtime subscription
   };
 
-  if (loading || dashboardData.isLoading) {
+  if (loading || dashboardData.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -141,8 +141,8 @@ export default function GovEmissionOverview() {
                   {[1, 2, 3, 4].map((quarter) => (
                     <EmissionTestSchedule
                       key={quarter}
-                      year={selectedYear}
-                      quarter={quarter}
+                      selectedYear={selectedYear}
+                      selectedQuarter={quarter}
                       onScheduleChange={handleScheduleChange}
                     />
                   ))}

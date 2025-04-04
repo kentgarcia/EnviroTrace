@@ -15,6 +15,7 @@ import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Re
 import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
 import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
 import UserManagement from "./pages/admin/UserManagement";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,12 @@ const App = () => (
           <Route path="/dashboard-selection" element={
             <ProtectedRoute>
               <DashboardSelection />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           } />
           

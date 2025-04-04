@@ -58,38 +58,57 @@ export interface TestSchedule {
   conducted_on: string;
 }
 
-interface UseEmissionDashboardProps {
-  year: number;
-  quarter?: number;
+export interface DashboardData {
+  totalVehicles: number;
+  totalPassed: number;
+  totalFailed: number;
+  complianceRate: number;
+  quarterStats: any[];
+  engineTypeData: any[];
+  vehicleTypeData: any[];
+  complianceByOffice: any[];
+  recentTests: any[];
 }
 
-export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProps) => {
+export const useEmissionDashboard = (year: number, quarter?: number) => {
   const [data, setData] = useState<EmissionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    totalVehicles: 0,
+    totalPassed: 0,
+    totalFailed: 0,
+    complianceRate: 0,
+    quarterStats: [],
+    engineTypeData: [],
+    vehicleTypeData: [],
+    complianceByOffice: [],
+    recentTests: []
+  });
 
   const fetchEmissionData = async () => {
     try {
       setLoading(true);
       // Each query will be performed separately to avoid complex join queries
 
-      // 1. Calculate total vehicles count and change from previous year
-      const { data: vehiclesData, error: vehiclesError } = await supabase
+      // 1. Calculate total vehicles count
+      const { count: vehiclesCount, error: vehiclesError } = await supabase
         .from('vehicles')
-        .select('count', { count: 'exact' });
+        .select('*', { count: 'exact', head: true });
 
       if (vehiclesError) throw vehiclesError;
 
-      const totalVehicles = vehiclesData || 0;
+      const totalVehicles = vehiclesCount || 0;
 
       // 2. Calculate tested vehicles and compliance rate
       let testsQuery = supabase
         .from('emission_tests')
-        .select('count, result', { count: 'exact' })
-        .eq('year', year);
+        .select('*');
 
-      if (quarter) {
-        testsQuery = testsQuery.eq('quarter', quarter);
+      if (quarter !== undefined) {
+        testsQuery = testsQuery.eq('year', year).eq('quarter', quarter);
+      } else {
+        testsQuery = testsQuery.eq('year', year);
       }
 
       const { data: testsData, error: testsError } = await testsQuery;
@@ -98,21 +117,23 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
 
       const testedVehicles = testsData ? testsData.length : 0;
       const passedVehicles = testsData ? testsData.filter(test => test.result).length : 0;
-      const complianceRate = totalVehicles > 0 ? (passedVehicles / totalVehicles) * 100 : 0;
-      const failRate = testedVehicles > 0 ? ((testedVehicles - passedVehicles) / testedVehicles) * 100 : 0;
+      const failedVehicles = testsData ? testsData.filter(test => !test.result).length : 0;
+      const complianceRate = totalVehicles > 0 ? Math.round((passedVehicles / totalVehicles) * 100) : 0;
+      const failRate = testedVehicles > 0 ? Math.round(((testedVehicles - passedVehicles) / testedVehicles) * 100) : 0;
 
       // 3. Get quarterly tests data
       let quarterlyData: {
         quarter: number;
         passed: number;
         failed: number;
+        name: string;
       }[] = [];
 
       // This would normally use the groupBy functionality, but for the demo we'll simulate it
       for (let q = 1; q <= 4; q++) {
         const { data: quarterResults, error: quarterError } = await supabase
           .from('emission_tests')
-          .select('result')
+          .select('*')
           .eq('year', year)
           .eq('quarter', q);
 
@@ -125,10 +146,49 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
           quarter: q,
           passed,
           failed,
+          name: `Q${q}`
         });
       }
 
-      // 4. Generate office compliance data
+      // 4. Generate engine type data
+      const { data: vehicles, error: vehiclesDataError } = await supabase
+        .from('vehicles')
+        .select('engine_type');
+      
+      if (vehiclesDataError) throw vehiclesDataError;
+      
+      // Count by engine type
+      const engineTypeCounts: Record<string, number> = {};
+      vehicles.forEach(vehicle => {
+        const engineType = vehicle.engine_type || 'Unknown';
+        engineTypeCounts[engineType] = (engineTypeCounts[engineType] || 0) + 1;
+      });
+      
+      const engineTypeData = Object.entries(engineTypeCounts).map(([name, value]) => ({
+        name,
+        value
+      }));
+      
+      // 5. Generate vehicle type data
+      const { data: vehicleTypes, error: vehicleTypesError } = await supabase
+        .from('vehicles')
+        .select('vehicle_type');
+      
+      if (vehicleTypesError) throw vehicleTypesError;
+      
+      // Count by vehicle type
+      const vehicleTypeCounts: Record<string, number> = {};
+      vehicleTypes.forEach(vehicle => {
+        const vehicleType = vehicle.vehicle_type || 'Unknown';
+        vehicleTypeCounts[vehicleType] = (vehicleTypeCounts[vehicleType] || 0) + 1;
+      });
+      
+      const vehicleTypeData = Object.entries(vehicleTypeCounts).map(([name, value]) => ({
+        name,
+        value
+      }));
+
+      // 6. Generate office compliance data
       const { data: officesData, error: officesError } = await supabase
         .from('vehicles')
         .select('office_name');
@@ -153,7 +213,7 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
           .select('vehicle_id, result')
           .eq('year', year);
 
-        if (quarter) {
+        if (quarter !== undefined) {
           testQuery = testQuery.eq('quarter', quarter);
         }
 
@@ -172,11 +232,11 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
           vehicleCount,
           testedCount,
           passedCount,
-          complianceRate: vehicleCount > 0 ? (passedCount / vehicleCount) * 100 : 0
+          complianceRate: vehicleCount > 0 ? Math.round((passedCount / vehicleCount) * 100) : 0
         });
       }
 
-      // 5. Generate yearly trends (mocked data for now)
+      // 7. Generate yearly trends (mocked data for now)
       const currentYear = new Date().getFullYear();
       const yearlyTrends = [
         { year: currentYear - 2, complianceRate: 82, totalVehicles: 450 },
@@ -184,25 +244,12 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
         { year: currentYear, complianceRate: complianceRate, totalVehicles: totalVehicles }
       ];
 
-      // 6. Get recent tests
+      // 8. Get recent tests
       let recentTestsQuery = supabase
-        .from('emission_tests')
-        .select(`
-          id,
-          test_date,
-          result,
-          vehicles(plate_number, office_name)
-        `)
-        .order('test_date', { ascending: false })
+        .from('vehicle_summary_view')
+        .select('*')
+        .order('latest_test_date', { ascending: false })
         .limit(5);
-
-      if (quarter) {
-        recentTestsQuery = recentTestsQuery
-          .eq('year', year)
-          .eq('quarter', quarter);
-      } else {
-        recentTestsQuery = recentTestsQuery.eq('year', year);
-      }
 
       const { data: recentTestsData, error: recentTestsError } = await recentTestsQuery;
 
@@ -210,13 +257,26 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
 
       const recentTests = recentTestsData.map(test => ({
         id: test.id,
-        plateNumber: test.vehicles ? test.vehicles.plate_number : 'Unknown',
-        officeName: test.vehicles ? test.vehicles.office_name : 'Unknown',
-        testDate: test.test_date,
-        result: test.result
+        plateNumber: test.plate_number || 'Unknown',
+        officeName: test.office_name || 'Unknown',
+        testDate: test.latest_test_date || 'N/A',
+        result: test.latest_test_result
       }));
 
-      // Combine all data
+      // Set dashboard data
+      setDashboardData({
+        totalVehicles,
+        totalPassed: passedVehicles,
+        totalFailed: failedVehicles,
+        complianceRate,
+        quarterStats: quarterlyData,
+        engineTypeData,
+        vehicleTypeData,
+        complianceByOffice: officeCompliance,
+        recentTests
+      });
+
+      // Combine all data for EmissionData interface
       setData({
         stats: {
           totalVehicles: {
@@ -261,7 +321,7 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
         .select('*')
         .eq('year', year);
         
-      if (quarter) {
+      if (quarter !== undefined) {
         query = query.eq('quarter', quarter);
       }
         
@@ -283,5 +343,5 @@ export const useEmissionDashboard = ({ year, quarter }: UseEmissionDashboardProp
     fetchEmissionData();
   }, [year, quarter]);
 
-  return { data, loading, error, refetch: fetchEmissionData, fetchTestSchedules };
+  return { data, loading, error, refetch: fetchEmissionData, fetchTestSchedules, ...dashboardData };
 };
