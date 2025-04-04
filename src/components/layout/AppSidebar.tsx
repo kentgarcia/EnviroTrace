@@ -10,15 +10,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BarChart2, Car, ClipboardList, FileStack, Leaf, LogOut, Settings, User, Calendar } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { BarChart2, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { useEffect, useState } from "react";
-import { signOut } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 
 interface SidebarProps {
@@ -27,20 +22,8 @@ interface SidebarProps {
 
 export function AppSidebar({ dashboardType }: SidebarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, userData } = useAuth();
+  const { userData } = useAuth();
   
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast.success("Signed out successfully");
-      navigate("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
-      toast.error("Failed to sign out");
-    }
-  };
-
   const getMenuItems = () => {
     const basePath = `/${dashboardType}`;
     
@@ -127,7 +110,6 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           <Leaf className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-lg">{getDashboardTitle()}</h3>
         </div>
-        <SidebarTrigger className="mb-0" />
       </SidebarHeader>
       
       <SidebarContent>
@@ -151,33 +133,16 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
       </SidebarContent>
       
       <SidebarFooter className="border-t p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {userData?.email?.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="text-xs">
-              <div className="font-medium">{userData?.email || "User"}</div>
-              <Button 
-                variant="link" 
-                className="p-0 h-auto text-xs text-muted-foreground"
-                onClick={handleSignOut}
-              >
-                Sign out
-              </Button>
-            </div>
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {userData?.email?.charAt(0).toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="text-xs">
+            <div className="font-medium truncate">{userData?.email || "User"}</div>
+            <div className="text-muted-foreground">Signed in</div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="rounded-full h-8 w-8"
-            onClick={() => navigate("/dashboard-selection")}
-            title="Switch Dashboard"
-          >
-            <LogOut className="h-4 w-4 text-muted-foreground" />
-          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>

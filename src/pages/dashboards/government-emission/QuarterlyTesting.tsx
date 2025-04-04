@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -18,8 +19,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar } from "lucide-react";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Calendar, Eye, Edit, Plus } from "lucide-react";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -29,9 +30,9 @@ import { YearSelector } from "@/components/dashboards/government-emission/YearSe
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmissionTestSchedule } from "@/components/dashboards/government-emission/EmissionTestSchedule";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
 
 interface TestSchedule {
   id: string;
@@ -42,6 +43,16 @@ interface TestSchedule {
   conducted_on: string;
 }
 
+interface VehicleTest {
+  id: string;
+  vehicle_id: string;
+  plate_number: string;
+  vehicle_type: string;
+  engine_type: string;
+  test_date: string;
+  result: boolean;
+}
+
 export default function QuarterlyTestingPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -50,11 +61,13 @@ export default function QuarterlyTestingPage() {
     Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
   );
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [selectedQuarter, setSelectedQuarter] = useState<number | "All">("All");
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("schedule");
   const [isLoading, setIsLoading] = useState(true);
   const [schedules, setSchedules] = useState<TestSchedule[]>([]);
+  const [selectedSchedule, setSelectedSchedule] = useState<TestSchedule | null>(null);
+  const [vehicleTests, setVehicleTests] = useState<VehicleTest[]>([]);
+  const [isLoadingTests, setIsLoadingTests] = useState(false);
   
   // Form state for new schedule
   const [newSchedule, setNewSchedule] = useState({
@@ -98,8 +111,60 @@ export default function QuarterlyTestingPage() {
     setSelectedYear(parseInt(year));
   };
 
-  const handleQuarterChange = (quarter: string) => {
-    setSelectedQuarter(quarter === "All" ? "All" : parseInt(quarter));
+  const handleViewTests = async (schedule: TestSchedule) => {
+    setSelectedSchedule(schedule);
+    setActiveTab("tests");
+    setIsLoadingTests(true);
+    
+    try {
+      // Fetch tests related to this schedule (matching year & quarter)
+      const { data, error } = await supabase
+        .from('emission_tests')
+        .select(`
+          id, 
+          test_date,
+          result,
+          vehicle_id,
+          vehicles:vehicle_id (
+            plate_number,
+            vehicle_type,
+            engine_type
+          )
+        `)
+        .eq('year', schedule.year)
+        .eq('quarter', schedule.quarter);
+      
+      if (error) throw error;
+      
+      // Transform the data for display
+      const formattedTests = data.map(test => ({
+        id: test.id,
+        vehicle_id: test.vehicle_id,
+        plate_number: test.vehicles.plate_number,
+        vehicle_type: test.vehicles.vehicle_type,
+        engine_type: test.vehicles.engine_type,
+        test_date: test.test_date,
+        result: test.result
+      }));
+      
+      setVehicleTests(formattedTests);
+    } catch (error) {
+      console.error("Error fetching vehicle tests:", error);
+      toast.error("Failed to load vehicle test data");
+    } finally {
+      setIsLoadingTests(false);
+    }
+  };
+
+  const handleEditSchedule = (schedule: TestSchedule) => {
+    setNewSchedule({
+      year: schedule.year,
+      quarter: schedule.quarter,
+      assigned_personnel: schedule.assigned_personnel,
+      location: schedule.location,
+      conducted_on: new Date(schedule.conducted_on),
+    });
+    setOpenAddDialog(true);
   };
 
   const handleAddSchedule = async () => {
@@ -146,15 +211,16 @@ export default function QuarterlyTestingPage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
       <AppSidebar dashboardType="government-emission" />
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <DashboardNavbar />
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold">Quarterly Emissions Testing</h1>
               <p className="text-muted-foreground">Schedule and manage quarterly emission tests</p>
             </div>
             <Button onClick={() => setOpenAddDialog(true)}>
-              <Calendar className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Test Schedule
             </Button>
           </div>
@@ -162,39 +228,141 @@ export default function QuarterlyTestingPage() {
           <div className="mb-6">
             <YearSelector
               selectedYear={selectedYear}
-              selectedQuarter={selectedQuarter}
               availableYears={availableYears}
               onYearChange={handleYearChange}
-              onQuarterChange={handleQuarterChange}
-              showQuarters={true}
+              showQuarters={false}
             />
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-6">
-              <TabsTrigger value="schedule">Test Schedule</TabsTrigger>
-              <TabsTrigger value="tests">Vehicle Tests</TabsTrigger>
+              <TabsTrigger value="schedule">Test Schedules</TabsTrigger>
+              <TabsTrigger value="tests" disabled={!selectedSchedule}>Vehicle Tests</TabsTrigger>
             </TabsList>
             
             <TabsContent value="schedule">
-              <EmissionTestSchedule 
-                selectedYear={selectedYear}
-                selectedQuarter={selectedQuarter === "All" ? undefined : selectedQuarter}
-              />
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>
+                    {selectedYear} Test Schedules
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : schedules.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No test schedules found for {selectedYear}.
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Quarter</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Assigned Personnel</TableHead>
+                            <TableHead>Conducted On</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {schedules.map((schedule) => (
+                            <TableRow key={schedule.id}>
+                              <TableCell>Q{schedule.quarter}</TableCell>
+                              <TableCell>{schedule.location}</TableCell>
+                              <TableCell>{schedule.assigned_personnel}</TableCell>
+                              <TableCell>
+                                {format(new Date(schedule.conducted_on), 'MMMM d, yyyy')}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleViewTests(schedule)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View Tests
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleEditSchedule(schedule)}
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
             
             <TabsContent value="tests">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle>Vehicle Test Records</CardTitle>
+                  <CardTitle>
+                    {selectedSchedule ? 
+                      `Q${selectedSchedule.quarter} ${selectedSchedule.year} - Vehicle Tests at ${selectedSchedule.location}` : 
+                      'Vehicle Tests'}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Vehicle tests content will be implemented later */}
-                  <div className="py-8 text-center">
-                    <p className="text-muted-foreground">
-                      Select a test schedule to view and add vehicle tests.
-                    </p>
-                  </div>
+                  {isLoadingTests ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                    </div>
+                  ) : vehicleTests.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No vehicle tests found for this schedule.
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Plate Number</TableHead>
+                            <TableHead>Vehicle Type</TableHead>
+                            <TableHead>Engine Type</TableHead>
+                            <TableHead>Test Date</TableHead>
+                            <TableHead>Result</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {vehicleTests.map((test) => (
+                            <TableRow key={test.id}>
+                              <TableCell>{test.plate_number}</TableCell>
+                              <TableCell>{test.vehicle_type}</TableCell>
+                              <TableCell>{test.engine_type}</TableCell>
+                              <TableCell>
+                                {format(new Date(test.test_date), 'MMMM d, yyyy')}
+                              </TableCell>
+                              <TableCell>
+                                {test.result ? (
+                                  <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Passed
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    Failed
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -269,7 +437,7 @@ export default function QuarterlyTestingPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
+                  <CalendarUI
                     mode="single"
                     selected={newSchedule.conducted_on}
                     onSelect={(date) => date && setNewSchedule({ ...newSchedule, conducted_on: date })}
@@ -284,7 +452,7 @@ export default function QuarterlyTestingPage() {
             <Button variant="outline" onClick={() => setOpenAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddSchedule}>Add Schedule</Button>
+            <Button onClick={handleAddSchedule}>Save Schedule</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

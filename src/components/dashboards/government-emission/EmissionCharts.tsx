@@ -46,12 +46,12 @@ export function EmissionCharts({
           },
           {
             name: "Wheel Count",
-            "2-wheels": vehicleTypeData.find(item => item.name === "2")?.value || 0,
-            "4-wheels": vehicleTypeData.find(item => item.name === "4")?.value || 0
+            "two_wheels": vehicleTypeData.find(item => item.name === "2")?.value || 0,
+            "four_wheels": vehicleTypeData.find(item => item.name === "4")?.value || 0
           }
         ]}
         type="bar"
-        dataKeys={["gas", "diesel", "2-wheels", "4-wheels"]}
+        dataKeys={["gas", "diesel", "two_wheels", "four_wheels"]}
         colors={["#60a5fa", "#a855f7", "#fbbf24", "#f97316"]}
       />
     </section>
