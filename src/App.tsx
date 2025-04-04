@@ -12,6 +12,8 @@ import TreeManagementOverview from "./pages/dashboards/tree-management/Overview"
 import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
 import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
 import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
+import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
+import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
 import UserManagement from "./pages/admin/UserManagement";
 import NotFound from "./pages/NotFound";
 
@@ -105,6 +107,16 @@ const App = () => (
           <Route path="/government-emission/records" element={
             <ProtectedRoute>
               <GovernmentEmissionRecords />
+            </ProtectedRoute>
+          } />
+          <Route path="/government-emission/vehicles" element={
+            <ProtectedRoute>
+              <VehiclesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/government-emission/quarterly-testing" element={
+            <ProtectedRoute>
+              <QuarterlyTestingPage />
             </ProtectedRoute>
           } />
           <Route path="/government-emission/reports" element={

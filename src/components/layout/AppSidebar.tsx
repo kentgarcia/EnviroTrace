@@ -13,7 +13,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { BarChart2, ClipboardList, FileStack, Leaf, LogOut, Settings, User } from "lucide-react";
+import { BarChart2, Car, ClipboardList, FileStack, Leaf, LogOut, Settings, User, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -43,6 +43,41 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
 
   const getMenuItems = () => {
     const basePath = `/${dashboardType}`;
+    
+    if (dashboardType === "government-emission") {
+      return [
+        {
+          title: "Dashboard",
+          icon: BarChart2,
+          path: `${basePath}/overview`,
+        },
+        {
+          title: "Records",
+          icon: ClipboardList,
+          path: `${basePath}/records`,
+        },
+        {
+          title: "Vehicles",
+          icon: Car,
+          path: `${basePath}/vehicles`,
+        },
+        {
+          title: "Quarterly Testing",
+          icon: Calendar,
+          path: `${basePath}/quarterly-testing`,
+        },
+        {
+          title: "Reports",
+          icon: FileStack,
+          path: `${basePath}/reports`,
+        },
+        {
+          title: "Settings",
+          icon: Settings,
+          path: `${basePath}/settings`,
+        }
+      ];
+    }
     
     const commonItems = [
       {
@@ -102,7 +137,7 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild active={location.pathname === item.path}>
+                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
                     <Link to={item.path}>
                       <item.icon />
                       <span>{item.title}</span>

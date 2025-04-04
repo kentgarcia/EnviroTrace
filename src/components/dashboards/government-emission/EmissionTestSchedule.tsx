@@ -1,15 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -18,333 +9,291 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
+import { Calendar, Edit2, FileDown, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-interface EmissionScheduleProps {
-  year: number;
-  quarter: number;
-  onScheduleChange: () => void;
+interface EmissionTestScheduleProps {
+  selectedYear: number;
+  selectedQuarter?: number;
 }
 
-const formSchema = z.object({
-  assignedPersonnel: z.string().min(3, "Personnel name is required"),
-  location: z.string().min(3, "Location is required"),
-  conductedOn: z.date({ required_error: "Please select a date" }),
-});
+interface TestSchedule {
+  id: string;
+  year: number;
+  quarter: number;
+  assigned_personnel: string;
+  location: string;
+  conducted_on: string;
+}
 
-type FormValues = z.infer<typeof formSchema>;
-
-export function EmissionTestSchedule({ year, quarter, onScheduleChange }: EmissionScheduleProps) {
+export function EmissionTestSchedule({ 
+  selectedYear,
+  selectedQuarter 
+}: EmissionTestScheduleProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [schedule, setSchedule] = useState<any>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      assignedPersonnel: "",
-      location: "",
-    },
+  const [schedules, setSchedules] = useState<TestSchedule[]>([]);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [currentSchedule, setCurrentSchedule] = useState<TestSchedule | null>(null);
+  const [formValues, setFormValues] = useState({
+    assigned_personnel: "",
+    location: "",
+    conducted_on: new Date(),
   });
 
-  // Fetch schedule for this year and quarter
   useEffect(() => {
-    const fetchSchedule = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("emission_test_schedules")
-          .select("*")
-          .eq("year", year)
-          .eq("quarter", quarter)
-          .single();
+    fetchSchedules();
 
-        if (error && error.code !== "PGRST116") {
-          throw error;
-        }
-
-        setSchedule(data || null);
-        
-        if (data) {
-          form.reset({
-            assignedPersonnel: data.assigned_personnel,
-            location: data.location,
-            conductedOn: new Date(data.conducted_on),
-          });
-        } else {
-          form.reset({
-            assignedPersonnel: "",
-            location: "",
-            conductedOn: undefined,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching schedule:", error);
-        toast.error("Failed to load schedule information");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSchedule();
-
-    // Set up real-time subscription for schedule changes
+    // Set up real-time listener
     const channel = supabase
-      .channel('emission-schedule-changes')
+      .channel('emission_schedules')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
-        table: 'emission_test_schedules',
-        filter: `year=eq.${year},quarter=eq.${quarter}`
-      }, payload => {
-        if (payload.new) {
-          const newSchedule = payload.new as { id: number; assigned_personnel: string; location: string; conducted_on: string };
-          setSchedule(newSchedule);
-          form.reset({
-            assignedPersonnel: newSchedule.assigned_personnel,
-            location: newSchedule.location,
-            conductedOn: new Date(newSchedule.conducted_on),
-          });
-        } else if (payload.eventType === 'DELETE') {
-          setSchedule(null);
-          form.reset({
-            assignedPersonnel: "",
-            location: "",
-            conductedOn: undefined,
-          });
-        }
+        table: 'emission_test_schedules' 
+      }, () => {
+        fetchSchedules();
       })
       .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [year, quarter, form]);
 
-  const onSubmit = async (values: FormValues) => {
-    setIsSaving(true);
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [selectedYear, selectedQuarter]);
+
+  const fetchSchedules = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from('emission_test_schedules')
+        .select('*')
+        .eq('year', selectedYear);
+        
+      if (selectedQuarter) {
+        query = query.eq('quarter', selectedQuarter);
+      }
+        
+      query = query.order('quarter', { ascending: true });
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setSchedules(data as TestSchedule[]);
+    } catch (error) {
+      console.error("Error fetching test schedules:", error);
+      toast.error("Failed to load quarterly test schedules");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (schedule: TestSchedule) => {
+    setCurrentSchedule(schedule);
+    setFormValues({
+      assigned_personnel: schedule.assigned_personnel,
+      location: schedule.location,
+      conducted_on: new Date(schedule.conducted_on),
+    });
+    setOpenEditDialog(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this schedule?")) return;
     
     try {
-      if (schedule) {
-        // Update existing schedule
-        const { error } = await supabase
-          .from("emission_test_schedules")
-          .update({
-            assigned_personnel: values.assignedPersonnel,
-            location: values.location,
-            conducted_on: values.conductedOn.toISOString().split("T")[0],
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", schedule.id);
+      const { error } = await supabase
+        .from('emission_test_schedules')
+        .delete()
+        .eq('id', id);
 
-        if (error) throw error;
-        toast.success("Schedule updated successfully");
-      } else {
-        // Create new schedule
-        const { error } = await supabase
-          .from("emission_test_schedules")
-          .insert({
-            year,
-            quarter,
-            assigned_personnel: values.assignedPersonnel,
-            location: values.location,
-            conducted_on: values.conductedOn.toISOString().split("T")[0],
-          });
-
-        if (error) throw error;
-        toast.success("Schedule created successfully");
-      }
-      
-      onScheduleChange();
-      setIsDialogOpen(false);
+      if (error) throw error;
+      toast.success("Schedule deleted successfully");
+      fetchSchedules();
     } catch (error) {
-      console.error("Error saving schedule:", error);
-      toast.error("Failed to save schedule");
-    } finally {
-      setIsSaving(false);
+      console.error("Error deleting schedule:", error);
+      toast.error("Failed to delete schedule");
     }
+  };
+
+  const handleUpdate = async () => {
+    if (!currentSchedule) return;
+    
+    try {
+      const { error } = await supabase
+        .from('emission_test_schedules')
+        .update({
+          assigned_personnel: formValues.assigned_personnel,
+          location: formValues.location,
+          conducted_on: format(formValues.conducted_on, 'yyyy-MM-dd'),
+        })
+        .eq('id', currentSchedule.id);
+
+      if (error) throw error;
+      toast.success("Schedule updated successfully");
+      setOpenEditDialog(false);
+      fetchSchedules();
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      toast.error("Failed to update schedule");
+    }
+  };
+
+  const handleExportToCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    // Add CSV Headers
+    csvContent += "Year,Quarter,Assigned Personnel,Location,Conducted On\n";
+    
+    // Add data rows
+    schedules.forEach(schedule => {
+      const testDate = format(new Date(schedule.conducted_on), 'yyyy-MM-dd');
+      csvContent += `${schedule.year},${schedule.quarter},"${schedule.assigned_personnel}","${schedule.location}","${testDate}"\n`;
+    });
+
+    // Create download link
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `quarterly_test_schedules_${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Schedule data exported successfully");
   };
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Quarter {quarter} Testing Schedule</CardTitle>
-            <CardDescription>Manage emission testing schedule for {year} Q{quarter}</CardDescription>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                {schedule ? "Edit Schedule" : "Create Schedule"}
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>
-                  {schedule ? "Edit" : "Create"} Emission Test Schedule
-                </DialogTitle>
-                <DialogDescription>
-                  Set up the testing schedule for {year} Q{quarter}
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <FormField
-                    control={form.control}
-                    name="assignedPersonnel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assigned Personnel</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter personnel name" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Enter test location" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="conductedOn"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Test Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={`w-full pl-3 text-left font-normal ${
-                                  !field.value && "text-muted-foreground"
-                                }`}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) =>
-                                date < new Date("1900-01-01")
-                              }
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setIsDialogOpen(false)}
-                      disabled={isSaving}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSaving}>
-                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <CardTitle>Quarterly Test Schedules</CardTitle>
+        {schedules.length > 0 && (
+          <Button variant="outline" size="sm" onClick={handleExportToCSV}>
+            <FileDown className="h-4 w-4 mr-1" />
+            Export CSV
+          </Button>
+        )}
       </CardHeader>
-      
       <CardContent>
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <div className="flex justify-center py-8">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
           </div>
-        ) : schedule ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Year/Quarter</TableHead>
-                <TableHead>Personnel</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                <TableCell>{year} Q{quarter}</TableCell>
-                <TableCell>{schedule.assigned_personnel}</TableCell>
-                <TableCell>{schedule.location}</TableCell>
-                <TableCell>
-                  {new Date(schedule.conducted_on).toLocaleDateString()}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+        ) : schedules.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No test schedules found for {selectedQuarter ? `Q${selectedQuarter} ` : ''}the year {selectedYear}.</p>
+          </div>
         ) : (
-          <div className="py-8 text-center text-muted-foreground">
-            <p>No schedule has been set for this quarter.</p>
-            <Button
-              variant="outline"
-              className="mt-2"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              Create Schedule
-            </Button>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Quarter</TableHead>
+                  <TableHead>Assigned Personnel</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Conducted On</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {schedules.map((schedule) => (
+                  <TableRow key={schedule.id}>
+                    <TableCell>{schedule.year}</TableCell>
+                    <TableCell>Q{schedule.quarter}</TableCell>
+                    <TableCell>{schedule.assigned_personnel}</TableCell>
+                    <TableCell>{schedule.location}</TableCell>
+                    <TableCell>{format(new Date(schedule.conducted_on), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(schedule)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(schedule.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
+
+      {/* Edit Schedule Dialog */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Test Schedule</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label htmlFor="personnel">Assigned Personnel</Label>
+              <Input
+                id="personnel"
+                value={formValues.assigned_personnel}
+                onChange={(e) => setFormValues({ ...formValues, assigned_personnel: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="location">Test Location</Label>
+              <Input
+                id="location"
+                value={formValues.location}
+                onChange={(e) => setFormValues({ ...formValues, location: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <Label>Conducted On</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal"
+                    )}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {format(formValues.conducted_on, "PPP")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={formValues.conducted_on}
+                    onSelect={(date) => date && setFormValues({ ...formValues, conducted_on: date })}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
