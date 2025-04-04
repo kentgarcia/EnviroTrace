@@ -33,7 +33,7 @@ export default function GovernmentEmissionOverview() {
   const {
     loading: isLoading,
     quarterStats,
-    complianceByOffice: complianceData,
+    complianceByOffice,
     recentTests,
     totalVehicles,
     totalPassed,
@@ -41,7 +41,7 @@ export default function GovernmentEmissionOverview() {
     complianceRate,
     engineTypeData,
     vehicleTypeData,
-    pastYearData,
+    data,
     error,
     refetch: fetchData
   } = useEmissionDashboard(selectedYear, selectedQuarter === "All" ? undefined : selectedQuarter);
@@ -85,6 +85,11 @@ export default function GovernmentEmissionOverview() {
       </div>
     );
   }
+
+  // Calculate the number of office departments
+  const officeDepartments = complianceByOffice ? complianceByOffice.length : 0;
+  // Calculate total tested vehicles
+  const testedVehicles = totalPassed + totalFailed;
 
   return (
     <SidebarProvider>
@@ -130,9 +135,9 @@ export default function GovernmentEmissionOverview() {
               <>
                 <EmissionStatCards
                   totalVehicles={totalVehicles}
-                  testedVehicles={totalPassed + totalFailed}
+                  testedVehicles={testedVehicles}
                   passRate={complianceRate}
-                  officeDepartments={complianceData.length}
+                  officeDepartments={officeDepartments}
                 />
 
                 <EmissionCharts
@@ -144,18 +149,18 @@ export default function GovernmentEmissionOverview() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   <RecentTestsTable recentTests={recentTests} />
-                  <OfficeComplianceTable officeData={complianceData} />
+                  <OfficeComplianceTable complianceData={complianceByOffice} />
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 mb-6">
-                  <EmissionHistoryTrend historyData={pastYearData} />
+                  <EmissionHistoryTrend historyData={data?.yearlyTrends || []} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   <EmissionTestSchedule
                     selectedYear={selectedYear}
                   />
-                  <ExportToSheet handleExport={handleExportData} />
+                  <ExportToSheet onExport={handleExportData} />
                 </div>
               </>
             )}

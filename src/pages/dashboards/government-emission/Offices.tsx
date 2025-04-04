@@ -91,7 +91,7 @@ export default function OfficesPage() {
         .from('vehicles')
         .select('office_name')
         .order('office_name')
-        .is('office_name', 'not.null');
+        .not('office_name', 'is', null); // Fixed this line
 
       if (officesError) throw officesError;
 

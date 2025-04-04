@@ -1,4 +1,3 @@
-
 import {
   Sidebar,
   SidebarContent,
@@ -12,7 +11,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
-import { BarChart2, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
+import { BarChart2, Building, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 
@@ -48,6 +47,11 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           title: "Quarterly Testing",
           icon: Calendar,
           path: `${basePath}/quarterly-testing`,
+        },
+        {
+          title: "Offices",
+          icon: Building,
+          path: `${basePath}/offices`,
         },
         {
           title: "Reports",

@@ -4,16 +4,16 @@ import { Building, Factory, Loader2, Truck } from "lucide-react";
 
 interface EmissionStatCardsProps {
   totalVehicles: number;
-  totalPassed: number;
-  totalFailed: number;
-  complianceRate: number;
+  testedVehicles: number;
+  passRate: number;
+  officeDepartments: number;
 }
 
 export function EmissionStatCards({ 
   totalVehicles, 
-  totalPassed, 
-  totalFailed, 
-  complianceRate 
+  testedVehicles, 
+  passRate, 
+  officeDepartments 
 }: EmissionStatCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -26,28 +26,28 @@ export function EmissionStatCards({
         trendValue={`${totalVehicles} total vehicles`}
       />
       <StatCard
-        title="Passed Tests"
-        value={totalPassed.toString()}
+        title="Tested Vehicles"
+        value={testedVehicles.toString()}
         description="All quarters combined"
         icon={Building}
         trend="up"
-        trendValue={`${totalPassed} passed tests`}
-      />
-      <StatCard
-        title="Failed Tests"
-        value={totalFailed.toString()}
-        description="Requiring follow-up"
-        icon={Factory}
-        trend={totalFailed > 0 ? "down" : "up"}
-        trendValue={`${totalFailed} failed tests`}
+        trendValue={`${testedVehicles} tested tests`}
       />
       <StatCard
         title="Compliance Rate"
-        value={`${complianceRate}%`}
+        value={`${passRate}%`}
         description="Pass rate across all tests"
         icon={Loader2}
-        trend={complianceRate >= 90 ? "up" : "down"}
-        trendValue={`${complianceRate}% compliance rate`}
+        trend={passRate >= 90 ? "up" : "down"}
+        trendValue={`${passRate}% compliance rate`}
+      />
+      <StatCard
+        title="Office Departments"
+        value={officeDepartments.toString()}
+        description="Managing vehicles"
+        icon={Factory}
+        trend="up"
+        trendValue={`${officeDepartments} departments`}
       />
     </div>
   );
