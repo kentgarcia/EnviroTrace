@@ -14,6 +14,7 @@ import GovEmissionOverview from "./pages/dashboards/government-emission/Overview
 import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
 import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
 import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
+import OfficesPage from "./pages/dashboards/government-emission/Offices";
 import UserManagement from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
@@ -124,6 +125,11 @@ const App = () => (
           <Route path="/government-emission/quarterly-testing" element={
             <ProtectedRoute>
               <QuarterlyTestingPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/government-emission/offices" element={
+            <ProtectedRoute>
+              <OfficesPage />
             </ProtectedRoute>
           } />
           <Route path="/government-emission/reports" element={

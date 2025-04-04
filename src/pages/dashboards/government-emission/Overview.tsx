@@ -29,21 +29,21 @@ export default function GovernmentEmissionOverview() {
     Array.from({ length: 5 }, (_, i) => currentYear - 2 + i)
   );
   
-  // Use the dashboard hook
+  // Use the dashboard hook with proper types
   const {
-    isLoading,
+    loading: isLoading,
     quarterStats,
-    complianceData,
+    complianceByOffice: complianceData,
     recentTests,
     totalVehicles,
-    testedVehicles,
-    passRate,
-    officeDepartments,
-    pastYearData,
+    totalPassed,
+    totalFailed,
+    complianceRate,
     engineTypeData,
     vehicleTypeData,
+    pastYearData,
     error,
-    fetchData
+    refetch: fetchData
   } = useEmissionDashboard(selectedYear, selectedQuarter === "All" ? undefined : selectedQuarter);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function GovernmentEmissionOverview() {
   // Fetch data when selected filters change
   useEffect(() => {
     fetchData();
-  }, [selectedYear, selectedQuarter]);
+  }, [selectedYear, selectedQuarter, fetchData]);
 
   const handleYearChange = (year: string) => {
     setSelectedYear(parseInt(year));
@@ -130,9 +130,9 @@ export default function GovernmentEmissionOverview() {
               <>
                 <EmissionStatCards
                   totalVehicles={totalVehicles}
-                  testedVehicles={testedVehicles}
-                  passRate={passRate}
-                  officeDepartments={officeDepartments}
+                  testedVehicles={totalPassed + totalFailed}
+                  passRate={complianceRate}
+                  officeDepartments={complianceData.length}
                 />
 
                 <EmissionCharts
@@ -143,19 +143,19 @@ export default function GovernmentEmissionOverview() {
                 />
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <RecentTestsTable tests={recentTests} />
-                  <OfficeComplianceTable data={complianceData} />
+                  <RecentTestsTable recentTests={recentTests} />
+                  <OfficeComplianceTable officeData={complianceData} />
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 mb-6">
-                  <EmissionHistoryTrend data={pastYearData} />
+                  <EmissionHistoryTrend historyData={pastYearData} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   <EmissionTestSchedule
                     selectedYear={selectedYear}
                   />
-                  <ExportToSheet onExport={handleExportData} />
+                  <ExportToSheet handleExport={handleExportData} />
                 </div>
               </>
             )}

@@ -35,6 +35,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 type Vehicle = {
   id: string;
@@ -63,6 +72,20 @@ export default function VehiclesPage() {
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
   const [engineTypes, setEngineTypes] = useState<string[]>([]);
   const [wheelCounts, setWheelCounts] = useState<number[]>([]);
+  
+  // Modal state
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    plate_number: "",
+    driver_name: "",
+    office_name: "",
+    vehicle_type: "",
+    engine_type: "",
+    wheels: 0,
+    contact_number: ""
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -188,14 +211,65 @@ export default function VehiclesPage() {
     toast.success("Vehicle data exported successfully");
   };
 
-  const handleViewDetails = (id: string) => {
-    toast.info(`Viewing details for vehicle: ${id}`);
-    // Implement view details functionality
+  const handleViewDetails = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setViewModalOpen(true);
   };
 
-  const handleEditVehicle = (id: string) => {
-    toast.info(`Editing vehicle: ${id}`);
-    // Implement edit vehicle functionality
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setEditFormData({
+      plate_number: vehicle.plate_number,
+      driver_name: vehicle.driver_name,
+      office_name: vehicle.office_name,
+      vehicle_type: vehicle.vehicle_type,
+      engine_type: vehicle.engine_type,
+      wheels: vehicle.wheels,
+      contact_number: vehicle.contact_number || ""
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedVehicle) return;
+    
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({
+          plate_number: editFormData.plate_number,
+          driver_name: editFormData.driver_name,
+          office_name: editFormData.office_name,
+          vehicle_type: editFormData.vehicle_type,
+          engine_type: editFormData.engine_type,
+          wheels: editFormData.wheels,
+          contact_number: editFormData.contact_number
+        })
+        .eq('id', selectedVehicle.id);
+
+      if (error) throw error;
+      
+      toast.success("Vehicle updated successfully");
+      setEditModalOpen(false);
+      
+      // Update the vehicle in the local state
+      const updatedVehicle = {
+        ...selectedVehicle,
+        plate_number: editFormData.plate_number,
+        driver_name: editFormData.driver_name,
+        office_name: editFormData.office_name,
+        vehicle_type: editFormData.vehicle_type,
+        engine_type: editFormData.engine_type,
+        wheels: editFormData.wheels,
+        contact_number: editFormData.contact_number
+      };
+      
+      setVehicles(prev => prev.map(v => v.id === selectedVehicle.id ? updatedVehicle : v));
+      
+    } catch (error) {
+      console.error("Error updating vehicle:", error);
+      toast.error("Failed to update vehicle");
+    }
   };
 
   if (loading) {
@@ -315,6 +389,7 @@ export default function VehiclesPage() {
                         <TableHead>Driver</TableHead>
                         <TableHead>Vehicle Type</TableHead>
                         <TableHead>Engine Type</TableHead>
+                        <TableHead>Wheels</TableHead>
                         <TableHead>Latest Test</TableHead>
                         <TableHead>Result</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -323,7 +398,7 @@ export default function VehiclesPage() {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             <div className="flex justify-center">
                               <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
                             </div>
@@ -331,7 +406,7 @@ export default function VehiclesPage() {
                         </TableRow>
                       ) : filteredVehicles.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={9} className="text-center py-8">
                             No vehicles found.
                           </TableCell>
                         </TableRow>
@@ -343,6 +418,7 @@ export default function VehiclesPage() {
                             <TableCell>{vehicle.driver_name}</TableCell>
                             <TableCell>{vehicle.vehicle_type}</TableCell>
                             <TableCell>{vehicle.engine_type}</TableCell>
+                            <TableCell>{vehicle.wheels}</TableCell>
                             <TableCell>
                               {vehicle.latest_test_date 
                                 ? format(new Date(vehicle.latest_test_date), 'MMM dd, yyyy') 
@@ -371,10 +447,10 @@ export default function VehiclesPage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewDetails(vehicle.id)}>
+                                  <DropdownMenuItem onClick={() => handleViewDetails(vehicle)}>
                                     <Eye className="mr-2 h-4 w-4" /> View Details
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditVehicle(vehicle.id)}>
+                                  <DropdownMenuItem onClick={() => handleEditVehicle(vehicle)}>
                                     <Edit className="mr-2 h-4 w-4" /> Edit Vehicle
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -388,6 +464,171 @@ export default function VehiclesPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* View Vehicle Modal */}
+            <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Vehicle Details</DialogTitle>
+                  <DialogDescription>
+                    Complete information about this vehicle
+                  </DialogDescription>
+                </DialogHeader>
+                {selectedVehicle && (
+                  <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Plate Number</Label>
+                      <p className="font-medium">{selectedVehicle.plate_number}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Office</Label>
+                      <p className="font-medium">{selectedVehicle.office_name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Driver</Label>
+                      <p className="font-medium">{selectedVehicle.driver_name}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Contact Number</Label>
+                      <p className="font-medium">{selectedVehicle.contact_number || "N/A"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Vehicle Type</Label>
+                      <p className="font-medium">{selectedVehicle.vehicle_type}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Engine Type</Label>
+                      <p className="font-medium">{selectedVehicle.engine_type}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Wheel Count</Label>
+                      <p className="font-medium">{selectedVehicle.wheels}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground">Latest Test Date</Label>
+                      <p className="font-medium">
+                        {selectedVehicle.latest_test_date 
+                          ? format(new Date(selectedVehicle.latest_test_date), 'MMM dd, yyyy') 
+                          : "Not tested"}
+                      </p>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-muted-foreground">Test Result</Label>
+                      <p>
+                        {selectedVehicle.latest_test_result === null ? (
+                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Not tested
+                          </span>
+                        ) : selectedVehicle.latest_test_result ? (
+                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Passed
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Failed
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setViewModalOpen(false)}>Close</Button>
+                  <Button onClick={() => {
+                    setViewModalOpen(false);
+                    if (selectedVehicle) handleEditVehicle(selectedVehicle);
+                  }}>Edit</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            {/* Edit Vehicle Modal */}
+            <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Edit Vehicle</DialogTitle>
+                  <DialogDescription>
+                    Make changes to this vehicle's information
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="plate_number">Plate Number</Label>
+                    <Input 
+                      id="plate_number"
+                      value={editFormData.plate_number}
+                      onChange={(e) => setEditFormData({...editFormData, plate_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="office_name">Office</Label>
+                    <Input 
+                      id="office_name"
+                      value={editFormData.office_name}
+                      onChange={(e) => setEditFormData({...editFormData, office_name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="driver_name">Driver</Label>
+                    <Input 
+                      id="driver_name"
+                      value={editFormData.driver_name}
+                      onChange={(e) => setEditFormData({...editFormData, driver_name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contact_number">Contact Number</Label>
+                    <Input 
+                      id="contact_number"
+                      value={editFormData.contact_number}
+                      onChange={(e) => setEditFormData({...editFormData, contact_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle_type">Vehicle Type</Label>
+                    <Input 
+                      id="vehicle_type"
+                      value={editFormData.vehicle_type}
+                      onChange={(e) => setEditFormData({...editFormData, vehicle_type: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="engine_type">Engine Type</Label>
+                    <Select 
+                      value={editFormData.engine_type}
+                      onValueChange={(value) => setEditFormData({...editFormData, engine_type: value})}
+                    >
+                      <SelectTrigger id="engine_type">
+                        <SelectValue placeholder="Select engine type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Gas">Gas</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="wheels">Wheels</Label>
+                    <Select 
+                      value={editFormData.wheels.toString()}
+                      onValueChange={(value) => setEditFormData({...editFormData, wheels: parseInt(value)})}
+                    >
+                      <SelectTrigger id="wheels">
+                        <SelectValue placeholder="Select wheel count" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSaveEdit}>Save Changes</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
