@@ -5,59 +5,59 @@ import { RecordTable } from "@/components/dashboard/RecordTable";
 
 const airQualityRecords = [
   {
-    id: "AQR001",
-    name: "Downtown Air Quality Report",
-    date: "2025-04-01",
+    id: "AQ001",
+    name: "Downtown Air Quality Monitor",
+    date: "2025-04-02",
     location: "Downtown",
-    status: "active",
-    level: "Moderate",
+    status: "active" as const,
+    level: "Good (45 AQI)",
     updated: "2 hours ago"
   },
   {
-    id: "AQR002",
-    name: "Industrial Zone Monitoring",
-    date: "2025-03-30",
-    location: "Industrial Park",
-    status: "active",
-    level: "Unhealthy",
+    id: "AQ002",
+    name: "Industrial Zone Monitor",
+    date: "2025-04-02",
+    location: "Industrial Zone",
+    status: "active" as const,
+    level: "Moderate (82 AQI)",
+    updated: "3 hours ago"
+  },
+  {
+    id: "AQ003",
+    name: "Residential Area Monitor",
+    date: "2025-04-01",
+    location: "North Residential",
+    status: "active" as const,
+    level: "Good (38 AQI)",
     updated: "1 day ago"
   },
   {
-    id: "AQR003",
-    name: "Suburban Area Assessment",
-    date: "2025-03-28",
-    location: "North Suburbs",
-    status: "completed",
-    level: "Good",
+    id: "AQ004",
+    name: "School Zone Monitor",
+    date: "2025-03-30",
+    location: "Education District",
+    status: "completed" as const,
+    level: "Good (32 AQI)",
     updated: "3 days ago"
   },
   {
-    id: "AQR004",
-    name: "School Zone Air Quality",
+    id: "AQ005",
+    name: "Park Area Monitor",
     date: "2025-03-25",
-    location: "School District",
-    status: "pending",
-    level: "Moderate",
+    location: "Central Park",
+    status: "pending" as const,
+    level: "Maintenance Required",
     updated: "1 week ago"
-  },
-  {
-    id: "AQR005",
-    name: "Hospital Area Analysis",
-    date: "2025-03-20",
-    location: "Medical Center",
-    status: "completed",
-    level: "Good",
-    updated: "2 weeks ago"
   },
 ];
 
 const airQualityColumns = [
   { key: "id", title: "ID" },
-  { key: "name", title: "Name" },
-  { key: "date", title: "Date" },
+  { key: "name", title: "Monitor Name" },
+  { key: "date", title: "Reading Date" },
   { key: "location", title: "Location" },
   { key: "status", title: "Status" },
-  { key: "level", title: "AQ Level" },
+  { key: "level", title: "Air Quality Level" },
   { key: "updated", title: "Last Updated" }
 ];
 
@@ -70,12 +70,12 @@ export default function AirQualityRecords() {
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Air Quality Records</h1>
-              <p className="text-muted-foreground">Manage and view air quality data records</p>
+              <p className="text-muted-foreground">View and manage air quality monitoring records</p>
             </header>
 
             <section className="mb-8">
               <RecordTable 
-                title="Air Quality Reports" 
+                title="Air Quality Monitors" 
                 records={airQualityRecords} 
                 columns={airQualityColumns} 
               />

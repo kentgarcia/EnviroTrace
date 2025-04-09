@@ -4,37 +4,87 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { DataChart } from "@/components/dashboard/DataChart";
-import { ArrowRight, Leaf, MapPin, Ruler, TreePine } from "lucide-react";
+import { 
+  ArrowRight, 
+  Leaf, 
+  MapPin, 
+  Ruler, 
+  TreePine, 
+  FileText, 
+  Banknote,
+  CalendarDays
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const plantingData = [
-  { name: "Jan", planted: 530, survived: 480 },
-  { name: "Feb", planted: 620, survived: 550 },
-  { name: "Mar", planted: 750, survived: 680 },
-  { name: "Apr", planted: 820, survived: 760 },
-  { name: "May", planted: 950, survived: 880 },
-  { name: "Jun", planted: 850, survived: 800 },
-  { name: "Jul", planted: 750, survived: 710 },
-  { name: "Aug", planted: 680, survived: 640 },
-  { name: "Sep", planted: 720, survived: 680 },
-  { name: "Oct", planted: 800, survived: 740 },
-  { name: "Nov", planted: 680, survived: 620 },
-  { name: "Dec", planted: 550, survived: 490 }
+// Request type data for pie chart
+const requestTypeData = [
+  { name: "Tree Cutting", value: 46, percentage: "48.4%" },
+  { name: "Pruning", value: 47, percentage: "49.5%" },
+  { name: "Violations/Complaints", value: 2, percentage: "2.1%" }
 ];
 
-const speciesData = [
-  { name: "Oak", count: 3200 },
-  { name: "Pine", count: 4500 },
-  { name: "Maple", count: 2800 },
-  { name: "Birch", count: 1900 },
-  { name: "Willow", count: 1200 }
+// Request status data for pie chart
+const requestStatusData = [
+  { name: "Filed", value: 25, percentage: "75.8%" },
+  { name: "On Hold", value: 1, percentage: "3.0%" },
+  { name: "For Signature", value: 1, percentage: "3.0%" },
+  { name: "Payment and Pick-Up", value: 6, percentage: "18.2%" }
 ];
 
-const regionData = [
-  { name: "North", trees: 12500, area: 450 },
-  { name: "South", trees: 9800, area: 380 },
-  { name: "East", trees: 7600, area: 320 },
-  { name: "West", trees: 10200, area: 420 },
-  { name: "Central", trees: 15300, area: 520 }
+// Tree species data for bar chart
+const treeSpeciesData = [
+  { name: "Indian Tree", count: 30 },
+  { name: "Cotton Tree", count: 25 },
+  { name: "Mango Tree", count: 24 },
+  { name: "Narra Tree", count: 17 },
+  { name: "Mahogany", count: 15 },
+  { name: "Fire Tree", count: 10 },
+  { name: "Santol Tree", count: 8 },
+  { name: "Acacia Tree", count: 7 },
+  { name: "Other Trees", count: 15 }
+];
+
+// Flora data for urban greening
+const floraData = [
+  { name: "Bougainvillea", count: 115 },
+  { name: "Eugenia", count: 113 },
+  { name: "Kalachuchi", count: 50 },
+  { name: "Indian Tree", count: 45 },
+  { name: "Palm Tree", count: 13 },
+  { name: "Caballero", count: 14 },
+  { name: "Coconut Tree", count: 10 }
+];
+
+// Monthly fees collected data
+const monthlyFeesData = [
+  { name: "Jan", fees: 120000 },
+  { name: "Feb", fees: 416000 },
+  { name: "Mar", fees: 10000 },
+  { name: "Apr", fees: 45000 },
+  { name: "May", fees: 38000 },
+  { name: "Jun", fees: 0 },
+  { name: "Jul", fees: 0 },
+  { name: "Aug", fees: 0 },
+  { name: "Sep", fees: 0 },
+  { name: "Oct", fees: 0 },
+  { name: "Nov", fees: 0 },
+  { name: "Dec", fees: 0 }
+];
+
+// Late payment data
+const latePaymentData = [
+  { name: "Jan", fees: 11500 },
+  { name: "Feb", fees: 1000 },
+  { name: "Mar", fees: 0 },
+  { name: "Apr", fees: 0 },
+  { name: "May", fees: 0 },
+  { name: "Jun", fees: 0 },
+  { name: "Jul", fees: 0 },
+  { name: "Aug", fees: 0 },
+  { name: "Sep", fees: 0 },
+  { name: "Oct", fees: 0 },
+  { name: "Nov", fees: 0 },
+  { name: "Dec", fees: 0 }
 ];
 
 export default function TreeManagementOverview() {
@@ -71,15 +121,23 @@ export default function TreeManagementOverview() {
             </header>
 
             <section>
-              <h2 className="text-xl font-semibold mb-4">Forestry Overview</h2>
+              <h2 className="text-xl font-semibold mb-4">Summary Statistics</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <StatCard
-                  title="Total Trees"
-                  value="65,438"
-                  description="Across all regions"
-                  icon={TreePine}
+                  title="Number of Inspection Reports"
+                  value="47"
+                  description="Total for 2025"
+                  icon={FileText}
                   trend="up"
-                  trendValue="+1,205 this year"
+                  trendValue="+5 from last month"
+                />
+                <StatCard
+                  title="Fees Collected"
+                  value="₱629,500"
+                  description="Total for 2025"
+                  icon={Banknote}
+                  trend="up"
+                  trendValue="+₱120,000 this month"
                 />
                 <StatCard
                   title="Tree Species"
@@ -88,14 +146,6 @@ export default function TreeManagementOverview() {
                   icon={Leaf}
                   trend="up"
                   trendValue="+3 new species"
-                />
-                <StatCard
-                  title="Covered Area"
-                  value="2,450 ha"
-                  description="Forest coverage"
-                  icon={Ruler}
-                  trend="up"
-                  trendValue="+120 ha from last year"
                 />
                 <StatCard
                   title="Managed Zones"
@@ -110,39 +160,138 @@ export default function TreeManagementOverview() {
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               <DataChart
-                title="Tree Planting Performance (2025)"
-                description="Monthly planting and survival rates"
-                data={plantingData}
-                type="line"
-                dataKeys={["planted", "survived"]}
-                colors={["#2EA04F", "#1F7A3C"]}
+                title="Tree Cutting/Pruning/Ball-out Requests 2025"
+                description="Distribution of request types"
+                data={requestTypeData}
+                type="pie"
+                dataKeys={["value"]}
+                colors={["#4589FF", "#FF5C5C", "#FFBB33"]}
               />
               <DataChart
-                title="Tree Species Distribution"
-                description="Count of major tree species"
-                data={speciesData}
-                type="bar"
-                dataKeys={["count"]}
-                colors={["#4DBC6B"]}
+                title="Status of Tree Cutting/Pruning/Ball-out Clearance 2025"
+                description="Current status of requests"
+                data={requestStatusData}
+                type="pie"
+                dataKeys={["value"]}
+                colors={["#4589FF", "#FF5C5C", "#FFBB33", "#44BC66"]}
               />
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly 2025 Collected Fees</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <DataChart
+                      title=""
+                      data={monthlyFeesData}
+                      type="bar"
+                      dataKeys={["fees"]}
+                      colors={["#44BC66"]}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Late Payment of Clearance (2024)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <DataChart
+                      title=""
+                      data={latePaymentData}
+                      type="bar"
+                      dataKeys={["fees"]}
+                      colors={["#FF5C5C"]}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Trees to be Cut Down/Prune</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <DataChart
+                      title=""
+                      data={treeSpeciesData}
+                      type="bar"
+                      dataKeys={["count"]}
+                      colors={["#4589FF"]}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Flora Data (Urban Greening)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <DataChart
+                      title=""
+                      data={floraData}
+                      type="bar"
+                      dataKeys={["count"]}
+                      colors={["#44BC66"]}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </section>
 
             <section className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Regional Distribution</h2>
+                <h2 className="text-xl font-semibold">Recent Activities</h2>
                 <button className="text-ems-green-600 text-sm font-medium flex items-center hover:text-ems-green-800">
-                  View detailed map <ArrowRight className="ml-1 h-4 w-4" />
+                  View all activities <ArrowRight className="ml-1 h-4 w-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DataChart
-                  title="Trees by Region"
-                  description="Tree count and area covered by region"
-                  data={regionData}
-                  type="bar"
-                  dataKeys={["trees", "area"]}
-                  colors={["#2EA04F", "#8BBFE0"]}
-                />
+              <div className="grid grid-cols-1 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Recent Tree Management Activities</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-4">
+                      <li className="flex items-start gap-3">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium">Tree Cutting Request #TM-2025-042</p>
+                          <p className="text-sm text-muted-foreground">Approved on April 8, 2025</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium">Pruning Request #TM-2025-041</p>
+                          <p className="text-sm text-muted-foreground">Filed on April 5, 2025</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium">Tree Inspection #TM-2025-040</p>
+                          <p className="text-sm text-muted-foreground">Completed on April 3, 2025</p>
+                        </div>
+                      </li>
+                      <li className="flex items-start gap-3">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="font-medium">Tree Cutting Request #TM-2025-039</p>
+                          <p className="text-sm text-muted-foreground">Approved on April 1, 2025</p>
+                        </div>
+                      </li>
+                    </ul>
+                  </CardContent>
+                </Card>
               </div>
             </section>
           </div>

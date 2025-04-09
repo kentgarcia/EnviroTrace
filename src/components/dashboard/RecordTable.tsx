@@ -16,7 +16,7 @@ interface Record {
   id: string;
   name: string;
   date: string;
-  status: "active" | "pending" | "completed";
+  status: "active" | "pending" | "completed" | string;
   [key: string]: string | number;
 }
 

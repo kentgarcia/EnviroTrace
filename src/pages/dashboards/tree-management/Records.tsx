@@ -9,7 +9,7 @@ const treeRecords = [
     name: "Northern Forest Inventory",
     date: "2025-04-01",
     location: "Northern Region",
-    status: "active",
+    status: "active" as const,
     trees: "12,450",
     updated: "1 day ago"
   },
@@ -18,7 +18,7 @@ const treeRecords = [
     name: "Oak Planting Project",
     date: "2025-03-28",
     location: "Eastern Zone",
-    status: "active",
+    status: "active" as const,
     trees: "850",
     updated: "3 days ago"
   },
@@ -27,7 +27,7 @@ const treeRecords = [
     name: "Urban Tree Health Assessment",
     date: "2025-03-25",
     location: "Downtown Area",
-    status: "completed",
+    status: "completed" as const,
     trees: "320",
     updated: "1 week ago"
   },
@@ -36,7 +36,7 @@ const treeRecords = [
     name: "Park Reforestation",
     date: "2025-03-20",
     location: "Central Park",
-    status: "pending",
+    status: "pending" as const,
     trees: "500",
     updated: "10 days ago"
   },
@@ -45,7 +45,7 @@ const treeRecords = [
     name: "School Campus Greening",
     date: "2025-03-15",
     location: "University Campus",
-    status: "completed",
+    status: "completed" as const,
     trees: "125",
     updated: "2 weeks ago"
   },
