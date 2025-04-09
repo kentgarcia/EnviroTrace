@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
+import Tesseract from "tesseract.js";
 
 interface TestSchedule {
   id: string;
@@ -68,7 +69,18 @@ export default function QuarterlyTestingPage() {
   const [selectedSchedule, setSelectedSchedule] = useState<TestSchedule | null>(null);
   const [vehicleTests, setVehicleTests] = useState<VehicleTest[]>([]);
   const [isLoadingTests, setIsLoadingTests] = useState(false);
-  
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<null | { x: number; y: number; width: number; height: number }>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [newTest, setNewTest] = useState({
+    vehicle_id: "",
+    test_date: "",
+    result: true,
+  });
+  const [vehicleDetails, setVehicleDetails] = useState<null | { id: string; plate_number: string; vehicle_type: string; engine_type: string }>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+
   // Form state for new schedule
   const [newSchedule, setNewSchedule] = useState({
     year: currentYear,
@@ -199,16 +211,6 @@ export default function QuarterlyTestingPage() {
     }
   };
 
-  const [testDialogOpen, setTestDialogOpen] = useState(false);
-const [newTest, setNewTest] = useState({
-  vehicle_id: "",
-  test_date: "",
-  result: true,
-});
-
-const [vehicleDetails, setVehicleDetails] = useState<null | { id: string; plate_number: string; vehicle_type: string; engine_type: string }> (null);
-const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-
 const handleAddVehicleTest = async (vehicle_id: string) => {
   if (!selectedSchedule || !vehicle_id || !newTest.test_date) {
     toast.error("Please fill in all fields");
@@ -284,6 +286,37 @@ const confirmAddVehicleTest = async () => {
       </div>
     );
   }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const imageSrc = reader.result as string;
+        setImageSrc(imageSrc); // Optional: Store the image source if needed
+        await extractPlateNumber(imageSrc); // Directly extract the plate number
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const extractPlateNumber = async (imageSrc: string) => {
+    setIsProcessing(true);
+  
+    try {
+      // Use Tesseract.js to extract text from the image
+      const { data } = await Tesseract.recognize(imageSrc, "eng");
+      const detectedPlateNumber = data.text.trim();
+  
+      setNewTest({ ...newTest, vehicle_id: detectedPlateNumber });
+      toast.success("Plate number detected successfully!");
+    } catch (error) {
+      console.error("Error extracting plate number:", error);
+      toast.error("Failed to detect plate number. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -552,7 +585,7 @@ const confirmAddVehicleTest = async () => {
       </Dialog>
 
       {/* Add Vehicle Test Dialog */}
-<Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
   <DialogContent>
     <DialogHeader>
       <DialogTitle>Add Vehicle Test</DialogTitle>
@@ -567,6 +600,20 @@ const confirmAddVehicleTest = async () => {
           onChange={(e) => setNewTest({ ...newTest, vehicle_id: e.target.value })}
         />
       </div>
+      <div className="mt-4">
+        <Label>Upload Image</Label>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+        />
+      </div>
+      {isProcessing && (
+        <div className="mt-4 text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+          <p className="mt-2">Processing image...</p>
+        </div>
+      )}
       <div>
         <Label htmlFor="testDate">Test Date</Label>
         <Popover>
