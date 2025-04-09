@@ -37,7 +37,7 @@ export function DashboardCard({
           </div>
         ) : (
           <div className="p-3 rounded-full bg-accent mb-4">
-            <icon.type className="h-8 w-8 text-primary" />
+            {React.createElement(icon, { className: "h-8 w-8 text-primary" })}
           </div>
         )}
         <h3 className="text-lg font-semibold mb-2">{title}</h3>

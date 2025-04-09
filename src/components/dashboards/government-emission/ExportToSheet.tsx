@@ -15,6 +15,12 @@ interface ExportToSheetProps {
 }
 
 export function ExportToSheet({ onExport }: ExportToSheetProps) {
+  const handleExport = () => {
+    if (typeof onExport === 'function') {
+      onExport();
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -34,7 +40,7 @@ export function ExportToSheet({ onExport }: ExportToSheetProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={onExport} className="w-full">
+        <Button onClick={handleExport} className="w-full">
           Export to Spreadsheet
         </Button>
       </CardFooter>

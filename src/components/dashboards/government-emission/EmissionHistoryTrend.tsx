@@ -8,34 +8,38 @@ import {
 } from "@/components/ui/card";
 import { DataChart } from "@/components/dashboard/DataChart";
 
-interface QuarterStat {
-  name: string;
-  passed: number;
-  failed: number;
-  total: number;
-}
-
 interface EmissionHistoryTrendProps {
-  quarterStats: QuarterStat[];
+  historyData: Array<{
+    year: number;
+    complianceRate: number;
+    totalVehicles: number;
+  }>;
 }
 
-export function EmissionHistoryTrend({ quarterStats }: EmissionHistoryTrendProps) {
+export function EmissionHistoryTrend({ historyData }: EmissionHistoryTrendProps) {
+  // Transform data for chart display
+  const chartData = historyData.map(item => ({
+    name: item.year.toString(),
+    complianceRate: item.complianceRate,
+    vehicles: item.totalVehicles
+  }));
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle>Test History Trends</CardTitle>
         </div>
-        <CardDescription>Pass/fail trends by quarter</CardDescription>
+        <CardDescription>Compliance rate by year</CardDescription>
       </CardHeader>
       <CardContent>
         <DataChart
           title=""
           description=""
-          data={quarterStats}
+          data={chartData}
           type="line"
-          dataKeys={["passed", "failed", "total"]}
-          colors={["#4ade80", "#f87171", "#94a3b8"]}
+          dataKeys={["complianceRate", "vehicles"]}
+          colors={["#4ade80", "#94a3b8"]}
         />
       </CardContent>
     </Card>

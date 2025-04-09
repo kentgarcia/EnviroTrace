@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { YearSelector } from "@/components/dashboards/government-emission/YearSelector";
 import { EmissionStatCards } from "@/components/dashboards/government-emission/EmissionStatCards";
 import { RecentTestsTable } from "@/components/dashboards/government-emission/RecentTestsTable";
@@ -21,7 +20,7 @@ import { useEmissionDashboard } from "@/hooks/useEmissionDashboard";
 
 export default function GovernmentEmissionOverview() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedQuarter, setSelectedQuarter] = useState<number | "All">("All");
@@ -43,19 +42,21 @@ export default function GovernmentEmissionOverview() {
     vehicleTypeData,
     data,
     error,
-    refetch: fetchData
+    refetch
   } = useEmissionDashboard(selectedYear, selectedQuarter === "All" ? undefined : selectedQuarter);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate("/");
     }
-  }, [user, loading, navigate]);
+  }, [user, authLoading, navigate]);
 
   // Fetch data when selected filters change
   useEffect(() => {
-    fetchData();
-  }, [selectedYear, selectedQuarter, fetchData]);
+    if (user) {
+      refetch();
+    }
+  }, [selectedYear, selectedQuarter, refetch, user]);
 
   const handleYearChange = (year: string) => {
     setSelectedYear(parseInt(year));
@@ -65,11 +66,6 @@ export default function GovernmentEmissionOverview() {
     setSelectedQuarter(quarter === "All" ? "All" : parseInt(quarter));
   };
   
-  const handleScheduleChange = () => {
-    // Refresh data when schedules are updated
-    fetchData();
-  };
-
   const handleExportData = async () => {
     toast.success("Data export started");
     // This would be replaced with actual export logic
@@ -78,7 +74,7 @@ export default function GovernmentEmissionOverview() {
     }, 1500);
   };
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -86,10 +82,23 @@ export default function GovernmentEmissionOverview() {
     );
   }
 
-  // Calculate the number of office departments
+  // Provide default values to avoid undefined errors
   const officeDepartments = complianceByOffice ? complianceByOffice.length : 0;
+  const safeComplianceRate = complianceRate || 0;
+  const safeTotalVehicles = totalVehicles || 0;
+  const safeTotalPassed = totalPassed || 0;
+  const safeTotalFailed = totalFailed || 0;
+  
   // Calculate total tested vehicles
-  const testedVehicles = totalPassed + totalFailed;
+  const testedVehicles = safeTotalPassed + safeTotalFailed;
+  
+  // Ensure we have valid arrays for chart data
+  const safeQuarterStats = quarterStats || [];
+  const safeEngineTypeData = engineTypeData || [];
+  const safeVehicleTypeData = vehicleTypeData || [];
+  const safeComplianceByOffice = complianceByOffice || [];
+  const safeRecentTests = recentTests || [];
+  const safeYearlyTrends = data?.yearlyTrends || [];
 
   return (
     <SidebarProvider>
@@ -127,33 +136,33 @@ export default function GovernmentEmissionOverview() {
                   <div className="text-center p-6">
                     <h3 className="text-lg font-medium text-red-600 mb-2">Error Loading Data</h3>
                     <p className="text-muted-foreground mb-4">{error.message || "Failed to load dashboard data"}</p>
-                    <Button onClick={fetchData}>Retry</Button>
+                    <Button onClick={refetch}>Retry</Button>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <>
                 <EmissionStatCards
-                  totalVehicles={totalVehicles}
+                  totalVehicles={safeTotalVehicles}
                   testedVehicles={testedVehicles}
-                  passRate={complianceRate}
+                  passRate={safeComplianceRate}
                   officeDepartments={officeDepartments}
                 />
 
                 <EmissionCharts
-                  quarterStats={quarterStats}
-                  engineTypeData={engineTypeData}
-                  vehicleTypeData={vehicleTypeData}
+                  quarterStats={safeQuarterStats}
+                  engineTypeData={safeEngineTypeData}
+                  vehicleTypeData={safeVehicleTypeData}
                   selectedYear={selectedYear}
                 />
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <RecentTestsTable recentTests={recentTests} />
-                  <OfficeComplianceTable complianceData={complianceByOffice} />
+                  <RecentTestsTable recentTests={safeRecentTests} />
+                  <OfficeComplianceTable complianceData={safeComplianceByOffice} />
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 mb-6">
-                  <EmissionHistoryTrend historyData={data?.yearlyTrends || []} />
+                  <EmissionHistoryTrend historyData={safeYearlyTrends} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

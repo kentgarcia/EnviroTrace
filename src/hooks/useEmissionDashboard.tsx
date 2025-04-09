@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -86,9 +86,10 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     recentTests: []
   });
 
-  const fetchEmissionData = async () => {
+  const fetchEmissionData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       // Each query will be performed separately to avoid complex join queries
 
       // 1. Calculate total vehicles count
@@ -172,18 +173,18 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       // 5. Generate vehicle type data
       const { data: vehicleTypes, error: vehicleTypesError } = await supabase
         .from('vehicles')
-        .select('vehicle_type');
+        .select('vehicle_type, wheels');
       
       if (vehicleTypesError) throw vehicleTypesError;
       
-      // Count by vehicle type
-      const vehicleTypeCounts: Record<string, number> = {};
+      // Count by wheel count
+      const wheelCounts: Record<string, number> = {};
       vehicleTypes.forEach(vehicle => {
-        const vehicleType = vehicle.vehicle_type || 'Unknown';
-        vehicleTypeCounts[vehicleType] = (vehicleTypeCounts[vehicleType] || 0) + 1;
+        const wheels = vehicle.wheels?.toString() || 'Unknown';
+        wheelCounts[wheels] = (wheelCounts[wheels] || 0) + 1;
       });
       
-      const vehicleTypeData = Object.entries(vehicleTypeCounts).map(([name, value]) => ({
+      const vehicleTypeData = Object.entries(wheelCounts).map(([name, value]) => ({
         name,
         value
       }));
@@ -312,9 +313,9 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [year, quarter]);
 
-  const fetchTestSchedules = async (): Promise<TestSchedule[]> => {
+  const fetchTestSchedules = useCallback(async (): Promise<TestSchedule[]> => {
     try {
       let query = supabase
         .from('emission_test_schedules')
@@ -336,12 +337,17 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       toast.error("Failed to load quarterly test schedules");
       return [];
     }
-  };
-
-  // Fetch data on component mount and when year/quarter changes
-  useEffect(() => {
-    fetchEmissionData();
   }, [year, quarter]);
 
-  return { data, loading, error, refetch: fetchEmissionData, fetchTestSchedules, ...dashboardData };
+  // We're not using useEffect here to avoid auto-fetching on component mount
+  // Let the component control when to fetch
+
+  return { 
+    data, 
+    loading, 
+    error, 
+    refetch: fetchEmissionData, 
+    fetchTestSchedules, 
+    ...dashboardData 
+  };
 };
