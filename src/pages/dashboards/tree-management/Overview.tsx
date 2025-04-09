@@ -12,9 +12,12 @@ import {
   TreePine, 
   FileText, 
   Banknote,
-  CalendarDays
+  CalendarDays,
+  Trees,
+  Sprout
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 // Request type data for pie chart
 const requestTypeData = [
@@ -87,6 +90,28 @@ const latePaymentData = [
   { name: "Dec", fees: 0 }
 ];
 
+// Plant Saplings Collected data (from the image)
+const plantSaplingsData = [
+  { month: "Jan", count: 420 },
+  { month: "Feb", count: 1952 },
+  { month: "Dec", count: 0 }
+];
+
+// Urban Greening Plants data (from the image)
+const urbanGreeningData = [
+  { month: "Jan", count: 137 },
+  { month: "Feb", count: 306 },
+  { month: "Dec", count: 0 }
+];
+
+// Urban Greening Breakdown data (from the image)
+const urbanGreeningBreakdownData = [
+  { name: "Ornamentals", value: 316, percentage: "71.3%" },
+  { name: "Seeds", value: 54, percentage: "12.2%" },
+  { name: "Trees", value: 53, percentage: "12.0%" },
+  { name: "Seeds (private)", value: 20, percentage: "4.5%" }
+];
+
 export default function TreeManagementOverview() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -148,14 +173,82 @@ export default function TreeManagementOverview() {
                   trendValue="+3 new species"
                 />
                 <StatCard
-                  title="Managed Zones"
-                  value="18"
-                  description="Active management zones"
-                  icon={MapPin}
-                  trend="neutral"
-                  trendValue="Same as last quarter"
+                  title="Plant Saplings Collected"
+                  value="2,372"
+                  description="Total for 2025"
+                  icon={Sprout}
+                  trend="up"
+                  trendValue="+1,952 in February"
                 />
               </div>
+            </section>
+
+            {/* New sections from the image */}
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Plant Saplings Collected (Replacements) 2025</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {plantSaplingsData.map((row) => (
+                        <TableRow key={row.month}>
+                          <TableCell>{row.month}</TableCell>
+                          <TableCell className="text-right">{row.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Urban Greening (Number of Ornamental Plant and Trees Planted)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {urbanGreeningData.map((row) => (
+                        <TableRow key={row.month}>
+                          <TableCell>{row.month}</TableCell>
+                          <TableCell className="text-right">{row.count}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Urban Greening (Breakdown)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <DataChart
+                    title=""
+                    data={urbanGreeningBreakdownData}
+                    type="pie"
+                    dataKeys={["value"]}
+                    colors={["#4589FF", "#44BC66", "#FF5C5C", "#FFBB33"]}
+                  />
+                </CardContent>
+              </Card>
             </section>
 
             <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

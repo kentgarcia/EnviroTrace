@@ -9,6 +9,8 @@ interface DashboardCardProps {
   description: string;
   icon: LucideIcon | string; // Can be either a LucideIcon or an image URL
   className?: string;
+  contentClassName?: string;
+  iconClassName?: string;
   onClick?: () => void;
 }
 
@@ -17,6 +19,8 @@ export function DashboardCard({
   description,
   icon,
   className,
+  contentClassName,
+  iconClassName,
   onClick,
 }: DashboardCardProps) {
   return (
@@ -27,9 +31,9 @@ export function DashboardCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-6 flex flex-col items-center text-center">
+      <CardContent className={cn("p-6 flex flex-col items-center text-center", contentClassName)}>
         {typeof icon === "string" ? (
-          <div className="w-full h-40 mb-4 overflow-hidden rounded-md">
+          <div className={cn("w-full h-40 mb-4 overflow-hidden rounded-md", iconClassName)}>
             <img 
               src={icon} 
               alt={title} 
@@ -37,7 +41,7 @@ export function DashboardCard({
             />
           </div>
         ) : (
-          <div className="p-3 rounded-full bg-accent mb-4">
+          <div className={cn("p-3 rounded-full bg-accent mb-4", iconClassName)}>
             {React.createElement(icon, { className: "h-8 w-8 text-primary" })}
           </div>
         )}

@@ -1,13 +1,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { cn } from "@/lib/utils";
 
 interface DataChartProps {
   title: string;
   description?: string;
   data: any[];
-  type: "line" | "bar" | "area";
+  type: "line" | "bar" | "area" | "pie";
   dataKeys: string[];
   colors?: string[];
   className?: string;
@@ -24,6 +24,37 @@ export function DataChart({
 }: DataChartProps) {
   const renderChart = () => {
     switch (type) {
+      case "pie":
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <Pie
+                data={data}
+                dataKey={dataKeys[0]}
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: "white",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                  border: "none",
+                }}
+                formatter={(value) => [`${value}`, ""]}
+              />
+              <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+        
       case "bar":
         return (
           <ResponsiveContainer width="100%" height={300}>
