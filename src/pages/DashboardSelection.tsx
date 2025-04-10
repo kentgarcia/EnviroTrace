@@ -126,7 +126,7 @@ export default function DashboardSelection() {
               <DashboardCard
                 title="Tree Management"
                 description="Track afforestation efforts, tree health data, and forest coverage"
-                icon="https://images.unsplash.com/photo-1523712999610-f77fbcfc3843?auto=format&fit=crop&w=600&q=80"
+                icon="https://images.unsplash.com/photo-1523712999604-f77fbcfc3843?auto=format&fit=crop&w=600&q=80"
                 onClick={() => handleDashboardSelect("tree-management")}
                 className="border-ems-green-200 hover:border-ems-green-400"
               />

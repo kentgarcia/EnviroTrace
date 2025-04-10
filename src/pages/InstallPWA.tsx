@@ -23,7 +23,8 @@ const InstallPWA = () => {
     // Check if the app is installed
     if (window.matchMedia('(display-mode: standalone)').matches || 
         window.matchMedia('(display-mode: fullscreen)').matches || 
-        (window.navigator as any).standalone === true) {
+        // For iOS Safari
+        navigator.standalone === true) {
       setIsInstalled(true);
     }
 

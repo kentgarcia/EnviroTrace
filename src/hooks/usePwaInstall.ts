@@ -17,16 +17,20 @@ export const usePwaInstall = () => {
   useEffect(() => {
     console.log('Checking PWA installability'); // Debug log
   
+    // Check if the app is already in standalone mode (installed)
     if (window.matchMedia('(display-mode: standalone)').matches || 
         window.matchMedia('(display-mode: fullscreen)').matches || 
-        (window.navigator as any).standalone === true) {
+        // For iOS Safari
+        navigator.standalone === true) {
       console.log('App is already installed'); // Debug log
       setIsInstalled(true);
     }
   
     const handleBeforeInstallPrompt = (e: Event) => {
       console.log('beforeinstallprompt event fired'); // Debug log
+      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
+      // Store the event for later use
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
   
@@ -36,9 +40,11 @@ export const usePwaInstall = () => {
       setDeferredPrompt(null);
     };
   
+    // Add event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
   
+    // Clean up event listeners
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
