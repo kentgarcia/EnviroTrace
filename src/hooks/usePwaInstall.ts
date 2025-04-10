@@ -15,44 +15,33 @@ export const usePwaInstall = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if the app is installed
-    const checkIfInstalled = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                          window.matchMedia('(display-mode: fullscreen)').matches || 
-                          window.navigator.standalone === true;
-      setIsInstalled(isStandalone);
-    };
-
-    checkIfInstalled();
-
-    // Listen for the beforeinstallprompt event
+    console.log('Checking PWA installability'); // Debug log
+  
+    if (window.matchMedia('(display-mode: standalone)').matches || 
+        window.matchMedia('(display-mode: fullscreen)').matches || 
+        (window.navigator as any).standalone === true) {
+      console.log('App is already installed'); // Debug log
+      setIsInstalled(true);
+    }
+  
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      console.log('beforeinstallprompt event fired'); // Debug log
       e.preventDefault();
-      // Store the event for later use
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
-
-    // Listen for the appinstalled event
+  
     const handleAppInstalled = () => {
-      // App is installed, update UI
+      console.log('App was installed'); // Debug log
       setIsInstalled(true);
       setDeferredPrompt(null);
-      console.log('App was installed');
     };
-
+  
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
-
-    // Also check for changes in display mode
-    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkIfInstalled);
-    window.matchMedia('(display-mode: fullscreen)').addEventListener('change', checkIfInstalled);
-
+  
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkIfInstalled);
-      window.matchMedia('(display-mode: fullscreen)').removeEventListener('change', checkIfInstalled);
     };
   }, []);
 

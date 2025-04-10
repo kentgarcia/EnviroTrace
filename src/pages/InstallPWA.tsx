@@ -23,7 +23,7 @@ const InstallPWA = () => {
     // Check if the app is installed
     if (window.matchMedia('(display-mode: standalone)').matches || 
         window.matchMedia('(display-mode: fullscreen)').matches || 
-        window.navigator.standalone === true) {
+        (window.navigator as any).standalone === true) {
       setIsInstalled(true);
     }
 
@@ -53,6 +53,8 @@ const InstallPWA = () => {
   }, []);
 
   const handleInstallClick = async () => {
+    console.log('Install button clicked'); // Debug log
+
     if (!deferredPrompt) {
       console.log('Installation prompt not available');
       return;
@@ -154,7 +156,7 @@ const InstallPWA = () => {
               <Button 
                 className="px-6 gap-2 w-full sm:w-auto"
                 onClick={handleInstallClick}
-                disabled={!deferredPrompt}
+                disabled={false}
               >
                 <Download className="h-4 w-4" />
                 Install App
