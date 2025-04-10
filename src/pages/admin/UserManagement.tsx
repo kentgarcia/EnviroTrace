@@ -36,7 +36,8 @@ const userData = [
     role: "Administrator",
     department: "IT",
     status: "active",
-    lastLogin: "2025-02-21T08:30:00"
+    lastLogin: "2025-02-21T08:30:00",
+    date: "2025-02-21" // Added this field to satisfy the Record type
   },
   {
     id: "2",
@@ -45,7 +46,8 @@ const userData = [
     role: "Manager",
     department: "Environmental",
     status: "active",
-    lastLogin: "2025-02-20T14:45:00"
+    lastLogin: "2025-02-20T14:45:00",
+    date: "2025-02-20" // Added this field to satisfy the Record type
   },
   {
     id: "3",
@@ -54,7 +56,8 @@ const userData = [
     role: "Inspector",
     department: "Field Operations",
     status: "active",
-    lastLogin: "2025-02-19T09:15:00"
+    lastLogin: "2025-02-19T09:15:00",
+    date: "2025-02-19" // Added this field to satisfy the Record type
   },
   {
     id: "4",
@@ -63,7 +66,8 @@ const userData = [
     role: "Data Analyst",
     department: "Research",
     status: "inactive",
-    lastLogin: "2025-01-15T11:20:00"
+    lastLogin: "2025-01-15T11:20:00",
+    date: "2025-01-15" // Added this field to satisfy the Record type
   },
   {
     id: "5",
@@ -72,7 +76,8 @@ const userData = [
     role: "Technician",
     department: "Maintenance",
     status: "pending",
-    lastLogin: "2025-02-18T16:10:00"
+    lastLogin: "2025-02-18T16:10:00",
+    date: "2025-02-18" // Added this field to satisfy the Record type
   }
 ];
 
@@ -167,21 +172,39 @@ export default function UserManagement() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-gray-100">
         <AppSidebar dashboardType="tree-management" />
         <div className="flex-1 overflow-auto">
           <div className="p-6">
-            <header className="mb-8">
-              <h1 className="text-3xl font-semibold">User Management</h1>
-              <p className="text-muted-foreground">
-                {currentTime.toLocaleDateString("en-US", {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
-            </header>
+            <div className="bg-white rounded-lg p-6 mb-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">ENVIRONMENTAL MANAGEMENT</h1>
+                  <p className="text-sm text-gray-500">User Management System</p>
+                </div>
+                <div className="mt-4 md:mt-0 flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input 
+                      placeholder="Search here..." 
+                      className="pl-10 h-10 w-full min-w-[240px] rounded-full bg-gray-100"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-sm">🔔</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+                      <div className="hidden md:block">
+                        <p className="text-sm font-medium">Elijah Santos</p>
+                        <p className="text-xs text-gray-500">Admin</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <section className="mb-8">
               <h2 className="text-xl font-semibold mb-4">User Statistics</h2>
