@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -65,7 +64,7 @@ export default function ProfilePage() {
         .from("profiles")
         .update({
           full_name: profileData.fullName,
-          updated_at: new Date(),
+          updated_at: new Date().toISOString(),
         })
         .eq("id", user.id);
 

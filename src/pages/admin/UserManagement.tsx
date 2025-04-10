@@ -1,512 +1,317 @@
-
-import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAuth } from "@/lib/auth";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { DataChart } from "@/components/dashboard/DataChart";
+import { DashboardCard } from "@/components/dashboard/DashboardCard";
+import { 
+  ArrowRight, 
+  Leaf, 
+  MapPin, 
+  Ruler, 
+  TreePine, 
+  FileText, 
+  Banknote,
+  CalendarDays,
+  Trees,
+  Sprout,
+  Filter,
+  Download,
+  Search
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { UserRole } from "@/lib/auth";
-import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { RecordTable } from "@/components/dashboard/RecordTable";
 
-interface UserWithRoles {
-  id: string;
-  email: string;
-  full_name: string | null;
-  roles: UserRole[];
-}
+// Sample user data
+const userData = [
+  {
+    id: "1",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    role: "Administrator",
+    department: "IT",
+    status: "active",
+    lastLogin: "2025-02-21T08:30:00"
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    email: "jane.smith@example.com",
+    role: "Manager",
+    department: "Environmental",
+    status: "active",
+    lastLogin: "2025-02-20T14:45:00"
+  },
+  {
+    id: "3",
+    name: "Robert Johnson",
+    email: "robert.johnson@example.com",
+    role: "Inspector",
+    department: "Field Operations",
+    status: "active",
+    lastLogin: "2025-02-19T09:15:00"
+  },
+  {
+    id: "4",
+    name: "Emily Davis",
+    email: "emily.davis@example.com",
+    role: "Data Analyst",
+    department: "Research",
+    status: "inactive",
+    lastLogin: "2025-01-15T11:20:00"
+  },
+  {
+    id: "5",
+    name: "Michael Wilson",
+    email: "michael.wilson@example.com",
+    role: "Technician",
+    department: "Maintenance",
+    status: "pending",
+    lastLogin: "2025-02-18T16:10:00"
+  }
+];
+
+// User activity data
+const userActivityData = [
+  {
+    id: "1",
+    user: "John Doe",
+    action: "Created new inspection report",
+    timestamp: "2025-02-21T08:35:00",
+    details: "Report #INS-2025-042"
+  },
+  {
+    id: "2",
+    user: "Jane Smith",
+    action: "Approved tree cutting request",
+    timestamp: "2025-02-20T15:10:00",
+    details: "Request #TM-2025-039"
+  },
+  {
+    id: "3",
+    user: "Robert Johnson",
+    action: "Updated user profile",
+    timestamp: "2025-02-19T09:30:00",
+    details: "Profile ID #USR-005"
+  },
+  {
+    id: "4",
+    user: "Emily Davis",
+    action: "Generated monthly report",
+    timestamp: "2025-02-18T14:25:00",
+    details: "February 2025 Summary"
+  }
+];
+
+// Role distribution data for pie chart
+const roleDistributionData = [
+  { name: "Administrators", value: 3 },
+  { name: "Managers", value: 5 },
+  { name: "Inspectors", value: 12 },
+  { name: "Data Analysts", value: 7 },
+  { name: "Technicians", value: 8 }
+];
+
+// Department distribution data for pie chart
+const departmentDistributionData = [
+  { name: "IT", value: 6 },
+  { name: "Environmental", value: 10 },
+  { name: "Field Operations", value: 15 },
+  { name: "Research", value: 8 },
+  { name: "Maintenance", value: 6 }
+];
+
+// Monthly user activity data
+const monthlyActivityData = [
+  { name: "Jan", count: 245 },
+  { name: "Feb", count: 388 },
+  { name: "Mar", count: 470 },
+  { name: "Apr", count: 520 },
+  { name: "May", count: 430 },
+  { name: "Jun", count: 380 },
+  { name: "Jul", count: 0 },
+  { name: "Aug", count: 0 },
+  { name: "Sep", count: 0 },
+  { name: "Oct", count: 0 },
+  { name: "Nov", count: 0 },
+  { name: "Dec", count: 0 }
+];
 
 export default function UserManagement() {
-  const navigate = useNavigate();
-  const { user, userData, loading } = useAuth();
-  const [users, setUsers] = useState<UserWithRoles[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  // New user form state
-  const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserPassword, setNewUserPassword] = useState("");
-  const [newUserFullName, setNewUserFullName] = useState("");
-  const [newUserRoles, setNewUserRoles] = useState<UserRole[]>([]);
-  
-  // Edit user dialog state
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
-  const [editFullName, setEditFullName] = useState("");
-  const [editRoles, setEditRoles] = useState<UserRole[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate("/");
-      } else if (userData && !userData.roles.includes('admin')) {
-        navigate("/dashboard-selection");
-        toast.error("You don't have access to admin page");
-      } else {
-        fetchUsers();
-      }
-    }
-  }, [user, userData, loading, navigate]);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
 
-  const fetchUsers = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch all users with their profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, full_name');
-      
-      if (profilesError) throw profilesError;
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
-      // For each profile, fetch their roles
-      const usersWithRoles: UserWithRoles[] = [];
-      
-      for (const profile of profiles) {
-        const { data: roles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', profile.id);
-        
-        if (rolesError) throw rolesError;
-        
-        usersWithRoles.push({
-          id: profile.id,
-          email: profile.email,
-          full_name: profile.full_name,
-          roles: roles.map(r => r.role as UserRole)
-        });
-      }
-      
-      setUsers(usersWithRoles);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users');
-    } finally {
-      setIsLoading(false);
-    }
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
-
-  const handleCreateUser = async () => {
-    if (!newUserEmail || !newUserPassword) {
-      toast.error('Email and password are required');
-      return;
-    }
-    
-    setIsCreating(true);
-    try {
-      // 1. Create the user in auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newUserEmail,
-        password: newUserPassword,
-        email_confirm: true,
-        user_metadata: { full_name: newUserFullName }
-      });
-      
-      if (authError) throw authError;
-      
-      // 2. Add roles to the user
-      if (newUserRoles.length > 0) {
-        const rolePromises = newUserRoles.map(role => 
-          supabase.from('user_roles').insert({
-            user_id: authData.user.id,
-            role
-          })
-        );
-        
-        await Promise.all(rolePromises);
-      }
-      
-      toast.success('User created successfully');
-      setNewUserEmail('');
-      setNewUserPassword('');
-      setNewUserFullName('');
-      setNewUserRoles([]);
-      fetchUsers();
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error('Failed to create user');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleEditUser = (user: UserWithRoles) => {
-    setEditingUser(user);
-    setEditFullName(user.full_name || '');
-    setEditRoles(user.roles);
-    setEditOpen(true);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingUser) return;
-    
-    try {
-      // Update full name in profile
-      await supabase
-        .from('profiles')
-        .update({ full_name: editFullName })
-        .eq('id', editingUser.id);
-      
-      // Delete all existing roles
-      await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', editingUser.id);
-      
-      // Add new roles
-      if (editRoles.length > 0) {
-        const roleInserts = editRoles.map(role => ({
-          user_id: editingUser.id,
-          role
-        }));
-        
-        await supabase
-          .from('user_roles')
-          .insert(roleInserts);
-      }
-      
-      toast.success('User updated successfully');
-      setEditOpen(false);
-      fetchUsers();
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('Failed to update user');
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    
-    try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
-      
-      toast.success('User deleted successfully');
-      fetchUsers();
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
-    }
-  };
-
-  const toggleRole = (role: UserRole) => {
-    if (newUserRoles.includes(role)) {
-      setNewUserRoles(newUserRoles.filter(r => r !== role));
-    } else {
-      setNewUserRoles([...newUserRoles, role]);
-    }
-  };
-
-  const toggleEditRole = (role: UserRole) => {
-    if (editRoles.includes(role)) {
-      setEditRoles(editRoles.filter(r => r !== role));
-    } else {
-      setEditRoles([...editRoles, role]);
-    }
-  };
-
-  const filteredUsers = users.filter(user => 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="admin" />
+        <AppSidebar dashboardType="tree-management" />
         <div className="flex-1 overflow-auto">
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">User Management</h1>
-              <p className="text-muted-foreground">Create and manage user accounts</p>
+              <p className="text-muted-foreground">
+                {currentTime.toLocaleDateString("en-US", {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </p>
             </header>
 
-            <div className="mb-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-              <div className="w-full md:w-1/3">
-                <Input
-                  placeholder="Search users..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">User Statistics</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <StatCard
+                  title="Total Users"
+                  value="35"
+                  description="Active system users"
+                  icon={FileText}
+                  trend="up"
+                  trendValue="+3 this month"
+                />
+                <StatCard
+                  title="Active Users"
+                  value="28"
+                  description="Currently active"
+                  icon={FileText}
+                  trend="neutral"
+                  trendValue="80% of total"
+                />
+                <StatCard
+                  title="New Users"
+                  value="5"
+                  description="Added this month"
+                  icon={FileText}
+                  trend="up"
+                  trendValue="+2 from last month"
+                />
+                <StatCard
+                  title="Inactive Users"
+                  value="7"
+                  description="Pending or disabled"
+                  icon={FileText}
+                  trend="down"
+                  trendValue="-1 from last month"
                 />
               </div>
-              
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button>Create New User</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
-                    <DialogDescription>
-                      Add a new user account to the system.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="email" className="text-right">
-                        Email
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={newUserEmail}
-                        onChange={(e) => setNewUserEmail(e.target.value)}
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="password" className="text-right">
-                        Password
-                      </Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={newUserPassword}
-                        onChange={(e) => setNewUserPassword(e.target.value)}
-                        className="col-span-3"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="fullName" className="text-right">
-                        Full Name
-                      </Label>
-                      <Input
-                        id="fullName"
-                        value={newUserFullName}
-                        onChange={(e) => setNewUserFullName(e.target.value)}
-                        className="col-span-3"
-                      />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-right">Roles</Label>
-                      <div className="col-span-3 space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="admin" 
-                            checked={newUserRoles.includes('admin')}
-                            onCheckedChange={() => toggleRole('admin')}
-                          />
-                          <label htmlFor="admin">Admin</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="air-quality" 
-                            checked={newUserRoles.includes('air-quality')}
-                            onCheckedChange={() => toggleRole('air-quality')}
-                          />
-                          <label htmlFor="air-quality">Air Quality</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="tree-management" 
-                            checked={newUserRoles.includes('tree-management')}
-                            onCheckedChange={() => toggleRole('tree-management')}
-                          />
-                          <label htmlFor="tree-management">Tree Management</label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="government-emission" 
-                            checked={newUserRoles.includes('government-emission')}
-                            onCheckedChange={() => toggleRole('government-emission')}
-                          />
-                          <label htmlFor="government-emission">Government Emission</label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button onClick={handleCreateUser} disabled={isCreating}>
-                      {isCreating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating...
-                        </>
-                      ) : (
-                        'Create User'
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+            </section>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Full Name</TableHead>
-                    <TableHead>Roles</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-4">
-                        No users found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.full_name || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles.map((role) => (
-                              <span 
-                                key={role} 
-                                className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
-                              >
-                                {role}
-                              </span>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="mr-2"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            Delete
-                          </Button>
-                        </TableCell>
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <DataChart
+                title="Role Distribution"
+                description="Users by role type"
+                data={roleDistributionData}
+                type="pie"
+                dataKeys={["value"]}
+                colors={["#4589FF", "#44BC66", "#FF5C5C", "#FFBB33", "#6B7280"]}
+              />
+              <DataChart
+                title="Department Distribution"
+                description="Users by department"
+                data={departmentDistributionData}
+                type="pie"
+                dataKeys={["value"]}
+                colors={["#4589FF", "#44BC66", "#FF5C5C", "#FFBB33", "#6B7280"]}
+              />
+            </section>
+
+            <section className="mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly User Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px]">
+                    <DataChart
+                      title=""
+                      data={monthlyActivityData}
+                      type="bar"
+                      dataKeys={["count"]}
+                      colors={["#44BC66"]}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="mb-8">
+              <RecordTable
+                title="User Management"
+                records={userData.map(user => ({
+                  ...user,
+                  lastLogin: formatDate(user.lastLogin)
+                }))}
+                columns={[
+                  { key: "name", title: "Name" },
+                  { key: "email", title: "Email" },
+                  { key: "role", title: "Role" },
+                  { key: "department", title: "Department" },
+                  { key: "status", title: "Status" },
+                  { key: "lastLogin", title: "Last Login" }
+                ]}
+              />
+            </section>
+
+            <section className="mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Recent User Activity</h2>
+                <button className="text-ems-green-600 text-sm font-medium flex items-center hover:text-ems-green-800">
+                  View all activity <ArrowRight className="ml-1 h-4 w-4" />
+                </button>
+              </div>
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Details</TableHead>
+                        <TableHead>Timestamp</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {userActivityData.map((activity) => (
+                        <TableRow key={activity.id}>
+                          <TableCell className="font-medium">{activity.user}</TableCell>
+                          <TableCell>{activity.action}</TableCell>
+                          <TableCell>{activity.details}</TableCell>
+                          <TableCell>{formatDate(activity.timestamp)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </section>
           </div>
         </div>
       </div>
-
-      {/* Edit User Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Update user details and roles.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Email</Label>
-              <div className="col-span-3">
-                {editingUser?.email}
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="editFullName" className="text-right">
-                Full Name
-              </Label>
-              <Input
-                id="editFullName"
-                value={editFullName}
-                onChange={(e) => setEditFullName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Roles</Label>
-              <div className="col-span-3 space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-admin" 
-                    checked={editRoles.includes('admin')}
-                    onCheckedChange={() => toggleEditRole('admin')}
-                  />
-                  <label htmlFor="edit-admin">Admin</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-air-quality" 
-                    checked={editRoles.includes('air-quality')}
-                    onCheckedChange={() => toggleEditRole('air-quality')}
-                  />
-                  <label htmlFor="edit-air-quality">Air Quality</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-tree-management" 
-                    checked={editRoles.includes('tree-management')}
-                    onCheckedChange={() => toggleEditRole('tree-management')}
-                  />
-                  <label htmlFor="edit-tree-management">Tree Management</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="edit-government-emission" 
-                    checked={editRoles.includes('government-emission')}
-                    onCheckedChange={() => toggleEditRole('government-emission')}
-                  />
-                  <label htmlFor="edit-government-emission">Government Emission</label>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </SidebarProvider>
   );
 }
