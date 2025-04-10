@@ -157,7 +157,7 @@ const InstallPWA = () => {
               <Button 
                 className="px-6 gap-2 w-full sm:w-auto"
                 onClick={handleInstallClick}
-                disabled={false}
+                disabled={!deferredPrompt}
               >
                 <Download className="h-4 w-4" />
                 Install App
