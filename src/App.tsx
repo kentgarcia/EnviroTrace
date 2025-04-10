@@ -18,6 +18,8 @@ import OfficesPage from "./pages/dashboards/government-emission/Offices";
 import UserManagement from "./pages/admin/UserManagement";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
+import InstallPWA from "./pages/InstallPWA";
+import { PwaBanner } from "./components/pwa/PwaBanner";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +43,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<SignIn />} />
+          <Route path="/install-pwa" element={<InstallPWA />} />
           
           {/* Protected routes */}
           <Route path="/dashboard-selection" element={
@@ -146,6 +149,7 @@ const App = () => (
           {/* Not found route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <PwaBanner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

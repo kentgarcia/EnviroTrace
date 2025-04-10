@@ -6,8 +6,9 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox
 workbox.precaching.precacheAndRoute([
   { url: '/', revision: '1' },
   { url: '/index.html', revision: '1' },
-  { url: '/manifest.json', revision: '1' }
-  // Additional assets will be automatically added by the workbox-webpack-plugin
+  { url: '/manifest.json', revision: '1' },
+  { url: '/install-pwa', revision: '1' },
+  { url: '/offline.html', revision: '1' }
 ]);
 
 // Cache CSS, JS, and Web Worker requests with a Stale While Revalidate strategy
@@ -80,5 +81,25 @@ workbox.routing.setCatchHandler(({ event }) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+});
+
+// Add a custom fetch handler to support SPA navigation
+// This ensures that navigations to routes like /install-pwa work offline
+self.addEventListener('fetch', event => {
+  // Let Workbox handle most requests
+  if (!event.request.url.includes(self.location.origin) || 
+      !event.request.url.endsWith('/') && 
+      !event.request.url.includes('.') && 
+      event.request.url.startsWith(self.location.origin)) {
+    
+    // For SPA navigation to routes that don't have file extensions
+    event.respondWith(
+      caches.match(event.request).then(response => {
+        return response || fetch(event.request).catch(() => {
+          return caches.match('/index.html');
+        });
+      })
+    );
   }
 });
