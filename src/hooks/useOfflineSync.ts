@@ -90,8 +90,8 @@ export function useOfflineSync() {
 
       const parsed = JSON.parse(cachedData) as CachedData<{ role: string }[]>;
       
-      // Check if data is stale (older than 1 hour)
-      const isStale = Date.now() - parsed.timestamp > 60 * 60 * 1000;
+      // Check if data is stale (older than 24 hours)
+      const isStale = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000;
       if (isStale && isOnline) return null;
       
       return parsed.data.map(item => item.role as UserRole);
@@ -105,7 +105,7 @@ export function useOfflineSync() {
   const safeSupabaseQuery = async <T,>(
     queryFn: () => Promise<{ data: T | null, error: any }>,
     cacheKey: string,
-    expiryTimeMs = 5 * 60 * 1000 // 5 minutes default
+    expiryTimeMs = 24 * 60 * 60 * 1000 // 24 hours default
   ): Promise<{ data: T | null, error: any, fromCache: boolean }> => {
     // Try to get from cache first
     try {

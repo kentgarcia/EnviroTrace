@@ -55,8 +55,8 @@ export async function getUserRoles(userId: string): Promise<UserRole[]> {
       const parsed = JSON.parse(cachedRoles);
       const timestamp = parsed.timestamp;
       
-      // If cache is less than 1 hour old, use it
-      if (Date.now() - timestamp < 60 * 60 * 1000) {
+      // If cache is less than 24 hours old, use it
+      if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
         console.log('Using cached user roles');
         return parsed.data.map((item: any) => item.role as UserRole);
       }

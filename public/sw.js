@@ -15,13 +15,13 @@ workbox.precaching.precacheAndRoute([
   { url: '/offline.html', revision: '1' }
 ]);
 
-// Cache CSS, JS, and Web Worker requests with a Stale While Revalidate strategy
+// Cache CSS, JS, and Web Worker requests with a Cache First strategy
 workbox.routing.registerRoute(
   ({ request }) => request.destination === 'style' ||
                   request.destination === 'script' ||
                   request.destination === 'worker',
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: 'assets',
+  new workbox.strategies.CacheFirst({
+    cacheName: 'static-assets',
     plugins: [
       new workbox.expiration.ExpirationPlugin({
         maxEntries: 60,
@@ -67,7 +67,7 @@ workbox.routing.registerRoute(
     plugins: [
       new workbox.expiration.ExpirationPlugin({
         maxEntries: 10,
-        maxAgeSeconds: 60 * 60, // 1 hour
+        maxAgeSeconds: 24 * 60 * 60, // 24 hours
       }),
       {
         // Custom plugin to save API responses to localStorage

@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
       retry: 3,
       retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 60 * 60 * 1000, // 1 hour
+      gcTime: 60 * 60 * 1000, // 1 hour (formerly called cacheTime)
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
       refetchOnMount: true
