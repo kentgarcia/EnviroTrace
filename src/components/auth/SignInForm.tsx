@@ -77,14 +77,16 @@ export function SignInForm() {
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-center mb-2">
-          {/* Placeholder for the first logo */}
-          <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-            Logo 1
-          </div>
-          {/* Placeholder for the second logo */}
-          <div className="h-16 w-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-            Logo 2
-          </div>
+          <img
+            src="/images/logo_munti.png"
+            alt="Logo 1"
+            className="h-16 w-16 rounded-md"
+          />
+          <img
+            src="/images/logo_epnro.png"
+            alt="Logo 2"
+            className="h-16 w-16 rounded-md"
+          />
         </div>
         <CardTitle className="text-2xl text-center">Environmental Management System</CardTitle>
         <CardDescription className="text-center">
@@ -92,127 +94,46 @@ export function SignInForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="sign-in" value={mode} onValueChange={(value) => setMode(value as FormMode)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="sign-in">Sign In</TabsTrigger>
-            <TabsTrigger value="sign-up">Sign Up</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="sign-in">
-            <form onSubmit={handleSubmitSignIn(onSignIn)} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  {...registerSignIn("email", { 
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address"
-                    }
-                  })}
-                />
-                {errorsSignIn.email && (
-                  <p className="text-sm text-destructive">{errorsSignIn.email.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  {...registerSignIn("password", { required: "Password is required" })}
-                />
-                {errorsSignIn.password && (
-                  <p className="text-sm text-destructive">{errorsSignIn.password.message}</p>
-                )}
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : "Sign in"}
-              </Button>
-            </form>
-          </TabsContent>
-          
-          <TabsContent value="sign-up">
-            <form onSubmit={handleSubmitSignUp(onSignUp)} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  placeholder="John Doe"
-                  {...registerSignUp("fullName", { required: "Full name is required" })}
-                />
-                {errorsSignUp.fullName && (
-                  <p className="text-sm text-destructive">{errorsSignUp.fullName.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  {...registerSignUp("email", { 
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: "Invalid email address"
-                    }
-                  })}
-                />
-                {errorsSignUp.email && (
-                  <p className="text-sm text-destructive">{errorsSignUp.email.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  {...registerSignUp("password", { 
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters"
-                    }
-                  })}
-                />
-                {errorsSignUp.password && (
-                  <p className="text-sm text-destructive">{errorsSignUp.password.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  {...registerSignUp("confirmPassword", { 
-                    required: "Please confirm your password",
-                    validate: value => value === password || "Passwords do not match"
-                  })}
-                />
-                {errorsSignUp.confirmPassword && (
-                  <p className="text-sm text-destructive">{errorsSignUp.confirmPassword.message}</p>
-                )}
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : "Create account"}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+        <form onSubmit={handleSubmitSignIn(onSignIn)} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              {...registerSignIn("email", { 
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address"
+                }
+              })}
+            />
+            {errorsSignIn.email && (
+              <p className="text-sm text-destructive">{errorsSignIn.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Password"
+              {...registerSignIn("password", { required: "Password is required" })}
+            />
+            {errorsSignIn.password && (
+              <p className="text-sm text-destructive">{errorsSignIn.password.message}</p>
+            )}
+          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : "Sign in"}
+          </Button>
+        </form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-2">
         <div className="text-sm text-center text-muted-foreground mt-2">

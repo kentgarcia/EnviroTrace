@@ -54,18 +54,18 @@ export default function DashboardSelection() {
       <header className="border-b bg-white py-4 px-6">
         <div className="max-w-screen-xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {/* Placeholder for the first logo */}
-            <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-              Logo 1
-            </div>
-            {/* Placeholder for the second logo */}
-            <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-              Logo 2
-            </div>
+            <img
+              src="/images/logo_munti.png"
+              alt="Logo 1"
+              className="h-16 w-16 rounded-md"
+            />
+            <img
+              src="/images/logo_epnro.png"
+              alt="Logo 2"
+              className="h-16 w-16 rounded-md"
+            />
             <h1 className="text-xl font-semibold">Environmental Management System</h1>
           </div>
-
-          <InstallPwaButton />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -99,7 +99,7 @@ export default function DashboardSelection() {
 
       <div 
         className="py-16 px-6 bg-cover bg-center text-white"
-        style={{ backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=2000&q=80')" }}
+        style={{ backgroundImage: "url('/images/bg_login.png')" }}
       >
         <div className="max-w-screen-xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Welcome, {userData?.email}</h2>
@@ -116,7 +116,7 @@ export default function DashboardSelection() {
               <DashboardCard
                 title="Air Quality"
                 description="Monitor air quality metrics, pollution levels, and compliance data"
-                icon="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=600&q=80"
+                icon="/images/bg_asbu.jpg"
                 onClick={() => handleDashboardSelect("air-quality")}
                 className="border-ems-blue-200 hover:border-ems-blue-400"
               />
@@ -126,7 +126,7 @@ export default function DashboardSelection() {
               <DashboardCard
                 title="Tree Management"
                 description="Track afforestation efforts, tree health data, and forest coverage"
-                icon="https://images.unsplash.com/photo-1523712999604-f77fbcfc3843?auto=format&fit=crop&w=600&q=80"
+                icon="/images/bg_envicompliance.jpg"
                 onClick={() => handleDashboardSelect("tree-management")}
                 className="border-ems-green-200 hover:border-ems-green-400"
               />
@@ -136,7 +136,7 @@ export default function DashboardSelection() {
               <DashboardCard
                 title="Government Emission"
                 description="Analyze emission data from government facilities and public transportation"
-                icon="https://images.unsplash.com/photo-1488972685288-c3fd157d7c7a?auto=format&fit=crop&w=600&q=80"
+                icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("government-emission")}
                 className="border-ems-gray-200 hover:border-ems-gray-400"
               />
@@ -146,6 +146,7 @@ export default function DashboardSelection() {
       </main>
 
       <footer className="border-t bg-white py-4 px-6">
+        <InstallPwaButton />
         <div className="max-w-screen-xl mx-auto text-center text-sm text-muted-foreground">
           Environmental Management System &copy; 2025
         </div>

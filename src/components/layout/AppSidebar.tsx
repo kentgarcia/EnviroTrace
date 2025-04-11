@@ -109,21 +109,53 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
 
   return (
     <Sidebar>
-      <SidebarHeader className="px-4 py-3 border-b">
-        <div className="flex items-center gap-2">
-          <Leaf className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-lg">{getDashboardTitle()}</h3>
+      <SidebarHeader className="px-4 py-3">
+        <div className="flex items-center justify-center gap-2 pt-4">
+          {/* First logo */}
+          <img
+            src="/images/logo_munti.png"
+            alt="Logo 1"
+            className="h-16 w-16"
+          />
+          {/* Second logo */}
+          <img
+            src="/images/logo_epnro.png"
+            alt="Logo 2"
+            className="h-16 w-16"
+          />
+        </div>
+        <div className="flex items-center justify-center gap-2">
+          {/* <h3 className="font-semibold text-lg">{getDashboardTitle()}</h3> */}
+          <h3 className="font-semibold text-lg text-center text-[#FFBF00]">
+            EPNRO Management System
+          </h3>
         </div>
       </SidebarHeader>
       
-      <SidebarContent>
+      <SidebarContent className="text-white">
         <SidebarGroup>
-          <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
+          {/* <SidebarGroupLabel>Main Navigation</SidebarGroupLabel> */}
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
+                <SidebarMenuItem 
+                  key={item.title}
+                  className="pl-2 pr-2 py-1">
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.path}
+                    className="
+                      data-[active=true]:bg-[#676782]
+                      data-[active=true]:font-semibold
+                      data-[active=true]:text-white
+                      hover:bg-[#4e4e63]
+                      hover:text-white 
+                      focus:bg-[#4e4e63]
+                      focus:text-white
+                      active:bg-[#676782] 
+                      active:text-white
+                      "
+                    >
                     <Link to={item.path}>
                       <item.icon />
                       <span>{item.title}</span>
@@ -135,20 +167,6 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      <SidebarFooter className="border-t p-4">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {userData?.email?.charAt(0).toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="text-xs">
-            <div className="font-medium truncate">{userData?.email || "User"}</div>
-            <div className="text-muted-foreground">Signed in</div>
-          </div>
-        </div>
-      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { DataChart } from "@/components/dashboard/DataChart";
 import { AlertCircle, ArrowRight, Cloud, CloudLightning, CloudRain, Droplets, Thermometer } from "lucide-react";
+import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
 
 const airQualityData = [
   { name: "Jan", pm25: 35, pm10: 50, no2: 40 },
@@ -71,6 +72,7 @@ export default function AirQualityOverview() {
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="air-quality" />
         <div className="flex-1 overflow-auto">
+        <DashboardNavbar />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Air Quality Dashboard</h1>

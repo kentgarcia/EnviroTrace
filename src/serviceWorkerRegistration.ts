@@ -8,10 +8,10 @@ export const registerServiceWorker = () => {
       const swUrl = '/sw.js';
       
       // Add a cache-busting query parameter to ensure we get the latest version
-      const swUrlWithCacheBust = `${swUrl}?v=${Date.now()}`;
+      //const swUrlWithCacheBust = `${swUrl}?v=${Date.now()}`;
       
       navigator.serviceWorker
-        .register(swUrlWithCacheBust)
+        .register(swUrl)
         .then((registration) => {
           // Registration was successful
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
@@ -31,9 +31,9 @@ export const registerServiceWorker = () => {
                   console.log('New content is available and will be used when all tabs for this page are closed.');
                   
                   // Execute callback if set
-                  if (window.confirm('New version available! Reload to update?')) {
-                    window.location.reload();
-                  }
+                  // if (window.confirm('New version available! Reload to update?')) {
+                  //   window.location.reload();
+                  // }
                 } else {
                   // At this point, everything has been precached.
                   console.log('Content is cached for offline use.');

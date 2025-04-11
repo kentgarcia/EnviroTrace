@@ -9,7 +9,7 @@ const log = (...args) => DEBUG && console.log('[ServiceWorker]', ...args);
 // Set up precaching for core app shell
 workbox.precaching.precacheAndRoute([
   { url: '/', revision: '1' },
-  { url: '/index.html', revision: '1' },
+  //{ url: '/index.html', revision: '1' },
   { url: '/manifest.json', revision: '1' },
   { url: '/install-pwa', revision: '1' },
   { url: '/offline.html', revision: '1' }

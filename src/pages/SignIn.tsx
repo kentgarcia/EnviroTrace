@@ -25,12 +25,10 @@ export default function SignIn() {
   return (
     <div 
       className="min-h-screen flex items-center justify-center bg-cover bg-center p-4"
-      style={{ backgroundImage: "url('https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=2000&q=80')" }}
+      style={{ backgroundImage: "url('/images/bg_login.png')" }}
     >
       <div className="w-full max-w-md animate-fade-in">
-        <div className="bg-white/90 backdrop-blur-md p-8 rounded-xl shadow-lg">
           <SignInForm />
-        </div>
       </div>
     </div>
   );
