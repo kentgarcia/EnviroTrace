@@ -42,6 +42,27 @@ export const registerServiceWorker = () => {
         .catch((error) => {
           console.error('Error during service worker registration:', error);
         });
+      
+      // Listen for controller change
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('New service worker activated.');
+      });
+      
+      // Check if we need to reload for an update
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'RELOAD_PAGE') {
+          window.location.reload();
+        }
+      });
+    });
+
+    // Set up offline event handlers for the page
+    window.addEventListener('online', () => {
+      document.dispatchEvent(new CustomEvent('app-online', { detail: true }));
+    });
+    
+    window.addEventListener('offline', () => {
+      document.dispatchEvent(new CustomEvent('app-offline', { detail: false }));
     });
   }
 };
@@ -55,5 +76,17 @@ export const unregisterServiceWorker = () => {
       .catch((error) => {
         console.error(error.message);
       });
+  }
+};
+
+// Update service worker (force skip waiting)
+export const updateServiceWorker = () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.update();
+      if (registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+    });
   }
 };

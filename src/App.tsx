@@ -20,8 +20,22 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./pages/InstallPWA";
 import { PwaBanner } from "./components/pwa/PwaBanner";
+import { NetworkStatus } from "./components/layout/NetworkStatus";
 
-const queryClient = new QueryClient();
+// Configure React Query with offline support
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 3,
+      retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 60 * 60 * 1000, // 1 hour
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+      refetchOnMount: true
+    },
+  },
+});
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -150,6 +164,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         <PwaBanner />
+        <NetworkStatus />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
