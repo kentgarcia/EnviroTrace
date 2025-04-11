@@ -30,6 +30,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useQuery } from "@tanstack/react-query";
+import { SkeletonTable } from "@/components/ui/skeleton-table";
 
 type OfficeSummary = {
   office_name: string;
@@ -55,20 +58,16 @@ type OfficeVehicle = {
 export default function OfficesPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const [officeSummaries, setOfficeSummaries] = useState<OfficeSummary[]>([]);
-  const [filteredOffices, setFilteredOffices] = useState<OfficeSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [yearFilter, setYearFilter] = useState<string>(new Date().getFullYear().toString());
   const [quarterFilter, setQuarterFilter] = useState<string>("all");
-  const [isLoading, setIsLoading] = useState(true);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   
   // Modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState<string | null>(null);
-  const [officeVehicles, setOfficeVehicles] = useState<OfficeVehicle[]>([]);
-  const [loadingVehicles, setLoadingVehicles] = useState(false);
-
+  
   useEffect(() => {
     if (!loading && !user) {
       navigate("/");
@@ -79,19 +78,17 @@ export default function OfficesPage() {
     // Generate available years (current year - 2 to current year + 2)
     const currentYear = new Date().getFullYear();
     setAvailableYears(Array.from({ length: 5 }, (_, i) => currentYear - 2 + i));
-    
-    fetchOfficeSummaries();
-  }, [yearFilter, quarterFilter]);
+  }, []);
 
+  // Fetch office summaries using react-query
   const fetchOfficeSummaries = async () => {
-    setIsLoading(true);
     try {
       // First, get all unique offices
       const { data: officesData, error: officesError } = await supabase
         .from('vehicles')
         .select('office_name')
         .order('office_name')
-        .not('office_name', 'is', null); // Fixed this line
+        .not('office_name', 'is', null);
 
       if (officesError) throw officesError;
 
@@ -115,8 +112,7 @@ export default function OfficesPage() {
         // Get test results for these vehicles in the selected year/quarter
         let testQuery = supabase
           .from('emission_tests')
-          .select('*')
-          .in('vehicle_id', vehicleIds);
+          .select('vehicle_id,result');
           
         if (yearFilter !== "all") {
           testQuery = testQuery.eq('year', parseInt(yearFilter));
@@ -155,45 +151,52 @@ export default function OfficesPage() {
         });
       }
       
-      setOfficeSummaries(summaries);
-      setFilteredOffices(summaries);
-      setIsLoading(false);
-      
+      return summaries;
     } catch (error) {
       console.error("Error fetching office summaries:", error);
-      toast.error("Failed to load office data");
-      setIsLoading(false);
+      throw error;
     }
   };
 
+  const { data: officeSummaries = [], isLoading: isLoadingOffices, error: officeError } = useQuery({
+    queryKey: ['offices', yearFilter, quarterFilter],
+    queryFn: fetchOfficeSummaries,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Filter offices based on debounced search query
+  const filteredOffices = officeSummaries.filter(office => 
+    office.office_name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+  );
+
+  // Fetch office vehicles using react-query
   const fetchOfficeVehicles = async (officeName: string) => {
-    setLoadingVehicles(true);
     try {
       // Get all vehicles for this office with their latest test result
       const { data, error } = await supabase
         .from('vehicle_summary_view')
-        .select('*')
+        .select('id,plate_number,driver_name,vehicle_type,engine_type,wheels,latest_test_date,latest_test_result')
         .eq('office_name', officeName)
         .order('plate_number');
         
       if (error) throw error;
-      
-      setOfficeVehicles(data as OfficeVehicle[]);
+      return data as OfficeVehicle[];
     } catch (error) {
       console.error("Error fetching office vehicles:", error);
-      toast.error("Failed to load office vehicles");
-    } finally {
-      setLoadingVehicles(false);
+      throw error;
     }
   };
 
-  useEffect(() => {
-    // Filter offices based on search query
-    const filtered = officeSummaries.filter(office => 
-      office.office_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredOffices(filtered);
-  }, [searchQuery, officeSummaries]);
+  const { 
+    data: officeVehicles = [], 
+    isLoading: loadingVehicles,
+    refetch: refetchVehicles
+  } = useQuery({
+    queryKey: ['office-vehicles', selectedOffice],
+    queryFn: () => selectedOffice ? fetchOfficeVehicles(selectedOffice) : Promise.resolve([]),
+    enabled: !!selectedOffice && viewModalOpen,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const handleExportToCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -219,14 +222,16 @@ export default function OfficesPage() {
 
   const handleViewOfficeVehicles = (officeName: string) => {
     setSelectedOffice(officeName);
-    fetchOfficeVehicles(officeName);
     setViewModalOpen(true);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <div className="flex flex-col items-center gap-2">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+        </div>
       </div>
     );
   }
@@ -299,63 +304,65 @@ export default function OfficesPage() {
                 </div>
 
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Office Name</TableHead>
-                        <TableHead>Total Vehicles</TableHead>
-                        <TableHead>Tested</TableHead>
-                        <TableHead>Untested</TableHead>
-                        <TableHead>Passed</TableHead>
-                        <TableHead>Failed</TableHead>
-                        <TableHead>Compliance Rate</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
+                  {isLoadingOffices ? (
+                    <SkeletonTable rows={7} columns={8} />
+                  ) : (
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            <div className="flex justify-center">
-                              <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          </TableCell>
+                          <TableHead>Office Name</TableHead>
+                          <TableHead>Total Vehicles</TableHead>
+                          <TableHead>Tested</TableHead>
+                          <TableHead>Untested</TableHead>
+                          <TableHead>Passed</TableHead>
+                          <TableHead>Failed</TableHead>
+                          <TableHead>Compliance Rate</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ) : filteredOffices.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
-                            No offices found.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredOffices.map((office) => (
-                          <TableRow key={office.office_name}>
-                            <TableCell className="font-medium">{office.office_name}</TableCell>
-                            <TableCell>{office.total_vehicles}</TableCell>
-                            <TableCell>{office.tested_vehicles}</TableCell>
-                            <TableCell>{office.untested_vehicles}</TableCell>
-                            <TableCell>{office.passed_vehicles}</TableCell>
-                            <TableCell>{office.failed_vehicles}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <Progress value={office.compliance_rate} className="h-2 w-20" />
-                                <span>{office.compliance_rate}%</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleViewOfficeVehicles(office.office_name)}
-                              >
-                                <Eye className="mr-2 h-4 w-4" /> View Vehicles
-                              </Button>
+                      </TableHeader>
+                      <TableBody>
+                        {officeError ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-red-500">
+                              Error loading data. Please try again later.
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : filteredOffices.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8">
+                              No offices found.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredOffices.map((office) => (
+                            <TableRow key={office.office_name}>
+                              <TableCell className="font-medium">{office.office_name}</TableCell>
+                              <TableCell>{office.total_vehicles}</TableCell>
+                              <TableCell>{office.tested_vehicles}</TableCell>
+                              <TableCell>{office.untested_vehicles}</TableCell>
+                              <TableCell>{office.passed_vehicles}</TableCell>
+                              <TableCell>{office.failed_vehicles}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Progress value={office.compliance_rate} className="h-2 w-20" />
+                                  <span>{office.compliance_rate}%</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => handleViewOfficeVehicles(office.office_name)}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" /> View Vehicles
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -370,9 +377,7 @@ export default function OfficesPage() {
                   </DialogDescription>
                 </DialogHeader>
                 {loadingVehicles ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                  </div>
+                  <SkeletonTable rows={5} columns={7} />
                 ) : (
                   <div className="rounded-md border mt-4">
                     <Table>

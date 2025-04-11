@@ -2,6 +2,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 export interface EmissionStat {
   label: string;
@@ -71,9 +72,6 @@ export interface DashboardData {
 }
 
 export const useEmissionDashboard = (year: number, quarter?: number) => {
-  const [data, setData] = useState<EmissionData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalVehicles: 0,
     totalPassed: 0,
@@ -85,26 +83,23 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     complianceByOffice: [],
     recentTests: []
   });
-
+  
+  // Use react-query to fetch and cache dashboard data
   const fetchEmissionData = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      // Each query will be performed separately to avoid complex join queries
-
-      // 1. Calculate total vehicles count
+      // 1. Calculate total vehicles count - select only id for count
       const { count: vehiclesCount, error: vehiclesError } = await supabase
         .from('vehicles')
-        .select('*', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true });
 
       if (vehiclesError) throw vehiclesError;
 
       const totalVehicles = vehiclesCount || 0;
 
-      // 2. Calculate tested vehicles and compliance rate
+      // 2. Calculate tested vehicles and compliance rate - select only needed fields
       let testsQuery = supabase
         .from('emission_tests')
-        .select('*');
+        .select('id,result');
 
       if (quarter !== undefined) {
         testsQuery = testsQuery.eq('year', year).eq('quarter', quarter);
@@ -134,7 +129,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       for (let q = 1; q <= 4; q++) {
         const { data: quarterResults, error: quarterError } = await supabase
           .from('emission_tests')
-          .select('*')
+          .select('result')
           .eq('year', year)
           .eq('quarter', q);
 
@@ -245,10 +240,10 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         { year: currentYear, complianceRate: complianceRate, totalVehicles: totalVehicles }
       ];
 
-      // 8. Get recent tests
+      // 8. Get recent tests - select only needed fields
       let recentTestsQuery = supabase
         .from('vehicle_summary_view')
-        .select('*')
+        .select('id,plate_number,office_name,latest_test_date,latest_test_result')
         .order('latest_test_date', { ascending: false })
         .limit(5);
 
@@ -265,7 +260,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       }));
 
       // Set dashboard data
-      setDashboardData({
+      const dashboardData = {
         totalVehicles,
         totalPassed: passedVehicles,
         totalFailed: failedVehicles,
@@ -275,10 +270,12 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         vehicleTypeData,
         complianceByOffice: officeCompliance,
         recentTests
-      });
+      };
+      
+      setDashboardData(dashboardData);
 
-      // Combine all data for EmissionData interface
-      setData({
+      // Create and return emission data
+      const emissionData: EmissionData = {
         stats: {
           totalVehicles: {
             label: 'Total Vehicles',
@@ -305,13 +302,13 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         officeCompliance,
         yearlyTrends,
         recentTests,
-      });
+      };
+      
+      return emissionData;
     } catch (err) {
       console.error('Error fetching emission data:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch emission data'));
       toast.error("Failed to load dashboard data");
-    } finally {
-      setLoading(false);
+      throw err;
     }
   }, [year, quarter]);
 
@@ -319,7 +316,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     try {
       let query = supabase
         .from('emission_test_schedules')
-        .select('*')
+        .select('id,year,quarter,assigned_personnel,location,conducted_on')
         .eq('year', year);
         
       if (quarter !== undefined) {
@@ -339,15 +336,34 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     }
   }, [year, quarter]);
 
-  // We're not using useEffect here to avoid auto-fetching on component mount
-  // Let the component control when to fetch
+  // Use React Query to fetch and cache emission data
+  const { 
+    data, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['emissionData', year, quarter],
+    queryFn: fetchEmissionData,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Use React Query to fetch and cache test schedules
+  const { 
+    data: schedules = [],
+    refetch: refetchSchedules
+  } = useQuery({
+    queryKey: ['testSchedules', year, quarter],
+    queryFn: fetchTestSchedules,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   return { 
     data, 
-    loading, 
+    loading: isLoading, 
     error, 
-    refetch: fetchEmissionData, 
-    fetchTestSchedules, 
+    refetch, 
+    fetchTestSchedules: () => refetchSchedules().then(result => result.data || []), 
     ...dashboardData 
   };
 };
