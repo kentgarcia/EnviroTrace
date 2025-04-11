@@ -6,7 +6,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox
 const DEBUG = false;
 const log = (...args) => DEBUG && console.log('[ServiceWorker]', ...args);
 
-// Set up precaching
+// Set up precaching for core app shell
 workbox.precaching.precacheAndRoute([
   { url: '/', revision: '1' },
   { url: '/index.html', revision: '1' },
@@ -17,9 +17,10 @@ workbox.precaching.precacheAndRoute([
 
 // Cache CSS, JS, and Web Worker requests with a Cache First strategy
 workbox.routing.registerRoute(
-  ({ request }) => request.destination === 'style' ||
-                  request.destination === 'script' ||
-                  request.destination === 'worker',
+  ({ request }) => 
+    request.destination === 'style' ||
+    request.destination === 'script' ||
+    request.destination === 'worker',
   new workbox.strategies.CacheFirst({
     cacheName: 'static-assets',
     plugins: [
@@ -50,6 +51,20 @@ workbox.routing.registerRoute(
   ({ request }) => request.destination === 'image',
   new workbox.strategies.CacheFirst({
     cacheName: 'images',
+    plugins: [
+      new workbox.expiration.ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+      }),
+    ],
+  })
+);
+
+// Specific file extension matching for JS and CSS files (in case destination isn't enough)
+workbox.routing.registerRoute(
+  ({ url }) => url.pathname.endsWith('.js') || url.pathname.endsWith('.css'),
+  new workbox.strategies.CacheFirst({
+    cacheName: 'static-assets-extensions',
     plugins: [
       new workbox.expiration.ExpirationPlugin({
         maxEntries: 60,
@@ -108,7 +123,7 @@ workbox.routing.registerRoute(
   })
 );
 
-// Fallback for navigation requests
+// Fallback for navigation requests - but NOT for static assets
 workbox.routing.registerRoute(
   ({ request }) => request.mode === 'navigate',
   new workbox.strategies.NetworkFirst({
@@ -122,11 +137,35 @@ workbox.routing.registerRoute(
   })
 );
 
-// Handle offline fallback
-workbox.routing.setCatchHandler(({ event }) => {
-  if (event.request.destination === 'document') {
+// Custom catch handler that respects MIME types
+workbox.routing.setCatchHandler(({ event, request }) => {
+  log('Catch handler for:', request.url, 'destination:', request.destination);
+  
+  // Don't try to return HTML for JS/CSS requests
+  if (request.destination === 'script') {
+    return Response.error();
+  }
+  
+  if (request.destination === 'style') {
+    return Response.error();
+  }
+  
+  // For navigation requests, return the offline page
+  if (request.mode === 'navigate') {
     return caches.match('/offline.html');
   }
+  
+  // Check the file extension as a fallback
+  const url = new URL(request.url);
+  if (url.pathname.endsWith('.js')) {
+    return Response.error();
+  }
+  
+  if (url.pathname.endsWith('.css')) {
+    return Response.error();
+  }
+  
+  // For other requests, just return an error
   return Response.error();
 });
 
@@ -158,22 +197,5 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Add a custom fetch handler to support SPA navigation
-// This ensures that navigations to routes like /install-pwa work offline
-self.addEventListener('fetch', event => {
-  // Let Workbox handle most requests
-  if (!event.request.url.includes(self.location.origin) || 
-      !event.request.url.endsWith('/') && 
-      !event.request.url.includes('.') && 
-      event.request.url.startsWith(self.location.origin)) {
-    
-    // For SPA navigation to routes that don't have file extensions
-    event.respondWith(
-      caches.match(event.request).then(response => {
-        return response || fetch(event.request).catch(() => {
-          return caches.match('/index.html');
-        });
-      })
-    );
-  }
-});
+// Remove the custom fetch handler that was causing issues
+// The Workbox routing system will handle most cases automatically

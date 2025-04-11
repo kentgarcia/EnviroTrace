@@ -7,8 +7,11 @@ export const registerServiceWorker = () => {
     window.addEventListener('load', () => {
       const swUrl = '/sw.js';
       
+      // Add a cache-busting query parameter to ensure we get the latest version
+      const swUrlWithCacheBust = `${swUrl}?v=${Date.now()}`;
+      
       navigator.serviceWorker
-        .register(swUrl)
+        .register(swUrlWithCacheBust)
         .then((registration) => {
           // Registration was successful
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
