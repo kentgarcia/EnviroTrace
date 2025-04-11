@@ -16,6 +16,7 @@ import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
 import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
 import OfficesPage from "./pages/dashboards/government-emission/Offices";
 import UserManagement from "./pages/admin/UserManagement";
+import AdminUserManagement from "./pages/admin/AdminUserManagement";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import InstallPWA from "./pages/InstallPWA";
@@ -76,6 +77,12 @@ const App = () => (
           <Route path="/admin/user-management" element={
             <ProtectedRoute>
               <UserManagement />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/admin/users" element={
+            <ProtectedRoute>
+              <AdminUserManagement />
             </ProtectedRoute>
           } />
           
