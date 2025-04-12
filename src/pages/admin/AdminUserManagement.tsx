@@ -41,7 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Edit,
   UserX,
@@ -63,11 +63,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+// Define supported role types from the database
+type UserRole = "admin" | "air-quality" | "tree-management" | "government-emission";
+
 interface User {
   id: string;
   email: string;
   full_name: string;
-  role: string;
+  role: UserRole;
   status: string;
   created_at: string;
 }
@@ -98,7 +101,7 @@ const fetchUsers = async () => {
     id: profile.id,
     email: profile.email,
     full_name: profile.full_name || 'N/A',
-    role: roleMap[profile.id] || 'user',
+    role: roleMap[profile.id] || 'user' as UserRole,
     status: 'active', // This would need to be fetched from auth.users or another table if tracked
     created_at: profile.created_at
   }));
@@ -110,7 +113,7 @@ const fetchUsers = async () => {
 const userFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   full_name: z.string().min(2, "Name must be at least 2 characters"),
-  role: z.enum(["admin", "user", "moderator"]),
+  role: z.enum(["admin", "air-quality", "tree-management", "government-emission"]),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
 });
 
@@ -140,7 +143,7 @@ export default function AdminUserManagement() {
     defaultValues: {
       email: "",
       full_name: "",
-      role: "user",
+      role: "admin",
     },
   });
 
@@ -154,7 +157,7 @@ export default function AdminUserManagement() {
     defaultValues: {
       email: "",
       full_name: "",
-      role: "user",
+      role: "admin",
       password: "",
     },
   });
@@ -290,7 +293,7 @@ export default function AdminUserManagement() {
       // Update user in Supabase Auth to disable
       const { error } = await supabase.auth.admin.updateUserById(
         userId,
-        { banned: true }
+        { user_metadata: { disabled: true } }
       );
       if (error) throw error;
       return userId;
@@ -326,7 +329,7 @@ export default function AdminUserManagement() {
     editForm.reset({
       email: user.email,
       full_name: user.full_name,
-      role: user.role as any,
+      role: user.role,
     });
     setEditUserDialogOpen(true);
   };
@@ -357,7 +360,9 @@ export default function AdminUserManagement() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
-      case 'moderator':
+      case 'air-quality':
+      case 'tree-management':
+      case 'government-emission':
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-green-100 text-green-800';
@@ -417,7 +422,7 @@ export default function AdminUserManagement() {
                   <SkeletonTable rows={5} columns={6} />
                 ) : error ? (
                   <div className="text-center p-4 text-red-500">
-                    Error loading users: {error.message}
+                    Error loading users: {(error as Error).message}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -547,8 +552,9 @@ export default function AdminUserManagement() {
                   {...editForm.register("role")}
                 >
                   <option value="admin">Admin</option>
-                  <option value="moderator">Moderator</option>
-                  <option value="user">User</option>
+                  <option value="air-quality">Air Quality</option>
+                  <option value="tree-management">Tree Management</option>
+                  <option value="government-emission">Government Emission</option>
                 </select>
                 {editForm.formState.errors.role && (
                   <p className="text-red-500 text-sm col-span-3 col-start-2">
@@ -636,8 +642,9 @@ export default function AdminUserManagement() {
                   {...addForm.register("role")}
                 >
                   <option value="admin">Admin</option>
-                  <option value="moderator">Moderator</option>
-                  <option value="user">User</option>
+                  <option value="air-quality">Air Quality</option>
+                  <option value="tree-management">Tree Management</option>
+                  <option value="government-emission">Government Emission</option>
                 </select>
                 {addForm.formState.errors.role && (
                   <p className="text-red-500 text-sm col-span-3 col-start-2">

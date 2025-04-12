@@ -117,6 +117,87 @@ export type Database = {
         }
         Relationships: []
       }
+      sapling_requests: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          quantity: number
+          request_date: string
+          requester_address: string
+          requester_name: string
+          sapling_name: string
+          status: Database["public"]["Enums"]["planting_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity: number
+          request_date: string
+          requester_address: string
+          requester_name: string
+          sapling_name: string
+          status?: Database["public"]["Enums"]["planting_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          request_date?: string
+          requester_address?: string
+          requester_name?: string
+          sapling_name?: string
+          status?: Database["public"]["Enums"]["planting_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tree_planting_activities: {
+        Row: {
+          created_at: string
+          establishment_name: string
+          id: string
+          notes: string | null
+          planted_by: string
+          planting_date: string
+          quantity: number
+          status: Database["public"]["Enums"]["planting_status"]
+          tree_name: string
+          tree_type: Database["public"]["Enums"]["tree_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          establishment_name: string
+          id?: string
+          notes?: string | null
+          planted_by: string
+          planting_date: string
+          quantity: number
+          status?: Database["public"]["Enums"]["planting_status"]
+          tree_name: string
+          tree_type: Database["public"]["Enums"]["tree_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          establishment_name?: string
+          id?: string
+          notes?: string | null
+          planted_by?: string
+          planting_date?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["planting_status"]
+          tree_name?: string
+          tree_type?: Database["public"]["Enums"]["tree_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -208,6 +289,19 @@ export type Database = {
       }
     }
     Enums: {
+      planting_status:
+        | "planted"
+        | "pending"
+        | "rejected"
+        | "approved"
+        | "in_progress"
+      tree_type:
+        | "tree"
+        | "ornamental"
+        | "fruit"
+        | "shade"
+        | "decorative"
+        | "other"
       user_role:
         | "admin"
         | "air-quality"
@@ -328,6 +422,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      planting_status: [
+        "planted",
+        "pending",
+        "rejected",
+        "approved",
+        "in_progress",
+      ],
+      tree_type: [
+        "tree",
+        "ornamental",
+        "fruit",
+        "shade",
+        "decorative",
+        "other",
+      ],
       user_role: [
         "admin",
         "air-quality",

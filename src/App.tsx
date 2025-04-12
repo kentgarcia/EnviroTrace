@@ -10,6 +10,8 @@ import AirQualityOverview from "./pages/dashboards/air-quality/Overview";
 import AirQualityRecords from "./pages/dashboards/air-quality/Records";
 import TreeManagementOverview from "./pages/dashboards/tree-management/Overview";
 import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
+import TreeManagementPlanting from "./pages/dashboards/tree-management/Planting";
+import TreeManagementRequests from "./pages/dashboards/tree-management/Requests";
 import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
 import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
 import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
@@ -117,6 +119,16 @@ const App = () => (
           <Route path="/tree-management/records" element={
             <ProtectedRoute>
               <TreeManagementRecords />
+            </ProtectedRoute>
+          } />
+          <Route path="/tree-management/planting" element={
+            <ProtectedRoute>
+              <TreeManagementPlanting />
+            </ProtectedRoute>
+          } />
+          <Route path="/tree-management/requests" element={
+            <ProtectedRoute>
+              <TreeManagementRequests />
             </ProtectedRoute>
           } />
           <Route path="/tree-management/reports" element={
