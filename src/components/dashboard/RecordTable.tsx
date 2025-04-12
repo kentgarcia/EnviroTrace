@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import { Search, PlusCircle } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
@@ -34,6 +34,45 @@ interface RecordTableProps {
   onViewRecord?: (record: Record) => void;
 }
 
+// Memoized table row to prevent unnecessary re-renders
+const TableRowMemo = memo(({ 
+  record, 
+  columns, 
+  onViewRecord 
+}: { 
+  record: Record; 
+  columns: { key: string; title: string }[];
+  onViewRecord?: (record: Record) => void;
+}) => (
+  <TableRow key={record.id}>
+    {columns.map((column) => (
+      <TableCell key={`${record.id}-${column.key}`}>
+        {column.key === "status" ? (
+          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+            ${record.status === "active" ? "bg-ems-green-100 text-ems-green-800" : 
+              record.status === "pending" ? "bg-amber-100 text-amber-800" : 
+              "bg-blue-100 text-blue-800"}`}>
+            {record[column.key]}
+          </div>
+        ) : (
+          record[column.key]
+        )}
+      </TableCell>
+    ))}
+    <TableCell>
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => onViewRecord && onViewRecord(record)}
+      >
+        View
+      </Button>
+    </TableCell>
+  </TableRow>
+));
+
+TableRowMemo.displayName = "TableRowMemo";
+
 export function RecordTable({ 
   title, 
   records: initialRecords, 
@@ -46,19 +85,21 @@ export function RecordTable({
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [records, setRecords] = useState(initialRecords);
   
-  // Update records when initialRecords changes - use memo for better performance
+  // Update records when initialRecords changes
   useEffect(() => {
     setRecords(initialRecords);
   }, [initialRecords]);
 
-  // Optimize filtering by memoizing filtered records
-  const filteredRecords = debouncedSearchTerm 
-    ? records.filter((record) => 
-        Object.values(record).some(value => 
-          value.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        )
+  // Memoize filtered records to prevent unnecessary recalculations
+  const filteredRecords = useMemo(() => {
+    if (!debouncedSearchTerm) return records;
+    
+    return records.filter((record) => 
+      Object.values(record).some(value => 
+        value.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       )
-    : records;
+    );
+  }, [records, debouncedSearchTerm]);
 
   return (
     <div className="space-y-4">
@@ -102,31 +143,12 @@ export function RecordTable({
             <TableBody>
               {filteredRecords.length > 0 ? (
                 filteredRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    {columns.map((column) => (
-                      <TableCell key={`${record.id}-${column.key}`}>
-                        {column.key === "status" ? (
-                          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                            ${record.status === "active" ? "bg-ems-green-100 text-ems-green-800" : 
-                              record.status === "pending" ? "bg-amber-100 text-amber-800" : 
-                              "bg-blue-100 text-blue-800"}`}>
-                            {record[column.key]}
-                          </div>
-                        ) : (
-                          record[column.key]
-                        )}
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => onViewRecord && onViewRecord(record)}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <TableRowMemo 
+                    key={record.id} 
+                    record={record} 
+                    columns={columns} 
+                    onViewRecord={onViewRecord} 
+                  />
                 ))
               ) : (
                 <TableRow>

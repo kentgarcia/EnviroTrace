@@ -1,29 +1,18 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import SignIn from "./pages/SignIn";
 import DashboardSelection from "./pages/DashboardSelection";
-import AirQualityOverview from "./pages/dashboards/air-quality/Overview";
-import AirQualityRecords from "./pages/dashboards/air-quality/Records";
-import TreeManagementOverview from "./pages/dashboards/tree-management/Overview";
-import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
-import TreeManagementPlanting from "./pages/dashboards/tree-management/Planting";
-import TreeManagementRequests from "./pages/dashboards/tree-management/Requests";
-import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
-import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
-import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
-import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
-import OfficesPage from "./pages/dashboards/government-emission/Offices";
-import UserManagement from "./pages/admin/UserManagement";
-import AdminUserManagement from "./pages/admin/AdminUserManagement";
-import ProfilePage from "./pages/ProfilePage";
-import NotFound from "./pages/NotFound";
-import InstallPWA from "./pages/InstallPWA";
-import { PwaBanner } from "./components/pwa/PwaBanner";
-import { NetworkStatus } from "./components/layout/NetworkStatus";
+
+// Lazy loaded components
+const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({ 
+  default: module.NetworkStatus 
+})));
+const PwaBanner = lazy(() => import("./components/pwa/PwaBanner").then(module => ({ 
+  default: module.PwaBanner 
+})));
 
 // Configure React Query with offline support
 const queryClient = new QueryClient({
@@ -182,8 +171,14 @@ const App = () => (
           {/* Not found route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <PwaBanner />
-        <NetworkStatus />
+        
+        <Suspense fallback={null}>
+          <PwaBanner />
+        </Suspense>
+        
+        <Suspense fallback={null}>
+          <NetworkStatus />
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

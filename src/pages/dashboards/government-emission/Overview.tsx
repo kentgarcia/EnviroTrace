@@ -1,349 +1,226 @@
-
 import { useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmissionStatCards } from "@/components/dashboards/government-emission/EmissionStatCards";
-import { EmissionCharts } from "@/components/dashboards/government-emission/EmissionCharts";
-import { RecentTestsTable } from "@/components/dashboards/government-emission/RecentTestsTable";
-import { EmissionTestSchedule } from "@/components/dashboards/government-emission/EmissionTestSchedule";
-import { EmissionHistoryTrend } from "@/components/dashboards/government-emission/EmissionHistoryTrend";
-import { ExportToSheet } from "@/components/dashboards/government-emission/ExportToSheet";
-import { YearSelector } from "@/components/dashboards/government-emission/YearSelector";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useQuery, useQueries } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { Suspense, lazy } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
-
-// Data types
-interface EmissionStat {
-  label: string;
-  value: number;
-  change: number;
-}
-
-interface EmissionData {
-  stats: {
-    totalVehicles: EmissionStat;
-    testedVehicles: EmissionStat;
-    complianceRate: EmissionStat;
-    failRate: EmissionStat;
-  };
-  quarterlyData: Array<{
-    quarter: number;
-    passed: number;
-    failed: number;
-    name: string;
-  }>;
-  upcomingTests: Array<{
-    id: string;
-    location: string;
-    quarter: number;
-    assignedPersonnel: string;
-    scheduledDate: string;
-  }>;
-  recentTests: Array<{
-    id: string;
-    plateNumber: string;
-    officeName: string;
-    testDate: string;
-    result: boolean;
-  }>;
-  historicalTrend: Array<{
-    year: number;
-    complianceRate: number;
-    totalVehicles: number;
-  }>;
-}
-
-// Lazy loaded components for deferred rendering
-const LazyEmissionHistoryTrend = lazy(() => import("@/components/dashboards/government-emission/EmissionHistoryTrend").then(
-  (module) => ({ default: module.EmissionHistoryTrend })
-));
+import { SkeletonTable } from "@/components/ui/skeleton-table";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { YearSelectorWrapper } from "@/components/dashboards/government-emission/YearSelectorWrapper";
+import { EmissionStatCardsWrapper } from "@/components/dashboards/government-emission/EmissionStatCardsWrapper";
+import { EmissionChartsWrapper } from "@/components/dashboards/government-emission/EmissionChartsWrapper";
+import { EmissionTestScheduleWrapper } from "@/components/dashboards/government-emission/EmissionTestScheduleWrapper";
+import { RecentTestsTableWrapper } from "@/components/dashboards/government-emission/RecentTestsTableWrapper";
+import { EmissionHistoryTrendWrapper } from "@/components/dashboards/government-emission/EmissionHistoryTrendWrapper";
 
 export default function GovEmissionOverview() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const availableYears = [selectedYear - 2, selectedYear - 1, selectedYear, selectedYear + 1];
-  const { isOffline } = useNetworkStatus();
 
-  // Main data query with optimized payload
-  const { 
-    data, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useQuery({
-    queryKey: ['emissionOverview', selectedYear],
+  // Fetch dashboard data
+  const { data: dashboardData, isLoading, error } = useQuery({
+    queryKey: ['govEmissionDashboard', selectedYear],
     queryFn: async () => {
-      if (isOffline) {
-        throw new Error("You are offline. Data cannot be fetched.");
-      }
-
-      // Parallel data fetching for different data sets
-      const [vehiclesResult, testsResult, schedulesResult, recentTestsResult] = await Promise.all([
-        // Get vehicle count - only select ID for counting
-        supabase.from('vehicles').select('id', { count: 'exact', head: true }),
-        
-        // Get tests data for the selected year - minimal field selection
-        supabase.from('emission_tests')
-          .select('id,result,quarter')
-          .eq('year', selectedYear),
-          
-        // Get upcoming test schedules - minimal field selection
-        supabase.from('emission_test_schedules')
-          .select('id,location,quarter,assigned_personnel,conducted_on')
-          .eq('year', selectedYear)
-          .order('quarter', { ascending: true })
-          .limit(5),
-          
-        // Get recent tests - minimal field selection
-        supabase.from('vehicle_summary_view')
-          .select('id,plate_number,office_name,latest_test_date,latest_test_result')
-          .order('latest_test_date', { ascending: false })
-          .limit(5)
-      ]);
-
-      if (vehiclesResult.error || testsResult.error || schedulesResult.error || recentTestsResult.error) {
-        throw new Error("Error fetching data");
-      }
-
-      const totalVehicles = vehiclesResult.count || 0;
-      const testsData = testsResult.data || [];
-      const schedulesData = schedulesResult.data || [];
-      const recentTestsData = recentTestsResult.data || [];
-
-      // Process tests data
-      const testedVehicles = testsData.length;
-      const passedTests = testsData.filter(test => test.result).length;
-      const failedTests = testedVehicles - passedTests;
-      const complianceRate = totalVehicles > 0 ? Math.round((passedTests / totalVehicles) * 100) : 0;
-      const failRate = testedVehicles > 0 ? Math.round((failedTests / testedVehicles) * 100) : 0;
-
-      // Process quarterly data
-      const quarterlyData = [1, 2, 3, 4].map(quarter => {
-        const quarterTests = testsData.filter(test => test.quarter === quarter);
-        const passed = quarterTests.filter(test => test.result).length;
-        const failed = quarterTests.length - passed;
-        return {
-          quarter,
-          passed,
-          failed,
-          name: `Q${quarter}`
-        };
-      });
-
-      // Process upcoming tests
-      const upcomingTests = schedulesData.map(schedule => ({
-        id: schedule.id,
-        location: schedule.location,
-        quarter: schedule.quarter,
-        assignedPersonnel: schedule.assigned_personnel,
-        scheduledDate: schedule.conducted_on
-      }));
-
-      // Process recent tests
-      const recentTests = recentTestsData.map(test => ({
-        id: test.id,
-        plateNumber: test.plate_number || 'Unknown',
-        officeName: test.office_name || 'Unknown',
-        testDate: test.latest_test_date || 'N/A',
-        result: test.latest_test_result
-      }));
-
-      // Create historical trend data (mocked for now)
-      const historicalTrend = [
-        { year: selectedYear - 2, complianceRate: 82, totalVehicles: 450 },
-        { year: selectedYear - 1, complianceRate: 87, totalVehicles: 475 },
-        { year: selectedYear, complianceRate, totalVehicles }
-      ];
-
-      // Construct return data object
-      const emissionData: EmissionData = {
-        stats: {
-          totalVehicles: {
-            label: 'Total Vehicles',
-            value: totalVehicles,
-            change: 5.2, // Mocked change percentage
-          },
-          testedVehicles: {
-            label: 'Tested Vehicles',
-            value: testedVehicles,
-            change: 12.3, // Mocked change percentage
-          },
-          complianceRate: {
-            label: 'Compliance Rate',
-            value: complianceRate,
-            change: 3.1, // Mocked change percentage
-          },
-          failRate: {
-            label: 'Fail Rate',
-            value: failRate,
-            change: -2.4, // Mocked change percentage
-          },
-        },
-        quarterlyData,
-        upcomingTests,
-        recentTests,
-        historicalTrend,
-      };
+      // In a real app, this would fetch from your API with the selected year
+      // For demo purposes, we'll simulate a delay and return mock data
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      return emissionData;
+      // Mock data structure
+      return {
+        stats: {
+          totalVehicles: 1248,
+          testedVehicles: 987,
+          complianceRate: 79.2,
+          failRate: 8.5
+        },
+        quarterlyData: [
+          { quarter: 'Q1', pass: 230, fail: 20 },
+          { quarter: 'Q2', pass: 245, fail: 25 },
+          { quarter: 'Q3', pass: 260, fail: 15 },
+          { quarter: 'Q4', pass: 252, fail: 18 }
+        ],
+        upcomingTests: [
+          { id: 1, vehicleId: 'GV-2023-001', department: 'Public Works', scheduledDate: '2023-06-15' },
+          { id: 2, vehicleId: 'GV-2023-042', department: 'Parks & Recreation', scheduledDate: '2023-06-18' },
+          { id: 3, vehicleId: 'GV-2023-108', department: 'Water District', scheduledDate: '2023-06-22' },
+          { id: 4, vehicleId: 'GV-2023-156', department: 'Fire Department', scheduledDate: '2023-06-25' },
+          { id: 5, vehicleId: 'GV-2023-201', department: 'Police Department', scheduledDate: '2023-06-28' }
+        ],
+        recentTests: [
+          { id: 1, vehicleId: 'GV-2023-198', testDate: '2023-06-01', result: 'Pass', emissions: '1.2g/km' },
+          { id: 2, vehicleId: 'GV-2023-045', testDate: '2023-06-02', result: 'Fail', emissions: '4.8g/km' },
+          { id: 3, vehicleId: 'GV-2023-112', testDate: '2023-06-03', result: 'Pass', emissions: '1.5g/km' },
+          { id: 4, vehicleId: 'GV-2023-078', testDate: '2023-06-04', result: 'Pass', emissions: '1.1g/km' },
+          { id: 5, vehicleId: 'GV-2023-156', testDate: '2023-06-05', result: 'Pass', emissions: '1.3g/km' }
+        ],
+        historyData: [
+          { year: 2019, rate: 68 },
+          { year: 2020, rate: 72 },
+          { year: 2021, rate: 75 },
+          { year: 2022, rate: 77 },
+          { year: 2023, rate: 79 }
+        ]
+      };
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 60, // 1 hour
-    enabled: !isOffline,
   });
-
-  const handleRefresh = () => {
-    refetch();
-  };
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
-        <div className="flex-1 p-6 bg-gray-50">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold">Government Emission Dashboard</h1>
-            <p className="text-muted-foreground">
-              Monitor and analyze vehicle emission compliance for government fleets
-            </p>
-          </div>
+        <div className="flex-1 overflow-auto">
+          <div className="p-6">
+            <header className="mb-8">
+              <h1 className="text-3xl font-semibold">Government Vehicle Emission Dashboard</h1>
+              <p className="text-muted-foreground">Monitor and manage emission testing for government vehicles</p>
+            </header>
 
-          {isOffline && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Offline Mode</AlertTitle>
-              <AlertDescription>
-                You are currently offline. Some data may not be up to date.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <YearSelector 
-              selectedYear={selectedYear} 
-              onYearChange={setSelectedYear} 
-              availableYears={availableYears}
-            />
-            
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'Loading...' : 'Refresh Data'}
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            {isLoading ? (
-              Array(4).fill(0).map((_, i) => (
-                <SkeletonCard key={`stat-skeleton-${i}`} headerHeight={6} contentHeight={12} />
-              ))
-            ) : error ? (
-              <div className="col-span-full p-4 bg-red-50 text-red-600 rounded-md">
-                Error loading statistics: {error.message}
+            <main>
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold mb-2">Dashboard Overview</h2>
+                <div className="flex items-center justify-between">
+                  <div className="text-muted-foreground">
+                    {isLoading ? (
+                      <Skeleton className="h-5 w-48" />
+                    ) : (
+                      `Showing data for ${selectedYear} emissions testing`
+                    )}
+                  </div>
+                  <YearSelectorWrapper
+                    selectedYear={selectedYear}
+                    onYearChange={(year) => setSelectedYear(Number(year))}
+                  />
+                </div>
               </div>
-            ) : (
-              <EmissionStatCards stats={data?.stats} />
-            )}
-          </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            <Card className="col-span-full lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Quarterly Emission Test Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-[300px]">
-                    <div className="animate-pulse bg-muted h-full w-full rounded-md"></div>
-                  </div>
-                ) : error ? (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-md">
-                    Error loading charts: {error.message}
-                  </div>
-                ) : (
-                  <EmissionCharts data={data?.quarterlyData} />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Upcoming Tests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="space-y-2">
-                    {Array(3).fill(0).map((_, i) => (
-                      <div key={`schedule-skeleton-${i}`} className="animate-pulse space-y-1">
-                        <div className="h-5 bg-muted rounded w-3/4"></div>
-                        <div className="h-4 bg-muted rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : error ? (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-md">
-                    Error loading schedule: {error.message}
-                  </div>
-                ) : (
-                  <EmissionTestSchedule tests={data?.upcomingTests} />
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Recent Emission Tests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="w-full">
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 bg-muted rounded w-full"></div>
-                      {Array(4).fill(0).map((_, i) => (
-                        <div key={`table-skeleton-${i}`} className="h-10 bg-muted rounded w-full"></div>
+              <div className="space-y-8">
+                {/* Stats Cards */}
+                <section>
+                  {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {[...Array(4)].map((_, i) => (
+                        <SkeletonCard key={i} headerHeight={6} contentHeight={12} />
                       ))}
                     </div>
-                  </div>
-                ) : error ? (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-md">
-                    Error loading test data: {error.message}
-                  </div>
-                ) : (
-                  <RecentTestsTable tests={data?.recentTests} />
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  ) : (
+                    <EmissionStatCardsWrapper
+                      totalVehicles={dashboardData?.stats.totalVehicles}
+                      testedVehicles={dashboardData?.stats.testedVehicles}
+                      complianceRate={dashboardData?.stats.complianceRate}
+                      failRate={dashboardData?.stats.failRate}
+                    />
+                  )}
+                </section>
 
-          <Suspense fallback={<SkeletonCard headerHeight={6} contentHeight={24} />}>
-            <Card>
-              <CardHeader>
-                <CardTitle>Historical Trend Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="h-[300px]">
-                    <div className="animate-pulse bg-muted h-full w-full rounded-md"></div>
-                  </div>
-                ) : error ? (
-                  <div className="p-4 bg-red-50 text-red-600 rounded-md">
-                    Error loading historical trends: {error.message}
-                  </div>
-                ) : (
-                  <LazyEmissionHistoryTrend data={data?.historicalTrend} />
-                )}
-              </CardContent>
-            </Card>
-          </Suspense>
+                {/* Charts Section */}
+                <section>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Quarterly Emission Test Results</CardTitle>
+                      <CardDescription>
+                        Pass and fail rates across quarters
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      {isLoading ? (
+                        <div className="h-[300px] w-full flex items-center justify-center">
+                          <Skeleton className="h-[300px] w-full" />
+                        </div>
+                      ) : (
+                        <EmissionChartsWrapper
+                          quarterlyData={dashboardData?.quarterlyData || []}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </section>
+
+                {/* Two Column Layout */}
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column - Upcoming Tests */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Upcoming Emission Tests</CardTitle>
+                      <CardDescription>
+                        Tests scheduled in the next 30 days
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoading ? (
+                        <SkeletonTable rows={5} columns={3} />
+                      ) : (
+                        <EmissionTestScheduleWrapper
+                          schedules={dashboardData?.upcomingTests || []}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Right Column - Recent Tests */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Test Results</CardTitle>
+                      <CardDescription>Latest emission test results</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoading ? (
+                        <SkeletonTable rows={5} columns={4} />
+                      ) : (
+                        <RecentTestsTableWrapper
+                          recentTests={dashboardData?.recentTests || []}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </section>
+
+                {/* Historical Trend */}
+                <section>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Historical Compliance Trend</CardTitle>
+                      <CardDescription>
+                        Year-over-year compliance rate comparison
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      {isLoading ? (
+                        <div className="h-[300px] w-full flex items-center justify-center">
+                          <Skeleton className="h-[300px] w-full" />
+                        </div>
+                      ) : (
+                        <EmissionHistoryTrendWrapper
+                          historyData={dashboardData?.historyData || []}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </section>
+
+                {/* Export Section */}
+                <section>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Export Data</CardTitle>
+                      <CardDescription>
+                        Download emission testing data for reporting
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-4">
+                        <Button variant="outline">Export to Excel</Button>
+                        <Button variant="outline">Export to PDF</Button>
+                        <Button variant="outline">Export to CSV</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+              </div>
+            </main>
+          </div>
         </div>
       </div>
     </SidebarProvider>
