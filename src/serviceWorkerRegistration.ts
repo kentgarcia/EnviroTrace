@@ -3,15 +3,15 @@
 
 // Check if service workers are supported
 export const registerServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       const swUrl = '/sw.js';
       
       // Add a cache-busting query parameter to ensure we get the latest version
-      //const swUrlWithCacheBust = `${swUrl}?v=${Date.now()}`;
+      const swUrlWithCacheBust = `${swUrl}?v=${Date.now()}`;
       
       navigator.serviceWorker
-        .register(swUrl)
+        .register(swUrlWithCacheBust)
         .then((registration) => {
           // Registration was successful
           console.log('ServiceWorker registration successful with scope: ', registration.scope);
@@ -67,11 +67,13 @@ export const registerServiceWorker = () => {
     window.addEventListener('offline', () => {
       document.dispatchEvent(new CustomEvent('app-offline', { detail: false }));
     });
+  } else {
+    console.log('Service workers are not supported in this browser');
   }
 };
 
 export const unregisterServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.ready
       .then((registration) => {
         registration.unregister();
@@ -84,7 +86,7 @@ export const unregisterServiceWorker = () => {
 
 // Update service worker (force skip waiting)
 export const updateServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
       registration.update();
       if (registration.waiting) {
