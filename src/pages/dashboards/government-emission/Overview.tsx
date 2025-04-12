@@ -109,7 +109,7 @@ export default function GovEmissionOverview() {
                     <EmissionStatCardsWrapper
                       totalVehicles={dashboardData?.stats.totalVehicles}
                       testedVehicles={dashboardData?.stats.testedVehicles}
-                      complianceRate={dashboardData?.stats.complianceRate}
+                      passRate={dashboardData?.stats.complianceRate}
                       failRate={dashboardData?.stats.failRate}
                     />
                   )}
