@@ -30,28 +30,35 @@ interface RecordTableProps {
     title: string;
   }[];
   isLoading?: boolean;
+  onAddNew?: () => void;
+  onViewRecord?: (record: Record) => void;
 }
 
 export function RecordTable({ 
   title, 
   records: initialRecords, 
   columns, 
-  isLoading = false 
+  isLoading = false,
+  onAddNew,
+  onViewRecord
 }: RecordTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [records, setRecords] = useState(initialRecords);
   
-  // Update records when initialRecords changes
+  // Update records when initialRecords changes - use memo for better performance
   useEffect(() => {
     setRecords(initialRecords);
   }, [initialRecords]);
 
-  const filteredRecords = records.filter((record) => 
-    Object.values(record).some(value => 
-      value.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    )
-  );
+  // Optimize filtering by memoizing filtered records
+  const filteredRecords = debouncedSearchTerm 
+    ? records.filter((record) => 
+        Object.values(record).some(value => 
+          value.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        )
+      )
+    : records;
 
   return (
     <div className="space-y-4">
@@ -67,10 +74,12 @@ export function RecordTable({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button size="sm" className="flex-shrink-0">
-            <PlusCircle className="h-4 w-4 mr-1" />
-            Add New
-          </Button>
+          {onAddNew && (
+            <Button size="sm" className="flex-shrink-0" onClick={onAddNew}>
+              <PlusCircle className="h-4 w-4 mr-1" />
+              Add New
+            </Button>
+          )}
         </div>
       </div>
 
@@ -109,7 +118,13 @@ export function RecordTable({
                       </TableCell>
                     ))}
                     <TableCell>
-                      <Button variant="ghost" size="sm">View</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => onViewRecord && onViewRecord(record)}
+                      >
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))

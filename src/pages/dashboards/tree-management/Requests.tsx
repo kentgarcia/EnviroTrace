@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -45,7 +44,6 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
-// Define interfaces
 interface SaplingRequest {
   id: string;
   request_date: string;
@@ -59,7 +57,6 @@ interface SaplingRequest {
   updated_at: string;
 }
 
-// Form validation schema
 const requestFormSchema = z.object({
   request_date: z.string().min(1, "Date is required"),
   requester_name: z.string().min(2, "Requester name is required"),
@@ -76,34 +73,32 @@ export default function SaplingRequestsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   
-  // Modal states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<SaplingRequest | null>(null);
 
-  // Fetch sapling requests
   const { data: requests, isLoading, error } = useQuery({
     queryKey: ['saplingRequests'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sapling_requests')
-        .select('*')
+        .select('id, request_date, requester_name, requester_address, sapling_name, quantity, status, notes, created_at, updated_at')
         .order('request_date', { ascending: false });
       
       if (error) throw error;
-      return data as SaplingRequest[];
+      return data;
     },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60,
   });
 
-  // Filter requests based on search term
   const filteredRequests = requests?.filter(request => 
     request.requester_name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
     request.sapling_name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
     request.requester_address.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
-  // Add request form
   const addForm = useForm<z.infer<typeof requestFormSchema>>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
@@ -117,7 +112,6 @@ export default function SaplingRequestsPage() {
     },
   });
 
-  // Edit request form
   const editForm = useForm<z.infer<typeof requestFormSchema>>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
@@ -131,12 +125,19 @@ export default function SaplingRequestsPage() {
     },
   });
 
-  // Add mutation
   const addMutation = useMutation({
     mutationFn: async (data: z.infer<typeof requestFormSchema>) => {
       const { error } = await supabase
         .from('sapling_requests')
-        .insert([data]);
+        .insert({
+          request_date: data.request_date,
+          requester_name: data.requester_name,
+          requester_address: data.requester_address,
+          sapling_name: data.sapling_name,
+          quantity: data.quantity,
+          status: data.status,
+          notes: data.notes
+        });
       
       if (error) throw error;
       return data;
@@ -159,13 +160,20 @@ export default function SaplingRequestsPage() {
     },
   });
 
-  // Edit mutation
   const editMutation = useMutation({
     mutationFn: async (data: z.infer<typeof requestFormSchema> & { id: string }) => {
       const { id, ...updateData } = data;
       const { error } = await supabase
         .from('sapling_requests')
-        .update(updateData)
+        .update({
+          request_date: updateData.request_date,
+          requester_name: updateData.requester_name,
+          requester_address: updateData.requester_address,
+          sapling_name: updateData.sapling_name,
+          quantity: updateData.quantity,
+          status: updateData.status,
+          notes: updateData.notes
+        })
         .eq('id', id);
       
       if (error) throw error;
@@ -188,7 +196,6 @@ export default function SaplingRequestsPage() {
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -217,7 +224,6 @@ export default function SaplingRequestsPage() {
     },
   });
 
-  // Handle edit
   const handleEdit = (request: SaplingRequest) => {
     setSelectedRequest(request);
     editForm.reset({
@@ -232,18 +238,15 @@ export default function SaplingRequestsPage() {
     setEditDialogOpen(true);
   };
 
-  // Handle delete
   const handleDelete = (request: SaplingRequest) => {
     setSelectedRequest(request);
     setDeleteDialogOpen(true);
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
   };
 
-  // Get status badge color
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'planted':
@@ -362,7 +365,6 @@ export default function SaplingRequestsPage() {
         </div>
       </div>
 
-      {/* Add Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
@@ -493,7 +495,6 @@ export default function SaplingRequestsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
@@ -628,7 +629,6 @@ export default function SaplingRequestsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

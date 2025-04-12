@@ -84,18 +84,21 @@ export default function TreePlantingPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<TreePlantingActivity | null>(null);
 
-  // Fetch tree planting activities
+  // Fetch tree planting activities with optimized query
   const { data: activities, isLoading, error } = useQuery({
     queryKey: ['treePlantingActivities'],
     queryFn: async () => {
+      // Only select needed fields to minimize payload
       const { data, error } = await supabase
         .from('tree_planting_activities')
-        .select('*')
+        .select('id, planting_date, establishment_name, planted_by, tree_name, tree_type, quantity, status, notes, created_at, updated_at')
         .order('planting_date', { ascending: false });
       
       if (error) throw error;
       return data as TreePlantingActivity[];
     },
+    staleTime: 1000 * 60 * 5, // 5 minutes cache
+    gcTime: 1000 * 60 * 60, // 1 hour garbage collection
   });
 
   // Filter activities based on search term
@@ -140,7 +143,16 @@ export default function TreePlantingPage() {
     mutationFn: async (data: z.infer<typeof plantingFormSchema>) => {
       const { error } = await supabase
         .from('tree_planting_activities')
-        .insert([data]);
+        .insert({
+          planting_date: data.planting_date,
+          establishment_name: data.establishment_name,
+          planted_by: data.planted_by,
+          tree_name: data.tree_name,
+          tree_type: data.tree_type,
+          quantity: data.quantity,
+          status: data.status,
+          notes: data.notes
+        });
       
       if (error) throw error;
       return data;
@@ -169,7 +181,16 @@ export default function TreePlantingPage() {
       const { id, ...updateData } = data;
       const { error } = await supabase
         .from('tree_planting_activities')
-        .update(updateData)
+        .update({
+          planting_date: updateData.planting_date,
+          establishment_name: updateData.establishment_name,
+          planted_by: updateData.planted_by,
+          tree_name: updateData.tree_name,
+          tree_type: updateData.tree_type,
+          quantity: updateData.quantity,
+          status: updateData.status,
+          notes: updateData.notes
+        })
         .eq('id', id);
       
       if (error) throw error;
