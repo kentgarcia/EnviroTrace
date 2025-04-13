@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import SignIn from "./pages/SignIn";
 import DashboardSelection from "./pages/DashboardSelection";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { ElectronInfo } from "@/components/layout/ElectronInfo";
 
 // Lazy loaded components
 const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({ 
@@ -172,6 +174,9 @@ const App = () => (
         <Suspense fallback={null}>
           <NetworkStatus />
         </Suspense>
+        
+        {/* Show Electron info if running in desktop app */}
+        <ElectronInfo />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
