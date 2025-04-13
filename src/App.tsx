@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,30 +6,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import SignIn from "./pages/SignIn";
 import DashboardSelection from "./pages/DashboardSelection";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import InstallPWA from "./pages/InstallPWA";
-import ProfilePage from "./pages/ProfilePage";
-import UserManagement from "./pages/admin/UserManagement";
-import AdminUserManagement from "./pages/admin/AdminUserManagement";
-import AirQualityOverview from "./pages/dashboards/air-quality/Overview";
-import AirQualityRecords from "./pages/dashboards/air-quality/Records";
-import TreeManagementOverview from "./pages/dashboards/tree-management/Overview";
-import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
-import TreePlantingPage from "./pages/dashboards/tree-management/Planting";
-import SaplingRequestsPage from "./pages/dashboards/tree-management/Requests";
-import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
-import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
-import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
-import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
-import OfficesPage from "./pages/dashboards/government-emission/Offices";
-import NotFound from "./pages/NotFound";
 
 // Lazy loaded components
 const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({ 
   default: module.NetworkStatus 
-})));
-const PwaBanner = lazy(() => import("./components/pwa/PwaBanner").then(module => ({ 
-  default: module.PwaBanner 
 })));
 
 // Configure React Query with offline support
@@ -66,7 +47,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<SignIn />} />
-          <Route path="/install-pwa" element={<InstallPWA />} />
           
           {/* Protected routes */}
           <Route path="/dashboard-selection" element={
@@ -188,10 +168,6 @@ const App = () => (
           {/* Not found route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        
-        <Suspense fallback={null}>
-          <PwaBanner />
-        </Suspense>
         
         <Suspense fallback={null}>
           <NetworkStatus />
