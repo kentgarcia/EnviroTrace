@@ -1,4 +1,3 @@
-import { InstallPwaButton } from '@/components/layout/InstallPwaButton';
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -146,7 +145,6 @@ export default function DashboardSelection() {
       </main>
 
       <footer className="border-t bg-white py-4 px-6">
-        <InstallPwaButton />
         <div className="max-w-screen-xl mx-auto text-center text-sm text-muted-foreground">
           Environmental Management System &copy; 2025
         </div>
