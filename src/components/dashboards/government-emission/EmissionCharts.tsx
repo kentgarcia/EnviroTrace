@@ -1,4 +1,3 @@
-
 import { DataChart } from "@/components/dashboard/DataChart";
 
 interface EmissionChartsProps {
@@ -12,9 +11,9 @@ interface EmissionChartsProps {
     name: string;
     value: number;
   }>;
-  vehicleTypeData: Array<{
-    name: string;
-    value: number;
+  wheelCountData: Array<{
+    count: number;
+    wheelCount: number;
   }>;
   selectedYear: number;
 }
@@ -22,7 +21,7 @@ interface EmissionChartsProps {
 export function EmissionCharts({ 
   quarterStats, 
   engineTypeData, 
-  vehicleTypeData, 
+  wheelCountData, 
   selectedYear 
 }: EmissionChartsProps) {
   return (
@@ -46,12 +45,12 @@ export function EmissionCharts({
           },
           {
             name: "Wheel Count",
-            "two_wheels": vehicleTypeData.find(item => item.name === "2")?.value || 0,
-            "four_wheels": vehicleTypeData.find(item => item.name === "4")?.value || 0
+            "2 wheels": wheelCountData.find(item => item.wheelCount === 2)?.count || 0,
+            "4 wheels": wheelCountData.find(item => item.wheelCount === 4)?.count || 0
           }
         ]}
         type="bar"
-        dataKeys={["gas", "diesel", "two_wheels", "four_wheels"]}
+        dataKeys={["gas", "diesel", "2 wheels", "4 wheels"]}
         colors={["#60a5fa", "#a855f7", "#fbbf24", "#f97316"]}
       />
     </section>

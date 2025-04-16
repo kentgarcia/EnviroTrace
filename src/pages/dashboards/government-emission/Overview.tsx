@@ -14,64 +14,170 @@ import { EmissionChartsWrapper } from "@/components/dashboards/government-emissi
 import { EmissionTestScheduleWrapper } from "@/components/dashboards/government-emission/EmissionTestScheduleWrapper";
 import { RecentTestsTableWrapper } from "@/components/dashboards/government-emission/RecentTestsTableWrapper";
 import { EmissionHistoryTrendWrapper } from "@/components/dashboards/government-emission/EmissionHistoryTrendWrapper";
+import { z } from "zod";
+import { toast } from "sonner";
+import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
+
+const dashboardDataSchema = z.object({
+  stats: z.object({
+    totalVehicles: z.number(),
+    testedVehicles: z.number(),
+    complianceRate: z.number(),
+    failRate: z.number(),
+    officeDepartments: z.number(), // Added officeDepartments definition
+  }),
+  quarterlyData: z.array(
+    z.object({
+      quarter: z.string(),
+      pass: z.number(),
+      fail: z.number(),
+    })
+  ),
+  upcomingTests: z.array(
+    z.object({
+      id: z.string(),
+      vehicleId: z.string(),
+      department: z.string(),
+      scheduledDate: z.string(),
+    })
+  ),
+  recentTests: z.array(
+    z.object({
+      id: z.string(),
+      vehicleId: z.string(),
+      testDate: z.string(),
+      result: z.boolean(),
+    })
+  ),
+  historyData: z.array(
+    z.object({
+      year: z.number(),
+      rate: z.number(),
+    })
+  ),
+  engineTypeData: z.array(
+    z.object({
+      type: z.string(),
+      count: z.number(),
+    })
+  ),
+  wheelCountData: z.array(
+    z.object({
+      count: z.number(),
+      wheelCount: z.number(),
+    })
+  ),
+});
 
 export default function GovEmissionOverview() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = useState("Q1"); // Added state for selectedQuarter
 
-  // Fetch dashboard data
   const { data: dashboardData, isLoading, error } = useQuery({
-    queryKey: ['govEmissionDashboard', selectedYear],
+    queryKey: ["govEmissionDashboard", selectedYear],
     queryFn: async () => {
-      // In a real app, this would fetch from your API with the selected year
-      // For demo purposes, we'll simulate a delay and return mock data
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data structure
-      return {
+      // Define the expected shape of the dashboard data
+      type DashboardData = {
         stats: {
-          totalVehicles: 1248,
-          testedVehicles: 987,
-          complianceRate: 79.2,
-          failRate: 8.5
-        },
-        quarterlyData: [
-          { quarter: 'Q1', pass: 230, fail: 20 },
-          { quarter: 'Q2', pass: 245, fail: 25 },
-          { quarter: 'Q3', pass: 260, fail: 15 },
-          { quarter: 'Q4', pass: 252, fail: 18 }
-        ],
-        upcomingTests: [
-          { id: 1, vehicleId: 'GV-2023-001', department: 'Public Works', scheduledDate: '2023-06-15' },
-          { id: 2, vehicleId: 'GV-2023-042', department: 'Parks & Recreation', scheduledDate: '2023-06-18' },
-          { id: 3, vehicleId: 'GV-2023-108', department: 'Water District', scheduledDate: '2023-06-22' },
-          { id: 4, vehicleId: 'GV-2023-156', department: 'Fire Department', scheduledDate: '2023-06-25' },
-          { id: 5, vehicleId: 'GV-2023-201', department: 'Police Department', scheduledDate: '2023-06-28' }
-        ],
-        recentTests: [
-          { id: 1, vehicleId: 'GV-2023-198', testDate: '2023-06-01', result: 'Pass', emissions: '1.2g/km' },
-          { id: 2, vehicleId: 'GV-2023-045', testDate: '2023-06-02', result: 'Fail', emissions: '4.8g/km' },
-          { id: 3, vehicleId: 'GV-2023-112', testDate: '2023-06-03', result: 'Pass', emissions: '1.5g/km' },
-          { id: 4, vehicleId: 'GV-2023-078', testDate: '2023-06-04', result: 'Pass', emissions: '1.1g/km' },
-          { id: 5, vehicleId: 'GV-2023-156', testDate: '2023-06-05', result: 'Pass', emissions: '1.3g/km' }
-        ],
-        historyData: [
-          { year: 2019, rate: 68 },
-          { year: 2020, rate: 72 },
-          { year: 2021, rate: 75 },
-          { year: 2022, rate: 77 },
-          { year: 2023, rate: 79 }
-        ]
+          totalVehicles: number;
+          testedVehicles: number;
+          complianceRate: number;
+          failRate: number;
+          officeDepartments: number;
+        };
+        quarterlyData: Array<{
+          quarter: string;
+          pass: number;
+          fail: number;
+        }>;
+        upcomingTests: Array<{
+          id: string;
+          vehicleId: string;
+          department: string;
+          scheduleddate: string;
+        }>;
+        recentTests: Array<{
+          id: string;
+          vehicleid: string;
+          test_date: string;
+          result: boolean;
+        }>;
+        historyData: Array<{
+          year: number;
+          rate: number;
+        }>;
+        engineTypeData: Array<{
+          type: string;
+          count: number;
+        }>;
+        wheelCountData: Array<{
+          count: number;
+          wheel_count: number;
+        }>;
       };
+
+      const { data, error } = await supabase.rpc("fetch_dashboard_data", { selected_year: selectedYear });
+      if (error) {
+        toast.error("Failed to fetch dashboard data");
+        throw error;
+      }
+
+      const dashboard = data as DashboardData;
+
+      // Ensure the response keys match the expected schema
+      const parsedData = dashboardDataSchema.parse({
+        stats: {
+          totalVehicles: dashboard.stats.totalVehicles,
+          testedVehicles: dashboard.stats.testedVehicles,
+          complianceRate: dashboard.stats.complianceRate,
+          failRate: dashboard.stats.failRate,
+          officeDepartments: dashboard.stats.officeDepartments,
+        },
+        quarterlyData: dashboard.quarterlyData.map((item) => ({
+          quarter: item.quarter,
+          pass: item.pass,
+          fail: item.fail,
+        })),
+        upcomingTests: dashboard.upcomingTests.map((item) => ({
+          id: item.id,
+          vehicleId: item.vehicleId,
+          department: item.department,
+          scheduledDate: item.scheduleddate, // Fixed key to match schema
+        })),
+        recentTests: dashboard.recentTests.map((item) => ({
+          id: item.id,
+          vehicleId: item.vehicleid, // Fixed key to match schema
+          testDate: item.test_date,
+          result: item.result,
+        })),
+        historyData: dashboard.historyData.map((item) => ({
+          year: item.year,
+          rate: item.rate,
+        })),
+        engineTypeData: dashboard.engineTypeData.map((item) => ({
+          type: item.type,
+          count: item.count,
+        })),
+        wheelCountData: dashboard.wheelCountData.map((item) => ({
+          wheelCount: item.wheel_count, // Fixed key to match schema
+          count: item.count,
+        })),
+      });
+
+      return parsedData;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 60,
   });
+
+  const availableYears = [2023, 2024, 2025]; // Example years, replace with dynamic data if needed
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 overflow-auto">
+          <DashboardNavbar />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Government Vehicle Emission Dashboard</h1>
@@ -92,6 +198,7 @@ export default function GovEmissionOverview() {
                   <YearSelectorWrapper
                     selectedYear={selectedYear}
                     onYearChange={(year) => setSelectedYear(Number(year))}
+                    availableYears={availableYears}
                   />
                 </div>
               </div>
@@ -107,10 +214,10 @@ export default function GovEmissionOverview() {
                     </div>
                   ) : (
                     <EmissionStatCardsWrapper
-                      totalVehicles={dashboardData?.stats.totalVehicles}
-                      testedVehicles={dashboardData?.stats.testedVehicles}
-                      passRate={dashboardData?.stats.complianceRate}
-                      failRate={dashboardData?.stats.failRate}
+                      totalVehicles={dashboardData?.stats.totalVehicles ?? 0}
+                      testedVehicles={dashboardData?.stats.testedVehicles ?? 0}
+                      passRate={dashboardData?.stats.complianceRate ?? 0}
+                      officeDepartments={dashboardData?.stats.officeDepartments ?? 0}
                     />
                   )}
                 </section>
@@ -131,7 +238,15 @@ export default function GovEmissionOverview() {
                         </div>
                       ) : (
                         <EmissionChartsWrapper
-                          quarterlyData={dashboardData?.quarterlyData || []}
+                          quarterlyData={dashboardData?.quarterlyData.map((data) => ({
+                            name: data.quarter,
+                            passed: data.pass,
+                            failed: data.fail,
+                            total: data.pass + data.fail,
+                          })) || []}
+                          engineTypeData={dashboardData?.engineTypeData.map(data => ({ name: data.type, value: data.count })) || []}
+                          wheelCountData={dashboardData?.wheelCountData.map(data => ({ wheelCount: data.wheelCount, count: data.count })) || []}
+                          selectedYear={selectedYear}
                         />
                       )}
                     </CardContent>
@@ -153,7 +268,8 @@ export default function GovEmissionOverview() {
                         <SkeletonTable rows={5} columns={3} />
                       ) : (
                         <EmissionTestScheduleWrapper
-                          schedules={dashboardData?.upcomingTests || []}
+                          selectedYear={selectedYear}
+                          selectedQuarter={parseInt(selectedQuarter.substring(1), 10)}
                         />
                       )}
                     </CardContent>

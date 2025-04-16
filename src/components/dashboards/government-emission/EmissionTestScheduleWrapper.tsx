@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { EmissionTestSchedule } from './EmissionTestSchedule';
 
 interface EmissionTestScheduleWrapperProps {
-  schedules: any[];
+  selectedYear: number;
+  selectedQuarter?: number;
 }
 
-export function EmissionTestScheduleWrapper({ schedules }: EmissionTestScheduleWrapperProps) {
-  return <EmissionTestSchedule schedules={schedules} />;
+export function EmissionTestScheduleWrapper({ selectedYear, selectedQuarter }: EmissionTestScheduleWrapperProps) {
+  return <EmissionTestSchedule selectedYear={selectedYear} selectedQuarter={selectedQuarter} />;
 }

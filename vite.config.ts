@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     } : undefined,
     host: "::",
     port: 8080,
-    strictPort: true, // Required for Electron
+    strictPort: true, 
     allowedHosts: ["86a28b8a-1703-4911-ac0d-b2499663ab17.lovableproject.com", "all"]
   },
   plugins: [
@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  base: process.env.ELECTRON ? './' : '/', // Adjust base path for Electron
+  base: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true

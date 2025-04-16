@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Search, Filter, FileSpreadsheet } from "lucide-react";
+import { Search, Filter, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +45,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
 
 // Current year for default filters
 const currentYear = new Date().getFullYear();
@@ -370,19 +371,12 @@ export default function GovernmentEmissionRecords() {
            matchesEngineType && matchesWheels;
   });
 
-  if (loading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 overflow-auto">
+          <DashboardNavbar />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Emission Records</h1>
