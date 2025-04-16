@@ -1,7 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { Badge } from "../ui/badge";
 
 interface StatCardProps {
   title: string;
@@ -11,6 +11,7 @@ interface StatCardProps {
   trend?: "up" | "down" | "neutral";
   trendValue?: string;
   className?: string;
+  iconClassName?: string;
 }
 
 export function StatCard({
@@ -21,15 +22,20 @@ export function StatCard({
   trend,
   trendValue,
   className,
+  iconClassName,
 }: StatCardProps) {
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+    <Card className={cn("rounded-lg", className)}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        {Icon && (
+          <div className={cn("h-10 w-10 rounded-md text-white flex items-center justify-center", iconClassName)}>
+            <Icon className="h-6 w-6 text-white" />
+          </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-3xl font-bold">{value}</div>
         {(description || trendValue) && (
           <div className="flex items-center text-xs text-muted-foreground mt-1">
             {trend && (

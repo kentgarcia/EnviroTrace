@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ const dashboardDataSchema = z.object({
     testedVehicles: z.number(),
     complianceRate: z.number(),
     failRate: z.number(),
-    officeDepartments: z.number(), // Added officeDepartments definition
+    officeDepartments: z.number(),
   }),
   quarterlyData: z.array(
     z.object({
@@ -71,12 +71,26 @@ const dashboardDataSchema = z.object({
 
 export default function GovEmissionOverview() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedQuarter, setSelectedQuarter] = useState("Q1"); // Added state for selectedQuarter
+  const [selectedQuarter, setSelectedQuarter] = useState("All");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  // Fetch available years dynamically from emission_tests table
+  useEffect(() => {
+    async function fetchYears() {
+      const { data, error } = await supabase
+        .from("emission_tests")
+        .select("year");
+      if (!error && data) {
+        const years = Array.from(new Set(data.map((row: any) => row.year))).filter(Boolean).sort((a, b) => b - a);
+        setAvailableYears(years);
+      }
+    }
+    fetchYears();
+  }, []);
 
   const { data: dashboardData, isLoading, error } = useQuery({
     queryKey: ["govEmissionDashboard", selectedYear],
     queryFn: async () => {
-      // Define the expected shape of the dashboard data
       type DashboardData = {
         stats: {
           totalVehicles: number;
@@ -124,7 +138,6 @@ export default function GovEmissionOverview() {
 
       const dashboard = data as DashboardData;
 
-      // Ensure the response keys match the expected schema
       const parsedData = dashboardDataSchema.parse({
         stats: {
           totalVehicles: dashboard.stats.totalVehicles,
@@ -142,11 +155,11 @@ export default function GovEmissionOverview() {
           id: item.id,
           vehicleId: item.vehicleId,
           department: item.department,
-          scheduledDate: item.scheduleddate, // Fixed key to match schema
+          scheduledDate: item.scheduleddate,
         })),
         recentTests: dashboard.recentTests.map((item) => ({
           id: item.id,
-          vehicleId: item.vehicleid, // Fixed key to match schema
+          vehicleId: item.vehicleid,
           testDate: item.test_date,
           result: item.result,
         })),
@@ -159,7 +172,7 @@ export default function GovEmissionOverview() {
           count: item.count,
         })),
         wheelCountData: dashboard.wheelCountData.map((item) => ({
-          wheelCount: item.wheel_count, // Fixed key to match schema
+          wheelCount: item.wheel_count, 
           count: item.count,
         })),
       });
@@ -169,8 +182,6 @@ export default function GovEmissionOverview() {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 60,
   });
-
-  const availableYears = [2023, 2024, 2025]; // Example years, replace with dynamic data if needed
 
   return (
     <SidebarProvider>
@@ -192,13 +203,16 @@ export default function GovEmissionOverview() {
                     {isLoading ? (
                       <Skeleton className="h-5 w-48" />
                     ) : (
-                      `Showing data for ${selectedYear} emissions testing`
+                      `Showing data for ${selectedYear} emissions testing${selectedQuarter !== "All" ? ", Q" + selectedQuarter : ""}`
                     )}
                   </div>
                   <YearSelectorWrapper
                     selectedYear={selectedYear}
                     onYearChange={(year) => setSelectedYear(Number(year))}
                     availableYears={availableYears}
+                    selectedQuarter={selectedQuarter === "All" ? "All" : Number(selectedQuarter)}
+                    onQuarterChange={(quarter) => setSelectedQuarter(quarter)}
+                    showQuarters={true}
                   />
                 </div>
               </div>
@@ -269,7 +283,7 @@ export default function GovEmissionOverview() {
                       ) : (
                         <EmissionTestScheduleWrapper
                           selectedYear={selectedYear}
-                          selectedQuarter={parseInt(selectedQuarter.substring(1), 10)}
+                          selectedQuarter={selectedQuarter === "All" ? undefined : Number(selectedQuarter)}
                         />
                       )}
                     </CardContent>
