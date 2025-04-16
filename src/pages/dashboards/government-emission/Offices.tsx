@@ -116,7 +116,7 @@ export default function OfficesPage() {
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 overflow-auto">
-          <DashboardNavbar />
+          <DashboardNavbar dashboardTitle="Office Compliance" />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Offices & Departments</h1>

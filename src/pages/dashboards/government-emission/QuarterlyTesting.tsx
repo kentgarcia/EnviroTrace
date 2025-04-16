@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -315,7 +314,7 @@ const confirmAddVehicleTest = async () => {
       <div className="flex min-h-screen w-full">
       <AppSidebar dashboardType="government-emission" />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <DashboardNavbar />
+        <DashboardNavbar dashboardTitle="Quarterly Emissions Testing" />
         <div className="flex-1 overflow-y-auto p-6">
           <div className="flex items-center justify-between mb-6">
             <div>

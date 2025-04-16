@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -376,7 +375,7 @@ export default function GovernmentEmissionRecords() {
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 overflow-auto">
-          <DashboardNavbar />
+          <DashboardNavbar dashboardTitle="Government Emission Records" />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Emission Records</h1>

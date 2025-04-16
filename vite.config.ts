@@ -16,7 +16,10 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     strictPort: true, 
-    allowedHosts: ["86a28b8a-1703-4911-ac0d-b2499663ab17.lovableproject.com", "all"]
+    allowedHosts: ["86a28b8a-1703-4911-ac0d-b2499663ab17.lovableproject.com", "all"],
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
   },
   envPrefix: ['VITE_', 'TAURI_PLATFORM', 'TAURI_ARCH', 'TAURI_FAMILY', 'TAURI_PLATFORM_VERSION', 'TAURI_PLATFORM_TYPE', 'TAURI_DEBUG'],
   plugins: [

@@ -1,4 +1,3 @@
-
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
@@ -72,7 +71,7 @@ export default function AirQualityOverview() {
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="air-quality" />
         <div className="flex-1 overflow-auto">
-        <DashboardNavbar />
+        <DashboardNavbar dashboardTitle="Air Quality Dashboard" />
           <div className="p-6">
             <header className="mb-8">
               <h1 className="text-3xl font-semibold">Air Quality Dashboard</h1>

@@ -119,7 +119,7 @@ export function DataChart({
   return (
     <Card className={cn("overflow-hidden", className)}>
       <CardHeader className="pb-3">
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="text-lg font-semibold mb-1">{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="px-2 sm:px-6">

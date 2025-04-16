@@ -1,5 +1,4 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ import {
   Edit,
   ChevronDown
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +43,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { useTauriStore } from "@/hooks/useTauriStore";
 
 type Vehicle = {
   id: string;
@@ -58,8 +58,23 @@ type Vehicle = {
   latest_test_result: boolean | null;
 }
 
+const debugLog = (...args: any[]) => {
+  if (typeof window !== 'undefined') {
+    // Only log in development
+    if (import.meta.env.DEV) {
+      // @ts-ignore
+      window.__TAURI_DEBUG__ = window.__TAURI_DEBUG__ || [];
+      // @ts-ignore
+      window.__TAURI_DEBUG__.push(args);
+      // eslint-disable-next-line no-console
+      console.log('[TAURI DEBUG]', ...args);
+    }
+  }
+};
+
 export default function VehiclesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
@@ -72,10 +87,15 @@ export default function VehiclesPage() {
   const [vehicleTypes, setVehicleTypes] = useState<string[]>([]);
   const [engineTypes, setEngineTypes] = useState<string[]>([]);
   const [wheelCounts, setWheelCounts] = useState<number[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState(false);
+  const { get, set, save } = useTauriStore(".vehicles-data.dat");
+  const [pendingVehicles, setPendingVehicles] = useState<Vehicle[]>([]);
   
   // Modal state
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [editFormData, setEditFormData] = useState({
     plate_number: "",
@@ -86,6 +106,15 @@ export default function VehiclesPage() {
     wheels: 0,
     contact_number: ""
   });
+  const [addFormData, setAddFormData] = useState({
+    plate_number: "",
+    driver_name: "",
+    office_name: "",
+    vehicle_type: "",
+    engine_type: "Gas",
+    wheels: 4,
+    contact_number: ""
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -94,53 +123,141 @@ export default function VehiclesPage() {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    const fetchVehicles = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('vehicle_summary_view')
-        .select('*')
-        .order('plate_number', { ascending: true });
-
-      if (error) {
-        console.error("Error fetching vehicles:", error);
-        toast.error("Failed to load vehicles data");
-        setIsLoading(false);
-        return;
-      }
-
-      setVehicles(data as Vehicle[]);
-      setFilteredVehicles(data as Vehicle[]);
-      
-      // Extract unique values for filters
-      const types = Array.from(new Set(data.map(v => v.vehicle_type)));
-      const engines = Array.from(new Set(data.map(v => v.engine_type)));
-      const wheels = Array.from(new Set(data.map(v => v.wheels)));
-      
-      setVehicleTypes(types);
-      setEngineTypes(engines);
-      setWheelCounts(wheels);
-      
-      setIsLoading(false);
-    };
-
-    fetchVehicles();
-
-    // Set up real-time changes listener
-    const subscription = supabase
-      .channel('vehicle_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'vehicles' 
-      }, () => {
-        fetchVehicles();
-      })
-      .subscribe();
-
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    updateOnlineStatus();
     return () => {
-      subscription.unsubscribe();
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
     };
   }, []);
+
+  const loadPending = useCallback(async () => {
+    const pending = await get("pending_vehicles");
+    if (Array.isArray(pending)) setPendingVehicles(pending as Vehicle[]);
+    else setPendingVehicles([]);
+  }, [get]);
+
+  const loadOfflineData = useCallback(async () => {
+    debugLog('Loading offline data from Tauri Store...');
+    const cached = await get("vehicles_list");
+    debugLog('Loaded cached vehicles:', cached);
+    if (Array.isArray(cached)) {
+      setVehicles(cached as Vehicle[]);
+      setFilteredVehicles(cached as Vehicle[]);
+    } else {
+      setVehicles([]);
+      setFilteredVehicles([]);
+    }
+    const pending = await get("pending_vehicles");
+    debugLog('Loaded pending vehicles:', pending);
+    if (Array.isArray(pending)) setPendingVehicles(pending as Vehicle[]);
+    else setPendingVehicles([]);
+  }, [get]);
+
+  const fetchVehicles = useCallback(async () => {
+    setIsLoading(true);
+    debugLog('fetchVehicles called. Online:', navigator.onLine);
+    if (!navigator.onLine) {
+      debugLog('Offline: loading from Tauri Store only.');
+      const cached = await get("vehicles_list");
+      debugLog('Loaded cached vehicles:', cached);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setVehicles(cached as Vehicle[]);
+        setFilteredVehicles(cached as Vehicle[]);
+        setOfflineNotice(true);
+      } else {
+        setVehicles([]);
+        setFilteredVehicles([]);
+        setOfflineNotice(true);
+      }
+      setIsLoading(false);
+      return;
+    }
+    debugLog('Online: fetching from Supabase.');
+    const { data, error } = await supabase
+      .from('vehicle_summary_view')
+      .select('*')
+      .order('plate_number', { ascending: true });
+    debugLog('Supabase fetch result:', { data, error });
+    if (error) {
+      debugLog('Supabase fetch error, fallback to cache.');
+      const cached = await get("vehicles_list");
+      debugLog('Loaded cached vehicles:', cached);
+      if (Array.isArray(cached) && cached.length > 0) {
+        setVehicles(cached as Vehicle[]);
+        setFilteredVehicles(cached as Vehicle[]);
+        setOfflineNotice(true);
+      } else {
+        setVehicles([]);
+        setFilteredVehicles([]);
+        setOfflineNotice(true);
+      }
+      setIsLoading(false);
+      toast.error("Failed to load vehicles data. Showing last available data.");
+      return;
+    }
+    setVehicles(data as Vehicle[]);
+    setFilteredVehicles(data as Vehicle[]);
+    setOfflineNotice(false);
+    await set("vehicles_list", data);
+    await save();
+    debugLog('Saved vehicles to Tauri Store:', data);
+    setIsLoading(false);
+  }, [get, set, save]);
+
+  useEffect(() => {
+    let subscription: any = null;
+    const fetchAndSubscribe = async () => {
+      if (!isOffline) {
+        // Online: fetch from Supabase and subscribe to realtime
+        await fetchVehicles();
+        subscription = supabase
+          .channel('vehicle_changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicles' }, () => {
+            fetchVehicles();
+          })
+          .subscribe();
+      } else {
+        // Offline: only load from Tauri Store, do not call Supabase
+        await loadOfflineData();
+      }
+    };
+    fetchAndSubscribe();
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
+  }, [isOffline, location.pathname]);
+
+  useEffect(() => {
+    if (!isOffline && pendingVehicles.length > 0) {
+      const syncPending = async () => {
+        for (const v of pendingVehicles) {
+          try {
+            await supabase.from('vehicles').insert({
+              plate_number: v.plate_number,
+              driver_name: v.driver_name,
+              office_name: v.office_name,
+              vehicle_type: v.vehicle_type,
+              engine_type: v.engine_type,
+              wheels: v.wheels,
+              contact_number: v.contact_number
+            });
+          } catch (e) {
+            // If any fail, keep them in pending
+            toast.error("Some vehicles failed to sync. Will retry later.");
+            return;
+          }
+        }
+        await set("pending_vehicles", []);
+        await save();
+        setPendingVehicles([]);
+        toast.success("Pending vehicles synced!");
+      };
+      syncPending();
+    }
+  }, [isOffline, pendingVehicles, set, save]);
 
   useEffect(() => {
     // Filter vehicles based on search query and filter types
@@ -232,7 +349,17 @@ export default function VehiclesPage() {
 
   const handleSaveEdit = async () => {
     if (!selectedVehicle) return;
-    
+    // Validation checks
+    if (!editFormData.plate_number.trim() || !editFormData.driver_name.trim() || !editFormData.office_name.trim() || !editFormData.vehicle_type.trim() || !editFormData.engine_type.trim() || !editFormData.wheels) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+    // Prevent duplicate plate number (except for the current vehicle)
+    const duplicate = vehicles.find(v => v.plate_number.toLowerCase() === editFormData.plate_number.trim().toLowerCase() && v.id !== selectedVehicle.id);
+    if (duplicate) {
+      toast.error("A vehicle with this plate number already exists.");
+      return;
+    }
     try {
       const { error } = await supabase
         .from('vehicles')
@@ -277,19 +404,22 @@ export default function VehiclesPage() {
       <div className="flex min-h-screen w-full">
         <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardNavbar />
+          <DashboardNavbar dashboardTitle="Government Vehicles" />
           <div className="flex-1 overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-2xl font-bold">Vehicles Database</h1>
                 <p className="text-muted-foreground">Manage and view all vehicles in the system</p>
+                {offlineNotice && (
+                  <div className="text-sm text-yellow-600 mt-2">Offline mode: showing last available data</div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleExportToCSV}>
                   <FileDown className="mr-2 h-4 w-4" />
                   Export to CSV
                 </Button>
-                <Button>
+                <Button onClick={() => setAddModalOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Vehicle
                 </Button>
@@ -396,15 +526,15 @@ export default function VehiclesPage() {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ) : filteredVehicles.length === 0 ? (
+                      ) : filteredVehicles.length === 0 && pendingVehicles.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={9} className="text-center py-8">
                             No vehicles found.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredVehicles.map((vehicle) => (
-                          <TableRow key={vehicle.id}>
+                        [...filteredVehicles, ...pendingVehicles].map((vehicle) => (
+                          <TableRow key={vehicle.id} className={vehicle.id?.toString().startsWith('pending-') ? 'opacity-60' : ''}>
                             <TableCell className="font-medium">{vehicle.plate_number}</TableCell>
                             <TableCell>{vehicle.office_name}</TableCell>
                             <TableCell>{vehicle.driver_name}</TableCell>
@@ -430,23 +560,29 @@ export default function VehiclesPage() {
                                   Failed
                                 </span>
                               )}
+                              {vehicle.id?.toString().startsWith('pending-') && (
+                                <span className="ml-2 text-xs text-yellow-600">(pending sync)</span>
+                              )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    Actions <ChevronDown className="ml-1 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewDetails(vehicle)}>
-                                    <Eye className="mr-2 h-4 w-4" /> View Details
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleEditVehicle(vehicle)}>
-                                    <Edit className="mr-2 h-4 w-4" /> Edit Vehicle
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              {/* Hide actions for pending vehicles */}
+                              {vehicle.id?.toString().startsWith('pending-') ? null : (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                      Actions <ChevronDown className="ml-1 h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleViewDetails(vehicle)}>
+                                      <Eye className="mr-2 h-4 w-4" /> View Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleEditVehicle(vehicle)}>
+                                      <Edit className="mr-2 h-4 w-4" /> Edit Vehicle
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))
@@ -618,6 +754,161 @@ export default function VehiclesPage() {
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
                   <Button onClick={handleSaveEdit}>Save Changes</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Add Vehicle Modal */}
+            <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Add Vehicle</DialogTitle>
+                  <DialogDescription>
+                    Enter details for the new vehicle
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="add_plate_number">Plate Number</Label>
+                    <Input 
+                      id="add_plate_number"
+                      value={addFormData.plate_number}
+                      onChange={(e) => setAddFormData({...addFormData, plate_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_office_name">Office</Label>
+                    <Input 
+                      id="add_office_name"
+                      value={addFormData.office_name}
+                      onChange={(e) => setAddFormData({...addFormData, office_name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_driver_name">Driver</Label>
+                    <Input 
+                      id="add_driver_name"
+                      value={addFormData.driver_name}
+                      onChange={(e) => setAddFormData({...addFormData, driver_name: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_contact_number">Contact Number</Label>
+                    <Input 
+                      id="add_contact_number"
+                      value={addFormData.contact_number}
+                      onChange={(e) => setAddFormData({...addFormData, contact_number: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_vehicle_type">Vehicle Type</Label>
+                    <Input 
+                      id="add_vehicle_type"
+                      value={addFormData.vehicle_type}
+                      onChange={(e) => setAddFormData({...addFormData, vehicle_type: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_engine_type">Engine Type</Label>
+                    <Select 
+                      value={addFormData.engine_type}
+                      onValueChange={(value) => setAddFormData({...addFormData, engine_type: value})}
+                    >
+                      <SelectTrigger id="add_engine_type">
+                        <SelectValue placeholder="Select engine type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Gas">Gas</SelectItem>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="add_wheels">Wheels</Label>
+                    <Select 
+                      value={addFormData.wheels.toString()}
+                      onValueChange={(value) => setAddFormData({...addFormData, wheels: parseInt(value)})}
+                    >
+                      <SelectTrigger id="add_wheels">
+                        <SelectValue placeholder="Select wheel count" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAddModalOpen(false)}>Cancel</Button>
+                  <Button onClick={async () => {
+                    // Validation checks
+                    if (!addFormData.plate_number.trim() || !addFormData.driver_name.trim() || !addFormData.office_name.trim() || !addFormData.vehicle_type.trim() || !addFormData.engine_type.trim() || !addFormData.wheels) {
+                      toast.error("Please fill in all required fields.");
+                      return;
+                    }
+                    // Prevent duplicate plate number (including pending)
+                    if (vehicles.some(v => v.plate_number.toLowerCase() === addFormData.plate_number.trim().toLowerCase()) ||
+                        pendingVehicles.some(v => v.plate_number.toLowerCase() === addFormData.plate_number.trim().toLowerCase())) {
+                      toast.error("A vehicle with this plate number already exists.");
+                      return;
+                    }
+                    if (isOffline) {
+                      // Add to pending vehicles in Tauri Store
+                      const newVehicle = {
+                        ...addFormData,
+                        id: `pending-${Date.now()}`,
+                        latest_test_date: null,
+                        latest_test_result: null
+                      };
+                      const updatedPending = [...pendingVehicles, newVehicle];
+                      await set("pending_vehicles", updatedPending);
+                      await save();
+                      setPendingVehicles(updatedPending);
+                      // setVehicles(prev => [...prev, newVehicle]);
+                      // setFilteredVehicles(prev => [...prev, newVehicle]);
+                      toast.success("Vehicle added offline. Will sync when online.");
+                      setAddModalOpen(false);
+                      setAddFormData({
+                        plate_number: "",
+                        driver_name: "",
+                        office_name: "",
+                        vehicle_type: "",
+                        engine_type: "Gas",
+                        wheels: 4,
+                        contact_number: ""
+                      });
+                      return;
+                    }
+                    try {
+                      const { error } = await supabase
+                        .from('vehicles')
+                        .insert({
+                          plate_number: addFormData.plate_number,
+                          driver_name: addFormData.driver_name,
+                          office_name: addFormData.office_name,
+                          vehicle_type: addFormData.vehicle_type,
+                          engine_type: addFormData.engine_type,
+                          wheels: addFormData.wheels,
+                          contact_number: addFormData.contact_number
+                        });
+                      if (error) throw error;
+                      toast.success("Vehicle added successfully");
+                      setAddModalOpen(false);
+                      setAddFormData({
+                        plate_number: "",
+                        driver_name: "",
+                        office_name: "",
+                        vehicle_type: "",
+                        engine_type: "Gas",
+                        wheels: 4,
+                        contact_number: ""
+                      });
+                    } catch (error) {
+                      console.error("Error adding vehicle:", error);
+                      toast.error("Failed to add vehicle");
+                    }
+                  }}>Add Vehicle</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

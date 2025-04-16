@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-export function DashboardNavbar() {
+export function DashboardNavbar({ dashboardTitle = "Environmental Management System" }) {
   const navigate = useNavigate();
   const { userData, signOut } = useAuth();
   
@@ -39,7 +38,7 @@ export function DashboardNavbar() {
     <div className="h-14 border-b bg-white px-4 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="mr-2" />
-        <div className="text-sm font-medium">Environmental Management System</div>
+        <div className="text-sm font-medium">{dashboardTitle}</div>
       </div>
       
       <DropdownMenu>

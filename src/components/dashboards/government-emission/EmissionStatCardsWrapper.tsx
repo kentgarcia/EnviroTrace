@@ -7,15 +7,17 @@ interface EmissionStatCardsWrapperProps {
   testedVehicles: number;
   passRate: number;
   officeDepartments: number;
+  subtitle?: string;
 }
 
-export function EmissionStatCardsWrapper({ totalVehicles, testedVehicles, passRate, officeDepartments }: EmissionStatCardsWrapperProps) {
+export function EmissionStatCardsWrapper({ totalVehicles, testedVehicles, passRate, officeDepartments, subtitle }: EmissionStatCardsWrapperProps) {
   return (
     <EmissionStatCards 
       totalVehicles={totalVehicles}
       testedVehicles={testedVehicles}
       passRate={passRate}
       officeDepartments={officeDepartments}
+      subtitle={subtitle}
     />
   );
 }

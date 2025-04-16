@@ -214,7 +214,7 @@ export default function TreeManagementOverview() {
       <div className="flex min-h-screen w-full bg-gray-100">
         <AppSidebar dashboardType="tree-management" />
         <div className="flex-1 overflow-auto">
-          <DashboardNavbar />
+          <DashboardNavbar dashboardTitle="Tree Management Dashboard" />
           <div className="p-6">
             <div className="bg-white rounded-lg p-6 mb-6">
               <div className="flex justify-between items-center mb-4">

@@ -37,18 +37,24 @@ export function StatCard({
       <CardContent>
         <div className="text-3xl font-bold">{value}</div>
         {(description || trendValue) && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1">
+          <div className="flex items-center text-xs text-muted-foreground mt-1 gap-2">
             {trend && (
-              <span
-                className={cn(
-                  "mr-1",
-                  trend === "up" && "text-ems-green-500", 
-                  trend === "down" && "text-destructive",
-                  trend === "neutral" && "text-muted-foreground"
-                )}
+              <Badge
+                variant={
+                  trend === "up"
+                    ? "green"
+                    : trend === "down"
+                    ? "destructive"
+                    : "secondary"
+                }
+                className="px-2 py-0.5 text-xs font-medium"
               >
-                {trend === "up" ? "↑" : trend === "down" ? "↓" : "→"}
-              </span>
+                {trend === "up"
+                  ? "Up"
+                  : trend === "down"
+                  ? "Down"
+                  : "Neutral"}
+              </Badge>
             )}
             {trendValue && <span className="mr-1">{trendValue}</span>}
             {description && <span>{description}</span>}
