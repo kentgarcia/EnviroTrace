@@ -1,9 +1,7 @@
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
-import { StatCard } from "@/components/dashboard/StatCard";
 import { DataChart } from "@/components/dashboard/DataChart";
-import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { 
   ArrowRight, 
   Leaf, 
@@ -22,10 +20,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from 'leaflet';
 
 // Request type data for pie chart
 const requestTypeData = [
@@ -171,6 +171,45 @@ const recentRequestsData = [
     statusCode: "signature"
   }
 ];
+
+// Sample sapling data with coordinates
+const saplings = [
+  {
+    id: 1,
+    name: "Acacia",
+    plantedBy: "Juan Dela Cruz",
+    type: "Tree",
+    qty: 5,
+    date: "2025-04-10",
+    total: 100,
+    notes: "Healthy, watered weekly",
+    status: "Growing",
+    lat: 14.5547,
+    lng: 121.0244,
+  },
+  {
+    id: 2,
+    name: "Narra",
+    plantedBy: "Maria Santos",
+    type: "Tree",
+    qty: 3,
+    date: "2025-03-20",
+    total: 50,
+    notes: "Needs fertilizer",
+    status: "Needs Attention",
+    lat: 14.555,
+    lng: 121.025,
+  },
+];
+
+// Custom marker icon (optional)
+const saplingIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
 
 export default function TreeManagementOverview() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -520,6 +559,49 @@ export default function TreeManagementOverview() {
                       dataKeys={["count"]}
                       colors={["#44BC66"]}
                     />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="mb-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sapling Monitoring Map</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div style={{ height: 400, width: "100%" }}>
+                    <MapContainer
+                      center={[14.5547, 121.0244]}
+                      zoom={15}
+                      style={{ height: "100%", width: "100%" }}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      {saplings.map((sapling) => (
+                        <Marker
+                          key={sapling.id}
+                          position={[sapling.lat, sapling.lng]}
+                          icon={saplingIcon}
+                        >
+                          <Popup>
+                            <div>
+                              <strong>{sapling.name}</strong>
+                              <br />
+                              <b>Planted by:</b> {sapling.plantedBy}<br />
+                              <b>Type:</b> {sapling.type}<br />
+                              <b>Qty:</b> {sapling.qty}<br />
+                              <b>Date:</b> {sapling.date}<br />
+                              <b>Total:</b> {sapling.total}<br />
+                              <b>Notes:</b> {sapling.notes}<br />
+                              <b>Status:</b> {sapling.status}
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MapContainer>
                   </div>
                 </CardContent>
               </Card>

@@ -1,7 +1,4 @@
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -46,23 +43,28 @@
   }
 
   * {
-    @apply border-border;
+    @reference border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @reference bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold text-foreground;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @reference font-semibold text-foreground;
   }
 
   .ems-gradient-bg {
-    @apply bg-gradient-to-br from-ems-green-500 to-ems-blue-600;
+    @reference bg-gradient-to-br from-ems-green-500 to-ems-blue-600;
   }
 
   .ems-card {
-    @apply rounded-xl border bg-card p-6 shadow-sm;
+    @reference rounded-xl border bg-card p-6 shadow-sm;
   }
 }
