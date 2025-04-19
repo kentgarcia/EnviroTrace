@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { BarChart2, Building, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth";
 
 interface SidebarProps {
@@ -22,10 +21,10 @@ interface SidebarProps {
 export function AppSidebar({ dashboardType }: SidebarProps) {
   const location = useLocation();
   const { userData } = useAuth();
-  
+
   const getMenuItems = () => {
     const basePath = `/${dashboardType}`;
-    
+
     if (dashboardType === "government-emission") {
       return [
         {
@@ -49,18 +48,13 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           path: `${basePath}/offices`,
         },
         {
-          title: "Reports",
-          icon: FileStack,
-          path: `${basePath}/reports`,
-        },
-        {
           title: "Settings",
           icon: Settings,
           path: `${basePath}/settings`,
         }
       ];
     }
-    
+
     const commonItems = [
       {
         title: "Dashboard",
@@ -126,14 +120,14 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           </h3>
         </div>
       </SidebarHeader>
-      
+
       <SidebarContent className="text-white">
         <SidebarGroup>
           {/* <SidebarGroupLabel>Main Navigation</SidebarGroupLabel> */}
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem 
+                <SidebarMenuItem
                   key={item.title}
                   className="pl-2 pr-2 py-1">
                   <SidebarMenuButton
@@ -150,7 +144,7 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
                       active:bg-[#676782] 
                       active:text-white
                       "
-                    >
+                  >
                     <Link to={item.path}>
                       <item.icon />
                       <span>{item.title}</span>

@@ -107,13 +107,16 @@ export default function ProfilePage() {
       <header className="border-b bg-white py-4 px-6 shadow-xs">
         <div className="max-w-(--breakpoint-xl) mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            {/* Placeholder for logos */}
-            <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-              Logo 1
-            </div>
-            <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">
-              Logo 2
-            </div>
+          <img
+              src="/images/logo_munti.png"
+              alt="Logo 1"
+              className="h-16 w-16 rounded-md"
+            />
+            <img
+              src="/images/logo_epnro.png"
+              alt="Logo 2"
+              className="h-16 w-16 rounded-md"
+            />
             <h1 className="text-xl font-semibold">Environmental Management System</h1>
           </div>
           

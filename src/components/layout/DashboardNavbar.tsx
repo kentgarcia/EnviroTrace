@@ -1,31 +1,33 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  ChevronDown, 
-  LogOut, 
-  Settings, 
-  User 
+import {
+  ChevronDown,
+  LogOut,
+  Settings,
+  User
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuthStore } from "@/hooks/useAuthStore";
 
 export function DashboardNavbar({ dashboardTitle = "Environmental Management System" }) {
   const navigate = useNavigate();
   const { userData, signOut } = useAuth();
-  
+  const clearToken = useAuthStore((state) => state.clearToken);
+
   const handleSignOut = async () => {
     try {
       await signOut();
+      clearToken();
       toast.success("Signed out successfully");
       navigate("/");
     } catch (error) {
@@ -40,7 +42,7 @@ export function DashboardNavbar({ dashboardTitle = "Environmental Management Sys
         <SidebarTrigger className="mr-2" />
         <div className="text-sm font-medium">{dashboardTitle}</div>
       </div>
-      
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="flex items-center gap-2">

@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,6 +20,7 @@ import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
 import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
 import OfficesPage from "./pages/dashboards/government-emission/Offices";
 import NotFound from "./pages/NotFound";
+import { useAuthStore } from "./hooks/useAuthStore";
 
 // Lazy loaded components
 const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({ 
@@ -44,13 +44,13 @@ const queryClient = new QueryClient({
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // Check if user is authenticated from supabase session
-  const isAuthenticated = localStorage.getItem("sb-trjtbptzqqxmnydzknol-auth-token") !== null;
-  
+  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = token !== null;
+
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
@@ -98,11 +98,6 @@ const App = () => (
           <Route path="/air-quality/records" element={
             <ProtectedRoute>
               <AirQualityRecords />
-            </ProtectedRoute>
-          } />
-          <Route path="/air-quality/reports" element={
-            <ProtectedRoute>
-              <AirQualityOverview />
             </ProtectedRoute>
           } />
           <Route path="/air-quality/settings" element={

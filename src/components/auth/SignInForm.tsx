@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,10 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { signIn, signUp } from "@/lib/auth";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
-
-type FormMode = 'sign-in' | 'sign-up';
+import { useAuthStore } from "@/hooks/useAuthStore";
 
 interface SignInFormData {
   email: string;
@@ -24,10 +21,10 @@ interface SignUpFormData extends SignInFormData {
 }
 
 export function SignInForm() {
-  const [mode, setMode] = useState<FormMode>('sign-in');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  
+  const setToken = useAuthStore((state) => state.setToken);
+
   const {
     register: registerSignIn,
     handleSubmit: handleSubmitSignIn,
@@ -45,29 +42,16 @@ export function SignInForm() {
 
   const onSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
-    
+
     try {
-      await signIn(data.email, data.password);
+      const result = await signIn(data.email, data.password);
+      // Store the access token in Zustand
+      setToken(result.session?.access_token || null);
       toast.success("Signed in successfully!");
       navigate("/dashboard-selection");
     } catch (error) {
       console.error("Authentication error:", error);
       toast.error("Failed to sign in. Please check your credentials.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onSignUp = async (data: SignUpFormData) => {
-    setIsLoading(true);
-    
-    try {
-      await signUp(data.email, data.password, data.fullName);
-      toast.success("Account created! Please check your email for verification.");
-      setMode('sign-in');
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      toast.error(error.message || "Failed to create account. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +85,7 @@ export function SignInForm() {
               id="email"
               type="email"
               placeholder="name@example.com"
-              {...registerSignIn("email", { 
+              {...registerSignIn("email", {
                 required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,

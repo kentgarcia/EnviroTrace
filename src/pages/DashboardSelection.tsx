@@ -4,20 +4,21 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ChevronDown, Leaf, Loader2, LogOut, TreePine, Wind, Factory, User } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth, UserRole } from "@/lib/auth";
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
+import { useAuth } from "@/lib/auth";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UserRole } from "@/integrations/types/userData";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();
   const { user, userData, loading, signOut: authSignOut } = useAuth();
-  
+
   useEffect(() => {
     // Check if user is authenticated
     if (!loading && !user) {
@@ -65,7 +66,7 @@ export default function DashboardSelection() {
             />
             <h1 className="text-xl font-semibold">Environmental Management System</h1>
           </div>
-          
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -96,7 +97,7 @@ export default function DashboardSelection() {
         </div>
       </header>
 
-      <div 
+      <div
         className="py-16 px-6 bg-cover bg-center text-white"
         style={{ backgroundImage: "url('/images/bg_login.png')" }}
       >
@@ -120,7 +121,7 @@ export default function DashboardSelection() {
                 className="border-ems-blue-200 hover:border-ems-blue-400"
               />
             ) : null}
-            
+
             {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('tree-management' as UserRole) ? (
               <DashboardCard
                 title="Tree Management"
@@ -130,7 +131,7 @@ export default function DashboardSelection() {
                 className="border-ems-green-200 hover:border-ems-green-400"
               />
             ) : null}
-            
+
             {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('government-emission' as UserRole) ? (
               <DashboardCard
                 title="Government Emission"
