@@ -49,9 +49,9 @@ export default function DashboardSelection() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-ems-green-50 to-ems-blue-50">
+    <div className="min-h-screen flex flex-col bg-linear-to-b from-ems-green-50 to-ems-blue-50">
       <header className="border-b bg-white py-4 px-6">
-        <div className="max-w-screen-xl mx-auto flex justify-between items-center">
+        <div className="max-w-(--breakpoint-xl) mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <img
               src="/images/logo_munti.png"
@@ -100,7 +100,7 @@ export default function DashboardSelection() {
         className="py-16 px-6 bg-cover bg-center text-white"
         style={{ backgroundImage: "url('/images/bg_login.png')" }}
       >
-        <div className="max-w-screen-xl mx-auto">
+        <div className="max-w-(--breakpoint-xl) mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Welcome, {userData?.email}</h2>
           <p className="text-xl max-w-2xl">
             Select a dashboard to access environmental data and management tools for sustainable development
@@ -109,7 +109,7 @@ export default function DashboardSelection() {
       </div>
 
       <main className="flex-1 px-6 py-10">
-        <div className="max-w-screen-xl mx-auto">
+        <div className="max-w-(--breakpoint-xl) mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('air-quality' as UserRole) ? (
               <DashboardCard
@@ -145,7 +145,7 @@ export default function DashboardSelection() {
       </main>
 
       <footer className="border-t bg-white py-4 px-6">
-        <div className="max-w-screen-xl mx-auto text-center text-sm text-muted-foreground">
+        <div className="max-w-(--breakpoint-xl) mx-auto text-center text-sm text-muted-foreground">
           Environmental Management System &copy; 2025
         </div>
       </footer>

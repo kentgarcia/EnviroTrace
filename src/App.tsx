@@ -17,7 +17,6 @@ import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
 import TreePlantingPage from "./pages/dashboards/tree-management/Planting";
 import SaplingRequestsPage from "./pages/dashboards/tree-management/Requests";
 import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
-import GovernmentEmissionRecords from "./pages/dashboards/government-emission/Records";
 import VehiclesPage from "./pages/dashboards/government-emission/Vehicles";
 import QuarterlyTestingPage from "./pages/dashboards/government-emission/QuarterlyTesting";
 import OfficesPage from "./pages/dashboards/government-emission/Offices";
@@ -148,11 +147,6 @@ const App = () => (
           <Route path="/government-emission/overview" element={
             <ProtectedRoute>
               <GovEmissionOverview />
-            </ProtectedRoute>
-          } />
-          <Route path="/government-emission/records" element={
-            <ProtectedRoute>
-              <GovernmentEmissionRecords />
             </ProtectedRoute>
           } />
           <Route path="/government-emission/vehicles" element={

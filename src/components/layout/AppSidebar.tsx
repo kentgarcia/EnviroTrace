@@ -34,11 +34,6 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           path: `${basePath}/overview`,
         },
         {
-          title: "Records",
-          icon: ClipboardList,
-          path: `${basePath}/records`,
-        },
-        {
           title: "Vehicles",
           icon: Car,
           path: `${basePath}/vehicles`,

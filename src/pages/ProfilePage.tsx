@@ -103,9 +103,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-ems-green-50 to-ems-blue-50">
-      <header className="border-b bg-white py-4 px-6 shadow-sm">
-        <div className="max-w-screen-xl mx-auto flex justify-between items-center">
+    <div className="min-h-screen bg-linear-to-b from-ems-green-50 to-ems-blue-50">
+      <header className="border-b bg-white py-4 px-6 shadow-xs">
+        <div className="max-w-(--breakpoint-xl) mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             {/* Placeholder for logos */}
             <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center text-gray-400">

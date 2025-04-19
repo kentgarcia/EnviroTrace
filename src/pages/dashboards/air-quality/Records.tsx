@@ -152,7 +152,7 @@ export default function AirQualityRecords() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <Button size="sm" className="flex-shrink-0 ml-2">
+                <Button size="sm" className="shrink-0 ml-2">
                   <PlusCircle className="h-4 w-4 mr-1" />
                   Add New
                 </Button>

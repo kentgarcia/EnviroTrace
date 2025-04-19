@@ -116,7 +116,7 @@ export function RecordTable({
             />
           </div>
           {onAddNew && (
-            <Button size="sm" className="flex-shrink-0" onClick={onAddNew}>
+            <Button size="sm" className="shrink-0" onClick={onAddNew}>
               <PlusCircle className="h-4 w-4 mr-1" />
               Add New
             </Button>

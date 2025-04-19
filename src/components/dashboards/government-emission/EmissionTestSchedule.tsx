@@ -614,7 +614,7 @@ export function EmissionTestSchedule({
           )}
           
           <div className="flex justify-between items-center mb-4">
-            <div className="relative flex-grow mr-4">
+            <div className="relative grow mr-4">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search by plate number, driver, or office..."

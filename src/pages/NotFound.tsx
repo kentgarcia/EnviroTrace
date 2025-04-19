@@ -16,8 +16,8 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-ems-green-100 to-ems-blue-100 p-4">
-      <div className="max-w-md w-full text-center bg-white p-8 rounded-2xl shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-ems-green-100 to-ems-blue-100 p-4">
+      <div className="max-w-md w-full text-center bg-white p-8 rounded-2xl shadow-xs">
         <div className="flex justify-center mb-4">
           <div className="bg-primary rounded-full p-2">
             <Leaf className="h-6 w-6 text-primary-foreground" />
