@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
 import { QueryProvider } from "./lib/query-client";
+import { ApolloClientProvider } from "@/lib/apollo-client";
 
 // Import Inter font
 import "@fontsource/inter/400.css";
@@ -10,10 +11,11 @@ import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+const root = ReactDOM.createRoot(document.getElementById("root")!);
+root.render(
   <React.StrictMode>
-    <QueryProvider>
+    <ApolloClientProvider>
       <App />
-    </QueryProvider>
+    </ApolloClientProvider>
   </React.StrictMode>
 );
