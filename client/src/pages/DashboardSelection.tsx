@@ -1,8 +1,8 @@
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { ChevronDown, Leaf, Loader2, LogOut, TreePine, Wind, Factory, User } from "lucide-react";
+import { useEffect } from "react";
+import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import {
@@ -39,6 +39,10 @@ export default function DashboardSelection() {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
     }
+  };
+
+  const hasRole = (role: UserRole) => {
+    return userData?.roles?.includes(role) || userData?.roles?.includes('admin');
   };
 
   if (loading) {
@@ -112,7 +116,7 @@ export default function DashboardSelection() {
       <main className="flex-1 px-6 py-10">
         <div className="max-w-(--breakpoint-xl) mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('air-quality' as UserRole) ? (
+            {hasRole('air_quality') && (
               <DashboardCard
                 title="Air Quality"
                 description="Monitor air quality metrics, pollution levels, and compliance data"
@@ -120,9 +124,9 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("air-quality")}
                 className="border-ems-blue-200 hover:border-ems-blue-400"
               />
-            ) : null}
+            )}
 
-            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('tree-management' as UserRole) ? (
+            {hasRole('tree_management') && (
               <DashboardCard
                 title="Tree Management"
                 description="Track afforestation efforts, tree health data, and forest coverage"
@@ -130,9 +134,9 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("tree-management")}
                 className="border-ems-green-200 hover:border-ems-green-400"
               />
-            ) : null}
+            )}
 
-            {userData?.roles.includes('admin' as UserRole) || userData?.roles.includes('government-emission' as UserRole) ? (
+            {hasRole('government_emission') && (
               <DashboardCard
                 title="Government Emission"
                 description="Analyze emission data from government facilities and public transportation"
@@ -140,7 +144,7 @@ export default function DashboardSelection() {
                 onClick={() => handleDashboardSelect("government-emission")}
                 className="border-ems-gray-200 hover:border-ems-gray-400"
               />
-            ) : null}
+            )}
           </div>
         </div>
       </main>

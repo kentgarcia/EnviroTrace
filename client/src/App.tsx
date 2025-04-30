@@ -21,10 +21,11 @@ import QuarterlyTestingPage from "./pages/dashboards/government-emission/Quarter
 import OfficesPage from "./pages/dashboards/government-emission/Offices";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from "./hooks/useAuthStore";
+import { RoleProtectedRoute } from "./components/auth/RoleProtectedRoute";
 
 // Lazy loaded components
-const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({ 
-  default: module.NetworkStatus 
+const NetworkStatus = lazy(() => import("./components/layout/NetworkStatus").then(module => ({
+  default: module.NetworkStatus
 })));
 
 // Configure React Query with offline support
@@ -42,7 +43,7 @@ const queryClient = new QueryClient({
   },
 });
 
-// Protected route wrapper
+// Basic protected route wrapper for authentication
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = useAuthStore((state) => state.token);
   const isAuthenticated = token !== null;
@@ -62,118 +63,118 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<SignIn />} />
-          
+
           {/* Protected routes */}
           <Route path="/dashboard-selection" element={
             <ProtectedRoute>
               <DashboardSelection />
             </ProtectedRoute>
           } />
-          
+
           <Route path="/profile" element={
             <ProtectedRoute>
               <ProfilePage />
             </ProtectedRoute>
           } />
-          
+
           {/* Admin Routes */}
           <Route path="/admin/user-management" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin']}>
               <UserManagement />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
-          
+
           <Route path="/admin/users" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin']}>
               <AdminUserManagement />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
-          
+
           {/* Air Quality Dashboard Routes */}
           <Route path="/air-quality/overview" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'air_quality']}>
               <AirQualityOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/air-quality/records" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'air_quality']}>
               <AirQualityRecords />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/air-quality/settings" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'air_quality']}>
               <AirQualityOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
-          
+
           {/* Tree Management Dashboard Routes */}
           <Route path="/tree-management/overview" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/tree-management/records" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementRecords />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/tree-management/planting" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreePlantingPage />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/tree-management/requests" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <SaplingRequestsPage />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/tree-management/reports" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/tree-management/settings" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
-          
+
           {/* Government Emission Dashboard Routes */}
           <Route path="/government-emission/overview" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <GovEmissionOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/government-emission/vehicles" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <VehiclesPage />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/government-emission/quarterly-testing" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <QuarterlyTestingPage />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/government-emission/offices" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <OfficesPage />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/government-emission/reports" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <GovEmissionOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
           <Route path="/government-emission/settings" element={
-            <ProtectedRoute>
+            <RoleProtectedRoute allowedRoles={['admin', 'government_emission']}>
               <GovEmissionOverview />
-            </ProtectedRoute>
+            </RoleProtectedRoute>
           } />
-          
+
           {/* Not found route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-        
+
         <Suspense fallback={null}>
           <NetworkStatus />
         </Suspense>

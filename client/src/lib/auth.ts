@@ -1,9 +1,11 @@
-import { gql, useMutation, useQuery } from "@apollo/client";
+import { gql } from "@apollo/client";
 import { useState, useEffect } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
+import { apolloClient } from "./apollo-client";
 
+// GraphQL mutations aligned with our backend server
 const SIGN_IN = gql`
   mutation SignIn($email: String!, $password: String!) {
     signIn(email: $email, password: $password) {
@@ -11,111 +13,206 @@ const SIGN_IN = gql`
       user {
         id
         email
+        lastSignInAt
+        isSuperAdmin
+        roles
       }
     }
   }
 `;
 
 const SIGN_UP = gql`
-  mutation SignUp($email: String!, $password: String!, $fullName: String!) {
-    signUp(email: $email, password: $password, fullName: $fullName) {
-      id
-      email
+  mutation SignUp($email: String!, $password: String!) {
+    signUp(email: $email, password: $password) {
+      token
+      user {
+        id
+        email
+        lastSignInAt
+        isSuperAdmin
+        roles
+      }
     }
   }
 `;
 
-const SIGN_OUT = gql`
-  mutation SignOut {
-    signOut
-  }
-`;
-
-const GET_USER_ROLES = gql`
-  query GetUserRoles($userId: String!) {
-    userRoles(userId: $userId) {
-      role
+const GET_ME = gql`
+  query Me {
+    me {
+      id
+      email
+      lastSignInAt
+      isSuperAdmin
+      createdAt
+      updatedAt
+      roles
     }
   }
 `;
 
 export async function signIn(email: string, password: string) {
-  const [signInMutation] = useMutation(SIGN_IN);
-  const { data, errors } = await signInMutation({
-    variables: { email, password },
-  });
+  try {
+    const { data, errors } = await apolloClient.mutate({
+      mutation: SIGN_IN,
+      variables: { email, password },
+    });
 
-  if (errors) {
-    throw new Error(errors[0].message);
+    if (errors) {
+      throw new Error(errors[0].message);
+    }
+
+    if (!data || !data.signIn) {
+      throw new Error("Login failed");
+    }
+
+    const { token, user } = data.signIn;
+
+    // Store the token
+    useAuthStore.getState().setToken(token);
+
+    // Store user roles
+    if (user.roles) {
+      useAuthStore.getState().setRoles(user.roles);
+    }
+
+    return {
+      token,
+      user,
+    };
+  } catch (error) {
+    console.error("Sign in error:", error);
+    throw error;
   }
-
-  return data.signIn;
 }
 
-export async function signUp(
-  email: string,
-  password: string,
-  fullName: string
-) {
-  const [signUpMutation] = useMutation(SIGN_UP);
-  const { data, errors } = await signUpMutation({
-    variables: { email, password, fullName },
-  });
+export async function signUp(email: string, password: string) {
+  try {
+    const { data, errors } = await apolloClient.mutate({
+      mutation: SIGN_UP,
+      variables: { email, password },
+    });
 
-  if (errors) {
-    throw new Error(errors[0].message);
+    if (errors) {
+      throw new Error(errors[0].message);
+    }
+
+    if (!data || !data.signUp) {
+      throw new Error("Sign up failed");
+    }
+
+    const { token, user } = data.signUp;
+
+    // Store the token
+    useAuthStore.getState().setToken(token);
+
+    // Store user roles
+    if (user.roles) {
+      useAuthStore.getState().setRoles(user.roles);
+    }
+
+    return {
+      token,
+      user,
+    };
+  } catch (error) {
+    console.error("Sign up error:", error);
+    throw error;
   }
-
-  return data.signUp;
 }
 
 export async function signOut() {
-  const [signOutMutation] = useMutation(SIGN_OUT);
-  const { errors } = await signOutMutation();
+  try {
+    // Clear local token and state
+    useAuthStore.getState().clearToken();
+    useAuthStore.getState().clearRoles();
 
-  if (errors) {
-    throw new Error(errors[0].message);
+    // Clear Apollo client cache
+    await apolloClient.clearStore();
+
+    return true;
+  } catch (error) {
+    console.error("Sign out error:", error);
+    throw error;
   }
-}
-
-export async function getUserRoles(userId: string): Promise<UserRole[]> {
-  const { data, error } = useQuery(GET_USER_ROLES, { variables: { userId } });
-
-  if (error) {
-    console.error("Error fetching user roles:", error);
-    return [];
-  }
-
-  return data.userRoles.map((item: { role: UserRole }) => item.role);
 }
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
+  const { token, roles } = useAuthStore();
+  const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const { isOnline } = useOfflineSync();
-  const { setRoles, clearRoles } = useAuthStore();
 
   useEffect(() => {
-    // Implement logic to fetch user session from your backend
-    // Example: Fetch user session from local storage or a session endpoint
-  }, []);
+    const initAuth = async () => {
+      try {
+        // Check if we have a valid token
+        if (!token) {
+          setLoading(false);
+          return;
+        }
 
+        // Fetch current user data using the token
+        const { data } = await apolloClient.query({
+          query: GET_ME,
+          fetchPolicy: "network-only",
+        });
+
+        if (data && data.me) {
+          setUser(data.me);
+
+          // Set user data including roles
+          setUserData({
+            id: data.me.id,
+            email: data.me.email,
+            roles: data.me.roles || [],
+          });
+
+          // Update roles in the store if needed
+          if (data.me.roles) {
+            useAuthStore.getState().setRoles(data.me.roles);
+          }
+        } else {
+          // Invalid token or user not found
+          useAuthStore.getState().clearToken();
+          useAuthStore.getState().clearRoles();
+        }
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        // Clear invalid token
+        useAuthStore.getState().clearToken();
+        useAuthStore.getState().clearRoles();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [token]);
+
+  // Re-fetch user data when coming back online
   useEffect(() => {
-    if (isOnline && user) {
-      fetchUserData(user);
+    if (isOnline && token && !user) {
+      initAuth();
     }
-  }, [isOnline, user]);
+  }, [isOnline, token, user]);
 
-  const fetchUserData = async (user: any) => {
+  // Initialize auth on component mount
+  const initAuth = async () => {
     try {
-      const roles = await getUserRoles(user.id);
-      setRoles(roles);
-      setUserData({
-        id: user.id,
-        email: user.email,
-        roles: roles,
+      const { data } = await apolloClient.query({
+        query: GET_ME,
+        fetchPolicy: "network-only",
       });
+
+      if (data && data.me) {
+        setUser(data.me);
+        setUserData({
+          id: data.me.id,
+          email: data.me.email,
+          roles: data.me.roles || [],
+        });
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {

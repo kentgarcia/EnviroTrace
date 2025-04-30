@@ -1,8 +1,8 @@
 export type UserRole =
   | "admin"
-  | "air-quality"
-  | "tree-management"
-  | "government-emission";
+  | "air_quality"
+  | "tree_management"
+  | "government_emission";
 
 export interface UserData {
   id: string;

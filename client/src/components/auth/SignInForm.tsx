@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { signIn, signUp } from "@/lib/auth";
+import { signIn } from "@/lib/auth";
 import { useForm } from "react-hook-form";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
@@ -15,43 +15,31 @@ interface SignInFormData {
   password: string;
 }
 
-interface SignUpFormData extends SignInFormData {
-  fullName: string;
-  confirmPassword: string;
-}
-
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const setToken = useAuthStore((state) => state.setToken);
 
   const {
-    register: registerSignIn,
-    handleSubmit: handleSubmitSignIn,
-    formState: { errors: errorsSignIn }
+    register,
+    handleSubmit,
+    formState: { errors }
   } = useForm<SignInFormData>();
-
-  const {
-    register: registerSignUp,
-    handleSubmit: handleSubmitSignUp,
-    formState: { errors: errorsSignUp },
-    watch: watchSignUp
-  } = useForm<SignUpFormData>();
-
-  const password = watchSignUp ? watchSignUp("password") : "";
 
   const onSignIn = async (data: SignInFormData) => {
     setIsLoading(true);
 
     try {
       const result = await signIn(data.email, data.password);
-      // Store the access token in Zustand
-      setToken(result.session?.access_token || null);
-      toast.success("Signed in successfully!");
-      navigate("/dashboard-selection");
-    } catch (error) {
+
+      if (result && result.token) {
+        toast.success("Signed in successfully!");
+        navigate("/dashboard-selection");
+      } else {
+        throw new Error("Authentication failed");
+      }
+    } catch (error: any) {
       console.error("Authentication error:", error);
-      toast.error("Failed to sign in. Please check your credentials.");
+      toast.error(error.message || "Failed to sign in. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -78,14 +66,14 @@ export function SignInForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmitSignIn(onSignIn)} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit(onSignIn)} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
               placeholder="name@example.com"
-              {...registerSignIn("email", {
+              {...register("email", {
                 required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -93,8 +81,8 @@ export function SignInForm() {
                 }
               })}
             />
-            {errorsSignIn.email && (
-              <p className="text-sm text-destructive">{errorsSignIn.email.message}</p>
+            {errors.email && (
+              <p className="text-sm text-destructive">{errors.email.message}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -103,10 +91,10 @@ export function SignInForm() {
               id="password"
               type="password"
               placeholder="Password"
-              {...registerSignIn("password", { required: "Password is required" })}
+              {...register("password", { required: "Password is required" })}
             />
-            {errorsSignIn.password && (
-              <p className="text-sm text-destructive">{errorsSignIn.password.message}</p>
+            {errors.password && (
+              <p className="text-sm text-destructive">{errors.password.message}</p>
             )}
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
