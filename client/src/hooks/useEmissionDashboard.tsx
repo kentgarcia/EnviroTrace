@@ -1,8 +1,11 @@
-
 import { useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import {
+  fetchEmissionTests,
+  fetchVehicleSummaries,
+  fetchTestSchedules as fetchScheduleData
+} from "@/lib/emission-api";
 
 export interface EmissionStat {
   label: string;
@@ -23,6 +26,7 @@ export interface EmissionData {
     passed: number;
     failed: number;
     total?: number;
+    name?: string;
   }[];
   officeCompliance: {
     officeName: string;
@@ -54,9 +58,9 @@ export interface TestSchedule {
   id: string;
   year: number;
   quarter: number;
-  assigned_personnel: string;
+  assignedPersonnel: string; // updated from assigned_personnel to camelCase
   location: string;
-  conducted_on: string;
+  conductedOn: string; // updated from conducted_on to camelCase
 }
 
 export interface DashboardData {
@@ -83,41 +87,28 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     complianceByOffice: [],
     recentTests: []
   });
-  
+
   // Use react-query to fetch and cache dashboard data
   const fetchEmissionData = useCallback(async () => {
     try {
-      // 1. Calculate total vehicles count - select only id for count
-      const { count: vehiclesCount, error: vehiclesError } = await supabase
-        .from('vehicles')
-        .select('id', { count: 'exact', head: true });
+      // 1. Fetch all vehicles to get count
+      const vehicles = await fetchVehicleSummaries();
+      const totalVehicles = vehicles.length;
 
-      if (vehiclesError) throw vehiclesError;
+      // 2. Fetch tests with filters
+      const testsData = await fetchEmissionTests(
+        quarter !== undefined
+          ? { year, quarter }
+          : { year }
+      );
 
-      const totalVehicles = vehiclesCount || 0;
-
-      // 2. Calculate tested vehicles and compliance rate - select only needed fields
-      let testsQuery = supabase
-        .from('emission_tests')
-        .select('id,result');
-
-      if (quarter !== undefined) {
-        testsQuery = testsQuery.eq('year', year).eq('quarter', quarter);
-      } else {
-        testsQuery = testsQuery.eq('year', year);
-      }
-
-      const { data: testsData, error: testsError } = await testsQuery;
-
-      if (testsError) throw testsError;
-
-      const testedVehicles = testsData ? testsData.length : 0;
-      const passedVehicles = testsData ? testsData.filter(test => test.result).length : 0;
-      const failedVehicles = testsData ? testsData.filter(test => !test.result).length : 0;
+      const testedVehicles = testsData.length;
+      const passedVehicles = testsData.filter(test => test.result).length;
+      const failedVehicles = testsData.filter(test => !test.result).length;
       const complianceRate = totalVehicles > 0 ? Math.round((passedVehicles / totalVehicles) * 100) : 0;
       const failRate = testedVehicles > 0 ? Math.round(((testedVehicles - passedVehicles) / testedVehicles) * 100) : 0;
 
-      // 3. Get quarterly tests data
+      // 3. Generate quarterly tests data
       let quarterlyData: {
         quarter: number;
         passed: number;
@@ -125,18 +116,13 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         name: string;
       }[] = [];
 
-      // This would normally use the groupBy functionality, but for the demo we'll simulate it
+      // Get data for each quarter
       for (let q = 1; q <= 4; q++) {
-        const { data: quarterResults, error: quarterError } = await supabase
-          .from('emission_tests')
-          .select('result')
-          .eq('year', year)
-          .eq('quarter', q);
+        // Fetch tests for this specific quarter
+        const quarterResults = await fetchEmissionTests({ year, quarter: q });
 
-        if (quarterError) throw quarterError;
-
-        const passed = quarterResults ? quarterResults.filter(test => test.result).length : 0;
-        const failed = quarterResults ? quarterResults.filter(test => !test.result).length : 0;
+        const passed = quarterResults.filter(test => test.result).length;
+        const failed = quarterResults.filter(test => !test.result).length;
 
         quarterlyData.push({
           quarter: q,
@@ -147,79 +133,49 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       }
 
       // 4. Generate engine type data
-      const { data: vehicles, error: vehiclesDataError } = await supabase
-        .from('vehicles')
-        .select('engine_type');
-      
-      if (vehiclesDataError) throw vehiclesDataError;
-      
-      // Count by engine type
+      // Count vehicles by engine type
       const engineTypeCounts: Record<string, number> = {};
       vehicles.forEach(vehicle => {
-        const engineType = vehicle.engine_type || 'Unknown';
+        const engineType = vehicle.engineType || 'Unknown';
         engineTypeCounts[engineType] = (engineTypeCounts[engineType] || 0) + 1;
       });
-      
+
       const engineTypeData = Object.entries(engineTypeCounts).map(([name, value]) => ({
         name,
         value
       }));
-      
-      // 5. Generate vehicle type data
-      const { data: vehicleTypes, error: vehicleTypesError } = await supabase
-        .from('vehicles')
-        .select('vehicle_type, wheels');
-      
-      if (vehicleTypesError) throw vehicleTypesError;
-      
-      // Count by wheel count
+
+      // 5. Generate vehicle type data by wheels count
       const wheelCounts: Record<string, number> = {};
-      vehicleTypes.forEach(vehicle => {
+      vehicles.forEach(vehicle => {
+        // Convert wheels number to string for grouping
         const wheels = vehicle.wheels?.toString() || 'Unknown';
         wheelCounts[wheels] = (wheelCounts[wheels] || 0) + 1;
       });
-      
+
       const vehicleTypeData = Object.entries(wheelCounts).map(([name, value]) => ({
         name,
         value
       }));
 
       // 6. Generate office compliance data
-      const { data: officesData, error: officesError } = await supabase
-        .from('vehicles')
-        .select('office_name');
-
-      if (officesError) throw officesError;
-
-      const offices = [...new Set(officesData.map(v => v.office_name))];
+      // Get unique offices
+      const officeNames = [...new Set(vehicles.map(v => v.officeName))];
       const officeCompliance = [];
 
-      for (const officeName of offices) {
-        const { data: officeVehicles, error: officeVehiclesError } = await supabase
-          .from('vehicles')
-          .select('id')
-          .eq('office_name', officeName);
-
-        if (officeVehiclesError) throw officeVehiclesError;
-
+      for (const officeName of officeNames) {
+        // Get vehicles for this office
+        const officeVehicles = vehicles.filter(v => v.officeName === officeName);
         const vehicleCount = officeVehicles.length;
 
-        let testQuery = supabase
-          .from('emission_tests')
-          .select('vehicle_id, result')
-          .eq('year', year);
-
-        if (quarter !== undefined) {
-          testQuery = testQuery.eq('quarter', quarter);
-        }
-
-        const { data: testResults, error: testResultsError } = await testQuery;
-
-        if (testResultsError) throw testResultsError;
+        // Get test results for vehicles in this office
+        const officeVehicleIds = officeVehicles.map(v => v.id);
 
         // Filter test results that belong to this office
-        const vehicleIds = officeVehicles.map(v => v.id);
-        const officeTests = testResults.filter(test => vehicleIds.includes(test.vehicle_id));
+        const officeTests = testsData.filter(test =>
+          officeVehicleIds.includes(test.vehicleId)
+        );
+
         const testedCount = officeTests.length;
         const passedCount = officeTests.filter(test => test.result).length;
 
@@ -240,27 +196,22 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         { year: currentYear, complianceRate: complianceRate, totalVehicles: totalVehicles }
       ];
 
-      // 8. Get recent tests - select only needed fields
-      let recentTestsQuery = supabase
-        .from('vehicle_summary_view')
-        .select('id,plate_number,office_name,latest_test_date,latest_test_result')
-        .order('latest_test_date', { ascending: false })
-        .limit(5);
+      // 8. Get recent tests
+      // Sort by testDate in descending order
+      const sortedTests = [...testsData].sort((a, b) =>
+        new Date(b.testDate).getTime() - new Date(a.testDate).getTime()
+      ).slice(0, 5);
 
-      const { data: recentTestsData, error: recentTestsError } = await recentTestsQuery;
-
-      if (recentTestsError) throw recentTestsError;
-
-      const recentTests = recentTestsData.map(test => ({
+      const recentTests = sortedTests.map(test => ({
         id: test.id,
-        plateNumber: test.plate_number || 'Unknown',
-        officeName: test.office_name || 'Unknown',
-        testDate: test.latest_test_date || 'N/A',
-        result: test.latest_test_result
+        plateNumber: test.vehicle?.plateNumber || 'Unknown',
+        officeName: test.vehicle?.officeName || 'Unknown',
+        testDate: test.testDate,
+        result: test.result
       }));
 
       // Set dashboard data
-      const dashboardData = {
+      const newDashboardData = {
         totalVehicles,
         totalPassed: passedVehicles,
         totalFailed: failedVehicles,
@@ -271,8 +222,8 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         complianceByOffice: officeCompliance,
         recentTests
       };
-      
-      setDashboardData(dashboardData);
+
+      setDashboardData(newDashboardData);
 
       // Create and return emission data
       const emissionData: EmissionData = {
@@ -303,7 +254,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         yearlyTrends,
         recentTests,
       };
-      
+
       return emissionData;
     } catch (err) {
       console.error('Error fetching emission data:', err);
@@ -314,21 +265,18 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
 
   const fetchTestSchedules = useCallback(async (): Promise<TestSchedule[]> => {
     try {
-      let query = supabase
-        .from('emission_test_schedules')
-        .select('id,year,quarter,assigned_personnel,location,conducted_on')
-        .eq('year', year);
-        
-      if (quarter !== undefined) {
-        query = query.eq('quarter', quarter);
-      }
-        
-      query = query.order('quarter', { ascending: true });
+      // Fetch test schedules using the GraphQL client
+      const data = await fetchScheduleData(year, quarter);
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data as TestSchedule[];
+      // Map response to TestSchedule interface
+      return data.map(schedule => ({
+        id: schedule.id,
+        year: schedule.year,
+        quarter: schedule.quarter,
+        assignedPersonnel: schedule.assignedPersonnel,
+        location: schedule.location,
+        conductedOn: schedule.conductedOn
+      }));
     } catch (error) {
       console.error("Error fetching test schedules:", error);
       toast.error("Failed to load quarterly test schedules");
@@ -337,11 +285,11 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
   }, [year, quarter]);
 
   // Use React Query to fetch and cache emission data
-  const { 
-    data, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data,
+    isLoading,
+    error,
+    refetch
   } = useQuery({
     queryKey: ['emissionData', year, quarter],
     queryFn: fetchEmissionData,
@@ -349,7 +297,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
   });
 
   // Use React Query to fetch and cache test schedules
-  const { 
+  const {
     data: schedules = [],
     refetch: refetchSchedules
   } = useQuery({
@@ -358,12 +306,12 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  return { 
-    data, 
-    loading: isLoading, 
-    error, 
-    refetch, 
-    fetchTestSchedules: () => refetchSchedules().then(result => result.data || []), 
-    ...dashboardData 
+  return {
+    data,
+    loading: isLoading,
+    error,
+    refetch,
+    fetchTestSchedules: () => refetchSchedules().then(result => result.data || []),
+    ...dashboardData
   };
 };

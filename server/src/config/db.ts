@@ -1,4 +1,4 @@
-import { dbManager } from "../db/dbManager";
+import { dbManager } from "../db/dbManager.js";
 import dotenv from "dotenv";
 
 dotenv.config();

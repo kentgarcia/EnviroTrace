@@ -1,7 +1,7 @@
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -14,17 +14,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@/integrations/types/userData";
+import { fetchMyProfile } from "@/lib/profile-api";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();
   const { user, userData, loading, signOut: authSignOut } = useAuth();
+  const [profile, setProfile] = useState<{ firstName?: string; lastName?: string } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     // Check if user is authenticated
     if (!loading && !user) {
       navigate("/");
+    } else if (user && userData) {
+      // Fetch user profile data
+      const getProfileData = async () => {
+        try {
+          setProfileLoading(true);
+          const profileData = await fetchMyProfile();
+          setProfile(profileData);
+        } catch (error) {
+          console.error("Error fetching profile data:", error);
+        } finally {
+          setProfileLoading(false);
+        }
+      };
+
+      getProfileData();
     }
-  }, [user, loading, navigate]);
+  }, [user, userData, loading, navigate]);
 
   const handleDashboardSelect = (dashboardType: string) => {
     navigate(`/${dashboardType}/overview`);
@@ -45,7 +63,31 @@ export default function DashboardSelection() {
     return userData?.roles?.includes(role) || userData?.roles?.includes('admin');
   };
 
-  if (loading) {
+  // Get user display name
+  const getDisplayName = () => {
+    if (profile?.firstName && profile?.lastName) {
+      return `${profile.firstName} ${profile.lastName}`;
+    } else if (profile?.firstName) {
+      return profile.firstName;
+    } else if (profile?.lastName) {
+      return profile.lastName;
+    }
+    return userData?.email || "User";
+  };
+
+  // Get initials for avatar
+  const getInitials = () => {
+    if (profile?.firstName && profile?.lastName) {
+      return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
+    } else if (profile?.firstName) {
+      return profile.firstName.charAt(0).toUpperCase();
+    } else if (profile?.lastName) {
+      return profile.lastName.charAt(0).toUpperCase();
+    }
+    return userData?.email?.charAt(0).toUpperCase() || "U";
+  };
+
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -76,11 +118,11 @@ export default function DashboardSelection() {
               <Button variant="ghost" size="sm" className="flex items-center gap-2">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    {userData?.email?.charAt(0).toUpperCase() || "U"}
+                    {getInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-sm text-left hidden md:block">
-                  <div className="font-medium">{userData?.email}</div>
+                  <div className="font-medium">{getDisplayName()}</div>
                   <div className="text-xs text-muted-foreground">User Profile</div>
                 </div>
                 <ChevronDown className="h-4 w-4" />
@@ -106,7 +148,7 @@ export default function DashboardSelection() {
         style={{ backgroundImage: "url('/images/bg_login.png')" }}
       >
         <div className="max-w-(--breakpoint-xl) mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Welcome, {userData?.email}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Welcome, {getDisplayName()}!</h2>
           <p className="text-xl max-w-2xl">
             Select a dashboard to access environmental data and management tools for sustainable development
           </p>

@@ -1,4 +1,4 @@
-import { verifyToken } from "../utils/auth";
+import { verifyToken } from "../utils/auth.js";
 
 /**
  * Middleware to extract and verify JWT token from request headers

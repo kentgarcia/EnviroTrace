@@ -1,6 +1,6 @@
-import { db } from "../../config/db";
-import { UserRole } from "../auth/types";
-import { ErrorType, AppError } from "../../middlewares/errorMiddleware";
+import { db } from "../../config/db.js";
+import { UserRole } from "../auth/types.js";
+import { ErrorType, AppError } from "../../middlewares/errorMiddleware.js";
 
 /**
  * User repository for database operations related to users

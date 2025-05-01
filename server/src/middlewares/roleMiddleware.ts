@@ -1,5 +1,5 @@
-import { UserRole } from "../modules/auth/types";
-import { UserRepository } from "../modules/user/repository";
+import { UserRole } from "../modules/auth/types.js";
+import { UserRepository } from "../modules/user/repository.js";
 
 /**
  * Middleware to check if the user has the required roles

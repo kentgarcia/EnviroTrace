@@ -1,6 +1,10 @@
-import { UserRepository } from "../user/repository";
-import { comparePassword, generateToken, hashPassword } from "../../utils/auth";
-import { AuthContext, UserRole } from "./types";
+import { UserRepository } from "../user/repository.js";
+import {
+  comparePassword,
+  generateToken,
+  hashPassword,
+} from "../../utils/auth.js";
+import { AuthContext, UserRole } from "./types.js";
 
 export const authResolvers = {
   Mutation: {

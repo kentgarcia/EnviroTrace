@@ -50,7 +50,9 @@ export const apolloClient = new ApolloClient({
       fetchPolicy: 'network-only',
       errorPolicy: 'all',
     },
-  }
+  },
+  // Add validationRules for better error reporting
+  queryDeduplication: false,
 });
 
 export function ApolloClientProvider({

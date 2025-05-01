@@ -1,7 +1,11 @@
-import { authTypeDefs } from "./auth/schema";
-import { userTypeDefs } from "./user/schema";
+import { authTypeDefs } from "./auth/schema.js";
+import { userTypeDefs } from "./user/schema.js";
+import { profileTypeDefs } from "./profile/schema.js";
+import { emissionTypeDefs } from "./emission/schema.js";
+import { mergeTypeDefs } from "@graphql-tools/merge";
 
-// Base schema definition
+// Base schema definition with empty Query and Mutation types
+// This creates proper extension points for our schema modules
 const baseTypeDefs = `#graphql
   type Query {
     _empty: String
@@ -12,10 +16,12 @@ const baseTypeDefs = `#graphql
   }
 `;
 
-// Combine all type definitions
-export const typeDefs = [
+// Combine all type definitions using mergeTypeDefs
+export const typeDefs = mergeTypeDefs([
   baseTypeDefs,
   authTypeDefs,
   userTypeDefs,
+  profileTypeDefs,
+  emissionTypeDefs,
   // Add other module schemas here
-];
+]);

@@ -8,7 +8,7 @@ import { apolloClient } from "./apollo-client";
 // GraphQL mutations aligned with our backend server
 const SIGN_IN = gql`
   mutation SignIn($email: String!, $password: String!) {
-    signIn(email: $email, $password: $password) {
+    signIn(email: $email, password: $password) {
       token
       user {
         id
@@ -23,7 +23,7 @@ const SIGN_IN = gql`
 
 const SIGN_UP = gql`
   mutation SignUp($email: String!, $password: String!) {
-    signUp(email: $email, $password: $password) {
+    signUp(email: $email, password: $password) {
       token
       user {
         id

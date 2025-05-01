@@ -2,11 +2,10 @@ import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import dotenv from "dotenv";
 
-// Import modules
-import { typeDefs } from "./modules/schema";
-import { resolvers } from "./modules/resolvers";
-import { authMiddleware } from "./middlewares/authMiddleware";
-import { formatError } from "./middlewares/errorMiddleware";
+import { typeDefs } from "./modules/schema.js";
+import { resolvers } from "./modules/resolvers.js";
+import { authMiddleware } from "./middlewares/authMiddleware.js";
+import { formatError } from "./middlewares/errorMiddleware.js";
 
 // Load environment variables
 dotenv.config();
