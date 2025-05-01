@@ -1,4 +1,4 @@
-import jwt, { Secret } from "jsonwebtoken";
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { JWT_CONFIG, BCRYPT_CONFIG } from "../config/jwt";
 
@@ -6,9 +6,14 @@ import { JWT_CONFIG, BCRYPT_CONFIG } from "../config/jwt";
  * Generates a JWT token for a user
  */
 export const generateToken = (payload: Record<string, any>): string => {
-  return jwt.sign(payload, JWT_CONFIG.secret as Secret, {
-    expiresIn: JWT_CONFIG.expiresIn,
-  });
+  // Using type assertions to ensure compatibility with jwt.sign
+  const secret: Secret = JWT_CONFIG.secret;
+  const options: SignOptions = { 
+    // Using type assertion to handle the expiresIn string value
+    expiresIn: JWT_CONFIG.expiresIn as jwt.SignOptions['expiresIn'] 
+  };
+  
+  return jwt.sign(payload, secret, options);
 };
 
 /**

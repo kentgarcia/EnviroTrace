@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { signIn } from "@/lib/auth";
 import { useForm } from "react-hook-form";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SignInFormData {
   email: string;
@@ -17,7 +19,9 @@ interface SignInFormData {
 
 export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { isOnline } = useOfflineSync();
 
   const {
     register,
@@ -26,20 +30,38 @@ export function SignInForm() {
   } = useForm<SignInFormData>();
 
   const onSignIn = async (data: SignInFormData) => {
+    // Clear any previous errors
+    setAuthError(null);
     setIsLoading(true);
 
     try {
+      if (!isOnline) {
+        // Special handling for offline login attempts
+        toast.warning("You are currently offline. Attempting to use cached credentials.");
+      }
+
       const result = await signIn(data.email, data.password);
 
       if (result && result.token) {
         toast.success("Signed in successfully!");
-        navigate("/dashboard-selection");
+
+        // Small delay before navigation to allow the toast to be seen
+        setTimeout(() => {
+          navigate("/dashboard-selection");
+        }, 300);
       } else {
         throw new Error("Authentication failed");
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
-      toast.error(error.message || "Failed to sign in. Please check your credentials.");
+
+      // Set a user-friendly error message
+      const errorMessage = error.message === "Failed to fetch" && !isOnline
+        ? "Cannot connect to server. Please check your internet connection."
+        : error.message || "Failed to sign in. Please check your credentials.";
+
+      setAuthError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +88,22 @@ export function SignInForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {!isOnline && (
+          <Alert variant="destructive" className="mb-4">
+            <WifiOff className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              You are currently offline. Limited functionality may be available.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {authError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>{authError}</AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit(onSignIn)} className="space-y-4 mt-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -73,6 +111,8 @@ export function SignInForm() {
               id="email"
               type="email"
               placeholder="name@example.com"
+              autoComplete="email"
+              disabled={isLoading}
               {...register("email", {
                 required: "Email is required",
                 pattern: {
@@ -91,6 +131,8 @@ export function SignInForm() {
               id="password"
               type="password"
               placeholder="Password"
+              autoComplete="current-password"
+              disabled={isLoading}
               {...register("password", { required: "Password is required" })}
             />
             {errors.password && (
@@ -103,7 +145,16 @@ export function SignInForm() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
               </>
-            ) : "Sign in"}
+            ) : (
+              <>
+                {isOnline ? (
+                  <Wifi className="mr-2 h-4 w-4" />
+                ) : (
+                  <WifiOff className="mr-2 h-4 w-4" />
+                )}
+                Sign in
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

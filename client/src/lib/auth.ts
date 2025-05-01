@@ -8,7 +8,7 @@ import { apolloClient } from "./apollo-client";
 // GraphQL mutations aligned with our backend server
 const SIGN_IN = gql`
   mutation SignIn($email: String!, $password: String!) {
-    signIn(email: $email, password: $password) {
+    signIn(email: $email, $password: $password) {
       token
       user {
         id
@@ -23,7 +23,7 @@ const SIGN_IN = gql`
 
 const SIGN_UP = gql`
   mutation SignUp($email: String!, $password: String!) {
-    signUp(email: $email, password: $password) {
+    signUp(email: $email, $password: $password) {
       token
       user {
         id
@@ -75,6 +75,14 @@ export async function signIn(email: string, password: string) {
       useAuthStore.getState().setRoles(user.roles);
     }
 
+    // Store user data
+    useAuthStore.getState().setUserData({
+      id: user.id,
+      email: user.email,
+      lastSignInAt: user.lastSignInAt,
+      isSuperAdmin: user.isSuperAdmin || false,
+    });
+
     return {
       token,
       user,
@@ -110,6 +118,14 @@ export async function signUp(email: string, password: string) {
       useAuthStore.getState().setRoles(user.roles);
     }
 
+    // Store user data
+    useAuthStore.getState().setUserData({
+      id: user.id,
+      email: user.email,
+      lastSignInAt: user.lastSignInAt,
+      isSuperAdmin: user.isSuperAdmin || false,
+    });
+
     return {
       token,
       user,
@@ -122,9 +138,8 @@ export async function signUp(email: string, password: string) {
 
 export async function signOut() {
   try {
-    // Clear local token and state
-    useAuthStore.getState().clearToken();
-    useAuthStore.getState().clearRoles();
+    // Reset the entire store
+    useAuthStore.getState().resetStore();
 
     // Clear Apollo client cache
     await apolloClient.clearStore();
@@ -143,50 +158,52 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const { isOnline } = useOfflineSync();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Check if we have a valid token
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+  // Define the initAuth function outside the useEffect
+  const initAuth = async () => {
+    try {
+      // Check if we have a valid token
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-        // Fetch current user data using the token
-        const { data } = await apolloClient.query({
-          query: GET_ME,
-          fetchPolicy: "network-only",
+      // Fetch current user data using the token
+      const { data } = await apolloClient.query({
+        query: GET_ME,
+        fetchPolicy: "network-only",
+      });
+
+      if (data && data.me) {
+        setUser(data.me);
+
+        // Set user data including roles
+        setUserData({
+          id: data.me.id,
+          email: data.me.email,
+          roles: data.me.roles || [],
         });
 
-        if (data && data.me) {
-          setUser(data.me);
-
-          // Set user data including roles
-          setUserData({
-            id: data.me.id,
-            email: data.me.email,
-            roles: data.me.roles || [],
-          });
-
-          // Update roles in the store if needed
-          if (data.me.roles) {
-            useAuthStore.getState().setRoles(data.me.roles);
-          }
-        } else {
-          // Invalid token or user not found
-          useAuthStore.getState().clearToken();
-          useAuthStore.getState().clearRoles();
+        // Update roles in the store if needed
+        if (data.me.roles) {
+          useAuthStore.getState().setRoles(data.me.roles);
         }
-      } catch (error) {
-        console.error("Auth initialization error:", error);
-        // Clear invalid token
+      } else {
+        // Invalid token or user not found
         useAuthStore.getState().clearToken();
         useAuthStore.getState().clearRoles();
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error("Auth initialization error:", error);
+      // Clear invalid token
+      useAuthStore.getState().clearToken();
+      useAuthStore.getState().clearRoles();
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Initialize auth on component mount
+  useEffect(() => {
     initAuth();
   }, [token]);
 
@@ -196,29 +213,6 @@ export function useAuth() {
       initAuth();
     }
   }, [isOnline, token, user]);
-
-  // Initialize auth on component mount
-  const initAuth = async () => {
-    try {
-      const { data } = await apolloClient.query({
-        query: GET_ME,
-        fetchPolicy: "network-only",
-      });
-
-      if (data && data.me) {
-        setUser(data.me);
-        setUserData({
-          id: data.me.id,
-          email: data.me.email,
-          roles: data.me.roles || [],
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return {
     user,
