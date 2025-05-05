@@ -9,17 +9,21 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ProfilePage from "./pages/ProfilePage";
 import UserManagement from "./pages/admin/UserManagement";
 import AdminUserManagement from "./pages/admin/AdminUserManagement";
-import AirQualityOverview from "./pages/dashboards/air-quality/Overview";
-import AirQualityRecords from "./pages/dashboards/air-quality/Records";
-import TreeManagementOverview from "./pages/dashboards/tree-management/Overview";
-import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
-import TreePlantingPage from "./pages/dashboards/tree-management/Planting";
-import SaplingRequestsPage from "./pages/dashboards/tree-management/Requests";
-import GovEmissionOverview from "./pages/dashboards/government-emission/Overview";
+
+// import AirQualityOverview from "./pages/dashboards/air-quality/Overview";
+// import AirQualityRecords from "./pages/dashboards/air-quality/Records";
+// import TreeManagementOverview from "./pages/dashboards/tree-management/Overview";
+// import TreeManagementRecords from "./pages/dashboards/tree-management/Records";
+// import TreePlantingPage from "./pages/dashboards/tree-management/Planting";
+// import SaplingRequestsPage from "./pages/dashboards/tree-management/Requests";
+
+{/* Government Emission */ }
+import GovEmissionOverview from "./pages/dashboards/emission/Overview";
 import VehiclesPage from "./pages/dashboards/emission/Vehicles";
-import QuarterlyTestingPage from "./pages/dashboards/old/government-emission/QuarterlyTesting";
-import OfficesPage from "./pages/dashboards/old/government-emission/Offices";
+import QuarterlyTestingPage from "./pages/dashboards/emission/QuarterlyTesting";
+import OfficesPage from "./pages/dashboards/emission/Offices";
 import NotFound from "./pages/NotFound";
+
 import { useAuthStore } from "./hooks/useAuthStore";
 import { RoleProtectedRoute } from "./components/auth/RoleProtectedRoute";
 
@@ -91,7 +95,7 @@ const App = () => (
           } />
 
           {/* Air Quality Dashboard Routes */}
-          <Route path="/air-quality/overview" element={
+          {/* <Route path="/air-quality/overview" element={
             <RoleProtectedRoute allowedRoles={['admin', 'air_quality']}>
               <AirQualityOverview />
             </RoleProtectedRoute>
@@ -105,10 +109,10 @@ const App = () => (
             <RoleProtectedRoute allowedRoles={['admin', 'air_quality']}>
               <AirQualityOverview />
             </RoleProtectedRoute>
-          } />
+          } /> */}
 
           {/* Tree Management Dashboard Routes */}
-          <Route path="/tree-management/overview" element={
+          {/* <Route path="/tree-management/overview" element={
             <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementOverview />
             </RoleProtectedRoute>
@@ -137,7 +141,7 @@ const App = () => (
             <RoleProtectedRoute allowedRoles={['admin', 'tree_management']}>
               <TreeManagementOverview />
             </RoleProtectedRoute>
-          } />
+          } /> */}
 
           {/* Government Emission Dashboard Routes */}
           <Route path="/government-emission/overview" element={

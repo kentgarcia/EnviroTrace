@@ -770,4 +770,95 @@ export const EmissionRepository = {
       );
     }
   },
+
+  // Office compliance operations
+  async findOfficeCompliance(
+    year: number,
+    quarter: number,
+    searchTerm?: string
+  ): Promise<any[]> {
+    try {
+      // First, get unique office names from vehicles
+      let officesQuery = `
+        SELECT DISTINCT office_name AS name
+        FROM vehicles
+        WHERE 1=1
+      `;
+
+      const officeQueryParams: any[] = [];
+      let officeParamCounter = 1;
+
+      if (searchTerm) {
+        officesQuery += ` AND office_name ILIKE $${officeParamCounter++}`;
+        officeQueryParams.push(`%${searchTerm}%`);
+      }
+
+      officesQuery += " ORDER BY name";
+
+      const officeResult = await db.query(officesQuery, officeQueryParams);
+      const offices = officeResult.rows;
+
+      // For each office, calculate compliance metrics
+      const officeCompliance = [];
+
+      for (const office of offices) {
+        // Generate a code based on the office name (get initials)
+        const code = office.name
+          .split(" ")
+          .map((word: string) => word.charAt(0).toUpperCase())
+          .join("");
+
+        // Get vehicles for this office
+        const vehiclesResult = await db.query(
+          `SELECT id
+           FROM vehicles
+           WHERE office_name = $1`,
+          [office.name]
+        );
+
+        const vehicleIds = vehiclesResult.rows.map((v) => v.id);
+        const vehicleCount = vehicleIds.length;
+
+        if (vehicleCount === 0) {
+          // Skip offices with no vehicles
+          continue;
+        }
+
+        // Get emission tests for these vehicles in the specified year and quarter
+        const emissionTestsResult = await db.query(
+          `SELECT vehicle_id, result
+           FROM emission_tests
+           WHERE year = $1 AND quarter = $2 AND vehicle_id = ANY($3)`,
+          [year, quarter, vehicleIds]
+        );
+
+        const testedCount = emissionTestsResult.rows.length;
+        const passedCount = emissionTestsResult.rows.filter(
+          (test) => test.result === true
+        ).length;
+
+        // Calculate compliance rate
+        const complianceRate =
+          vehicleCount > 0 ? Math.round((passedCount / vehicleCount) * 100) : 0;
+
+        officeCompliance.push({
+          id: code.toLowerCase(), // Use lowercase code as id
+          name: office.name,
+          code,
+          vehicleCount,
+          testedCount,
+          passedCount,
+          complianceRate,
+        });
+      }
+
+      return officeCompliance;
+    } catch (error) {
+      console.error("Database error in findOfficeCompliance:", error);
+      throw new AppError(
+        "Failed to retrieve office compliance data",
+        ErrorType.DATABASE_ERROR
+      );
+    }
+  },
 };

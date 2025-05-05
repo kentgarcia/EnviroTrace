@@ -171,6 +171,21 @@ export const DELETE_EMISSION_TEST = gql`
   }
 `;
 
+// Query to fetch office compliance data
+export const GET_OFFICE_COMPLIANCE = gql`
+  query OfficeCompliance($year: Int!, $quarter: Int!, $searchTerm: String) {
+    officeCompliance(year: $year, quarter: $quarter, searchTerm: $searchTerm) {
+      id
+      name
+      code
+      vehicleCount
+      testedCount
+      passedCount
+      complianceRate
+    }
+  }
+`;
+
 // Helper function to fetch vehicle summaries
 export async function fetchVehicleSummaries(filters = {}) {
   try {
@@ -337,6 +352,29 @@ export async function fetchVehicleById(id) {
     return data.vehicleSummary;
   } catch (error) {
     console.error("Error fetching vehicle:", error);
+    throw error;
+  }
+}
+
+// Helper function to fetch office compliance data
+export async function fetchOffices(filters: {
+  year?: number;
+  quarter?: number;
+  searchTerm?: string;
+}) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_OFFICE_COMPLIANCE,
+      variables: {
+        year: filters.year || new Date().getFullYear(),
+        quarter: filters.quarter || Math.ceil((new Date().getMonth() + 1) / 3),
+        searchTerm: filters.searchTerm || undefined,
+      },
+      fetchPolicy: "network-only",
+    });
+    return data.officeCompliance;
+  } catch (error) {
+    console.error("Error fetching office compliance data:", error);
     throw error;
   }
 }

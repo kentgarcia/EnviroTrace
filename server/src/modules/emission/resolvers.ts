@@ -98,6 +98,11 @@ export const emissionResolvers = {
       }
       return schedule;
     },
+
+    // Office compliance queries
+    officeCompliance: async (_, { year, quarter, searchTerm }) => {
+      return EmissionRepository.findOfficeCompliance(year, quarter, searchTerm);
+    },
   },
 
   Mutation: {

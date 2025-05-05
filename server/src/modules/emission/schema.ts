@@ -106,6 +106,20 @@ export const emissionTypeDefs = `#graphql
     # EmissionTestSchedule queries
     emissionTestSchedules(year: Int, quarter: Int): [EmissionTestSchedule!]!
     emissionTestSchedule(id: ID!): EmissionTestSchedule
+    
+    # Office compliance queries
+    officeCompliance(year: Int!, quarter: Int!, searchTerm: String): [OfficeCompliance!]!
+  }
+
+  # Office compliance data type
+  type OfficeCompliance {
+    id: ID!
+    name: String!
+    code: String!
+    vehicleCount: Int!
+    testedCount: Int!
+    passedCount: Int!
+    complianceRate: Int!
   }
 
   extend type Mutation {

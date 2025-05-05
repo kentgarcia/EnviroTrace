@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useVehicles, Vehicle, VehicleInput } from "@/hooks/useVehicles";
-import { VehicleTable, VehicleTableSkeleton } from "@/components/dashboards/emission/vehicle/VehicleTable";
-import { VehicleFilterPanel } from "@/components/dashboards/emission/vehicle/VehicleFilters";
-import { VehicleModals } from "@/components/dashboards/emission/vehicle/VehicleModals";
-import { VehicleDetails } from "@/components/dashboards/emission/vehicle/VehicleDetails";
+import { VehicleTable, VehicleTableSkeleton } from "@/components/dashboards/emission/vehicles/VehicleTable";
+import { VehicleFilterPanel } from "@/components/dashboards/emission/vehicles/VehicleFilters";
+import { VehicleModals } from "@/components/dashboards/emission/vehicles/VehicleModals";
+import { VehicleDetails } from "@/components/dashboards/emission/vehicles/VehicleDetails";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
     AlertDialog,
