@@ -157,6 +157,20 @@ export const UPDATE_TEST_SCHEDULE = gql`
   }
 `;
 
+// Delete a test schedule
+export const DELETE_TEST_SCHEDULE = gql`
+  mutation DeleteTestSchedule($id: ID!) {
+    deleteEmissionTestSchedule(id: $id)
+  }
+`;
+
+// Delete an emission test
+export const DELETE_EMISSION_TEST = gql`
+  mutation DeleteEmissionTest($id: ID!) {
+    deleteEmissionTest(id: $id)
+  }
+`;
+
 // Helper function to fetch vehicle summaries
 export async function fetchVehicleSummaries(filters = {}) {
   try {
@@ -238,6 +252,91 @@ export async function createTestSchedule(input) {
     return data.createEmissionTestSchedule;
   } catch (error) {
     console.error("Error creating test schedule:", error);
+    throw error;
+  }
+}
+
+// Helper function to update an existing test schedule
+export async function updateTestSchedule(id, input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_TEST_SCHEDULE,
+      variables: { id, input },
+      refetchQueries: [
+        {
+          query: GET_TEST_SCHEDULES,
+          variables: { year: input.year, quarter: input.quarter },
+        },
+      ],
+    });
+    return data.updateEmissionTestSchedule;
+  } catch (error) {
+    console.error("Error updating test schedule:", error);
+    throw error;
+  }
+}
+
+// Helper function to delete a test schedule
+export async function deleteTestSchedule(id) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: DELETE_TEST_SCHEDULE,
+      variables: { id },
+      refetchQueries: [{ query: GET_TEST_SCHEDULES }],
+    });
+    return data.deleteEmissionTestSchedule;
+  } catch (error) {
+    console.error("Error deleting test schedule:", error);
+    throw error;
+  }
+}
+
+// Helper function to update an emission test
+export async function updateEmissionTest(id, input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_EMISSION_TEST,
+      variables: { id, input },
+      refetchQueries: [
+        {
+          query: GET_EMISSION_TESTS,
+          variables: { filters: { year: input.year, quarter: input.quarter } },
+        },
+      ],
+    });
+    return data.updateEmissionTest;
+  } catch (error) {
+    console.error("Error updating emission test:", error);
+    throw error;
+  }
+}
+
+// Helper function to delete an emission test
+export async function deleteEmissionTest(id) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: DELETE_EMISSION_TEST,
+      variables: { id },
+      refetchQueries: [{ query: GET_EMISSION_TESTS }],
+    });
+    return data.deleteEmissionTest;
+  } catch (error) {
+    console.error("Error deleting emission test:", error);
+    throw error;
+  }
+}
+
+// Helper function to fetch a vehicle by ID
+export async function fetchVehicleById(id) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_VEHICLE_SUMMARY,
+      variables: { id },
+      fetchPolicy: "network-only",
+    });
+    return data.vehicleSummary;
+  } catch (error) {
+    console.error("Error fetching vehicle:", error);
     throw error;
   }
 }

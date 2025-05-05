@@ -175,7 +175,7 @@ export const EmissionRepository = {
 
       if (vehicleData.wheels !== undefined) {
         updateFields.push(`wheels = $${paramCounter++}`);
-        queryParams.push(vehicleData.wheels);
+        queryParams.push(String(vehicleData.wheels)); // Convert wheels number to string
       }
 
       // Always update updated_at timestamp
@@ -379,7 +379,7 @@ export const EmissionRepository = {
 
         if (filters.vehicleId) {
           query += ` AND et.vehicle_id = $${paramCounter++}`;
-          queryParams.push(filters.vehicleId);
+          queryParams.push(String(filters.vehicleId)); // Convert to string to ensure type compatibility
         }
 
         if (filters.result !== undefined) {
@@ -448,11 +448,15 @@ export const EmissionRepository = {
            created_at AS "createdAt",
            updated_at AS "updatedAt"`,
         [
-          testData.vehicleId,
-          testData.testDate,
+          String(testData.vehicleId),
+          testData.testDate instanceof Date
+            ? testData.testDate.toISOString()
+            : testData.testDate,
           testData.quarter,
           testData.year,
-          testData.result,
+          typeof testData.result === "boolean"
+            ? String(testData.result)
+            : testData.result,
           userId || null,
         ]
       );
@@ -482,27 +486,35 @@ export const EmissionRepository = {
 
       if (testData.vehicleId !== undefined) {
         updateFields.push(`vehicle_id = $${paramCounter++}`);
-        queryParams.push(testData.vehicleId);
+        queryParams.push(String(testData.vehicleId));
       }
 
       if (testData.testDate !== undefined) {
         updateFields.push(`test_date = $${paramCounter++}`);
-        queryParams.push(testData.testDate);
+        queryParams.push(
+          testData.testDate instanceof Date
+            ? testData.testDate.toISOString()
+            : testData.testDate
+        );
       }
 
       if (testData.quarter !== undefined) {
         updateFields.push(`quarter = $${paramCounter++}`);
-        queryParams.push(testData.quarter);
+        queryParams.push(String(testData.quarter));
       }
 
       if (testData.year !== undefined) {
         updateFields.push(`year = $${paramCounter++}`);
-        queryParams.push(testData.year);
+        queryParams.push(String(testData.year));
       }
 
       if (testData.result !== undefined) {
         updateFields.push(`result = $${paramCounter++}`);
-        queryParams.push(testData.result);
+        queryParams.push(
+          typeof testData.result === "boolean"
+            ? String(testData.result)
+            : testData.result
+        );
       }
 
       // Always update updated_at timestamp
@@ -649,10 +661,12 @@ export const EmissionRepository = {
            updated_at AS "updatedAt"`,
         [
           scheduleData.assignedPersonnel,
-          scheduleData.conductedOn,
+          scheduleData.conductedOn instanceof Date
+            ? scheduleData.conductedOn.toISOString()
+            : scheduleData.conductedOn,
           scheduleData.location,
-          scheduleData.quarter,
-          scheduleData.year,
+          String(scheduleData.quarter),
+          String(scheduleData.year),
         ]
       );
       return result.rows[0];
@@ -683,7 +697,11 @@ export const EmissionRepository = {
 
       if (scheduleData.conductedOn !== undefined) {
         updateFields.push(`conducted_on = $${paramCounter++}`);
-        queryParams.push(scheduleData.conductedOn);
+        queryParams.push(
+          scheduleData.conductedOn instanceof Date
+            ? scheduleData.conductedOn.toISOString()
+            : scheduleData.conductedOn
+        );
       }
 
       if (scheduleData.location !== undefined) {
@@ -693,12 +711,12 @@ export const EmissionRepository = {
 
       if (scheduleData.quarter !== undefined) {
         updateFields.push(`quarter = $${paramCounter++}`);
-        queryParams.push(scheduleData.quarter);
+        queryParams.push(String(scheduleData.quarter));
       }
 
       if (scheduleData.year !== undefined) {
         updateFields.push(`year = $${paramCounter++}`);
-        queryParams.push(scheduleData.year);
+        queryParams.push(String(scheduleData.year));
       }
 
       // Always update updated_at timestamp

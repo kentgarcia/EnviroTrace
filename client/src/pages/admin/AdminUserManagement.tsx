@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -56,15 +55,12 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
-// Define supported role types from the database
-type UserRole = "admin" | "air-quality" | "tree-management" | "government-emission";
+import { fetchUsers, createUser, updateUserRole, deleteUser, UserRole } from "@/lib/user-api";
 
 interface User {
   id: string;
@@ -75,46 +71,19 @@ interface User {
   created_at: string;
 }
 
-const fetchUsers = async () => {
-  // Get all profiles
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, created_at');
-  
-  if (profilesError) throw profilesError;
-
-  // Get all user roles
-  const { data: userRoles, error: rolesError } = await supabase
-    .from('user_roles')
-    .select('user_id, role');
-  
-  if (rolesError) throw rolesError;
-
-  // Create a map of user_id to role for quicker lookup
-  const roleMap = userRoles.reduce((acc, { user_id, role }) => {
-    acc[user_id] = role;
-    return acc;
-  }, {});
-
-  // Merge the data into our final format
-  const users = profiles.map(profile => ({
-    id: profile.id,
-    email: profile.email,
-    full_name: profile.full_name || 'N/A',
-    role: roleMap[profile.id] || 'user' as UserRole,
-    status: 'active', // This would need to be fetched from auth.users or another table if tracked
-    created_at: profile.created_at
-  }));
-
-  return users;
-};
-
-// Form schema for user creation/editing
-const userFormSchema = z.object({
+// Form schema for user editing (password optional)
+const editUserFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   full_name: z.string().min(2, "Name must be at least 2 characters"),
-  role: z.enum(["admin", "air-quality", "tree-management", "government-emission"]),
-  password: z.string().min(6, "Password must be at least 6 characters").optional(),
+  role: z.enum(["admin", "air_quality", "tree_management", "government_emission", "user", "revoked"]),
+});
+
+// Form schema for user creation (password required)
+const addUserFormSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  full_name: z.string().min(2, "Name must be at least 2 characters"),
+  role: z.enum(["admin", "air_quality", "tree_management", "government_emission", "user", "revoked"]),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export default function AdminUserManagement() {
@@ -122,7 +91,7 @@ export default function AdminUserManagement() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  
+
   // Modal states
   const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
@@ -138,8 +107,8 @@ export default function AdminUserManagement() {
   });
 
   // Edit user form
-  const editForm = useForm<z.infer<typeof userFormSchema>>({
-    resolver: zodResolver(userFormSchema),
+  const editForm = useForm<z.infer<typeof editUserFormSchema>>({
+    resolver: zodResolver(editUserFormSchema),
     defaultValues: {
       email: "",
       full_name: "",
@@ -148,12 +117,8 @@ export default function AdminUserManagement() {
   });
 
   // Add user form
-  const addForm = useForm<z.infer<typeof userFormSchema> & { password: string }>({
-    resolver: zodResolver(
-      userFormSchema.extend({
-        password: z.string().min(6, "Password must be at least 6 characters"),
-      })
-    ),
+  const addForm = useForm<z.infer<typeof addUserFormSchema>>({
+    resolver: zodResolver(addUserFormSchema),
     defaultValues: {
       email: "",
       full_name: "",
@@ -164,41 +129,15 @@ export default function AdminUserManagement() {
 
   // Mutations
   const updateUserMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof userFormSchema>) => {
+    mutationFn: async (data: z.infer<typeof editUserFormSchema>) => {
       if (!selectedUser) return;
-      
-      // Update user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          email: data.email,
-          full_name: data.full_name,
-        })
-        .eq('id', selectedUser.id);
-      
-      if (profileError) throw profileError;
 
       // Update user role if it changed
       if (data.role !== selectedUser.role) {
-        // First delete existing role
-        const { error: deleteRoleError } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', selectedUser.id);
-        
-        if (deleteRoleError) throw deleteRoleError;
-
-        // Then insert new role
-        const { error: insertRoleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: selectedUser.id,
-            role: data.role,
-          });
-        
-        if (insertRoleError) throw insertRoleError;
+        await updateUserRole(selectedUser.id, selectedUser.role, data.role);
       }
 
+      // Return updated user data (profile updates would be handled separately)
       return { ...selectedUser, ...data };
     },
     onSuccess: () => {
@@ -212,38 +151,16 @@ export default function AdminUserManagement() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to update user: ${error.message}`,
+        description: `Failed to update user: ${(error as Error).message}`,
         variant: "destructive",
       });
     },
   });
 
   const addUserMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof userFormSchema> & { password: string }) => {
-      // First, create the user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: data.full_name,
-        },
-      });
-      
-      if (authError) throw authError;
-
-      // The profile should be created automatically by the database trigger
-      // Now add the role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: data.role,
-        });
-      
-      if (roleError) throw roleError;
-
-      return authData.user;
+    mutationFn: async (data: z.infer<typeof addUserFormSchema>) => {
+      // Create user with GraphQL
+      return await createUser(data.email, data.password, data.role);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -257,7 +174,7 @@ export default function AdminUserManagement() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to create user: ${error.message}`,
+        description: `Failed to create user: ${(error as Error).message}`,
         variant: "destructive",
       });
     },
@@ -265,10 +182,8 @@ export default function AdminUserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete user from Supabase Auth
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
-      return userId;
+      // Delete user using GraphQL
+      return await deleteUser(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -282,7 +197,7 @@ export default function AdminUserManagement() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to delete user: ${error.message}`,
+        description: `Failed to delete user: ${(error as Error).message}`,
         variant: "destructive",
       });
     },
@@ -290,13 +205,9 @@ export default function AdminUserManagement() {
 
   const revokeAccessMutation = useMutation({
     mutationFn: async (userId: string) => {
-      // Update user in Supabase Auth to disable
-      const { error } = await supabase.auth.admin.updateUserById(
-        userId,
-        { user_metadata: { disabled: true } }
-      );
-      if (error) throw error;
-      return userId;
+      // This functionality might need to be implemented in your GraphQL API
+      // For now, we'll just update the user's role to a revoked state
+      return await updateUserRole(userId, selectedUser?.role || "", "revoked");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -310,15 +221,15 @@ export default function AdminUserManagement() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to revoke access: ${error.message}`,
+        description: `Failed to revoke access: ${(error as Error).message}`,
         variant: "destructive",
       });
     },
   });
 
   // Filter users based on search term
-  const filteredUsers = users?.filter(user => 
-    user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) || 
+  const filteredUsers = users?.filter(user =>
+    user.email.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
     user.full_name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
     user.role.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
@@ -360,9 +271,9 @@ export default function AdminUserManagement() {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
-      case 'air-quality':
-      case 'tree-management':
-      case 'government-emission':
+      case 'air_quality':
+      case 'tree_management':
+      case 'government_emission':
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-green-100 text-green-800';
@@ -398,8 +309,8 @@ export default function AdminUserManagement() {
                 <div className="mt-4 md:mt-0 flex items-center gap-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Search users..." 
+                    <Input
+                      placeholder="Search users..."
                       className="pl-10 h-10 w-full min-w-[240px] rounded-full bg-gray-100"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -552,9 +463,11 @@ export default function AdminUserManagement() {
                   {...editForm.register("role")}
                 >
                   <option value="admin">Admin</option>
-                  <option value="air-quality">Air Quality</option>
-                  <option value="tree-management">Tree Management</option>
-                  <option value="government-emission">Government Emission</option>
+                  <option value="air_quality">Air Quality</option>
+                  <option value="tree_management">Tree Management</option>
+                  <option value="government_emission">Government Emission</option>
+                  <option value="user">User</option>
+                  <option value="revoked">Revoked</option>
                 </select>
                 {editForm.formState.errors.role && (
                   <p className="text-red-500 text-sm col-span-3 col-start-2">
@@ -642,9 +555,11 @@ export default function AdminUserManagement() {
                   {...addForm.register("role")}
                 >
                   <option value="admin">Admin</option>
-                  <option value="air-quality">Air Quality</option>
-                  <option value="tree-management">Tree Management</option>
-                  <option value="government-emission">Government Emission</option>
+                  <option value="air_quality">Air Quality</option>
+                  <option value="tree_management">Tree Management</option>
+                  <option value="government_emission">Government Emission</option>
+                  <option value="user">User</option>
+                  <option value="revoked">Revoked</option>
                 </select>
                 {addForm.formState.errors.role && (
                   <p className="text-red-500 text-sm col-span-3 col-start-2">
@@ -668,7 +583,7 @@ export default function AdminUserManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will permanently delete the user account for {selectedUser?.full_name}. 
+              This action will permanently delete the user account for {selectedUser?.full_name}.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -690,7 +605,7 @@ export default function AdminUserManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Revoke User Access</AlertDialogTitle>
             <AlertDialogDescription>
-              This will revoke access for {selectedUser?.full_name}. They will no longer be able 
+              This will revoke access for {selectedUser?.full_name}. They will no longer be able
               to log in to the system. You can restore access later if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>

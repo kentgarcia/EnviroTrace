@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,9 +23,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  fetchTestSchedules,
+  createTestSchedule,
+  updateTestSchedule,
+  deleteTestSchedule,
+  fetchVehicleSummaries,
+  fetchVehicleById,
+  createEmissionTest,
+  deleteEmissionTest,
+  fetchEmissionTests
+} from "@/lib/emission-api";
 
 interface EmissionTestScheduleProps {
   selectedYear: number;
@@ -37,35 +46,42 @@ interface TestSchedule {
   id: string;
   year: number;
   quarter: number;
-  assigned_personnel: string;
+  assignedPersonnel: string;
   location: string;
-  conducted_on: string;
+  conductedOn: string;
 }
 
 interface VehicleTest {
   id: string;
-  vehicle_id: string;
-  plate_number: string;
-  driver_name: string;
-  office_name: string;
-  test_date: string;
+  vehicleId: string;
+  plateNumber: string;
+  driverName: string;
+  officeName: string;
+  testDate: string;
   result: boolean;
 }
 
-export function EmissionTestSchedule({ 
+interface Vehicle {
+  id: string;
+  plateNumber: string;
+  driverName: string;
+  officeName: string;
+}
+
+export function EmissionTestSchedule({
   selectedYear,
-  selectedQuarter 
+  selectedQuarter
 }: EmissionTestScheduleProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [schedules, setSchedules] = useState<TestSchedule[]>([]);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [currentSchedule, setCurrentSchedule] = useState<TestSchedule | null>(null);
   const [formValues, setFormValues] = useState({
-    assigned_personnel: "",
+    assignedPersonnel: "",
     location: "",
-    conducted_on: new Date(),
+    conductedOn: new Date(),
   });
-  
+
   // Vehicle tests modal state
   const [viewTestsModalOpen, setViewTestsModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<TestSchedule | null>(null);
@@ -73,73 +89,44 @@ export function EmissionTestSchedule({
   const [isLoadingTests, setIsLoadingTests] = useState(false);
   const [testSearchQuery, setTestSearchQuery] = useState("");
   const [filteredTests, setFilteredTests] = useState<VehicleTest[]>([]);
-  
+
   // Add vehicle test modal state
   const [addTestModalOpen, setAddTestModalOpen] = useState(false);
-  const [availableVehicles, setAvailableVehicles] = useState<any[]>([]);
+  const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [testDate, setTestDate] = useState<Date>(new Date());
   const [testResult, setTestResult] = useState<boolean>(true);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
-  
+
   // Create schedule modal state
   const [addScheduleModalOpen, setAddScheduleModalOpen] = useState(false);
   const [newScheduleValues, setNewScheduleValues] = useState({
     quarter: 1,
-    assigned_personnel: "",
+    assignedPersonnel: "",
     location: "",
-    conducted_on: new Date(),
+    conductedOn: new Date(),
   });
 
   useEffect(() => {
-    fetchSchedules();
-
-    // Set up real-time listener
-    const channel = supabase
-      .channel('emission_schedules')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'emission_test_schedules' 
-      }, () => {
-        fetchSchedules();
-      })
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
+    fetchSchedulesData();
   }, [selectedYear, selectedQuarter]);
-  
+
   useEffect(() => {
     if (vehicleTests.length > 0) {
-      const filtered = vehicleTests.filter(test => 
-        test.plate_number.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
-        test.driver_name.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
-        test.office_name.toLowerCase().includes(testSearchQuery.toLowerCase())
+      const filtered = vehicleTests.filter(test =>
+        test.plateNumber.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
+        test.driverName.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
+        test.officeName.toLowerCase().includes(testSearchQuery.toLowerCase())
       );
       setFilteredTests(filtered);
     }
   }, [testSearchQuery, vehicleTests]);
 
-  const fetchSchedules = async () => {
+  const fetchSchedulesData = async () => {
     setIsLoading(true);
     try {
-      let query = supabase
-        .from('emission_test_schedules')
-        .select('*')
-        .eq('year', selectedYear);
-        
-      if (selectedQuarter) {
-        query = query.eq('quarter', selectedQuarter);
-      }
-        
-      query = query.order('quarter', { ascending: true });
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setSchedules(data as TestSchedule[]);
+      const data = await fetchTestSchedules(selectedYear, selectedQuarter);
+      setSchedules(data);
     } catch (error) {
       console.error("Error fetching test schedules:", error);
       toast.error("Failed to load quarterly test schedules");
@@ -147,53 +134,37 @@ export function EmissionTestSchedule({
       setIsLoading(false);
     }
   };
-  
+
   const fetchVehicleTests = async (schedule: TestSchedule) => {
     setIsLoadingTests(true);
     try {
       // Get all emission tests for this schedule
-      const { data: testsData, error: testsError } = await supabase
-        .from('emission_tests')
-        .select('id, vehicle_id, test_date, result')
-        .eq('year', schedule.year)
-        .eq('quarter', schedule.quarter);
-        
-      if (testsError) throw testsError;
-      
+      const testsData = await fetchEmissionTests({
+        year: schedule.year,
+        quarter: schedule.quarter
+      });
+
       if (testsData.length === 0) {
         setVehicleTests([]);
         setFilteredTests([]);
         setIsLoadingTests(false);
         return;
       }
-      
-      // Get vehicle details for each test
-      const vehicleIds = testsData.map(test => test.vehicle_id);
-      
-      const { data: vehiclesData, error: vehiclesError } = await supabase
-        .from('vehicles')
-        .select('id, plate_number, driver_name, office_name')
-        .in('id', vehicleIds);
-        
-      if (vehiclesError) throw vehiclesError;
-      
-      // Combine test data with vehicle data
-      const combinedTests = testsData.map(test => {
-        const vehicle = vehiclesData.find(v => v.id === test.vehicle_id);
-        return {
-          id: test.id,
-          vehicle_id: test.vehicle_id,
-          plate_number: vehicle?.plate_number || 'Unknown',
-          driver_name: vehicle?.driver_name || 'Unknown',
-          office_name: vehicle?.office_name || 'Unknown',
-          test_date: test.test_date,
-          result: test.result
-        };
-      });
-      
+
+      // Map the test data to our VehicleTest interface format
+      const combinedTests = testsData.map(test => ({
+        id: test.id,
+        vehicleId: test.vehicleId,
+        plateNumber: test.vehicle?.plateNumber || 'Unknown',
+        driverName: test.vehicle?.driverName || 'Unknown',
+        officeName: test.vehicle?.officeName || 'Unknown',
+        testDate: test.testDate,
+        result: test.result
+      }));
+
       setVehicleTests(combinedTests);
       setFilteredTests(combinedTests);
-      
+
     } catch (error) {
       console.error("Error fetching vehicle tests:", error);
       toast.error("Failed to load vehicle test data");
@@ -201,18 +172,19 @@ export function EmissionTestSchedule({
       setIsLoadingTests(false);
     }
   };
-  
+
   const fetchAvailableVehicles = async () => {
     setIsLoadingVehicles(true);
     try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('id, plate_number, driver_name, office_name')
-        .order('plate_number');
-        
-      if (error) throw error;
-      
-      setAvailableVehicles(data);
+      const vehicles = await fetchVehicleSummaries();
+      const formattedVehicles = vehicles.map(vehicle => ({
+        id: vehicle.id,
+        plateNumber: vehicle.plateNumber,
+        driverName: vehicle.driverName,
+        officeName: vehicle.officeName
+      }));
+
+      setAvailableVehicles(formattedVehicles);
     } catch (error) {
       console.error("Error fetching available vehicles:", error);
       toast.error("Failed to load available vehicles");
@@ -224,25 +196,20 @@ export function EmissionTestSchedule({
   const handleEdit = (schedule: TestSchedule) => {
     setCurrentSchedule(schedule);
     setFormValues({
-      assigned_personnel: schedule.assigned_personnel,
+      assignedPersonnel: schedule.assignedPersonnel,
       location: schedule.location,
-      conducted_on: new Date(schedule.conducted_on),
+      conductedOn: new Date(schedule.conductedOn),
     });
     setOpenEditDialog(true);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this schedule?")) return;
-    
-    try {
-      const { error } = await supabase
-        .from('emission_test_schedules')
-        .delete()
-        .eq('id', id);
 
-      if (error) throw error;
+    try {
+      await deleteTestSchedule(id);
       toast.success("Schedule deleted successfully");
-      fetchSchedules();
+      fetchSchedulesData();
     } catch (error) {
       console.error("Error deleting schedule:", error);
       toast.error("Failed to delete schedule");
@@ -251,89 +218,78 @@ export function EmissionTestSchedule({
 
   const handleUpdate = async () => {
     if (!currentSchedule) return;
-    
-    try {
-      const { error } = await supabase
-        .from('emission_test_schedules')
-        .update({
-          assigned_personnel: formValues.assigned_personnel,
-          location: formValues.location,
-          conducted_on: format(formValues.conducted_on, 'yyyy-MM-dd'),
-        })
-        .eq('id', currentSchedule.id);
 
-      if (error) throw error;
+    try {
+      await updateTestSchedule(currentSchedule.id, {
+        assignedPersonnel: formValues.assignedPersonnel,
+        location: formValues.location,
+        conductedOn: format(formValues.conductedOn, 'yyyy-MM-dd'),
+        quarter: currentSchedule.quarter, // maintain existing values
+        year: currentSchedule.year // maintain existing values
+      });
+
       toast.success("Schedule updated successfully");
       setOpenEditDialog(false);
-      fetchSchedules();
+      fetchSchedulesData();
     } catch (error) {
       console.error("Error updating schedule:", error);
       toast.error("Failed to update schedule");
     }
   };
-  
+
   const handleCreateSchedule = async () => {
     try {
-      const { error } = await supabase
-        .from('emission_test_schedules')
-        .insert({
-          year: selectedYear,
-          quarter: newScheduleValues.quarter,
-          assigned_personnel: newScheduleValues.assigned_personnel,
-          location: newScheduleValues.location,
-          conducted_on: format(newScheduleValues.conducted_on, 'yyyy-MM-dd'),
-        });
+      await createTestSchedule({
+        year: selectedYear,
+        quarter: newScheduleValues.quarter,
+        assignedPersonnel: newScheduleValues.assignedPersonnel,
+        location: newScheduleValues.location,
+        conductedOn: format(newScheduleValues.conductedOn, 'yyyy-MM-dd'),
+      });
 
-      if (error) throw error;
       toast.success("Test schedule created successfully");
       setAddScheduleModalOpen(false);
-      fetchSchedules();
+      fetchSchedulesData();
     } catch (error) {
       console.error("Error creating test schedule:", error);
       toast.error("Failed to create test schedule");
     }
   };
-  
+
   const handleViewTests = (schedule: TestSchedule) => {
     setSelectedSchedule(schedule);
     fetchVehicleTests(schedule);
     setViewTestsModalOpen(true);
   };
-  
+
   const handleAddVehicleTest = async () => {
     if (!selectedSchedule || !selectedVehicleId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('emission_tests')
-        .insert({
-          year: selectedSchedule.year,
-          quarter: selectedSchedule.quarter,
-          vehicle_id: selectedVehicleId,
-          test_date: format(testDate, 'yyyy-MM-dd'),
-          result: testResult
-        });
 
-      if (error) throw error;
+    try {
+      await createEmissionTest({
+        vehicleId: selectedVehicleId,
+        year: selectedSchedule.year,
+        quarter: selectedSchedule.quarter,
+        testDate: format(testDate, 'yyyy-MM-dd'),
+        result: testResult
+      });
+
       toast.success("Vehicle test added successfully");
       setAddTestModalOpen(false);
-      fetchVehicleTests(selectedSchedule);
+      if (selectedSchedule) {
+        fetchVehicleTests(selectedSchedule);
+      }
     } catch (error) {
       console.error("Error adding vehicle test:", error);
       toast.error("Failed to add vehicle test");
     }
   };
-  
+
   const handleDeleteTest = async (testId: string) => {
     if (!confirm("Are you sure you want to delete this test record?")) return;
-    
-    try {
-      const { error } = await supabase
-        .from('emission_tests')
-        .delete()
-        .eq('id', testId);
 
-      if (error) throw error;
+    try {
+      await deleteEmissionTest(testId);
       toast.success("Test record deleted successfully");
       if (selectedSchedule) {
         fetchVehicleTests(selectedSchedule);
@@ -348,11 +304,11 @@ export function EmissionTestSchedule({
     let csvContent = "data:text/csv;charset=utf-8,";
     // Add CSV Headers
     csvContent += "Year,Quarter,Assigned Personnel,Location,Conducted On\n";
-    
+
     // Add data rows
     schedules.forEach(schedule => {
-      const testDate = format(new Date(schedule.conducted_on), 'yyyy-MM-dd');
-      csvContent += `${schedule.year},${schedule.quarter},"${schedule.assigned_personnel}","${schedule.location}","${testDate}"\n`;
+      const testDate = format(new Date(schedule.conductedOn), 'yyyy-MM-dd');
+      csvContent += `${schedule.year},${schedule.quarter},"${schedule.assignedPersonnel}","${schedule.location}","${testDate}"\n`;
     });
 
     // Create download link
@@ -363,7 +319,7 @@ export function EmissionTestSchedule({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success("Schedule data exported successfully");
   };
 
@@ -411,9 +367,9 @@ export function EmissionTestSchedule({
                   <TableRow key={schedule.id}>
                     <TableCell>{schedule.year}</TableCell>
                     <TableCell>Q{schedule.quarter}</TableCell>
-                    <TableCell>{schedule.assigned_personnel}</TableCell>
+                    <TableCell>{schedule.assignedPersonnel}</TableCell>
                     <TableCell>{schedule.location}</TableCell>
-                    <TableCell>{format(new Date(schedule.conducted_on), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>{format(new Date(schedule.conductedOn), 'MMM dd, yyyy')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="icon" onClick={() => handleViewTests(schedule)}>
@@ -441,14 +397,14 @@ export function EmissionTestSchedule({
           <DialogHeader>
             <DialogTitle>Edit Test Schedule</DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <Label htmlFor="personnel">Assigned Personnel</Label>
               <Input
                 id="personnel"
-                value={formValues.assigned_personnel}
-                onChange={(e) => setFormValues({ ...formValues, assigned_personnel: e.target.value })}
+                value={formValues.assignedPersonnel}
+                onChange={(e) => setFormValues({ ...formValues, assignedPersonnel: e.target.value })}
               />
             </div>
 
@@ -472,21 +428,21 @@ export function EmissionTestSchedule({
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {format(formValues.conducted_on, "PPP")}
+                    {format(formValues.conductedOn, "PPP")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <CalendarComponent
                     mode="single"
-                    selected={formValues.conducted_on}
-                    onSelect={(date) => date && setFormValues({ ...formValues, conducted_on: date })}
+                    selected={formValues.conductedOn}
+                    onSelect={(date) => date && setFormValues({ ...formValues, conductedOn: date })}
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenEditDialog(false)}>
               Cancel
@@ -495,22 +451,22 @@ export function EmissionTestSchedule({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Create Schedule Dialog */}
       <Dialog open={addScheduleModalOpen} onOpenChange={setAddScheduleModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Test Schedule</DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <Label htmlFor="quarter">Quarter</Label>
               <Select
                 value={newScheduleValues.quarter.toString()}
-                onValueChange={(value) => setNewScheduleValues({ 
-                  ...newScheduleValues, 
-                  quarter: parseInt(value) 
+                onValueChange={(value) => setNewScheduleValues({
+                  ...newScheduleValues,
+                  quarter: parseInt(value)
                 })}
               >
                 <SelectTrigger>
@@ -524,15 +480,15 @@ export function EmissionTestSchedule({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="new-personnel">Assigned Personnel</Label>
               <Input
                 id="new-personnel"
-                value={newScheduleValues.assigned_personnel}
-                onChange={(e) => setNewScheduleValues({ 
-                  ...newScheduleValues, 
-                  assigned_personnel: e.target.value 
+                value={newScheduleValues.assignedPersonnel}
+                onChange={(e) => setNewScheduleValues({
+                  ...newScheduleValues,
+                  assignedPersonnel: e.target.value
                 })}
               />
             </div>
@@ -542,9 +498,9 @@ export function EmissionTestSchedule({
               <Input
                 id="new-location"
                 value={newScheduleValues.location}
-                onChange={(e) => setNewScheduleValues({ 
-                  ...newScheduleValues, 
-                  location: e.target.value 
+                onChange={(e) => setNewScheduleValues({
+                  ...newScheduleValues,
+                  location: e.target.value
                 })}
               />
             </div>
@@ -560,16 +516,16 @@ export function EmissionTestSchedule({
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {format(newScheduleValues.conducted_on, "PPP")}
+                    {format(newScheduleValues.conductedOn, "PPP")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <CalendarComponent
                     mode="single"
-                    selected={newScheduleValues.conducted_on}
-                    onSelect={(date) => date && setNewScheduleValues({ 
-                      ...newScheduleValues, 
-                      conducted_on: date 
+                    selected={newScheduleValues.conductedOn}
+                    onSelect={(date) => date && setNewScheduleValues({
+                      ...newScheduleValues,
+                      conductedOn: date
                     })}
                     initialFocus
                   />
@@ -577,7 +533,7 @@ export function EmissionTestSchedule({
               </Popover>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddScheduleModalOpen(false)}>
               Cancel
@@ -586,7 +542,7 @@ export function EmissionTestSchedule({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* View Vehicle Tests Dialog */}
       <Dialog open={viewTestsModalOpen} onOpenChange={setViewTestsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -595,7 +551,7 @@ export function EmissionTestSchedule({
               Vehicle Tests for {selectedSchedule ? `Q${selectedSchedule.quarter} ${selectedSchedule.year}` : ''}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedSchedule && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-1">
@@ -608,11 +564,11 @@ export function EmissionTestSchedule({
               </div>
               <div className="space-y-1">
                 <Label className="text-muted-foreground">Conducted On</Label>
-                <p className="font-medium">{format(new Date(selectedSchedule.conducted_on), 'MMM dd, yyyy')}</p>
+                <p className="font-medium">{format(new Date(selectedSchedule.conductedOn), 'MMM dd, yyyy')}</p>
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-between items-center mb-4">
             <div className="relative grow mr-4">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -623,7 +579,7 @@ export function EmissionTestSchedule({
                 onChange={(e) => setTestSearchQuery(e.target.value)}
               />
             </div>
-            <Button 
+            <Button
               onClick={() => {
                 fetchAvailableVehicles();
                 setAddTestModalOpen(true);
@@ -633,7 +589,7 @@ export function EmissionTestSchedule({
               Add Vehicle Test
             </Button>
           </div>
-          
+
           {isLoadingTests ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
@@ -658,10 +614,10 @@ export function EmissionTestSchedule({
                 <TableBody>
                   {filteredTests.map((test) => (
                     <TableRow key={test.id}>
-                      <TableCell className="font-medium">{test.plate_number}</TableCell>
-                      <TableCell>{test.driver_name}</TableCell>
-                      <TableCell>{test.office_name}</TableCell>
-                      <TableCell>{format(new Date(test.test_date), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell className="font-medium">{test.plateNumber}</TableCell>
+                      <TableCell>{test.driverName}</TableCell>
+                      <TableCell>{test.officeName}</TableCell>
+                      <TableCell>{format(new Date(test.testDate), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
                         {test.result ? (
                           <span className="inline-block px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -674,8 +630,8 @@ export function EmissionTestSchedule({
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => handleDeleteTest(test.id)}
                         >
@@ -688,7 +644,7 @@ export function EmissionTestSchedule({
               </Table>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewTestsModalOpen(false)}>
               Close
@@ -696,14 +652,14 @@ export function EmissionTestSchedule({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Add Vehicle Test Dialog */}
       <Dialog open={addTestModalOpen} onOpenChange={setAddTestModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Vehicle Test</DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
               <Label htmlFor="vehicle">Vehicle</Label>
@@ -722,14 +678,14 @@ export function EmissionTestSchedule({
                   ) : (
                     availableVehicles.map((vehicle) => (
                       <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.plate_number} - {vehicle.driver_name}
+                        {vehicle.plateNumber} - {vehicle.driverName}
                       </SelectItem>
                     ))
                   )}
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label>Test Date</Label>
               <Popover>
@@ -754,7 +710,7 @@ export function EmissionTestSchedule({
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div>
               <Label>Result</Label>
               <Select
@@ -771,7 +727,7 @@ export function EmissionTestSchedule({
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddTestModalOpen(false)}>
               Cancel
