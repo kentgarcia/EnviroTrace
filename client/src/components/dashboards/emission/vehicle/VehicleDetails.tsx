@@ -1,0 +1,199 @@
+import React, { useState } from "react";
+import { format } from "date-fns";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Vehicle, EmissionTest } from "@/hooks/useVehicles";
+import { useQuery } from "@tanstack/react-query";
+
+interface VehicleDetailsProps {
+    vehicle: Vehicle | null;
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
+    vehicle,
+    isOpen,
+    onClose
+}) => {
+    const [activeTab, setActiveTab] = useState("info");
+
+    // Fetch vehicle test history
+    const { data: testHistory = [], isLoading } = useQuery({
+        queryKey: ['vehicleTestHistory', vehicle?.id],
+        queryFn: async () => {
+            if (!vehicle?.id || vehicle.id.startsWith('pending-')) {
+                return [];
+            }
+
+            // Simulate API fetch - replace with actual API call
+            // This should be moved to the emission-api.ts file
+            await new Promise(resolve => setTimeout(resolve, 500)); // Simulated delay
+
+            // Mock data - replace with actual API response
+            return [
+                {
+                    id: "test1",
+                    vehicleId: vehicle.id,
+                    testDate: new Date().toISOString(),
+                    quarter: new Date().getMonth() < 3 ? 1 : new Date().getMonth() < 6 ? 2 : new Date().getMonth() < 9 ? 3 : 4,
+                    year: new Date().getFullYear(),
+                    result: Math.random() > 0.3 // Random pass/fail
+                }
+            ] as EmissionTest[];
+        },
+        enabled: isOpen && !!vehicle && !vehicle.id.startsWith('pending-')
+    });
+
+    if (!vehicle) return null;
+
+    const isPendingVehicle = vehicle.id.startsWith('pending-');
+
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-semibold">{vehicle.plateNumber}</DialogTitle>
+                    <DialogDescription>
+                        Vehicle Details
+                        {isPendingVehicle && (
+                            <Badge variant="outline" className="ml-2 text-yellow-600 bg-yellow-50">
+                                Pending Sync
+                            </Badge>
+                        )}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid grid-cols-2 mb-4">
+                        <TabsTrigger value="info">Vehicle Information</TabsTrigger>
+                        <TabsTrigger value="history" disabled={isPendingVehicle}>
+                            Test History
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="info" className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Plate Number</h3>
+                                <p>{vehicle.plateNumber}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Driver Name</h3>
+                                <p>{vehicle.driverName}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Contact Number</h3>
+                                <p>{vehicle.contactNumber || "Not provided"}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Office</h3>
+                                <p>{vehicle.officeName}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Vehicle Type</h3>
+                                <p>{vehicle.vehicleType}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Engine Type</h3>
+                                <p>{vehicle.engineType}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Wheels</h3>
+                                <p>{vehicle.wheels}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Latest Test Date</h3>
+                                <p>{vehicle.latestTestDate ? format(new Date(vehicle.latestTestDate), 'MMM dd, yyyy') : "Not tested"}</p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-sm font-medium text-gray-500">Latest Test Result</h3>
+                                <p>
+                                    {vehicle.latestTestResult === null || vehicle.latestTestResult === undefined ? (
+                                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                                            Not tested
+                                        </Badge>
+                                    ) : vehicle.latestTestResult ? (
+                                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                                            Passed
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="bg-red-100 text-red-800">
+                                            Failed
+                                        </Badge>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="history">
+                        {isPendingVehicle ? (
+                            <div className="text-center py-6 text-gray-500">
+                                Test history will be available after syncing this vehicle.
+                            </div>
+                        ) : isLoading ? (
+                            <div className="space-y-3">
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                            </div>
+                        ) : testHistory.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                No test history available for this vehicle.
+                            </div>
+                        ) : (
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Test Date</TableHead>
+                                            <TableHead>Period</TableHead>
+                                            <TableHead>Result</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {testHistory.map((test) => (
+                                            <TableRow key={test.id}>
+                                                <TableCell>{format(new Date(test.testDate), 'MMM dd, yyyy')}</TableCell>
+                                                <TableCell>Q{test.quarter}, {test.year}</TableCell>
+                                                <TableCell>
+                                                    {test.result ? (
+                                                        <Badge variant="outline" className="bg-green-100 text-green-800">
+                                                            Passed
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-red-100 text-red-800">
+                                                            Failed
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    );
+};
