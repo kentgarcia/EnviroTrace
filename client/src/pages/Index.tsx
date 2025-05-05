@@ -1,13 +1,12 @@
-
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 
 const Index = () => {
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     // Redirect to the sign-in page
-    navigate("/");
+    navigate({ to: "/" });
   }, [navigate]);
 
   return null;

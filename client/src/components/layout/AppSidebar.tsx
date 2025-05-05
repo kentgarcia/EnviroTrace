@@ -10,7 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useMatchRoute } from "@tanstack/react-router";
 import { BarChart2, Building, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
@@ -19,7 +19,7 @@ interface SidebarProps {
 }
 
 export function AppSidebar({ dashboardType }: SidebarProps) {
-  const location = useLocation();
+  const matchRoute = useMatchRoute();
   const { userData } = useAuth();
 
   const getMenuItems = () => {
@@ -132,7 +132,7 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
                   className="pl-2 pr-2 py-1">
                   <SidebarMenuButton
                     asChild
-                    isActive={location.pathname === item.path}
+                    isActive={!!matchRoute({ to: item.path, fuzzy: false })}
                     className="
                       data-[active=true]:bg-[#676782]
                       data-[active=true]:font-semibold

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,15 +28,8 @@ export default function ProfilePage() {
     phoneNumber: ""
   });
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/");
-    } else if (user && userData) {
-      fetchProfileData();
-    }
-  }, [user, userData, loading, navigate]);
-
-  const fetchProfileData = async () => {
+  // Memoize fetchProfileData to prevent unnecessary re-renders
+  const fetchProfileData = useCallback(async () => {
     try {
       if (!user) return;
 
@@ -68,7 +61,15 @@ export default function ProfilePage() {
     } finally {
       setProfileLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: "/" });
+    } else if (user && userData) {
+      fetchProfileData();
+    }
+  }, [user, userData, loading, navigate, fetchProfileData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,7 +152,7 @@ export default function ProfilePage() {
             <h1 className="text-xl font-semibold">Environmental Management System</h1>
           </div>
 
-          <Button variant="outline" onClick={() => navigate("/dashboard-selection")}>
+          <Button variant="outline" onClick={() => navigate({ to: "/dashboard-selection" })}>
             Back to Dashboard
           </Button>
         </div>

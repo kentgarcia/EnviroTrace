@@ -1,6 +1,6 @@
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
@@ -20,14 +20,10 @@ export default function DashboardSelection() {
   const navigate = useNavigate();
   const { user, userData, loading, signOut: authSignOut } = useAuth();
   const [profile, setProfile] = useState<{ firstName?: string; lastName?: string } | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
-    // Check if user is authenticated
-    if (!loading && !user) {
-      navigate("/");
-    } else if (user && userData) {
-      // Fetch user profile data
+    if (user && userData) {
       const getProfileData = async () => {
         try {
           setProfileLoading(true);
@@ -42,17 +38,17 @@ export default function DashboardSelection() {
 
       getProfileData();
     }
-  }, [user, userData, loading, navigate]);
+  }, [user, userData]);
 
   const handleDashboardSelect = (dashboardType: string) => {
-    navigate(`/${dashboardType}/overview`);
+    navigate({ to: `/${dashboardType}/overview` });
   };
 
   const handleSignOut = async () => {
     try {
       await authSignOut();
       toast.success("Signed out successfully");
-      navigate("/");
+      navigate({ to: "/" });
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
@@ -129,7 +125,7 @@ export default function DashboardSelection() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/profile')}>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate({ to: '/profile' })}>
                 <User className="mr-2 h-4 w-4" />
                 <span>My Profile</span>
               </DropdownMenuItem>

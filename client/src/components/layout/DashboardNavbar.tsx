@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronDown,
   LogOut,
@@ -46,7 +46,7 @@ export function DashboardNavbar({ dashboardTitle = "Environmental Management Sys
       await signOut();
       clearToken();
       toast.success("Signed out successfully");
-      navigate("/");
+      navigate({ to: "/" });
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
@@ -100,11 +100,11 @@ export function DashboardNavbar({ dashboardTitle = "Environmental Management Sys
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/profile')}>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate({ to: '/profile' })}>
             <User className="mr-2 h-4 w-4" />
             <span>My Profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/dashboard-selection')}>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => navigate({ to: '/dashboard-selection' })}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Switch Dashboard</span>
           </DropdownMenuItem>

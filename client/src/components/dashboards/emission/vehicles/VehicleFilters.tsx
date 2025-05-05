@@ -83,7 +83,7 @@ export const VehicleFilterPanel: React.FC<VehicleFiltersProps> = ({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="">All Offices</SelectItem>
+                                    <SelectItem value="all_offices">All Offices</SelectItem>
                                     {offices.map(office => (
                                         <SelectItem key={office} value={office}>{office}</SelectItem>
                                     ))}
@@ -103,7 +103,7 @@ export const VehicleFilterPanel: React.FC<VehicleFiltersProps> = ({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="">All Types</SelectItem>
+                                    <SelectItem value="all_types">All Types</SelectItem>
                                     {vehicleTypes.map(type => (
                                         <SelectItem key={type} value={type}>{type}</SelectItem>
                                     ))}
@@ -123,7 +123,7 @@ export const VehicleFilterPanel: React.FC<VehicleFiltersProps> = ({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="">All Engines</SelectItem>
+                                    <SelectItem value="all_engines">All Engines</SelectItem>
                                     {engineTypes.map(type => (
                                         <SelectItem key={type} value={type}>{type}</SelectItem>
                                     ))}
@@ -143,7 +143,7 @@ export const VehicleFilterPanel: React.FC<VehicleFiltersProps> = ({
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    <SelectItem value="">All Wheels</SelectItem>
+                                    <SelectItem value="all_wheels">All Wheels</SelectItem>
                                     {wheelCounts.map(count => (
                                         <SelectItem key={count} value={count}>{count} Wheels</SelectItem>
                                     ))}

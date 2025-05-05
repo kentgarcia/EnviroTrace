@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,18 +47,23 @@ export function SignInForm() {
 
         // Small delay before navigation to allow the toast to be seen
         setTimeout(() => {
-          navigate("/dashboard-selection");
+          navigate({ to: "/dashboard-selection" });
         }, 300);
       } else {
         throw new Error("Authentication failed");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Authentication error:", error);
 
       // Set a user-friendly error message
-      const errorMessage = error.message === "Failed to fetch" && !isOnline
-        ? "Cannot connect to server. Please check your internet connection."
-        : error.message || "Failed to sign in. Please check your credentials.";
+      let errorMessage = "Failed to sign in. Please check your credentials.";
+      if (error instanceof Error) {
+        errorMessage = error.message === "Failed to fetch" && !isOnline
+          ? "Cannot connect to server. Please check your internet connection."
+          : error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
 
       setAuthError(errorMessage);
       toast.error(errorMessage);

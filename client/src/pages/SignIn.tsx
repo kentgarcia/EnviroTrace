@@ -1,7 +1,6 @@
-
 import { SignInForm } from "@/components/auth/SignInForm";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 
 export default function SignIn() {
@@ -10,7 +9,7 @@ export default function SignIn() {
 
   useEffect(() => {
     if (user && !loading) {
-      navigate("/dashboard-selection");
+      navigate({ to: "/dashboard-selection" });
     }
   }, [user, loading, navigate]);
 

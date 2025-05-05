@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -57,10 +57,18 @@ export default function OfficesPage() {
         refetch();
     };
 
-    // Handle search term changes
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Memoize handlers to prevent them from being recreated on every render
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         handleFilterChange({ searchTerm: e.target.value });
-    };
+    }, [handleFilterChange]);
+
+    const handleYearChange = useCallback((year: number) => {
+        handleFilterChange({ year });
+    }, [handleFilterChange]);
+
+    const handleQuarterChange = useCallback((quarter: number) => {
+        handleFilterChange({ quarter });
+    }, [handleFilterChange]);
 
     return (
         <div className="container mx-auto py-6 space-y-6">
@@ -83,8 +91,8 @@ export default function OfficesPage() {
                 <PeriodSelector
                     year={filters.year}
                     quarter={filters.quarter}
-                    onYearChange={(year) => handleFilterChange({ year })}
-                    onQuarterChange={(quarter) => handleFilterChange({ quarter })}
+                    onYearChange={handleYearChange}
+                    onQuarterChange={handleQuarterChange}
                 />
 
                 <div className="flex gap-2">

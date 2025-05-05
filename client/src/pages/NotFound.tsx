@@ -1,11 +1,10 @@
-
 import { Button } from "@/components/ui/button";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Leaf } from "lucide-react";
 
 const NotFound = () => {
-  const location = useLocation();
+  const { location } = useRouterState();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,8 +28,11 @@ const NotFound = () => {
           The page you are looking for doesn't exist or has been moved.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={() => navigate("/")}>Go to Sign In</Button>
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button onClick={() => navigate({ to: "/" })}>Go to Sign In</Button>
+          <Button
+            variant="outline"
+            onClick={() => window.history.back()}
+          >
             Go Back
           </Button>
         </div>

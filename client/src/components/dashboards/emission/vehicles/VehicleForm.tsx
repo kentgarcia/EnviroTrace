@@ -72,9 +72,9 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
         plateNumber: initialValues ? initialValues.plateNumber : "",
         driverName: initialValues ? initialValues.driverName : "",
         contactNumber: initialValues?.contactNumber || "",
-        officeName: initialValues ? initialValues.officeName : (offices.length > 0 ? offices[0] : ""),
-        vehicleType: initialValues ? initialValues.vehicleType : (vehicleTypes.length > 0 ? vehicleTypes[0] : ""),
-        engineType: initialValues ? initialValues.engineType : (engineTypes.length > 0 ? engineTypes[0] : ""),
+        officeName: initialValues ? initialValues.officeName : (offices.length > 0 ? offices[0] : "Default Office"),
+        vehicleType: initialValues ? initialValues.vehicleType : (vehicleTypes.length > 0 ? vehicleTypes[0] : "Default Type"),
+        engineType: initialValues ? initialValues.engineType : (engineTypes.length > 0 ? engineTypes[0] : "Default Engine"),
         wheels: initialValues ? initialValues.wheels : 4,
     };
 
@@ -165,7 +165,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                     </FormControl>
                                     <SelectContent>
                                         {offices.map(office => (
-                                            <SelectItem key={office} value={office}>{office}</SelectItem>
+                                            // Make sure office is not empty string
+                                            <SelectItem key={office} value={office || `office-${office.length}`}>{office || "Unnamed Office"}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -193,7 +194,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                         </FormControl>
                                         <SelectContent>
                                             {vehicleTypes.map(type => (
-                                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                                                // Make sure type is not empty string
+                                                <SelectItem key={type} value={type || `type-${type.length}`}>{type || "Unnamed Type"}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -226,7 +228,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                         </FormControl>
                                         <SelectContent>
                                             {engineTypes.map(type => (
-                                                <SelectItem key={type} value={type}>{type}</SelectItem>
+                                                // Make sure type is not empty string
+                                                <SelectItem key={type} value={type || `engine-${type.length}`}>{type || "Unnamed Engine"}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -259,7 +262,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                         </FormControl>
                                         <SelectContent>
                                             {wheelCounts.map(count => (
-                                                <SelectItem key={count} value={count}>{count} wheels</SelectItem>
+                                                // Make sure count is not empty string
+                                                <SelectItem key={count} value={count || "0"}>{count || "0"} wheels</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>

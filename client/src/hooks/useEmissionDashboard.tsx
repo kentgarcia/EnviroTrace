@@ -1,9 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery as useApolloQuery } from "@apollo/client";
 import {
-  fetchEmissionTests,
+  GET_EMISSION_TESTS,
+  GET_VEHICLE_SUMMARIES,
+  GET_TEST_SCHEDULES,
   fetchVehicleSummaries,
+  fetchEmissionTests,
   fetchTestSchedules as fetchScheduleData
 } from "@/lib/emission-api";
 
@@ -68,11 +71,23 @@ export interface DashboardData {
   totalPassed: number;
   totalFailed: number;
   complianceRate: number;
-  quarterStats: any[];
-  engineTypeData: any[];
-  vehicleTypeData: any[];
-  complianceByOffice: any[];
-  recentTests: any[];
+  quarterStats: { quarter: number; passed: number; failed: number; name: string; }[];
+  engineTypeData: { name: string; value: number }[];
+  vehicleTypeData: { name: string; value: number }[];
+  complianceByOffice: {
+    officeName: string;
+    vehicleCount: number;
+    testedCount: number;
+    passedCount: number;
+    complianceRate: number;
+  }[];
+  recentTests: {
+    id: string;
+    plateNumber: string;
+    officeName: string;
+    testDate: string;
+    result: boolean;
+  }[];
 }
 
 export const useEmissionDashboard = (year: number, quarter?: number) => {
@@ -88,20 +103,64 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
     recentTests: []
   });
 
-  // Use react-query to fetch and cache dashboard data
-  const fetchEmissionData = useCallback(async () => {
+  // Use Apollo queries for vehicle summaries
+  const {
+    data: vehicleSummariesData,
+    loading: vehiclesLoading,
+    error: vehiclesError,
+    refetch: refetchVehicles
+  } = useApolloQuery(GET_VEHICLE_SUMMARIES, {
+    variables: { filters: {} },
+    fetchPolicy: "network-only"
+  });
+
+  // Use Apollo queries for emission tests
+  const {
+    data: emissionTestsData,
+    loading: testsLoading,
+    error: testsError,
+    refetch: refetchTests
+  } = useApolloQuery(GET_EMISSION_TESTS, {
+    variables: {
+      filters: quarter !== undefined ? { year, quarter } : { year }
+    },
+    fetchPolicy: "network-only"
+  });
+
+  // Use Apollo queries for test schedules
+  const {
+    data: schedulesData,
+    loading: schedulesLoading,
+    error: schedulesError,
+    refetch: refetchSchedules
+  } = useApolloQuery(GET_TEST_SCHEDULES, {
+    variables: { year, quarter },
+    fetchPolicy: "network-only"
+  });
+
+  const processEmissionData = useCallback(async () => {
     try {
-      // 1. Fetch all vehicles to get count
-      const vehicles = await fetchVehicleSummaries();
+      // Only process data when all required queries have completed
+      if (vehiclesLoading || testsLoading) return;
+
+      // Check for errors
+      if (vehiclesError) {
+        console.error('Error fetching vehicles data:', vehiclesError);
+        toast.error("Failed to load vehicles data");
+        return;
+      }
+
+      if (testsError) {
+        console.error('Error fetching emission tests data:', testsError);
+        toast.error("Failed to load emission tests data");
+        return;
+      }
+
+      // Extract data from Apollo results
+      const vehicles = vehicleSummariesData?.vehicleSummaries || [];
+      const testsData = emissionTestsData?.emissionTests || [];
+
       const totalVehicles = vehicles.length;
-
-      // 2. Fetch tests with filters
-      const testsData = await fetchEmissionTests(
-        quarter !== undefined
-          ? { year, quarter }
-          : { year }
-      );
-
       const testedVehicles = testsData.length;
       const passedVehicles = testsData.filter(test => test.result).length;
       const failedVehicles = testsData.filter(test => !test.result).length;
@@ -109,7 +168,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       const failRate = testedVehicles > 0 ? Math.round(((testedVehicles - passedVehicles) / testedVehicles) * 100) : 0;
 
       // 3. Generate quarterly tests data
-      let quarterlyData: {
+      const quarterlyData: {
         quarter: number;
         passed: number;
         failed: number;
@@ -118,7 +177,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
 
       // Get data for each quarter
       for (let q = 1; q <= 4; q++) {
-        // Fetch tests for this specific quarter
+        // Use Apollo client directly to fetch data for this specific quarter
         const quarterResults = await fetchEmissionTests({ year, quarter: q });
 
         const passed = quarterResults.filter(test => test.result).length;
@@ -159,9 +218,9 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
       }));
 
       // 6. Generate office compliance data
-      // Get unique offices
-      const officeNames = [...new Set(vehicles.map(v => v.officeName))];
-      const officeCompliance = [];
+      // Get unique offices, ensuring they are strings
+      const officeNames = [...new Set(vehicles.map(v => v.officeName).filter((name): name is string => typeof name === 'string'))];
+      const officeCompliance: EmissionData['officeCompliance'] = [];
 
       for (const officeName of officeNames) {
         // Get vehicles for this office
@@ -180,7 +239,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
         const passedCount = officeTests.filter(test => test.result).length;
 
         officeCompliance.push({
-          officeName,
+          officeName: officeName as string,
           vehicleCount,
           testedCount,
           passedCount,
@@ -225,7 +284,7 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
 
       setDashboardData(newDashboardData);
 
-      // Create and return emission data
+      // Create emission data
       const emissionData: EmissionData = {
         stats: {
           totalVehicles: {
@@ -257,61 +316,39 @@ export const useEmissionDashboard = (year: number, quarter?: number) => {
 
       return emissionData;
     } catch (err) {
-      console.error('Error fetching emission data:', err);
-      toast.error("Failed to load dashboard data");
+      console.error('Error processing emission data:', err);
+      toast.error("Failed to process dashboard data");
       throw err;
     }
-  }, [year, quarter]);
+  }, [year, vehicleSummariesData, emissionTestsData, vehiclesLoading, testsLoading, vehiclesError, testsError]);
 
-  const fetchTestSchedules = useCallback(async (): Promise<TestSchedule[]> => {
-    try {
-      // Fetch test schedules using the GraphQL client
-      const data = await fetchScheduleData(year, quarter);
+  // Process data whenever Apollo query results change
+  useEffect(() => {
+    processEmissionData();
+  }, [processEmissionData]);
 
-      // Map response to TestSchedule interface
-      return data.map(schedule => ({
-        id: schedule.id,
-        year: schedule.year,
-        quarter: schedule.quarter,
-        assignedPersonnel: schedule.assignedPersonnel,
-        location: schedule.location,
-        conductedOn: schedule.conductedOn
-      }));
-    } catch (error) {
-      console.error("Error fetching test schedules:", error);
-      toast.error("Failed to load quarterly test schedules");
-      return [];
-    }
-  }, [year, quarter]);
+  // Calculate loading state from all queries
+  const isLoading = vehiclesLoading || testsLoading || schedulesLoading;
 
-  // Use React Query to fetch and cache emission data
-  const {
-    data,
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
-    queryKey: ['emissionData', year, quarter],
-    queryFn: fetchEmissionData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // Combine all errors
+  const error = vehiclesError || testsError || schedulesError;
 
-  // Use React Query to fetch and cache test schedules
-  const {
-    data: schedules = [],
-    refetch: refetchSchedules
-  } = useQuery({
-    queryKey: ['testSchedules', year, quarter],
-    queryFn: fetchTestSchedules,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  // Process schedule data from Apollo
+  const schedules = schedulesData?.emissionTestSchedules || [];
 
   return {
-    data,
+    data: processEmissionData(),
     loading: isLoading,
-    error,
-    refetch,
-    fetchTestSchedules: () => refetchSchedules().then(result => result.data || []),
+    error: error,
+    refetch: () => {
+      refetchVehicles();
+      refetchTests();
+      refetchSchedules();
+    },
+    fetchTestSchedules: async () => {
+      const result = await refetchSchedules();
+      return result.data?.emissionTestSchedules || [];
+    },
     ...dashboardData
   };
-};
+}
