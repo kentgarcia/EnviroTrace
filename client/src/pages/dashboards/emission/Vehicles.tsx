@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileDown, Plus, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { useVehicles, Vehicle, VehicleInput } from "@/hooks/useVehicles";
+import { useVehicles, Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
 import { VehicleTable, VehicleTableSkeleton } from "@/components/dashboards/emission/vehicles/VehicleTable";
 import { VehicleFilterPanel } from "@/components/dashboards/emission/vehicles/VehicleFilters";
 import { VehicleModals } from "@/components/dashboards/emission/vehicles/VehicleModals";

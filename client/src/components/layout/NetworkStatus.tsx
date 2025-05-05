@@ -1,5 +1,5 @@
 
-import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useOfflineSync } from "@/hooks/utils/useOfflineSync";
 import { Wifi, WifiOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export const NetworkStatus = () => {
   const { isOnline, isSyncing } = useOfflineSync();
   const [visible, setVisible] = useState(false);
-  
+
   useEffect(() => {
     // Show banner when offline or syncing
     if (!isOnline || isSyncing) {

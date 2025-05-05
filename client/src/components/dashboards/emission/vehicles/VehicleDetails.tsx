@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Vehicle, EmissionTest } from "@/hooks/useVehicles";
-import { useQuery } from "@tanstack/react-query";
+import { Vehicle, EmissionTest } from "@/hooks/vehicles/useVehicles";
+import { useQuery } from "@apollo/client";
+import { GET_EMISSION_TESTS } from "@/lib/emission-api";
 
 interface VehicleDetailsProps {
     vehicle: Vehicle | null;
@@ -27,32 +28,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState("info");
 
-    // Fetch vehicle test history
-    const { data: testHistory = [], isLoading } = useQuery({
-        queryKey: ['vehicleTestHistory', vehicle?.id],
-        queryFn: async () => {
-            if (!vehicle?.id || vehicle.id.startsWith('pending-')) {
-                return [];
+    // Fetch vehicle test history using Apollo Client
+    const { data, loading: isLoading } = useQuery(GET_EMISSION_TESTS, {
+        variables: {
+            filters: {
+                vehicleId: vehicle?.id
             }
-
-            // Simulate API fetch - replace with actual API call
-            // This should be moved to the emission-api.ts file
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulated delay
-
-            // Mock data - replace with actual API response
-            return [
-                {
-                    id: "test1",
-                    vehicleId: vehicle.id,
-                    testDate: new Date().toISOString(),
-                    quarter: new Date().getMonth() < 3 ? 1 : new Date().getMonth() < 6 ? 2 : new Date().getMonth() < 9 ? 3 : 4,
-                    year: new Date().getFullYear(),
-                    result: Math.random() > 0.3 // Random pass/fail
-                }
-            ] as EmissionTest[];
         },
-        enabled: isOpen && !!vehicle && !vehicle.id.startsWith('pending-')
+        skip: !isOpen || !vehicle || vehicle.id.startsWith('pending-'),
+        fetchPolicy: "network-only"
     });
+
+    // Extract test history from the query result
+    const testHistory = data?.emissionTests || [];
 
     if (!vehicle) return null;
 

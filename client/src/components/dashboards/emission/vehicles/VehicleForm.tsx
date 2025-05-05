@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Vehicle, VehicleInput } from "@/hooks/useVehicles";
+import { Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
 
 // Form schema with validation
 const vehicleSchema = z.object({

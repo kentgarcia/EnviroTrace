@@ -1,20 +1,20 @@
 import { useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { useNetworkStatus } from "./useNetworkStatus";
+import { useQuery, useMutation, useLazyQuery } from "@apollo/client";
+import { useNetworkStatus } from "../utils/useNetworkStatus";
 import { useQuarterlyTestStore } from "./useQuarterlyTestStore";
 import {
-  fetchTestSchedules,
-  fetchEmissionTests,
-  createTestSchedule,
-  updateTestSchedule,
-  deleteTestSchedule,
-  createEmissionTest,
-  updateEmissionTest,
-  deleteEmissionTest,
-  fetchVehicleById,
-  fetchVehicleSummaries,
+  GET_TEST_SCHEDULES,
+  GET_EMISSION_TESTS,
+  GET_VEHICLE_SUMMARIES,
+  CREATE_TEST_SCHEDULE,
+  UPDATE_TEST_SCHEDULE,
+  DELETE_TEST_SCHEDULE,
+  CREATE_EMISSION_TEST,
+  UPDATE_EMISSION_TEST,
+  DELETE_EMISSION_TEST,
+  GET_VEHICLE_SUMMARY,
 } from "@/lib/emission-api";
 
 // Type definitions
@@ -76,7 +76,6 @@ export interface Vehicle {
 }
 
 export function useQuarterlyTesting() {
-  const queryClient = useQueryClient();
   const { isOffline } = useNetworkStatus();
   const {
     scheduleFilters,
@@ -91,9 +90,6 @@ export function useQuarterlyTesting() {
     actions,
   } = useQuarterlyTestStore();
 
-  // Cache time-to-live longer for offline support
-  const TTL = 1000 * 60 * 60; // 1 hour
-
   // Set offline mode when network changes
   useEffect(() => {
     actions.setShowOfflineData(isOffline);
@@ -101,139 +97,123 @@ export function useQuarterlyTesting() {
 
   // Fetch test schedules based on filters
   const {
-    data: schedules = [],
-    isLoading: isLoadingSchedules,
+    data: schedulesData,
+    loading: isLoadingSchedules,
     error: scheduleError,
     refetch: refetchSchedules,
-  } = useQuery({
-    queryKey: ["testSchedules", scheduleFilters],
-    queryFn: () =>
-      fetchTestSchedules(scheduleFilters.year, scheduleFilters.quarter),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: TTL,
-    retry: 2,
-    enabled: !isOffline, // Only fetch online
+  } = useQuery(GET_TEST_SCHEDULES, {
+    variables: { year: scheduleFilters.year, quarter: scheduleFilters.quarter },
+    pollInterval: isOffline ? undefined : 1000 * 60 * 5, // 5 minutes
+    skip: isOffline, // Only fetch online
+    fetchPolicy: "network-only",
   });
+
+  // Memoize schedules to avoid recreating on every render
+  const schedules = useMemo(() => {
+    return schedulesData?.emissionTestSchedules || [];
+  }, [schedulesData]);
 
   // When a schedule is selected, fetch related tests
   const {
-    data: emissionTests = [],
-    isLoading: isLoadingTests,
+    data: testsData,
+    loading: isLoadingTests,
     error: testsError,
     refetch: refetchTests,
-  } = useQuery({
-    queryKey: ["emissionTests", testFilters],
-    queryFn: () => fetchEmissionTests(testFilters),
-    staleTime: 1000 * 60 * 5,
-    gcTime: TTL,
-    retry: 2,
-    enabled: !isOffline && !!testFilters.year && !!testFilters.quarter,
+  } = useQuery(GET_EMISSION_TESTS, {
+    variables: {
+      filters: {
+        year: testFilters.year,
+        quarter: testFilters.quarter,
+      },
+    },
+    pollInterval: isOffline ? undefined : 1000 * 60 * 5,
+    skip: isOffline || !testFilters.year || !testFilters.quarter,
+    fetchPolicy: "network-only",
   });
+
+  // Memoize emission tests to avoid recreating on every render
+  const emissionTests = useMemo(() => {
+    return testsData?.emissionTests || [];
+  }, [testsData]);
 
   // Fetch all vehicles for test creation
-  const { data: vehicles = [], isLoading: isLoadingVehicles } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => fetchVehicleSummaries(),
-    staleTime: 1000 * 60 * 10, // 10 minutes
-    gcTime: TTL,
-    retry: 2,
-    enabled: !isOffline,
-  });
+  const { data: vehiclesData, loading: isLoadingVehicles } = useQuery(
+    GET_VEHICLE_SUMMARIES,
+    {
+      pollInterval: isOffline ? undefined : 1000 * 60 * 10, // 10 minutes
+      skip: isOffline,
+      fetchPolicy: "network-only",
+    }
+  );
+
+  const vehicles = vehiclesData?.vehicleSummaries || [];
 
   // Mutations for test schedules
-  const createScheduleMutation = useMutation({
-    mutationFn: (newSchedule: TestScheduleInput) =>
-      createTestSchedule(newSchedule),
-    onSuccess: () => {
-      toast.success("Test schedule created successfully");
-      queryClient.invalidateQueries({ queryKey: ["testSchedules"] });
+  const [createScheduleMutation] = useMutation(CREATE_TEST_SCHEDULE, {
+    onCompleted: () => {
+      refetchSchedules();
     },
     onError: (error) => {
       console.error("Failed to create test schedule:", error);
-      toast.error("Failed to create test schedule");
       throw error;
     },
   });
 
-  const updateScheduleMutation = useMutation({
-    mutationFn: ({
-      id,
-      schedule,
-    }: {
-      id: string;
-      schedule: TestScheduleInput;
-    }) => updateTestSchedule(id, schedule),
-    onSuccess: () => {
-      toast.success("Test schedule updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["testSchedules"] });
+  const [updateScheduleMutation] = useMutation(UPDATE_TEST_SCHEDULE, {
+    onCompleted: () => {
+      refetchSchedules();
     },
     onError: (error) => {
       console.error("Failed to update test schedule:", error);
-      toast.error("Failed to update test schedule");
       throw error;
     },
   });
 
-  const deleteScheduleMutation = useMutation({
-    mutationFn: (id: string) => deleteTestSchedule(id),
-    onSuccess: () => {
-      toast.success("Test schedule deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["testSchedules"] });
+  const [deleteScheduleMutation] = useMutation(DELETE_TEST_SCHEDULE, {
+    onCompleted: () => {
+      refetchSchedules();
     },
     onError: (error) => {
       console.error("Failed to delete test schedule:", error);
-      toast.error("Failed to delete test schedule");
       throw error;
     },
   });
 
   // Mutations for emission tests
-  const createTestMutation = useMutation({
-    mutationFn: (newTest: EmissionTestInput) => createEmissionTest(newTest),
-    onSuccess: () => {
-      toast.success("Vehicle test added successfully");
-      queryClient.invalidateQueries({ queryKey: ["emissionTests"] });
+  const [createTestMutation] = useMutation(CREATE_EMISSION_TEST, {
+    onCompleted: () => {
+      refetchTests();
     },
     onError: (error) => {
       console.error("Failed to add vehicle test:", error);
-      toast.error("Failed to add vehicle test");
       throw error;
     },
   });
 
-  const updateTestMutation = useMutation({
-    mutationFn: ({ id, test }: { id: string; test: EmissionTestInput }) =>
-      updateEmissionTest(id, test),
-    onSuccess: () => {
-      toast.success("Vehicle test updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["emissionTests"] });
+  const [updateTestMutation] = useMutation(UPDATE_EMISSION_TEST, {
+    onCompleted: () => {
+      refetchTests();
     },
     onError: (error) => {
       console.error("Failed to update vehicle test:", error);
-      toast.error("Failed to update vehicle test");
       throw error;
     },
   });
 
-  const deleteTestMutation = useMutation({
-    mutationFn: (id: string) => deleteEmissionTest(id),
-    onSuccess: () => {
-      toast.success("Vehicle test deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["emissionTests"] });
+  const [deleteTestMutation] = useMutation(DELETE_EMISSION_TEST, {
+    onCompleted: () => {
+      refetchTests();
     },
     onError: (error) => {
       console.error("Failed to delete vehicle test:", error);
-      toast.error("Failed to delete vehicle test");
       throw error;
     },
   });
 
   // Fetch vehicle by ID (for test creation)
-  const fetchVehicle = useMutation({
-    mutationFn: (id: string) => fetchVehicleById(id),
+  const [getVehicleSummary] = useLazyQuery(GET_VEHICLE_SUMMARY, {
     onError: (error) => {
       console.error("Failed to fetch vehicle details:", error);
-      toast.error("Failed to fetch vehicle details");
     },
   });
 
@@ -246,7 +226,9 @@ export function useQuarterlyTesting() {
       if (pendingScheduleDeletes.length > 0) {
         for (const id of pendingScheduleDeletes) {
           try {
-            await deleteScheduleMutation.mutateAsync(id);
+            await deleteScheduleMutation({
+              variables: { id },
+            });
             actions.deletePendingSchedule(id);
             toast.success("Synced pending schedule deletion");
           } catch (error) {
@@ -263,7 +245,9 @@ export function useQuarterlyTesting() {
         for (const schedule of pendingSchedules) {
           try {
             const { id, ...scheduleData } = schedule;
-            await createScheduleMutation.mutateAsync(scheduleData);
+            await createScheduleMutation({
+              variables: { input: scheduleData },
+            });
             actions.updatePendingSchedule(id, null);
             toast.success(
               `Synced new schedule: Q${scheduleData.quarter}, ${scheduleData.year}`
@@ -279,9 +263,11 @@ export function useQuarterlyTesting() {
       if (pendingScheduleUpdateIds.length > 0) {
         for (const id of pendingScheduleUpdateIds) {
           try {
-            await updateScheduleMutation.mutateAsync({
-              id,
-              schedule: pendingScheduleUpdates[id],
+            await updateScheduleMutation({
+              variables: {
+                id,
+                input: pendingScheduleUpdates[id],
+              },
             });
             actions.updatePendingSchedule(id, null);
             toast.success(
@@ -300,7 +286,9 @@ export function useQuarterlyTesting() {
       if (pendingTestDeletes.length > 0) {
         for (const id of pendingTestDeletes) {
           try {
-            await deleteTestMutation.mutateAsync(id);
+            await deleteTestMutation({
+              variables: { id },
+            });
             actions.deletePendingTest(id);
             toast.success("Synced pending test deletion");
           } catch (error) {
@@ -313,7 +301,9 @@ export function useQuarterlyTesting() {
         for (const test of pendingTests) {
           try {
             const { id, ...testData } = test;
-            await createTestMutation.mutateAsync(testData);
+            await createTestMutation({
+              variables: { input: testData },
+            });
             actions.updatePendingTest(id, null);
             toast.success("Synced new vehicle test");
           } catch (error) {
@@ -326,9 +316,11 @@ export function useQuarterlyTesting() {
       if (pendingTestUpdateIds.length > 0) {
         for (const id of pendingTestUpdateIds) {
           try {
-            await updateTestMutation.mutateAsync({
-              id,
-              test: pendingTestUpdates[id],
+            await updateTestMutation({
+              variables: {
+                id,
+                input: pendingTestUpdates[id],
+              },
             });
             actions.updatePendingTest(id, null);
             toast.success("Synced vehicle test update");
@@ -431,7 +423,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await createScheduleMutation.mutateAsync(scheduleData);
+      await createScheduleMutation({
+        variables: { input: scheduleData },
+      });
       return true;
     } catch (error) {
       return false;
@@ -446,7 +440,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await updateScheduleMutation.mutateAsync({ id, schedule: scheduleData });
+      await updateScheduleMutation({
+        variables: { id, input: scheduleData },
+      });
       return true;
     } catch (error) {
       return false;
@@ -460,8 +456,6 @@ export function useQuarterlyTesting() {
         const pendingIdx = pendingSchedules.findIndex((s) => s.id === id);
         if (pendingIdx !== -1) {
           // Remove from pending creates
-          const newPendingSchedules = [...pendingSchedules];
-          newPendingSchedules.splice(pendingIdx, 1);
           actions.deletePendingSchedule(id);
           toast.success("Pending schedule removed");
           return true;
@@ -475,7 +469,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await deleteScheduleMutation.mutateAsync(id);
+      await deleteScheduleMutation({
+        variables: { id },
+      });
       return true;
     } catch (error) {
       return false;
@@ -490,7 +486,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await createTestMutation.mutateAsync(testData);
+      await createTestMutation({
+        variables: { input: testData },
+      });
       return true;
     } catch (error) {
       return false;
@@ -505,7 +503,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await updateTestMutation.mutateAsync({ id, test: testData });
+      await updateTestMutation({
+        variables: { id, input: testData },
+      });
       return true;
     } catch (error) {
       return false;
@@ -519,8 +519,6 @@ export function useQuarterlyTesting() {
         const pendingIdx = pendingTests.findIndex((t) => t.id === id);
         if (pendingIdx !== -1) {
           // Remove from pending creates
-          const newPendingTests = [...pendingTests];
-          newPendingTests.splice(pendingIdx, 1);
           actions.deletePendingTest(id);
           toast.success("Pending test removed");
           return true;
@@ -534,7 +532,9 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      await deleteTestMutation.mutateAsync(id);
+      await deleteTestMutation({
+        variables: { id },
+      });
       return true;
     } catch (error) {
       return false;
@@ -554,19 +554,29 @@ export function useQuarterlyTesting() {
     }
 
     try {
-      // First try assuming it's an ID
-      let vehicle = await fetchVehicle.mutateAsync(identifier);
+      // Try to find by ID first
+      const { data } = await getVehicleSummary({
+        variables: { id: identifier },
+      });
+
+      if (data?.vehicleSummary) {
+        return data.vehicleSummary;
+      }
 
       // If not found by ID, search by plate number in our cached vehicles
-      if (!vehicle) {
-        const matchByPlate = vehicles.find((v) => v.plateNumber === identifier);
-        if (matchByPlate) {
-          vehicle = await fetchVehicle.mutateAsync(matchByPlate.id);
+      const matchByPlate = vehicles.find((v) => v.plateNumber === identifier);
+      if (matchByPlate) {
+        const { data: vehicleData } = await getVehicleSummary({
+          variables: { id: matchByPlate.id },
+        });
+        if (vehicleData?.vehicleSummary) {
+          return vehicleData.vehicleSummary;
         }
       }
 
-      return vehicle || null;
+      return null;
     } catch (error) {
+      console.error("Error fetching vehicle:", error);
       return null;
     }
   };
@@ -604,7 +614,7 @@ export function useQuarterlyTesting() {
     vehicles,
     scheduleFilters,
     testFilters,
-    isOffline: isOffline,
+    isOffline,
     isLoading: isLoadingSchedules || isLoadingTests || isLoadingVehicles,
 
     // Errors

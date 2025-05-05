@@ -3,14 +3,14 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEmissionDashboard } from "@/hooks/useEmissionDashboard";
+import { useEmissionDashboard } from "@/hooks/emissions/useEmissionDashboard";
 import { YearSelectorWrapper } from "@/components/dashboards/emission/overview/YearSelectorWrapper";
 import { EmissionStatCardsWrapper } from "@/components/dashboards/emission/overview/EmissionStatCardsWrapper";
 import { toast } from "sonner";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
-import { useEmissionStore } from "@/hooks/useEmissionStore";
+import { useEmissionStore } from "@/hooks/emissions/useEmissionStore";
 import { NetworkStatus } from "@/components/layout/NetworkStatus";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useNetworkStatus } from "@/hooks/utils/useNetworkStatus";
 
 // Lazy-loaded components for better performance
 const EmissionChartsWrapper = lazy(() =>

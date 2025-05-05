@@ -1,14 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apolloClient } from "@/lib/apollo-client";
-import {
-  fetchVehicleSummaries,
-  GET_VEHICLE_SUMMARIES,
-} from "@/lib/emission-api";
+import { GET_VEHICLE_SUMMARIES } from "@/lib/emission-api";
 import { useVehicleStore } from "./useVehicleStore";
-import { useNetworkStatus } from "./useNetworkStatus";
-import { gql } from "@apollo/client";
+import { useNetworkStatus } from "../utils/useNetworkStatus";
+import { gql, useQuery, useMutation, ApolloError } from "@apollo/client";
 
 // GraphQL mutations for vehicles
 export const CREATE_VEHICLE = gql`
@@ -82,28 +78,28 @@ export interface EmissionTest {
 }
 
 export function useVehicles() {
-  const queryClient = useQueryClient();
   const { isOffline } = useNetworkStatus();
   const { filters, pendingVehicles, pendingUpdates, pendingDeletes, actions } =
     useVehicleStore();
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Cache time-to-live longer for offline support
-  const TTL = 1000 * 60 * 60; // 1 hour
-
-  // Fetch all vehicles
+  // Fetch all vehicles using Apollo Client
   const {
-    data: vehicles = [],
-    isLoading,
+    data,
+    loading: isLoading,
     error,
     refetch,
-  } = useQuery({
-    queryKey: ["vehicles"],
-    queryFn: () => fetchVehicleSummaries(),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: TTL,
-    retry: 2,
-    enabled: !isOffline, // Only fetch online
+  } = useQuery(GET_VEHICLE_SUMMARIES, {
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
+    skip: isOffline,
+    notifyOnNetworkStatusChange: true,
   });
+
+  // Extract vehicles from query data
+  const vehicles = useMemo(() => {
+    return data?.vehicleSummaries || [];
+  }, [data]);
 
   // Track any network issues
   useEffect(() => {
@@ -115,74 +111,59 @@ export function useVehicles() {
 
   // Set offline mode when network changes
   useEffect(() => {
-    actions.setShowOfflineData(isOffline);
-  }, [isOffline, actions]);
+    // The actions.setShowOfflineData function doesn't exist
+    // Instead, we can directly use any relevant actions from the vehicle store
+    if (isOffline) {
+      // If there's a need to track offline state in the store, you could add this action
+      // For now, we'll just log this condition for debugging
+      console.log("App is in offline mode, using local vehicle data");
+    }
+  }, [isOffline]);
 
   // Create vehicle mutation
-  const { mutateAsync: createVehicle, isPending: isCreating } = useMutation({
-    mutationFn: async (vehicle: VehicleInput) => {
-      const { data } = await apolloClient.mutate({
-        mutation: CREATE_VEHICLE,
-        variables: { input: vehicle },
-      });
-      return data.createVehicle;
-    },
-    onSuccess: () => {
-      toast.success("Vehicle added successfully");
-      return queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-    },
-    onError: (error) => {
-      console.error("Error adding vehicle:", error);
-      toast.error("Failed to add vehicle");
-      throw error;
-    },
-  });
+  const [createVehicleMutation, { loading: isCreating }] = useMutation(
+    CREATE_VEHICLE,
+    {
+      onCompleted: () => {
+        toast.success("Vehicle added successfully");
+        refetch();
+      },
+      onError: (error) => {
+        console.error("Error adding vehicle:", error);
+        toast.error("Failed to add vehicle");
+      },
+    }
+  );
 
   // Update vehicle mutation
-  const { mutateAsync: updateVehicle, isPending: isUpdating } = useMutation({
-    mutationFn: async ({
-      id,
-      vehicle,
-    }: {
-      id: string;
-      vehicle: VehicleInput;
-    }) => {
-      const { data } = await apolloClient.mutate({
-        mutation: UPDATE_VEHICLE,
-        variables: { id, input: vehicle },
-      });
-      return data.updateVehicle;
-    },
-    onSuccess: () => {
-      toast.success("Vehicle updated successfully");
-      return queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-    },
-    onError: (error) => {
-      console.error("Error updating vehicle:", error);
-      toast.error("Failed to update vehicle");
-      throw error;
-    },
-  });
+  const [updateVehicleMutation, { loading: isUpdatingMutation }] = useMutation(
+    UPDATE_VEHICLE,
+    {
+      onCompleted: () => {
+        toast.success("Vehicle updated successfully");
+        refetch();
+      },
+      onError: (error) => {
+        console.error("Error updating vehicle:", error);
+        toast.error("Failed to update vehicle");
+      },
+    }
+  );
 
   // Delete vehicle mutation
-  const { mutateAsync: deleteVehicle, isPending: isDeleting } = useMutation({
-    mutationFn: async (id: string) => {
-      const { data } = await apolloClient.mutate({
-        mutation: DELETE_VEHICLE,
-        variables: { id },
-      });
-      return data.deleteVehicle;
-    },
-    onSuccess: () => {
-      toast.success("Vehicle deleted successfully");
-      return queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-    },
-    onError: (error) => {
-      console.error("Error deleting vehicle:", error);
-      toast.error("Failed to delete vehicle");
-      throw error;
-    },
-  });
+  const [deleteVehicleMutation, { loading: isDeleting }] = useMutation(
+    DELETE_VEHICLE,
+    {
+      onCompleted: () => {
+        toast.success("Vehicle deleted successfully");
+        refetch();
+      },
+      onError: (error) => {
+        console.error("Error deleting vehicle:", error);
+        toast.error("Failed to delete vehicle");
+      },
+    }
+  );
 
   // Sync pending changes when online
   useEffect(() => {
@@ -190,47 +171,56 @@ export function useVehicles() {
       // Only proceed if online
       if (isOffline) return;
 
-      // Sync pending deletes
-      if (pendingDeletes.length > 0) {
-        for (const id of pendingDeletes) {
-          try {
-            await deleteVehicle(id);
-            actions.removePendingDelete(id);
-            toast.success(`Synced pending delete`);
-          } catch (error) {
-            console.error(`Failed to sync delete for vehicle ${id}:`, error);
+      setIsUpdating(true);
+      try {
+        // Sync pending deletes
+        if (pendingDeletes.length > 0) {
+          for (const id of pendingDeletes) {
+            try {
+              await deleteVehicleMutation({ variables: { id } });
+              actions.removePendingDelete(id);
+              toast.success(`Synced pending delete`);
+            } catch (error) {
+              console.error(`Failed to sync delete for vehicle ${id}:`, error);
+            }
           }
         }
-      }
 
-      // Sync pending creates
-      if (pendingVehicles.length > 0) {
-        for (const vehicle of pendingVehicles) {
-          try {
-            const { id, ...vehicleData } = vehicle;
-            await createVehicle(vehicleData);
-            actions.removePendingVehicle(id);
-            toast.success(`Synced new vehicle: ${vehicleData.plateNumber}`);
-          } catch (error) {
-            console.error(`Failed to sync new vehicle:`, error);
+        // Sync pending creates
+        if (pendingVehicles.length > 0) {
+          for (const vehicle of pendingVehicles) {
+            try {
+              const { id, ...vehicleData } = vehicle;
+              await createVehicleMutation({
+                variables: { input: vehicleData },
+              });
+              actions.removePendingVehicle(id);
+              toast.success(`Synced new vehicle: ${vehicleData.plateNumber}`);
+            } catch (error) {
+              console.error(`Failed to sync new vehicle:`, error);
+            }
           }
         }
-      }
 
-      // Sync pending updates
-      const pendingUpdateIds = Object.keys(pendingUpdates);
-      if (pendingUpdateIds.length > 0) {
-        for (const id of pendingUpdateIds) {
-          try {
-            await updateVehicle({ id, vehicle: pendingUpdates[id] });
-            actions.removePendingUpdate(id);
-            toast.success(
-              `Synced updated vehicle: ${pendingUpdates[id].plateNumber}`
-            );
-          } catch (error) {
-            console.error(`Failed to sync update for vehicle ${id}:`, error);
+        // Sync pending updates
+        const pendingUpdateIds = Object.keys(pendingUpdates);
+        if (pendingUpdateIds.length > 0) {
+          for (const id of pendingUpdateIds) {
+            try {
+              await updateVehicleMutation({
+                variables: { id, input: pendingUpdates[id] },
+              });
+              actions.removePendingUpdate(id);
+              toast.success(
+                `Synced updated vehicle: ${pendingUpdates[id].plateNumber}`
+              );
+            } catch (error) {
+              console.error(`Failed to sync update for vehicle ${id}:`, error);
+            }
           }
         }
+      } finally {
+        setIsUpdating(false);
       }
     };
 
@@ -249,9 +239,9 @@ export function useVehicles() {
     pendingUpdates,
     pendingDeletes,
     actions,
-    createVehicle,
-    updateVehicle,
-    deleteVehicle,
+    createVehicleMutation,
+    updateVehicleMutation,
+    deleteVehicleMutation,
   ]);
 
   // All vehicles including pending changes
@@ -366,11 +356,11 @@ export function useVehicles() {
       // Store for later syncing
       actions.addPendingVehicle(vehicleData);
       toast.success("Vehicle saved for syncing when online");
-      return;
+      return true;
     }
 
     try {
-      await createVehicle(vehicleData);
+      await createVehicleMutation({ variables: { input: vehicleData } });
       return true;
     } catch (error) {
       return false;
@@ -383,11 +373,11 @@ export function useVehicles() {
       // Store for later syncing
       actions.addPendingUpdate(id, vehicleData);
       toast.success("Changes saved for syncing when online");
-      return;
+      return true;
     }
 
     try {
-      await updateVehicle({ id, vehicle: vehicleData });
+      await updateVehicleMutation({ variables: { id, input: vehicleData } });
       return true;
     } catch (error) {
       return false;
@@ -411,7 +401,7 @@ export function useVehicles() {
     }
 
     try {
-      await deleteVehicle(id);
+      await deleteVehicleMutation({ variables: { id } });
       return true;
     } catch (error) {
       return false;
@@ -421,7 +411,8 @@ export function useVehicles() {
   return {
     vehicles: filteredVehicles,
     allVehicles,
-    isLoading: isLoading || isCreating || isUpdating || isDeleting,
+    isLoading:
+      isLoading || isCreating || isUpdatingMutation || isDeleting || isUpdating,
     error,
     refetch,
     isOffline,

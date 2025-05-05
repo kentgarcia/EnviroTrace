@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, Edit, Trash, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { EmissionTest } from "@/hooks/useQuarterlyTesting";
+import { EmissionTest } from "@/hooks/quarterly/useQuarterlyTesting";
 
 interface EmissionTestTableProps {
     tests: EmissionTest[];

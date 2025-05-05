@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo, memo } from "react";
 import { Search, PlusCircle } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/utils/useDebounce";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 
 interface Record {
@@ -35,12 +35,12 @@ interface RecordTableProps {
 }
 
 // Memoized table row to prevent unnecessary re-renders
-const TableRowMemo = memo(({ 
-  record, 
-  columns, 
-  onViewRecord 
-}: { 
-  record: Record; 
+const TableRowMemo = memo(({
+  record,
+  columns,
+  onViewRecord
+}: {
+  record: Record;
   columns: { key: string; title: string }[];
   onViewRecord?: (record: Record) => void;
 }) => (
@@ -49,9 +49,9 @@ const TableRowMemo = memo(({
       <TableCell key={`${record.id}-${column.key}`}>
         {column.key === "status" ? (
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-            ${record.status === "active" ? "bg-ems-green-100 text-ems-green-800" : 
-              record.status === "pending" ? "bg-amber-100 text-amber-800" : 
-              "bg-blue-100 text-blue-800"}`}>
+            ${record.status === "active" ? "bg-ems-green-100 text-ems-green-800" :
+              record.status === "pending" ? "bg-amber-100 text-amber-800" :
+                "bg-blue-100 text-blue-800"}`}>
             {record[column.key]}
           </div>
         ) : (
@@ -60,9 +60,9 @@ const TableRowMemo = memo(({
       </TableCell>
     ))}
     <TableCell>
-      <Button 
-        variant="ghost" 
-        size="sm" 
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => onViewRecord && onViewRecord(record)}
       >
         View
@@ -73,10 +73,10 @@ const TableRowMemo = memo(({
 
 TableRowMemo.displayName = "TableRowMemo";
 
-export function RecordTable({ 
-  title, 
-  records: initialRecords, 
-  columns, 
+export function RecordTable({
+  title,
+  records: initialRecords,
+  columns,
   isLoading = false,
   onAddNew,
   onViewRecord
@@ -84,7 +84,7 @@ export function RecordTable({
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [records, setRecords] = useState(initialRecords);
-  
+
   // Update records when initialRecords changes
   useEffect(() => {
     setRecords(initialRecords);
@@ -93,9 +93,9 @@ export function RecordTable({
   // Memoize filtered records to prevent unnecessary recalculations
   const filteredRecords = useMemo(() => {
     if (!debouncedSearchTerm) return records;
-    
-    return records.filter((record) => 
-      Object.values(record).some(value => 
+
+    return records.filter((record) =>
+      Object.values(record).some(value =>
         value.toString().toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       )
     );
@@ -126,9 +126,9 @@ export function RecordTable({
 
       <div className="border rounded-md overflow-hidden">
         {isLoading ? (
-          <SkeletonTable 
-            rows={5} 
-            columns={columns.length + 1} 
+          <SkeletonTable
+            rows={5}
+            columns={columns.length + 1}
           />
         ) : (
           <Table>
@@ -143,11 +143,11 @@ export function RecordTable({
             <TableBody>
               {filteredRecords.length > 0 ? (
                 filteredRecords.map((record) => (
-                  <TableRowMemo 
-                    key={record.id} 
-                    record={record} 
-                    columns={columns} 
-                    onViewRecord={onViewRecord} 
+                  <TableRowMemo
+                    key={record.id}
+                    record={record}
+                    columns={columns}
+                    onViewRecord={onViewRecord}
                   />
                 ))
               ) : (

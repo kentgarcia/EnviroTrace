@@ -1,6 +1,6 @@
 import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink } from "@apollo/client";
 import { setContext } from '@apollo/client/link/context';
-import { useAuthStore } from "@/hooks/useAuthStore";
+import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { onError } from "@apollo/client/link/error";
 
 // Create an http link

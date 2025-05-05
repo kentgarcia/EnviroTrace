@@ -36,7 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { NetworkStatus } from "@/components/layout/NetworkStatus";
-import { useQuarterlyTesting, TestSchedule, EmissionTest } from "@/hooks/useQuarterlyTesting";
+import { useQuarterlyTesting, TestSchedule, EmissionTest } from "@/hooks/quarterly/useQuarterlyTesting";
 
 // Lazy loaded components with code splitting for better initial load performance
 const YearSelector = lazy(() => import("@/components/dashboards/emission/quarterly/YearSelector").then(

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowRight, Search } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 
 interface VehicleData {
   plate_number: string;
@@ -34,13 +33,13 @@ interface RecentTestsTableProps {
 export function RecentTestsTable({ recentTests: initialTests }: RecentTestsTableProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Filter recent tests by search term
-  const filteredRecentTests = initialTests.filter(test => 
+  const filteredRecentTests = initialTests.filter(test =>
     test.vehicle?.plate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     test.vehicle?.office_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   return (
     <section className="mb-8">
       <div className="flex justify-between items-center mb-4">
@@ -55,10 +54,10 @@ export function RecentTestsTable({ recentTests: initialTests }: RecentTestsTable
               className="pl-10"
             />
           </div>
-          <Button 
-            variant="default" 
-            className="flex items-center" 
-            onClick={() => navigate("/government-emission/records")}
+          <Button
+            variant="default"
+            className="flex items-center"
+            onClick={() => navigate({ to: "/government-emission/reports" })}
           >
             View all records <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
@@ -97,11 +96,10 @@ export function RecentTestsTable({ recentTests: initialTests }: RecentTestsTable
                   <TableCell>{test.vehicle?.engine_type}</TableCell>
                   <TableCell>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        test.result
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                      className={`px-2 py-1 rounded-full text-xs ${test.result
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                        }`}
                     >
                       {test.result ? "Pass" : "Fail"}
                     </span>

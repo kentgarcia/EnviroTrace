@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { VehicleForm } from "./VehicleForm";
-import { Vehicle, VehicleInput } from "@/hooks/useVehicles";
+import { Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
 
 interface VehicleModalsProps {
     // Add vehicle modal

@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, ClipboardList, Edit, Trash, Loader2 } from "lucide-react";
-import { TestSchedule } from "@/hooks/useQuarterlyTesting";
+import { TestSchedule } from "@/hooks/quarterly/useQuarterlyTesting";
 
 interface ScheduleTableProps {
     schedules: TestSchedule[];

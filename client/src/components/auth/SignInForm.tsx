@@ -8,8 +8,8 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { signIn } from "@/lib/auth";
 import { useForm } from "react-hook-form";
-import { useAuthStore } from "@/hooks/useAuthStore";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useOfflineSync } from "@/hooks/utils/useOfflineSync";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SignInFormData {

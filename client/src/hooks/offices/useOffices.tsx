@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { gql, useQuery as useApolloQuery } from '@apollo/client';
 import { create } from 'zustand';
-import { fetchOffices } from '@/lib/emission-api';
-import { useDebounce } from './useDebounce';
-import { useNetworkStatus } from './useNetworkStatus';
+import { useDebounce } from '../utils/useDebounce';
+import { useNetworkStatus } from '../utils/useNetworkStatus';
 
 /**
  * Office data with emission compliance stats
@@ -28,6 +27,22 @@ export interface OfficesFilter {
     quarter: number;
     searchTerm?: string;
 }
+
+// GraphQL query for fetching office data
+export const GET_OFFICES = gql`
+  query GetOffices($year: Int!, $quarter: Int!, $searchTerm: String) {
+    offices(year: $year, quarter: $quarter, searchTerm: $searchTerm) {
+      id
+      name
+      code
+      address
+      contact
+      vehicleCount
+      testedCount
+      passedCount
+    }
+  }
+`;
 
 /**
  * Zustand store for offices state
@@ -56,45 +71,66 @@ export const useOfficesStore = create<OfficesStore>((set) => ({
     })),
 }));
 
+// Define interface for GraphQL response
+interface OfficeResponse {
+    id: string;
+    name: string;
+    code: string;
+    address?: string;
+    contact?: string;
+    vehicleCount: number;
+    testedCount: number;
+    passedCount: number;
+}
+
 // Main hook for office data fetching and management
 export function useOffices() {
     const { isOffline } = useNetworkStatus();
     const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
-    const { filters, updateFilters } = useOfficesStore();
+    const { filters, updateFilters, setOffices } = useOfficesStore();
     const debouncedSearchTerm = useDebounce(filters.searchTerm || '', 300);
 
-    // Query for fetching office data
+    // Query for fetching office data using Apollo Client
     const {
-        data: officeData = [],
-        isLoading,
-        refetch,
-    } = useQuery({
-        queryKey: ['offices', filters.year, filters.quarter, debouncedSearchTerm],
-        queryFn: async () => {
-            try {
-                setErrorMessage(undefined);
-                const response = await fetchOffices({
-                    year: filters.year,
-                    quarter: filters.quarter,
-                    searchTerm: debouncedSearchTerm,
-                });
-
-                // Process and transform the data if needed
-                return response.map((office: any) => ({
-                    ...office,
-                    complianceRate: office.vehicleCount > 0
-                        ? Math.round((office.passedCount / office.vehicleCount) * 100)
-                        : 0
-                }));
-            } catch (error) {
-                console.error('Error fetching offices:', error);
-                setErrorMessage('Failed to load office data. Please try again.');
-                return [];
-            }
+        data,
+        loading: isLoading,
+        error,
+        refetch
+    } = useApolloQuery(GET_OFFICES, {
+        variables: {
+            year: filters.year,
+            quarter: filters.quarter,
+            searchTerm: debouncedSearchTerm,
         },
-        enabled: !isOffline, // Enable query when online
+        skip: isOffline, // Skip query when offline
+        fetchPolicy: 'network-only', // Don't use cache, always request fresh data
     });
+
+    // Process the data to match the expected structure
+    const officeData = useMemo(() => data?.offices ? data.offices.map((office: OfficeResponse) => ({
+        ...office,
+        complianceRate: office.vehicleCount > 0
+            ? Math.round((office.passedCount / office.vehicleCount) * 100)
+            : 0
+    })) : [], [data]);
+
+    // Update error message if there's an error
+    useEffect(() => {
+        if (error) {
+            console.error('Error fetching offices:', error);
+            setErrorMessage('Failed to load office data. Please try again.');
+        } else {
+            setErrorMessage(undefined);
+        }
+    }, [error]);
+
+    // Update the store when data changes
+    useEffect(() => {
+        if (data?.offices) {
+            setOffices(officeData);
+        }
+    }, [data, setOffices, officeData]);
 
     // Function to handle filter changes
     const handleFilterChange = (filterUpdates: Partial<OfficesFilter>) => {

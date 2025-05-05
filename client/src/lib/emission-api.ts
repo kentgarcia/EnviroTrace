@@ -217,11 +217,14 @@ export async function fetchEmissionTests(filters = {}) {
 }
 
 // Helper function to fetch test schedules
-export async function fetchTestSchedules(year, quarter = undefined) {
+export async function fetchTestSchedules(
+  year: number,
+  quarter: number | undefined = undefined
+) {
   try {
     const { data } = await apolloClient.query({
       query: GET_TEST_SCHEDULES,
-      variables: { year, quarter },
+      variables: { year, quarter }, // Pass quarter directly (can be number or undefined)
       fetchPolicy: "network-only",
     });
     return data.emissionTestSchedules;

@@ -1,7 +1,7 @@
 import { gql } from "@apollo/client";
 import { useState, useEffect } from "react";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { useAuthStore } from "@/hooks/useAuthStore";
+import { useOfflineSync } from "@/hooks/utils/useOfflineSync";
+import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
 import { apolloClient } from "./apollo-client";
 

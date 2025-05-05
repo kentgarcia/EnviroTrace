@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { UserRole } from "@/integrations/types/userData";
-import { useAuthStore } from "./useAuthStore";
+import { useAuthStore } from "../auth/useAuthStore";
 
 interface CachedData<T> {
   data: T;

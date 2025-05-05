@@ -26,7 +26,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { TestSchedule } from "@/hooks/useQuarterlyTesting";
+import { TestSchedule } from "@/hooks/quarterly/useQuarterlyTesting";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";

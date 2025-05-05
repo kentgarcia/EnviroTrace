@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useAuthStore } from "@/hooks/useAuthStore";
+import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { useState, useEffect } from "react";
 import { fetchMyProfile } from "@/lib/profile-api";
 

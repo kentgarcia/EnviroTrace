@@ -40,7 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/ui/use-toast";
 import {
   Edit,
   UserX,
@@ -52,7 +52,7 @@ import {
   CalendarDays,
   User,
 } from "lucide-react";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/hooks/utils/useDebounce";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";

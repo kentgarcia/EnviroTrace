@@ -2,7 +2,7 @@
 import { ReactNode, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useNetworkStatus } from "@/hooks/utils/useNetworkStatus";
 
 interface DataCardProps {
   title: string;
@@ -26,11 +26,11 @@ export function DataCard({
   contentHeight = 100
 }: DataCardProps) {
   const { isOffline } = useNetworkStatus();
-  
+
   // Memoize the error message to avoid re-renders
   const errorComponent = useMemo(() => {
     if (!error) return null;
-    
+
     return (
       <div className="p-4 bg-red-50 text-red-600 rounded-md">
         Error: {isOffline ? "You are currently offline. Please check your connection." : error.message}

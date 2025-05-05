@@ -1,5 +1,5 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
-import { useAuthStore } from '@/hooks/useAuthStore';
+import { useAuthStore } from '@/hooks/auth/useAuthStore';
 import { toast } from 'sonner';
 import SignIn from '@/pages/SignIn';
 import DashboardSelection from '@/pages/DashboardSelection';

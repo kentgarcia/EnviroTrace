@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select';
-import { VehicleFilters } from '@/hooks/useVehicleStore';
+import { VehicleFilters } from '@/hooks/vehicles/useVehicleStore';
 
 interface VehicleFiltersProps {
     filters: VehicleFilters;

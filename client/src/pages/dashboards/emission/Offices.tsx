@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Search, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { PeriodSelector } from "@/components/dashboards/emission/offices/PeriodSelector";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useOffices } from "@/hooks/useOffices";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useOffices } from "@/hooks/offices/useOffices";
+import { useNetworkStatus } from "@/hooks/utils/useNetworkStatus";
 
 // Lazy load components for better performance
 const ComplianceSummaryCard = lazy(() =>
@@ -66,7 +66,7 @@ export default function OfficesPage() {
         handleFilterChange({ year });
     }, [handleFilterChange]);
 
-    const handleQuarterChange = useCallback((quarter: number) => {
+    const handleQuarterChange = useCallback((quarter: number | undefined) => {
         handleFilterChange({ quarter });
     }, [handleFilterChange]);
 

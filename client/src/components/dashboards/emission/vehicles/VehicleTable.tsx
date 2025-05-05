@@ -10,7 +10,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Eye, Edit, Trash2, MoreHorizontal, ChevronDown, ChevronUp } from "lucide-react";
-import { Vehicle } from "@/hooks/useVehicles";
+import { Vehicle } from "@/hooks/vehicles/useVehicles";
 import { Badge } from "@/components/ui/badge";
 
 interface VehicleTableProps {
