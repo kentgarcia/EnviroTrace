@@ -103,6 +103,10 @@ export const emissionResolvers = {
     officeCompliance: async (_, { year, quarter, searchTerm }) => {
       return EmissionRepository.findOfficeCompliance(year, quarter, searchTerm);
     },
+
+    officeComplianceByYear: async (_, { year, searchTerm }) => {
+      return EmissionRepository.findOfficeComplianceByYear(year, searchTerm);
+    },
   },
 
   Mutation: {
@@ -111,7 +115,7 @@ export const emissionResolvers = {
       if (!user) {
         throw new AppError("Not authenticated", ErrorType.UNAUTHORIZED);
       }
-      return await EmissionRepository.createVehicle(input);
+      return await EmissionRepository.createVehicle(input, user.id);
     },
 
     updateVehicle: async (_, { id, input }, { user }: AuthContext) => {
@@ -125,7 +129,7 @@ export const emissionResolvers = {
         throw new AppError("Vehicle not found", ErrorType.NOT_FOUND_ERROR);
       }
 
-      return await EmissionRepository.updateVehicle(id, input);
+      return await EmissionRepository.updateVehicle(id, input, user.id);
     },
 
     deleteVehicle: async (_, { id }, { user }: AuthContext) => {

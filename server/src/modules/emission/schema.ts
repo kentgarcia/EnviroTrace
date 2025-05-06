@@ -11,6 +11,8 @@ export const emissionTypeDefs = `#graphql
     createdAt: String!
     updatedAt: String!
     latestTest: EmissionTest
+    createdBy: ID
+    updatedBy: ID
   }
 
   type EmissionTest {
@@ -109,6 +111,7 @@ export const emissionTypeDefs = `#graphql
     
     # Office compliance queries
     officeCompliance(year: Int!, quarter: Int!, searchTerm: String): [OfficeCompliance!]!
+    officeComplianceByYear(year: Int!, searchTerm: String): [OfficeCompliance!]!
   }
 
   # Office compliance data type

@@ -9,7 +9,6 @@ import { Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { signIn } from "@/lib/auth";
 import { useForm } from "react-hook-form";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
-import { useOfflineSync } from "@/hooks/utils/useOfflineSync";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SignInFormData {
@@ -21,7 +20,6 @@ export function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isOnline } = useOfflineSync();
 
   const {
     register,
@@ -35,11 +33,6 @@ export function SignInForm() {
     setIsLoading(true);
 
     try {
-      if (!isOnline) {
-        // Special handling for offline login attempts
-        toast.warning("You are currently offline. Attempting to use cached credentials.");
-      }
-
       const result = await signIn(data.email, data.password);
 
       if (result && result.token) {
@@ -58,7 +51,7 @@ export function SignInForm() {
       // Set a user-friendly error message
       let errorMessage = "Failed to sign in. Please check your credentials.";
       if (error instanceof Error) {
-        errorMessage = error.message === "Failed to fetch" && !isOnline
+        errorMessage = error.message === "Failed to fetch"
           ? "Cannot connect to server. Please check your internet connection."
           : error.message;
       } else if (typeof error === 'string') {
@@ -93,15 +86,6 @@ export function SignInForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!isOnline && (
-          <Alert variant="destructive" className="mb-4">
-            <WifiOff className="h-4 w-4 mr-2" />
-            <AlertDescription>
-              You are currently offline. Limited functionality may be available.
-            </AlertDescription>
-          </Alert>
-        )}
-
         {authError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4 mr-2" />
@@ -152,11 +136,6 @@ export function SignInForm() {
               </>
             ) : (
               <>
-                {isOnline ? (
-                  <Wifi className="mr-2 h-4 w-4" />
-                ) : (
-                  <WifiOff className="mr-2 h-4 w-4" />
-                )}
                 Sign in
               </>
             )}

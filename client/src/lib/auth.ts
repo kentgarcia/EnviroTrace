@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { gql } from "@apollo/client";
-import { useState, useEffect } from "react";
-import { useOfflineSync } from "@/hooks/utils/useOfflineSync";
+import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
 import { apolloClient } from "./apollo-client";
@@ -156,10 +156,9 @@ export function useAuth() {
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const { isOnline } = useOfflineSync();
 
-  // Define the initAuth function outside the useEffect
-  const initAuth = async () => {
+  // Define the initAuth function outside the useEffect, wrapped in useCallback
+  const initAuth = useCallback(async () => {
     try {
       // Check if we have a valid token
       if (!token) {
@@ -200,25 +199,17 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]); // Add token as a dependency for useCallback
 
   // Initialize auth on component mount
   useEffect(() => {
     initAuth();
-  }, [token]);
-
-  // Re-fetch user data when coming back online
-  useEffect(() => {
-    if (isOnline && token && !user) {
-      initAuth();
-    }
-  }, [isOnline, token, user]);
+  }, [initAuth]); // Now initAuth is stable unless token changes
 
   return {
     user,
     userData,
     loading,
-    isOnline,
     signIn,
     signUp,
     signOut,

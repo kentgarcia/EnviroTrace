@@ -1,123 +1,164 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useEmissionDashboard } from "@/hooks/emissions/useEmissionDashboard";
-import { YearSelectorWrapper } from "@/components/dashboards/emission/overview/YearSelectorWrapper";
-import { EmissionStatCardsWrapper } from "@/components/dashboards/emission/overview/EmissionStatCardsWrapper";
-import { toast } from "sonner";
+import { useDashboardData } from "@/hooks/emissions/useDashboardData";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
-import { useEmissionStore } from "@/hooks/emissions/useEmissionStore";
 import { NetworkStatus } from "@/components/layout/NetworkStatus";
-import { useNetworkStatus } from "@/hooks/utils/useNetworkStatus";
-
-// Lazy-loaded components for better performance
-const EmissionChartsWrapper = lazy(() =>
-    import("@/components/dashboards/emission/overview/EmissionChartsWrapper").then(
-        module => ({ default: module.EmissionChartsWrapper })
-    )
-);
-
-const EmissionHistoryTrendWrapper = lazy(() =>
-    import("@/components/dashboards/emission/overview/EmissionHistoryTrendWrapper").then(
-        module => ({ default: module.EmissionHistoryTrendWrapper })
-    )
-);
-
-const EmissionTestScheduleWrapper = lazy(() =>
-    import("@/components/dashboards/emission/overview/EmissionTestScheduleWrapper").then(
-        module => ({ default: module.EmissionTestScheduleWrapper })
-    )
-);
-
-const RecentTestsTableWrapper = lazy(() =>
-    import("@/components/dashboards/emission/overview/RecentTestsTableWrapper").then(
-        module => ({ default: module.RecentTestsTableWrapper })
-    )
-);
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EChartsPieChart } from "@/components/dashboard/EChartsPieChart";
+import { EChartsBarChart } from "@/components/dashboard/EChartsBarChart";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { CarFront, BarChart3, Building2, CheckCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 
 // Component for skeleton loading placeholders
-const LoadingSkeleton = ({ type }: { type: 'chart' | 'table' | 'component' }) => {
-    if (type === 'chart') {
-        return <Skeleton className="w-full h-[300px] rounded-md" />;
-    } else if (type === 'table') {
-        return (
-            <div className="space-y-2">
-                <Skeleton className="w-full h-10 rounded-md" />
-                <Skeleton className="w-full h-10 rounded-md" />
-                <Skeleton className="w-full h-10 rounded-md" />
-                <Skeleton className="w-full h-10 rounded-md" />
-                <Skeleton className="w-full h-10 rounded-md" />
+const LoadingSkeleton = () => {
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Skeleton className="w-full h-[120px] rounded-md" />
+                <Skeleton className="w-full h-[120px] rounded-md" />
+                <Skeleton className="w-full h-[120px] rounded-md" />
+                <Skeleton className="w-full h-[120px] rounded-md" />
             </div>
-        );
-    } else {
-        return <Skeleton className="w-full h-40 rounded-md" />;
-    }
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Skeleton className="w-full h-[300px] rounded-md" />
+                <Skeleton className="w-full h-[300px] rounded-md" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Skeleton className="w-full h-[350px] rounded-md" />
+                <Skeleton className="w-full h-[350px] rounded-md" />
+            </div>
+        </div>
+    );
 };
 
-export default function GovEmissionOverview() {
-    // Get year and quarter from Zustand store
-    const { selectedYear, selectedQuarter, actions } = useEmissionStore();
-    const { isOffline } = useNetworkStatus();
+const GovEmissionOverview: React.FC = () => {
+    // State for year and quarter selection
+    const currentYear = new Date().getFullYear();
+    const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+    const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(undefined);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const { toast } = useToast();
 
-    // Check for available years to populate year selector
-    const [availableYears, setAvailableYears] = useState<number[]>([]);
+    // Available years for selection - last 5 years
+    const availableYears = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
-    // Use our custom hook to fetch emission dashboard data
-    const {
-        data,
-        loading,
-        error,
-        totalVehicles,
-        totalPassed,
-        totalFailed,
-        complianceRate,
-        quarterStats,
-        engineTypeData,
-        vehicleTypeData,
-        complianceByOffice,
-        recentTests
-    } = useEmissionDashboard(selectedYear, selectedQuarter);
+    // Use our dashboard data hook to fetch all required data
+    const { data, loading, error } = useDashboardData(selectedYear, selectedQuarter);
 
-    // When the component mounts, populate the available years
+    // Format for display
+    const formatNumber = (num: number) => {
+        return new Intl.NumberFormat().format(num);
+    };
+
+    // Function to handle manual refresh
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        // Force a re-render by toggling the year and then setting it back
+        const tempYear = selectedYear;
+        setSelectedYear(tempYear - 1);
+
+        setTimeout(() => {
+            setSelectedYear(tempYear);
+            setIsRefreshing(false);
+            toast({
+                title: "Dashboard Refreshed",
+                description: "The dashboard data has been refreshed."
+            });
+        }, 100);
+    };
+
     useEffect(() => {
-        // Get the current year and previous 4 years
-        const currentYear = new Date().getFullYear();
-        const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
-        setAvailableYears(years);
-    }, []);
-
-    // Handle errors in data fetching
-    useEffect(() => {
+        // Log detailed error information when an error occurs
         if (error) {
-            toast.error("Failed to load dashboard data");
-            console.error("Error loading emission dashboard data:", error);
+            console.error("Dashboard data error details:", {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
         }
     }, [error]);
 
-    // Format data for charts
-    const quarterlyChartData = quarterStats.map(q => ({
-        name: q.name,
-        passed: q.passed,
-        failed: q.failed,
-        total: q.passed + q.failed
-    }));
+    if (error) {
+        return (
+            <SidebarProvider>
+                <div className="flex min-h-screen w-full">
+                    <AppSidebar dashboardType="government-emission" />
+                    <div className="flex-1 overflow-auto">
+                        <DashboardNavbar dashboardTitle="Government Emission Dashboard" />
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h1 className="text-3xl font-semibold">Dashboard Overview</h1>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleRefresh}
+                                    disabled={isRefreshing}
+                                >
+                                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    Refresh Data
+                                </Button>
+                            </div>
+                            <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
+                                <h3 className="font-medium">Error Loading Dashboard Data</h3>
+                                <p className="mb-2">There was a problem connecting to the server. Please try again later or contact support if the issue persists.</p>
+                                <details className="text-sm">
+                                    <summary className="cursor-pointer font-medium">Technical Details</summary>
+                                    <p className="mt-2 font-mono text-xs bg-red-100 p-2 rounded">
+                                        {error.message}
+                                    </p>
+                                </details>
+                            </div>
 
-    // Mocked data for history trend
-    const historyData = [
-        { year: selectedYear - 2, complianceRate: 82, totalVehicles: 450 },
-        { year: selectedYear - 1, complianceRate: 87, totalVehicles: 475 },
-        { year: selectedYear, complianceRate, totalVehicles }
-    ];
+                            <div className="p-6 bg-muted/50 rounded-md text-center">
+                                <p className="text-muted-foreground mb-4">
+                                    You can try selecting a different year or quarter, or click the refresh button above.
+                                </p>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    <Select
+                                        value={selectedYear.toString()}
+                                        onValueChange={(value) => setSelectedYear(Number(value))}
+                                    >
+                                        <SelectTrigger className="w-[120px]">
+                                            <SelectValue placeholder="Year" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableYears.map((year) => (
+                                                <SelectItem key={year} value={year.toString()}>
+                                                    {year}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
-    // Format wheel count data for chart
-    const wheelCountData = vehicleTypeData
-        .filter(item => !isNaN(parseInt(item.name)))
-        .map(item => ({
-            wheelCount: parseInt(item.name),
-            count: item.value
-        }));
+                                    <Select
+                                        value={selectedQuarter ? selectedQuarter.toString() : "all"}
+                                        onValueChange={(value) =>
+                                            setSelectedQuarter(value === "all" ? undefined : Number(value))
+                                        }
+                                    >
+                                        <SelectTrigger className="w-[120px]">
+                                            <SelectValue placeholder="Quarter" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Quarters</SelectItem>
+                                            <SelectItem value="1">Q1</SelectItem>
+                                            <SelectItem value="2">Q2</SelectItem>
+                                            <SelectItem value="3">Q3</SelectItem>
+                                            <SelectItem value="4">Q4</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <NetworkStatus />
+            </SidebarProvider>
+        );
+    }
 
     return (
         <SidebarProvider>
@@ -127,112 +168,130 @@ export default function GovEmissionOverview() {
                     <DashboardNavbar dashboardTitle="Government Emission Dashboard" />
                     <div className="p-6">
                         <main>
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                                 <div>
                                     <h1 className="text-3xl font-semibold">Dashboard Overview</h1>
                                     <p className="text-muted-foreground">
                                         Monitor and manage emission testing for government vehicles
                                     </p>
-                                    {isOffline && (
-                                        <div className="text-sm bg-yellow-50 text-yellow-800 px-2 py-1 mt-2 rounded-md flex items-center">
-                                            <span className="mr-1">⚠️</span> Offline mode: showing cached data
-                                        </div>
-                                    )}
                                 </div>
-                                <div className="flex gap-2">
-                                    <YearSelectorWrapper
-                                        selectedYear={selectedYear}
-                                        onYearChange={(year) => actions.setSelectedYear(Number(year))}
-                                        availableYears={availableYears}
-                                    />
+                                <div className="flex items-center gap-4">
+                                    <div className="flex flex-wrap gap-2">
+                                        <Select
+                                            value={selectedYear.toString()}
+                                            onValueChange={(value) => setSelectedYear(Number(value))}
+                                        >
+                                            <SelectTrigger className="w-[120px]">
+                                                <SelectValue placeholder="Year" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {availableYears.map((year) => (
+                                                    <SelectItem key={year} value={year.toString()}>
+                                                        {year}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <Select
+                                            value={selectedQuarter ? selectedQuarter.toString() : "all"}
+                                            onValueChange={(value) =>
+                                                setSelectedQuarter(value === "all" ? undefined : Number(value))
+                                            }
+                                        >
+                                            <SelectTrigger className="w-[120px]">
+                                                <SelectValue placeholder="Quarter" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All Quarters</SelectItem>
+                                                <SelectItem value="1">Q1</SelectItem>
+                                                <SelectItem value="2">Q2</SelectItem>
+                                                <SelectItem value="3">Q3</SelectItem>
+                                                <SelectItem value="4">Q4</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleRefresh}
+                                        disabled={isRefreshing || loading}
+                                    >
+                                        <RefreshCw className={`h-4 w-4 mr-2 ${(isRefreshing || loading) ? 'animate-spin' : ''}`} />
+                                        Refresh
+                                    </Button>
                                 </div>
                             </div>
 
-                            <div className="space-y-8">
-                                {/* Statistics Cards Section */}
-                                <section>
-                                    {loading ? (
-                                        <LoadingSkeleton type="component" />
-                                    ) : (
-                                        <EmissionStatCardsWrapper
-                                            totalVehicles={totalVehicles}
-                                            testedVehicles={totalPassed + totalFailed}
-                                            passRate={complianceRate}
-                                            officeDepartments={complianceByOffice.length}
-                                            subtitle={`Showing data for ${selectedYear}${selectedQuarter ? ` Q${selectedQuarter}` : ''}`}
+                            {loading ? (
+                                <LoadingSkeleton />
+                            ) : (
+                                <div className="space-y-6">
+                                    {/* Statistics Cards Section */}
+                                    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <StatCard
+                                            title="Total Vehicles"
+                                            value={formatNumber(data.totalVehicles)}
+                                            icon={<CarFront className="h-5 w-5" />}
+                                            iconClassName="bg-blue-50 text-blue-700"
                                         />
-                                    )}
-                                </section>
-
-                                {/* Charts Section */}
-                                <Suspense fallback={<LoadingSkeleton type="chart" />}>
-                                    <section>
-                                        {loading ? (
-                                            <LoadingSkeleton type="chart" />
-                                        ) : (
-                                            <EmissionChartsWrapper
-                                                quarterlyData={quarterlyChartData}
-                                                engineTypeData={engineTypeData}
-                                                wheelCountData={wheelCountData}
-                                                selectedYear={selectedYear}
-                                            />
-                                        )}
+                                        <StatCard
+                                            title="Tested Vehicles"
+                                            value={formatNumber(data.testedVehicles)}
+                                            icon={<CheckCircle className="h-5 w-5" />}
+                                            iconClassName="bg-green-50 text-green-700"
+                                        />
+                                        <StatCard
+                                            title="Compliance Rate"
+                                            value={`${data.complianceRate}%`}
+                                            icon={<BarChart3 className="h-5 w-5" />}
+                                            iconClassName="bg-purple-50 text-purple-700"
+                                        />
+                                        <StatCard
+                                            title="Office Departments"
+                                            value={formatNumber(data.officeDepartments)}
+                                            icon={<Building2 className="h-5 w-5" />}
+                                            iconClassName="bg-amber-50 text-amber-700"
+                                        />
                                     </section>
-                                </Suspense>
 
-                                {/* Two Column Layout */}
-                                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Left Column - Test Schedule */}
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Emission Test Schedules</CardTitle>
-                                            <CardDescription>
-                                                Planned testing for vehicles
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Suspense fallback={<LoadingSkeleton type="table" />}>
-                                                {loading ? (
-                                                    <LoadingSkeleton type="table" />
-                                                ) : (
-                                                    <EmissionTestScheduleWrapper
-                                                        selectedYear={selectedYear}
-                                                        selectedQuarter={selectedQuarter}
-                                                    />
-                                                )}
-                                            </Suspense>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Right Column - Recent Tests */}
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle>Recent Test Results</CardTitle>
-                                            <CardDescription>Latest emission test results</CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <Suspense fallback={<LoadingSkeleton type="table" />}>
-                                                {loading ? (
-                                                    <LoadingSkeleton type="table" />
-                                                ) : (
-                                                    <RecentTestsTableWrapper recentTests={recentTests} />
-                                                )}
-                                            </Suspense>
-                                        </CardContent>
-                                    </Card>
-                                </section>
-
-                                {/* Historical Trend Chart */}
-                                <Suspense fallback={<LoadingSkeleton type="chart" />}>
-                                    <section>
-                                        {loading ? (
-                                            <LoadingSkeleton type="chart" />
-                                        ) : (
-                                            <EmissionHistoryTrendWrapper historyData={historyData} />
-                                        )}
+                                    {/* First row of charts - Pie charts */}
+                                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <EChartsPieChart
+                                            title="Vehicles by Engine Type"
+                                            data={data.engineTypeData}
+                                            height={300}
+                                            colors={['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']}
+                                        />
+                                        <EChartsPieChart
+                                            title="Vehicles by Wheel Count"
+                                            data={data.wheelCountData}
+                                            height={300}
+                                            colors={['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']}
+                                        />
                                     </section>
-                                </Suspense>
-                            </div>
+
+                                    {/* Second row of charts - Bar charts */}
+                                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <EChartsBarChart
+                                            title="Vehicles by Type"
+                                            data={data.vehicleTypeData}
+                                            height={350}
+                                            layout="horizontal"
+                                            color="#2563eb"
+                                            valueFormatter={(value) => value.toString()}
+                                        />
+                                        <EChartsBarChart
+                                            title="Compliance by Office"
+                                            data={data.officeComplianceData}
+                                            height={350}
+                                            layout="horizontal"
+                                            color="#7c3aed"
+                                            valueFormatter={(value) => `${value}%`}
+                                        />
+                                    </section>
+                                </div>
+                            )}
                         </main>
                     </div>
                 </div>
@@ -240,4 +299,6 @@ export default function GovEmissionOverview() {
             <NetworkStatus />
         </SidebarProvider>
     );
-}
+};
+
+export default GovEmissionOverview;

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useCallback } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useCallback } from "react";
 import { Store } from "@tauri-apps/plugin-store";
 
 export function useTauriStore(storeFile = ".dashboard-data.dat") {

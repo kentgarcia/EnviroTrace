@@ -155,7 +155,7 @@ export async function fetchUsers() {
       id: user.id,
       email: user.email,
       full_name: user.profile?.fullName || "N/A",
-      role: validateRole(user.roles?.length > 0 ? user.roles[0].role : "user"),
+      role: validateRole(user.roles?.[0]?.role ?? "user"),
       status: "active", // Default status
       created_at: user.createdAt,
     }));

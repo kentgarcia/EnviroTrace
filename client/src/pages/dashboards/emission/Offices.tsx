@@ -7,7 +7,6 @@ import { Search, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { PeriodSelector } from "@/components/dashboards/emission/offices/PeriodSelector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOffices } from "@/hooks/offices/useOffices";
-import { useNetworkStatus } from "@/hooks/utils/useNetworkStatus";
 
 // Lazy load components for better performance
 const ComplianceSummaryCard = lazy(() =>
@@ -40,7 +39,6 @@ const LoadingFallback = () => (
 
 export default function OfficesPage() {
     const [activeTab, setActiveTab] = useState("overview");
-    const { isOffline } = useNetworkStatus();
 
     const {
         officeData,
@@ -78,12 +76,6 @@ export default function OfficesPage() {
                     <p className="text-sm text-muted-foreground">
                         Monitor emission compliance across government offices
                     </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full ${!isOffline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    <span className="text-sm">{!isOffline ? 'Online' : 'Offline'}</span>
-                    {isOffline && <span className="text-xs text-muted-foreground">(Using cached data)</span>}
                 </div>
             </div>
 

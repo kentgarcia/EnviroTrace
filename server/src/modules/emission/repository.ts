@@ -99,13 +99,14 @@ export const EmissionRepository = {
   },
 
   async createVehicle(
-    vehicleData: Omit<Vehicle, "id" | "createdAt" | "updatedAt">
+    vehicleData: Omit<Vehicle, "id" | "createdAt" | "updatedAt">,
+    createdBy: string
   ): Promise<Vehicle> {
     try {
       const result = await db.query(
         `INSERT INTO vehicles
-         (driver_name, contact_number, engine_type, office_name, plate_number, vehicle_type, wheels, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         (driver_name, contact_number, engine_type, office_name, plate_number, vehicle_type, wheels, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
          RETURNING 
            id, 
            driver_name AS "driverName", 
@@ -115,6 +116,7 @@ export const EmissionRepository = {
            plate_number AS "plateNumber",
            vehicle_type AS "vehicleType",
            wheels,
+           created_by AS "createdBy",
            created_at AS "createdAt",
            updated_at AS "updatedAt"`,
         [
@@ -125,6 +127,7 @@ export const EmissionRepository = {
           vehicleData.plateNumber,
           vehicleData.vehicleType,
           vehicleData.wheels,
+          createdBy,
         ]
       );
       return result.rows[0];
@@ -136,7 +139,8 @@ export const EmissionRepository = {
 
   async updateVehicle(
     id: string,
-    vehicleData: Partial<Omit<Vehicle, "id" | "createdAt" | "updatedAt">>
+    vehicleData: Partial<Omit<Vehicle, "id" | "createdAt" | "updatedAt">>,
+    updatedBy: string
   ): Promise<Vehicle> {
     try {
       const updateFields = [];
@@ -178,8 +182,10 @@ export const EmissionRepository = {
         queryParams.push(String(vehicleData.wheels)); // Convert wheels number to string
       }
 
-      // Always update updated_at timestamp
+      // Always update updated_at timestamp and updated_by
       updateFields.push(`updated_at = NOW()`);
+      updateFields.push(`updated_by = $${paramCounter++}`);
+      queryParams.push(updatedBy);
 
       // If no fields to update, return the existing vehicle
       if (updateFields.length === 1) {
@@ -857,6 +863,96 @@ export const EmissionRepository = {
       console.error("Database error in findOfficeCompliance:", error);
       throw new AppError(
         "Failed to retrieve office compliance data",
+        ErrorType.DATABASE_ERROR
+      );
+    }
+  },
+
+  // New method to get office compliance with only year parameter
+  async findOfficeComplianceByYear(
+    year: number,
+    searchTerm?: string
+  ): Promise<any[]> {
+    try {
+      // First, get unique office names from vehicles
+      let officesQuery = `
+        SELECT DISTINCT office_name AS name
+        FROM vehicles
+        WHERE 1=1
+      `;
+
+      const officeQueryParams: any[] = [];
+      let officeParamCounter = 1;
+
+      if (searchTerm) {
+        officesQuery += ` AND office_name ILIKE $${officeParamCounter++}`;
+        officeQueryParams.push(`%${searchTerm}%`);
+      }
+
+      officesQuery += " ORDER BY name";
+
+      const officeResult = await db.query(officesQuery, officeQueryParams);
+      const offices = officeResult.rows;
+
+      // For each office, calculate compliance metrics
+      const officeCompliance = [];
+
+      for (const office of offices) {
+        // Generate a code based on the office name (get initials)
+        const code = office.name
+          .split(" ")
+          .map((word: string) => word.charAt(0).toUpperCase())
+          .join("");
+
+        // Get vehicles for this office
+        const vehiclesResult = await db.query(
+          `SELECT id
+           FROM vehicles
+           WHERE office_name = $1`,
+          [office.name]
+        );
+
+        const vehicleIds = vehiclesResult.rows.map((v) => v.id);
+        const vehicleCount = vehicleIds.length;
+
+        if (vehicleCount === 0) {
+          // Skip offices with no vehicles
+          continue;
+        }
+
+        // Get emission tests for these vehicles in the specified year (all quarters)
+        const emissionTestsResult = await db.query(
+          `SELECT vehicle_id, result
+           FROM emission_tests
+           WHERE year = $1 AND vehicle_id = ANY($2)`,
+          [year, vehicleIds]
+        );
+
+        const testedCount = emissionTestsResult.rows.length;
+        const passedCount = emissionTestsResult.rows.filter(
+          (test) => test.result === true
+        ).length;
+
+        // Calculate compliance rate
+        const complianceRate =
+          vehicleCount > 0 ? Math.round((passedCount / vehicleCount) * 100) : 0;
+
+        officeCompliance.push({
+          id: code.toLowerCase(), // Use lowercase code as id
+          name: office.name,
+          code,
+          vehicleCount,
+          testedCount,
+          passedCount,
+          complianceRate,
+        });
+      }
+
+      return officeCompliance;
+    } catch (error) {
+      console.error("Database error in findOfficeComplianceByYear:", error);
+      throw new AppError(
+        "Failed to retrieve yearly office compliance data",
         ErrorType.DATABASE_ERROR
       );
     }

@@ -65,7 +65,7 @@ export const GET_EMISSION_TESTS = gql`
 
 // Query to fetch test schedules
 export const GET_TEST_SCHEDULES = gql`
-  query EmissionTestSchedules($year: Int, $quarter: Int) {
+  query EmissionTestSchedules($year: Int!, $quarter: Int) {
     emissionTestSchedules(year: $year, quarter: $quarter) {
       id
       assignedPersonnel

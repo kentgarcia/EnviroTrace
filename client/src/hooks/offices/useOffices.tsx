@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { gql, useQuery as useApolloQuery } from '@apollo/client';
 import { create } from 'zustand';
 import { useDebounce } from '../utils/useDebounce';
-import { useNetworkStatus } from '../utils/useNetworkStatus';
 
 /**
  * Office data with emission compliance stats
@@ -85,7 +84,6 @@ interface OfficeResponse {
 
 // Main hook for office data fetching and management
 export function useOffices() {
-    const { isOffline } = useNetworkStatus();
     const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
     const { filters, updateFilters, setOffices } = useOfficesStore();
@@ -103,7 +101,6 @@ export function useOffices() {
             quarter: filters.quarter,
             searchTerm: debouncedSearchTerm,
         },
-        skip: isOffline, // Skip query when offline
         fetchPolicy: 'network-only', // Don't use cache, always request fresh data
     });
 

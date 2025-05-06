@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
@@ -6,9 +7,9 @@ import { Badge } from "../ui/badge";
 interface StatCardProps {
   title: string;
   value: string | number;
+  icon: React.ReactNode;
   description?: string;
-  icon?: LucideIcon;
-  trend?: "up" | "down" | "neutral";
+  trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   className?: string;
   iconClassName?: string;
@@ -17,49 +18,35 @@ interface StatCardProps {
 export function StatCard({
   title,
   value,
+  icon,
   description,
-  icon: Icon,
   trend,
   trendValue,
   className,
-  iconClassName,
+  iconClassName
 }: StatCardProps) {
   return (
-    <Card className={cn("rounded-lg", className)}>
+    <Card className={cn("rounded-lg overflow-hidden", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {Icon && (
-          <div className={cn("h-10 w-10 rounded-md text-white flex items-center justify-center", iconClassName)}>
-            <Icon className="h-6 w-6 text-white" />
-          </div>
-        )}
+        <div className={cn("h-10 w-10 rounded-full flex items-center justify-center", iconClassName)}>
+          {icon}
+        </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
-        {(description || trendValue) && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1 gap-2">
-            {trend && (
-              <Badge
-                variant={
-                  trend === "up"
-                    ? "green"
-                    : trend === "down"
-                    ? "destructive"
-                    : "secondary"
-                }
-                className="px-2 py-0.5 text-xs font-medium"
-              >
-                {trend === "up"
-                  ? "Up"
-                  : trend === "down"
-                  ? "Down"
-                  : "Neutral"}
-              </Badge>
+      <CardContent className="p-6">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-2xl font-bold">{value}</div>
+            {trendValue && (
+              <div className={`text-xs ${trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-500'}`}>
+                {trendValue}
+              </div>
             )}
-            {trendValue && <span className="mr-1">{trendValue}</span>}
-            {description && <span>{description}</span>}
+            {description && (
+              <div className="text-sm text-muted-foreground mt-1">{description}</div>
+            )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

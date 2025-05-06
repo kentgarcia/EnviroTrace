@@ -9,6 +9,8 @@ export interface Vehicle {
   wheels: number;
   createdAt: Date;
   updatedAt: Date;
+  createdBy?: string; // New field to track the creator of the vehicle
+  updatedBy?: string; // New field to track the last updater of the vehicle
 }
 
 export interface EmissionTest {
