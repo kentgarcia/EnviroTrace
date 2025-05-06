@@ -1,25 +1,18 @@
 import React from "react";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import * as z from "zod";
+import { VehicleInput } from "@/hooks/vehicles/useVehicles";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
+import {
+    Form,
+    FormItem,
+    FormLabel,
+    FormControl,
+    FormMessage,
+    FormField
+} from "@/components/ui/form";
 
 // Form schema with validation
 const vehicleSchema = z.object({
@@ -31,6 +24,7 @@ const vehicleSchema = z.object({
         .max(100, { message: "Driver name must be at most 100 characters" }),
     contactNumber: z.string()
         .max(20, { message: "Contact number must be at most 20 characters" })
+        .default("")
         .optional(),
     officeName: z.string()
         .min(2, { message: "Office name must be at least 2 characters" }),
@@ -67,40 +61,25 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
     wheelCounts,
     offices
 }) => {
-    // Set default values - properly handling required fields
+    // Set default values
     const defaultValues: VehicleFormValues = {
         plateNumber: initialValues ? initialValues.plateNumber : "",
         driverName: initialValues ? initialValues.driverName : "",
         contactNumber: initialValues?.contactNumber || "",
-        officeName: initialValues ? initialValues.officeName : (offices.length > 0 ? offices[0] : "Default Office"),
-        vehicleType: initialValues ? initialValues.vehicleType : (vehicleTypes.length > 0 ? vehicleTypes[0] : "Default Type"),
-        engineType: initialValues ? initialValues.engineType : (engineTypes.length > 0 ? engineTypes[0] : "Default Engine"),
+        officeName: initialValues ? initialValues.officeName : (offices[0] || ""),
+        vehicleType: initialValues ? initialValues.vehicleType : (vehicleTypes[0] || ""),
+        engineType: initialValues ? initialValues.engineType : (engineTypes[0] || ""),
         wheels: initialValues ? initialValues.wheels : 4,
     };
 
-    // Initialize form
     const form = useForm<VehicleFormValues>({
-        resolver: zodResolver(vehicleSchema),
         defaultValues,
+        resolver: zodResolver(vehicleSchema),
     });
-
-    const handleSubmit = (values: VehicleFormValues) => {
-        // Ensure that we're passing a valid VehicleInput object
-        const vehicleData: VehicleInput = {
-            plateNumber: values.plateNumber,
-            driverName: values.driverName,
-            contactNumber: values.contactNumber,
-            officeName: values.officeName,
-            vehicleType: values.vehicleType,
-            engineType: values.engineType,
-            wheels: values.wheels
-        };
-        onSubmit(vehicleData);
-    };
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
                 {/* Plate Number */}
                 <FormField
                     control={form.control}
@@ -115,7 +94,6 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         </FormItem>
                     )}
                 />
-
                 {/* Driver Name */}
                 <FormField
                     control={form.control}
@@ -130,7 +108,6 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         </FormItem>
                     )}
                 />
-
                 {/* Contact Number */}
                 <FormField
                     control={form.control}
@@ -145,7 +122,6 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         </FormItem>
                     )}
                 />
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Office */}
                     <FormField
@@ -154,27 +130,22 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Office</FormLabel>
-                                <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                >
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select office" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {offices.map(office => (
-                                            // Make sure office is not empty string
-                                            <SelectItem key={office} value={office || `office-${office.length}`}>{office || "Unnamed Office"}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        list="office-list"
+                                        placeholder="Type or select office"
+                                    />
+                                </FormControl>
+                                <datalist id="office-list">
+                                    {offices.map(office => (
+                                        <option key={office} value={office} />
+                                    ))}
+                                </datalist>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-
                     {/* Vehicle Type */}
                     <FormField
                         control={form.control}
@@ -182,33 +153,22 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Vehicle Type</FormLabel>
-                                {vehicleTypes.length > 0 ? (
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select vehicle type" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {vehicleTypes.map(type => (
-                                                // Make sure type is not empty string
-                                                <SelectItem key={type} value={type || `type-${type.length}`}>{type || "Unnamed Type"}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <FormControl>
-                                        <Input {...field} placeholder="e.g. Sedan, SUV, Truck" />
-                                    </FormControl>
-                                )}
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        list="vehicle-type-list"
+                                        placeholder="Type or select vehicle type"
+                                    />
+                                </FormControl>
+                                <datalist id="vehicle-type-list">
+                                    {vehicleTypes.map(type => (
+                                        <option key={type} value={type} />
+                                    ))}
+                                </datalist>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-
                     {/* Engine Type */}
                     <FormField
                         control={form.control}
@@ -216,33 +176,22 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Engine Type</FormLabel>
-                                {engineTypes.length > 0 ? (
-                                    <Select
-                                        onValueChange={field.onChange}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select engine type" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {engineTypes.map(type => (
-                                                // Make sure type is not empty string
-                                                <SelectItem key={type} value={type || `engine-${type.length}`}>{type || "Unnamed Engine"}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <FormControl>
-                                        <Input {...field} placeholder="e.g. Gas, Diesel, Electric" />
-                                    </FormControl>
-                                )}
+                                <FormControl>
+                                    <Input
+                                        {...field}
+                                        list="engine-type-list"
+                                        placeholder="Type or select engine type"
+                                    />
+                                </FormControl>
+                                <datalist id="engine-type-list">
+                                    {engineTypes.map(type => (
+                                        <option key={type} value={type} />
+                                    ))}
+                                </datalist>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-
                     {/* Wheels */}
                     <FormField
                         control={form.control}
@@ -250,45 +199,26 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Wheels</FormLabel>
-                                {wheelCounts.length > 0 ? (
-                                    <Select
-                                        onValueChange={(value) => field.onChange(parseInt(value))}
-                                        defaultValue={field.value.toString()}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select wheel count" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {wheelCounts.map(count => (
-                                                // Make sure count is not empty string
-                                                <SelectItem key={count} value={count || "0"}>{count || "0"} wheels</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                ) : (
-                                    <FormControl>
-                                        <Input
-                                            type="number"
-                                            min={2}
-                                            max={18}
-                                            {...field}
-                                            onChange={(e) => field.onChange(Number(e.target.value))}
-                                        />
-                                    </FormControl>
-                                )}
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        min={2}
+                                        max={18}
+                                        step={1}
+                                        {...field}
+                                        onChange={e => field.onChange(Math.max(2, Math.min(18, Number(e.target.value))))}
+                                    />
+                                </FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
                 </div>
-
                 <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={onCancel}>
                         Cancel
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading || form.formState.isSubmitting}>
                         {isLoading ? "Saving..." : initialValues ? "Update Vehicle" : "Add Vehicle"}
                     </Button>
                 </div>

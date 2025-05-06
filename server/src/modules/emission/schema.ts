@@ -13,6 +13,7 @@ export const emissionTypeDefs = `#graphql
     latestTest: EmissionTest
     createdBy: ID
     updatedBy: ID
+    driverHistory: [DriverHistoryEntry!]!
   }
 
   type EmissionTest {
@@ -52,6 +53,13 @@ export const emissionTypeDefs = `#graphql
     latestTestQuarter: Int
     latestTestYear: Int
     latestTestResult: Boolean
+    driverHistory: [DriverHistoryEntry!]!
+  }
+
+  type DriverHistoryEntry {
+    driverName: String!
+    changedAt: String!
+    changedBy: ID
   }
 
   input VehicleInput {

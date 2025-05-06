@@ -1,6 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useLazyQuery } from "@apollo/client";
-import { useQuarterlyTestStore } from "./useQuarterlyTestStore";
 import {
   GET_TEST_SCHEDULES,
   GET_EMISSION_TESTS,
@@ -73,8 +72,24 @@ export interface Vehicle {
 }
 
 export function useQuarterlyTesting() {
-  const { scheduleFilters, testFilters, selectedScheduleId, actions } =
-    useQuarterlyTestStore();
+  // Local state instead of Zustand store
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(
+    null
+  );
+  const [scheduleFilters, setScheduleFilters] = useState<{
+    year: number;
+    quarter?: number;
+  }>({
+    year: new Date().getFullYear(),
+  });
+  // Use default values for testFilters to avoid undefined errors
+  const [testFilters, setTestFilters] = useState<{
+    year?: number;
+    quarter?: number;
+  }>({
+    year: scheduleFilters.year,
+    quarter: scheduleFilters.quarter,
+  });
 
   // Fetch test schedules based on filters
   const {
@@ -102,11 +117,16 @@ export function useQuarterlyTesting() {
   } = useQuery(GET_EMISSION_TESTS, {
     variables: {
       filters: {
-        year: testFilters.year,
-        quarter: testFilters.quarter,
+        year: testFilters.year || scheduleFilters.year,
+        quarter:
+          typeof testFilters.quarter === "number"
+            ? testFilters.quarter
+            : typeof scheduleFilters.quarter === "number"
+            ? scheduleFilters.quarter
+            : undefined,
       },
     },
-    skip: isLoadingSchedules || !testFilters.year || !testFilters.quarter,
+    skip: isLoadingSchedules || !(testFilters.year || scheduleFilters.year),
     fetchPolicy: "network-only",
   });
 
@@ -138,17 +158,37 @@ export function useQuarterlyTesting() {
 
   // Schedule selection handler
   const selectSchedule = (scheduleId: string | null) => {
-    actions.setSelectedScheduleId(scheduleId);
+    setSelectedScheduleId(scheduleId);
   };
 
   // Schedule filter handlers
   const handleYearChange = (year: number) => {
-    actions.setScheduleFilters({ year });
+    setScheduleFilters((prev) => ({ ...prev, year }));
   };
 
   const handleQuarterChange = (quarter: number | undefined) => {
-    actions.setScheduleFilters({ quarter });
+    setScheduleFilters((prev) => {
+      if (quarter === undefined) {
+        // Remove quarter from filters for 'all'
+        const { quarter: _q, ...rest } = prev;
+        return { ...rest };
+      }
+      return { ...prev, quarter };
+    });
   };
+
+  // When scheduleFilters change, update testFilters defaults if not set
+  useEffect(() => {
+    setTestFilters((prev) => {
+      const newFilters: { year?: number; quarter?: number } = {
+        year: prev.year ?? scheduleFilters.year,
+      };
+      if (typeof scheduleFilters.quarter === "number") {
+        newFilters.quarter = scheduleFilters.quarter;
+      }
+      return newFilters;
+    });
+  }, [scheduleFilters.year, scheduleFilters.quarter]);
 
   // Create mutations for schedules and tests
   const [createScheduleMutation] = useMutation(CREATE_TEST_SCHEDULE, {
@@ -172,7 +212,7 @@ export function useQuarterlyTesting() {
   const [deleteScheduleMutation] = useMutation(DELETE_TEST_SCHEDULE, {
     onCompleted: () => {
       refetchSchedules();
-      actions.setSelectedScheduleId(null);
+      setSelectedScheduleId(null);
     },
     onError: (error) => {
       console.error("Failed to delete schedule:", error);
@@ -323,6 +363,8 @@ export function useQuarterlyTesting() {
     selectSchedule,
     handleYearChange,
     handleQuarterChange,
+    setScheduleFilters,
+    setTestFilters,
 
     // API operations
     refetchSchedules,

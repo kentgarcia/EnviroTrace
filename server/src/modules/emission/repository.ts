@@ -192,6 +192,17 @@ export const EmissionRepository = {
         return (await this.findVehicleById(id)) as Vehicle;
       }
 
+      // Before update, get current driverName
+      const current = await this.findVehicleById(id);
+      let driverChanged = false;
+      if (
+        vehicleData.driverName !== undefined &&
+        current &&
+        vehicleData.driverName !== current.driverName
+      ) {
+        driverChanged = true;
+      }
+
       const result = await db.query(
         `UPDATE vehicles
          SET ${updateFields.join(", ")}
@@ -209,7 +220,13 @@ export const EmissionRepository = {
            updated_at AS "updatedAt"`,
         queryParams
       );
-
+      // If driver changed, insert into history
+      if (driverChanged) {
+        await db.query(
+          `INSERT INTO vehicle_driver_history (vehicle_id, driver_name, changed_by) VALUES ($1, $2, $3)`,
+          [id, vehicleData.driverName, updatedBy]
+        );
+      }
       return result.rows[0];
     } catch (error) {
       console.error("Database error in updateVehicle:", error);
@@ -953,6 +970,25 @@ export const EmissionRepository = {
       console.error("Database error in findOfficeComplianceByYear:", error);
       throw new AppError(
         "Failed to retrieve yearly office compliance data",
+        ErrorType.DATABASE_ERROR
+      );
+    }
+  },
+
+  async getDriverHistory(vehicleId: string) {
+    try {
+      const result = await db.query(
+        `SELECT driver_name AS "driverName", changed_at AS "changedAt", changed_by AS "changedBy"
+         FROM vehicle_driver_history
+         WHERE vehicle_id = $1
+         ORDER BY changed_at DESC`,
+        [vehicleId]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error("Database error in getDriverHistory:", error);
+      throw new AppError(
+        "Failed to retrieve driver history",
         ErrorType.DATABASE_ERROR
       );
     }

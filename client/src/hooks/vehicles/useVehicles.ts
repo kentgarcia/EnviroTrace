@@ -1,7 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { GET_VEHICLE_SUMMARIES } from "@/lib/emission-api";
-import { useVehicleStore } from "./useVehicleStore";
 import { gql, useQuery, useMutation } from "@apollo/client";
 
 // GraphQL mutations for vehicles
@@ -41,6 +40,12 @@ export const DELETE_VEHICLE = gql`
   }
 `;
 
+export interface DriverHistoryEntry {
+  driverName: string;
+  changedAt: string;
+  changedBy?: string;
+}
+
 export interface Vehicle {
   id: string;
   plateNumber: string;
@@ -54,6 +59,9 @@ export interface Vehicle {
   latestTestQuarter?: number;
   latestTestYear?: number;
   latestTestResult?: boolean;
+  createdBy?: string;
+  updatedBy?: string;
+  driverHistory?: DriverHistoryEntry[];
 }
 
 export interface VehicleInput {
@@ -76,7 +84,26 @@ export interface EmissionTest {
 }
 
 export function useVehicles() {
-  const { filters, actions } = useVehicleStore();
+  // Local filter state instead of useVehicleStore
+  const [filters, setFilters] = useState({
+    searchQuery: "",
+    statusFilter: "all",
+    vehicleTypeFilter: "",
+    engineTypeFilter: "",
+    wheelsFilter: "",
+    officeFilter: "",
+  });
+
+  const resetFilters = () => {
+    setFilters({
+      searchQuery: "",
+      statusFilter: "all",
+      vehicleTypeFilter: "",
+      engineTypeFilter: "",
+      wheelsFilter: "",
+      officeFilter: "",
+    });
+  };
 
   // Fetch all vehicles using Apollo Client
   const {
@@ -271,8 +298,8 @@ export function useVehicles() {
     error,
     refetch,
     filters,
-    setFilter: actions.setFilter,
-    resetFilters: actions.resetFilters,
+    setFilter: setFilters,
+    resetFilters,
     vehicleTypes,
     engineTypes,
     wheelCounts,

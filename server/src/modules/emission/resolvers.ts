@@ -272,5 +272,13 @@ export const emissionResolvers = {
       });
       return tests.length > 0 ? tests[0] : null;
     },
+    driverHistory: async (parent) => {
+      return await EmissionRepository.getDriverHistory(parent.id);
+    },
+  },
+  VehicleSummary: {
+    driverHistory: async (parent) => {
+      return await EmissionRepository.getDriverHistory(parent.id);
+    },
   },
 };

@@ -116,7 +116,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     // Format date helper
     const formatDate = (dateString?: string) => {
         if (!dateString) return "Not tested";
-        return format(new Date(dateString), 'MMM dd, yyyy');
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "Invalid date";
+        return format(date, 'MMM dd, yyyy');
     };
 
     // Render test result badge
@@ -340,20 +342,20 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     }
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-2 text-xs"> {/* Compressed table: smaller text */}
             {/* Column Visibility Toggle */}
-            <div className="flex justify-between items-center py-2">
-                <div className="text-sm text-muted-foreground">
+            <div className="flex justify-between items-center py-1"> {/* Less vertical padding */}
+                <div className="text-xs text-muted-foreground">
                     {table.getFilteredRowModel().rows.length} of {vehicles.length} vehicles
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <Settings className="mr-2 h-4 w-4" />
+                        <Button variant="outline" size="sm" className="h-7 px-2 py-1 text-xs">
+                            <Settings className="mr-2 h-3.5 w-3.5" />
                             View Options
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[180px]">
+                    <DropdownMenuContent align="end" className="w-[160px] text-xs">
                         <DropdownMenuCheckboxItem
                             checked={table.getColumn("select")?.getIsVisible()}
                             onCheckedChange={(value) =>
@@ -422,12 +424,12 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             </div>
 
             <div className="rounded-md border">
-                <Table>
+                <Table className="text-xs"> {/* Smaller font for table */}
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
+                            <TableRow key={headerGroup.id} className="h-7"> {/* Shorter row height */}
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
+                                    <TableHead key={header.id} className="px-2 py-1">
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
@@ -446,18 +448,21 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
-                                    className={row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : ''}
+                                    className={
+                                        (row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : '') +
+                                        ' h-7'
+                                    }
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell key={cell.id} className="px-2 py-1">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="text-center py-8">
+                            <TableRow className="h-7">
+                                <TableCell colSpan={columns.length} className="text-center py-4">
                                     No vehicles found.
                                 </TableCell>
                             </TableRow>
@@ -468,11 +473,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
             {/* Pagination Controls */}
             {table.getRowModel().rows?.length > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs"> {/* Less padding, smaller text */}
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Rows per page:</span>
+                        <span>Rows per page:</span>
                         <select
-                            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
                             value={table.getState().pagination.pageSize}
                             onChange={(e) => {
                                 table.setPageSize(Number(e.target.value));
@@ -488,13 +493,14 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                         <Button
                             variant="outline"
                             size="sm"
+                            className="h-7 px-2 py-1"
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
                         >
                             Previous
                         </Button>
 
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                        <span>
                             Page <span className="font-semibold">{table.getState().pagination.pageIndex + 1}</span> of{" "}
                             <span className="font-semibold">{table.getPageCount()}</span>
                         </span>
@@ -502,6 +508,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                         <Button
                             variant="outline"
                             size="sm"
+                            className="h-7 px-2 py-1"
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
                         >
@@ -509,7 +516,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                         </Button>
                     </div>
 
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                    <div>
                         {vehicles.length === 0
                             ? "0"
                             : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min(

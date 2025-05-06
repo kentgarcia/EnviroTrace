@@ -5,6 +5,7 @@ import {
     SortingState,
     PaginationState,
     VisibilityState,
+    ColumnFilter,
     ColumnFiltersState,
     OnChangeFn,
     RowSelectionState
@@ -56,21 +57,23 @@ export default function Vehicles() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 
-    // Search and filter states
-    const [searchQuery, setSearchQuery] = useState("");
-    const [showFilters, setShowFilters] = useState(false);
-
-    // TanStack Table states
-    const [sorting, setSorting] = useState<SortingState>([
-        { id: 'plateNumber', desc: false }
-    ]);
-    const [pagination, setPagination] = useState<PaginationState>({
-        pageIndex: 0,
-        pageSize: 10,
+    // Search, filter, and table states
+    const [tableState, setTableState] = useState({
+        searchQuery: "",
+        officeFilter: "",
+        vehicleTypeFilter: "",
+        engineTypeFilter: "",
+        wheelsFilter: "",
+        statusFilter: "all",
+        sorting: [{ id: 'plateNumber', desc: false }],
+        pagination: { pageIndex: 0, pageSize: 10 },
+        columnFilters: [] as ColumnFiltersState,
+        columnVisibility: {},
+        rowSelection: {},
     });
-    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-    const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+    // Show/hide advanced filters
+    const [showFilters, setShowFilters] = useState(false);
 
     // Get vehicles data and actions from our custom hook
     const {
@@ -88,6 +91,56 @@ export default function Vehicles() {
         editVehicle,
         removeVehicle,
     } = useVehicles();
+
+    // Simple search and filter state
+    const [search, setSearch] = useState("");
+    const [office, setOffice] = useState("");
+    const [vehicleType, setVehicleType] = useState("");
+    const [engineType, setEngineType] = useState("");
+    const [status, setStatus] = useState("");
+
+    // Simple filter logic
+    const filteredVehicles = vehicles.filter((v) => {
+        // Search by plate, driver, or office
+        const searchMatch =
+            v.plateNumber.toLowerCase().includes(search.toLowerCase()) ||
+            v.driverName.toLowerCase().includes(search.toLowerCase()) ||
+            v.officeName.toLowerCase().includes(search.toLowerCase());
+        // Office filter
+        const officeMatch = !office || v.officeName === office;
+        // Vehicle type filter
+        const typeMatch = !vehicleType || v.vehicleType === vehicleType;
+        // Engine type filter
+        const engineMatch = !engineType || v.engineType === engineType;
+        // Status filter
+        let statusMatch = true;
+        if (status === "passed") statusMatch = v.latestTestResult === true;
+        else if (status === "failed") statusMatch = v.latestTestResult === false;
+        else if (status === "untested") statusMatch = v.latestTestResult == null;
+        return searchMatch && officeMatch && typeMatch && engineMatch && statusMatch;
+    });
+
+    // Row selection handler
+    const setRowSelection = (rowSelection: Record<string, boolean>) => {
+        setTableState(prev => ({ ...prev, rowSelection }));
+    };
+
+    // Update filter state (remove duplicate from hook destructure)
+    const setTableFilter = useCallback((key: string, value: string) => {
+        setTableState(prev => ({ ...prev, [key]: value }));
+    }, []);
+    const resetTableFilters = () => {
+        setTableState(prev => ({
+            ...prev,
+            searchQuery: "",
+            officeFilter: "",
+            vehicleTypeFilter: "",
+            engineTypeFilter: "",
+            wheelsFilter: "",
+            statusFilter: "all",
+            columnFilters: [],
+        }));
+    };
 
     // Handle viewing vehicle details
     const handleViewVehicle = useCallback((vehicle: Vehicle) => {
@@ -160,7 +213,7 @@ export default function Vehicles() {
 
     // Handle deleting selected vehicles
     const handleDeleteSelected = () => {
-        const selectedIds = Object.keys(rowSelection);
+        const selectedIds = Object.keys(tableState.rowSelection);
         if (selectedIds.length === 0) return;
 
         toast.info(`${selectedIds.length} vehicles would be deleted. This feature is not yet implemented.`);
@@ -202,59 +255,56 @@ export default function Vehicles() {
         toast.success("Vehicle data exported successfully");
     };
 
-    // Handle search query
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setSearchQuery(value);
-        setFilter('searchQuery', value);
-    };
-
-    // Reset all filters
-    const handleResetFilters = () => {
-        resetFilters();
-        setSearchQuery("");
-        setColumnFilters([]);
-    };
+    // Table state change handlers
+    const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
+        setTableState(prev => ({
+            ...prev,
+            sorting: typeof updater === 'function' ? updater(prev.sorting) : updater,
+        }));
+    }, []);
+    const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
+        setTableState(prev => ({
+            ...prev,
+            pagination: typeof updater === 'function' ? updater(prev.pagination) : updater,
+        }));
+    }, []);
+    const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = useCallback((updater) => {
+        setTableState(prev => ({
+            ...prev,
+            columnFilters: typeof updater === 'function' ? updater(prev.columnFilters) : updater,
+        }));
+    }, []);
+    const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = useCallback((updater) => {
+        setTableState(prev => ({
+            ...prev,
+            columnVisibility: typeof updater === 'function' ? updater(prev.columnVisibility) : updater,
+        }));
+    }, []);
+    const handleRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback((updater) => {
+        setTableState(prev => ({
+            ...prev,
+            rowSelection: typeof updater === 'function' ? updater(prev.rowSelection) : updater,
+        }));
+    }, []);
 
     // Update filters from TanStack column filters
     useEffect(() => {
-        if (columnFilters.length > 0) {
-            columnFilters.forEach(filter => {
+        if (tableState.columnFilters.length > 0) {
+            (tableState.columnFilters as ColumnFilter[]).forEach(filter => {
                 if (filter.id === 'officeName' && typeof filter.value === 'string') {
-                    setFilter('officeFilter', filter.value);
+                    setTableFilter('officeFilter', filter.value);
                 } else if (filter.id === 'vehicleType' && typeof filter.value === 'string') {
-                    setFilter('vehicleTypeFilter', filter.value);
+                    setTableFilter('vehicleTypeFilter', filter.value);
                 } else if (filter.id === 'engineType' && typeof filter.value === 'string') {
-                    setFilter('engineTypeFilter', filter.value);
+                    setTableFilter('engineTypeFilter', filter.value);
                 } else if (filter.id === 'wheels' && typeof filter.value === 'string') {
-                    setFilter('wheelsFilter', filter.value);
+                    setTableFilter('wheelsFilter', filter.value);
                 } else if (filter.id === 'latestTestResult' && typeof filter.value === 'string') {
-                    setFilter('statusFilter', filter.value as any);
+                    setTableFilter('statusFilter', filter.value as any);
                 }
             });
         }
-    }, [columnFilters, setFilter]);
-
-    // Table state change handlers
-    const handleSortingChange: OnChangeFn<SortingState> = useCallback((updater) => {
-        setSorting(typeof updater === 'function' ? updater(sorting) : updater);
-    }, [sorting]);
-
-    const handlePaginationChange: OnChangeFn<PaginationState> = useCallback((updater) => {
-        setPagination(typeof updater === 'function' ? updater(pagination) : updater);
-    }, [pagination]);
-
-    const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = useCallback((updater) => {
-        setColumnFilters(typeof updater === 'function' ? updater(columnFilters) : updater);
-    }, [columnFilters]);
-
-    const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = useCallback((updater) => {
-        setColumnVisibility(typeof updater === 'function' ? updater(columnVisibility) : updater);
-    }, [columnVisibility]);
-
-    const handleRowSelectionChange: OnChangeFn<RowSelectionState> = useCallback((updater) => {
-        setRowSelection(typeof updater === 'function' ? updater(rowSelection) : updater);
-    }, [rowSelection]);
+    }, [tableState.columnFilters, setTableFilter]);
 
     // Filter button for different categories
     const FilterButton = ({
@@ -320,247 +370,39 @@ export default function Vehicles() {
                         {/* Search and Filters */}
                         <div className="mb-4">
                             {/* Search Bar */}
-                            <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search by plate number, driver, or office..."
-                                        value={searchQuery}
-                                        onChange={handleSearchChange}
-                                        className="pl-8"
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        onClick={() => setShowFilters(!showFilters)}
-                                        className={`h-10 w-10 ${showFilters ? 'bg-muted' : ''}`}
-                                    >
-                                        <Filter className="h-4 w-4" />
-                                    </Button>
-                                    {Object.values(filters).some(v => v !== "" && v !== "all") && (
-                                        <Button
-                                            variant="outline"
-                                            className="flex items-center gap-1.5"
-                                            onClick={handleResetFilters}
-                                        >
-                                            <X className="h-3.5 w-3.5" /> Clear filters
-                                        </Button>
-                                    )}
-                                </div>
+                            <div className="mb-4 flex flex-col sm:flex-row gap-2">
+                                <Input
+                                    placeholder="Search by plate, driver, or office..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="pl-8"
+                                />
+                                <select value={office} onChange={e => setOffice(e.target.value)}>
+                                    <option value="">All Offices</option>
+                                    {offices.map(o => <option key={o as string} value={o as string}>{o as string}</option>)}
+                                </select>
+                                <select value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
+                                    <option value="">All Types</option>
+                                    {vehicleTypes.map(t => <option key={t as string} value={t as string}>{t as string}</option>)}
+                                </select>
+                                <select value={engineType} onChange={e => setEngineType(e.target.value)}>
+                                    <option value="">All Engines</option>
+                                    {engineTypes.map(e => <option key={e as string} value={e as string}>{e as string}</option>)}
+                                </select>
+                                <select value={status} onChange={e => setStatus(e.target.value)}>
+                                    <option value="">All Status</option>
+                                    <option value="passed">Passed</option>
+                                    <option value="failed">Failed</option>
+                                    <option value="untested">Not Tested</option>
+                                </select>
                             </div>
-
-                            {/* Advanced Filters */}
-                            {showFilters && (
-                                <div className="mb-4 border rounded-lg p-4 bg-background">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                                        {/* Office Filter */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium mb-2">Office</h3>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <FilterButton
-                                                    filterKey="officeFilter"
-                                                    value="all"
-                                                    label="All"
-                                                    currentValue={filters.officeFilter}
-                                                />
-                                                {offices.slice(0, 2).map(office => (
-                                                    <FilterButton
-                                                        key={office as string}
-                                                        filterKey="officeFilter"
-                                                        value={office as string}
-                                                        label={office as string}
-                                                        currentValue={filters.officeFilter}
-                                                    />
-                                                ))}
-                                                {offices.length > 2 && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" size="sm" className="text-xs">
-                                                                More...
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start">
-                                                            {offices.slice(2).map(office => (
-                                                                <DropdownMenuItem
-                                                                    key={office as string}
-                                                                    onClick={() => setFilter('officeFilter', office as string)}
-                                                                >
-                                                                    {office as string}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Vehicle Type Filter */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium mb-2">Vehicle Type</h3>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <FilterButton
-                                                    filterKey="vehicleTypeFilter"
-                                                    value="all"
-                                                    label="All"
-                                                    currentValue={filters.vehicleTypeFilter}
-                                                />
-                                                {vehicleTypes.slice(0, 2).map(type => (
-                                                    <FilterButton
-                                                        key={type as string}
-                                                        filterKey="vehicleTypeFilter"
-                                                        value={type as string}
-                                                        label={type as string}
-                                                        currentValue={filters.vehicleTypeFilter}
-                                                    />
-                                                ))}
-                                                {vehicleTypes.length > 2 && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" size="sm" className="text-xs">
-                                                                More...
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start">
-                                                            {vehicleTypes.slice(2).map(type => (
-                                                                <DropdownMenuItem
-                                                                    key={type as string}
-                                                                    onClick={() => setFilter('vehicleTypeFilter', type as string)}
-                                                                >
-                                                                    {type as string}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Engine Type Filter */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium mb-2">Engine Type</h3>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <FilterButton
-                                                    filterKey="engineTypeFilter"
-                                                    value="all"
-                                                    label="All"
-                                                    currentValue={filters.engineTypeFilter}
-                                                />
-                                                {engineTypes.slice(0, 2).map(type => (
-                                                    <FilterButton
-                                                        key={type as string}
-                                                        filterKey="engineTypeFilter"
-                                                        value={type as string}
-                                                        label={type as string}
-                                                        currentValue={filters.engineTypeFilter}
-                                                    />
-                                                ))}
-                                                {engineTypes.length > 2 && (
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="outline" size="sm" className="text-xs">
-                                                                More...
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="start">
-                                                            {engineTypes.slice(2).map(type => (
-                                                                <DropdownMenuItem
-                                                                    key={type as string}
-                                                                    onClick={() => setFilter('engineTypeFilter', type as string)}
-                                                                >
-                                                                    {type as string}
-                                                                </DropdownMenuItem>
-                                                            ))}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Status Filter */}
-                                        <div className="space-y-2">
-                                            <h3 className="text-sm font-medium mb-2">Test Status</h3>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                <FilterButton
-                                                    filterKey="statusFilter"
-                                                    value="all"
-                                                    label="All"
-                                                    currentValue={filters.statusFilter}
-                                                />
-                                                <FilterButton
-                                                    filterKey="statusFilter"
-                                                    value="passed"
-                                                    label="Passed"
-                                                    currentValue={filters.statusFilter}
-                                                />
-                                                <FilterButton
-                                                    filterKey="statusFilter"
-                                                    value="failed"
-                                                    label="Failed"
-                                                    currentValue={filters.statusFilter}
-                                                />
-                                                <FilterButton
-                                                    filterKey="statusFilter"
-                                                    value="untested"
-                                                    label="Not Tested"
-                                                    currentValue={filters.statusFilter}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Active Filters Display */}
-                                    {Object.values(filters).some(v => v !== "" && v !== "all") && (
-                                        <div className="flex flex-wrap gap-1.5 mt-3 border-t pt-3">
-                                            <span className="text-sm text-muted-foreground">Active filters:</span>
-                                            {filters.officeFilter && (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    Office: {filters.officeFilter}
-                                                    <X
-                                                        className="h-3 w-3 cursor-pointer"
-                                                        onClick={() => setFilter('officeFilter', "")}
-                                                    />
-                                                </Badge>
-                                            )}
-                                            {filters.vehicleTypeFilter && (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    Type: {filters.vehicleTypeFilter}
-                                                    <X
-                                                        className="h-3 w-3 cursor-pointer"
-                                                        onClick={() => setFilter('vehicleTypeFilter', "")}
-                                                    />
-                                                </Badge>
-                                            )}
-                                            {filters.engineTypeFilter && (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    Engine: {filters.engineTypeFilter}
-                                                    <X
-                                                        className="h-3 w-3 cursor-pointer"
-                                                        onClick={() => setFilter('engineTypeFilter', "")}
-                                                    />
-                                                </Badge>
-                                            )}
-                                            {filters.statusFilter !== "all" && (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    Status: {filters.statusFilter}
-                                                    <X
-                                                        className="h-3 w-3 cursor-pointer"
-                                                        onClick={() => setFilter('statusFilter', "all")}
-                                                    />
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
 
                         {/* Selection Controls */}
-                        {Object.keys(rowSelection).length > 0 && (
+                        {Object.keys(tableState.rowSelection).length > 0 && (
                             <div className="mb-4 p-3 bg-muted rounded-md flex items-center justify-between">
                                 <p className="text-sm">
-                                    <span className="font-medium">{Object.keys(rowSelection).length}</span> vehicles selected
+                                    <span className="font-medium">{Object.keys(tableState.rowSelection).length}</span> vehicles selected
                                 </p>
                                 <div className="flex gap-2">
                                     <Button
@@ -588,21 +430,11 @@ export default function Vehicles() {
                                     <VehicleTableSkeleton />
                                 ) : (
                                     <VehicleTable
-                                        vehicles={vehicles}
+                                        vehicles={filteredVehicles}
                                         isLoading={isLoading}
                                         onView={handleViewVehicle}
                                         onEdit={handleEditVehicle}
                                         onDelete={handleDeleteConfirm}
-                                        sorting={sorting}
-                                        onSortingChange={handleSortingChange}
-                                        pagination={pagination}
-                                        onPaginationChange={handlePaginationChange}
-                                        columnFilters={columnFilters}
-                                        onColumnFiltersChange={handleColumnFiltersChange}
-                                        columnVisibility={columnVisibility}
-                                        onColumnVisibilityChange={handleColumnVisibilityChange}
-                                        rowSelection={rowSelection}
-                                        onRowSelectionChange={handleRowSelectionChange}
                                     />
                                 )}
                             </CardContent>

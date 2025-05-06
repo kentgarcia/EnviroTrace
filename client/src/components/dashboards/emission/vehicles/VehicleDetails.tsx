@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Vehicle, EmissionTest } from "@/hooks/vehicles/useVehicles";
 import { useQuery } from "@apollo/client";
-import { GET_EMISSION_TESTS } from "@/lib/emission-api";
+import { GET_EMISSION_TESTS, GET_VEHICLE_SUMMARY } from "@/lib/emission-api";
 
 interface VehicleDetailsProps {
     vehicle: Vehicle | null;
@@ -27,6 +27,15 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     onClose
 }) => {
     const [activeTab, setActiveTab] = useState("info");
+
+    // Fetch full vehicle details (with driverHistory) when modal is open
+    const { data: vehicleData, loading: isVehicleLoading } = useQuery(GET_VEHICLE_SUMMARY, {
+        variables: { id: vehicle?.id },
+        skip: !isOpen || !vehicle || vehicle.id.startsWith('pending-'),
+        fetchPolicy: "network-only"
+    });
+    const fullVehicle = vehicleData?.vehicleSummary || vehicle;
+    const driverHistory = fullVehicle?.driverHistory || [];
 
     // Fetch vehicle test history using Apollo Client
     const { data, loading: isLoading } = useQuery(GET_EMISSION_TESTS, {
@@ -46,14 +55,24 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
     const isPendingVehicle = vehicle.id.startsWith('pending-');
 
+    // Helper to parse Postgres timestamp with timezone
+    function parsePgTimestamp(dateString: string) {
+        if (!dateString) return null;
+        // Replace first space with T
+        let isoString = dateString.replace(' ', 'T');
+        // Fix timezone: convert +08 or -08 to +08:00 or -08:00
+        isoString = isoString.replace(/([+-]\d{2})(?!:)/, '$1:00');
+        return new Date(isoString);
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">{vehicle.plateNumber}</DialogTitle>
+                    <DialogTitle className="text-xl font-semibold">{vehicle?.plateNumber}</DialogTitle>
                     <DialogDescription>
                         Vehicle Details
-                        {isPendingVehicle && (
+                        {vehicle?.id.startsWith('pending-') && (
                             <Badge variant="outline" className="ml-2 text-yellow-600 bg-yellow-50">
                                 Pending Sync
                             </Badge>
@@ -62,11 +81,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </DialogHeader>
 
                 <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid grid-cols-2 mb-4">
+                    <TabsList className="grid grid-cols-3 mb-4">
                         <TabsTrigger value="info">Vehicle Information</TabsTrigger>
-                        <TabsTrigger value="history" disabled={isPendingVehicle}>
-                            Test History
-                        </TabsTrigger>
+                        <TabsTrigger value="history" disabled={vehicle?.id.startsWith('pending-')}>Test History</TabsTrigger>
+                        <TabsTrigger value="drivers" disabled={vehicle?.id.startsWith('pending-')}>Driver History</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="info" className="space-y-6">
@@ -108,7 +126,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Latest Test Date</h3>
-                                <p>{vehicle.latestTestDate ? format(new Date(vehicle.latestTestDate), 'MMM dd, yyyy') : "Not tested"}</p>
+                                <p>{vehicle.latestTestDate ? (isNaN(parsePgTimestamp(vehicle.latestTestDate as string)?.getTime() ?? NaN) ? "Invalid date" : format(parsePgTimestamp(vehicle.latestTestDate as string)!, 'MMM dd, yyyy')) : "Not tested"}</p>
                             </div>
 
                             <div className="space-y-2">
@@ -160,7 +178,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                     <TableBody>
                                         {testHistory.map((test) => (
                                             <TableRow key={test.id}>
-                                                <TableCell>{format(new Date(test.testDate), 'MMM dd, yyyy')}</TableCell>
+                                                <TableCell>{test.testDate && !isNaN(parsePgTimestamp(test.testDate as string)?.getTime() ?? NaN) ? format(parsePgTimestamp(test.testDate as string)!, 'MMM dd, yyyy') : "Invalid date"}</TableCell>
                                                 <TableCell>Q{test.quarter}, {test.year}</TableCell>
                                                 <TableCell>
                                                     {test.result ? (
@@ -173,6 +191,41 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                                         </Badge>
                                                     )}
                                                 </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="drivers">
+                        {isVehicleLoading ? (
+                            <div className="space-y-3">
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                            </div>
+                        ) : driverHistory.length === 0 ? (
+                            <div className="text-center py-6 text-gray-500">
+                                No driver history available for this vehicle.
+                            </div>
+                        ) : (
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Driver Name</TableHead>
+                                            <TableHead>Changed At</TableHead>
+                                            <TableHead>Changed By</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {driverHistory.map((entry, idx) => (
+                                            <TableRow key={idx}>
+                                                <TableCell>{entry.driverName}</TableCell>
+                                                <TableCell>{format(new Date(Number(entry.changedAt)), 'MMM dd, yyyy HH:mm')}</TableCell>
+                                                <TableCell>{entry.changedBy || '—'}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

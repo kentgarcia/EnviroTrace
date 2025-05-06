@@ -2,15 +2,13 @@ import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { DataChart } from "@/components/dashboard/DataChart";
-import { DashboardCard } from "@/components/dashboard/DashboardCard";
-import { 
-  ArrowRight, 
-  Leaf, 
-  MapPin, 
-  Ruler, 
-  TreePine, 
-  FileText, 
+import {
+  ArrowRight,
+  Leaf,
+  MapPin,
+  Ruler,
+  TreePine,
+  FileText,
   Banknote,
   CalendarDays,
   Trees,
@@ -25,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { RecordTable } from "@/components/dashboard/RecordTable";
 
 // Sample user data
 const userData = [
@@ -185,8 +182,8 @@ export default function UserManagement() {
                 <div className="mt-4 md:mt-0 flex items-center gap-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input 
-                      placeholder="Search here..." 
+                    <Input
+                      placeholder="Search here..."
                       className="pl-10 h-10 w-full min-w-[240px] rounded-full bg-gray-100"
                     />
                   </div>
@@ -205,100 +202,6 @@ export default function UserManagement() {
                 </div>
               </div>
             </div>
-
-            <section className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">User Statistics</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard
-                  title="Total Users"
-                  value="35"
-                  description="Active system users"
-                  icon={FileText}
-                  trend="up"
-                  trendValue="+3 this month"
-                />
-                <StatCard
-                  title="Active Users"
-                  value="28"
-                  description="Currently active"
-                  icon={FileText}
-                  trend="neutral"
-                  trendValue="80% of total"
-                />
-                <StatCard
-                  title="New Users"
-                  value="5"
-                  description="Added this month"
-                  icon={FileText}
-                  trend="up"
-                  trendValue="+2 from last month"
-                />
-                <StatCard
-                  title="Inactive Users"
-                  value="7"
-                  description="Pending or disabled"
-                  icon={FileText}
-                  trend="down"
-                  trendValue="-1 from last month"
-                />
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <DataChart
-                title="Role Distribution"
-                description="Users by role type"
-                data={roleDistributionData}
-                type="pie"
-                dataKeys={["value"]}
-                colors={["#4589FF", "#44BC66", "#FF5C5C", "#FFBB33", "#6B7280"]}
-              />
-              <DataChart
-                title="Department Distribution"
-                description="Users by department"
-                data={departmentDistributionData}
-                type="pie"
-                dataKeys={["value"]}
-                colors={["#4589FF", "#44BC66", "#FF5C5C", "#FFBB33", "#6B7280"]}
-              />
-            </section>
-
-            <section className="mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly User Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <DataChart
-                      title=""
-                      data={monthlyActivityData}
-                      type="bar"
-                      dataKeys={["count"]}
-                      colors={["#44BC66"]}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
-            <section className="mb-8">
-              <RecordTable
-                title="User Management"
-                records={userData.map(user => ({
-                  ...user,
-                  lastLogin: formatDate(user.lastLogin)
-                }))}
-                columns={[
-                  { key: "name", title: "Name" },
-                  { key: "email", title: "Email" },
-                  { key: "role", title: "Role" },
-                  { key: "department", title: "Department" },
-                  { key: "status", title: "Status" },
-                  { key: "lastLogin", title: "Last Login" }
-                ]}
-              />
-            </section>
 
             <section className="mb-8">
               <div className="flex justify-between items-center mb-4">

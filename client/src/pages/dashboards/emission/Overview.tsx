@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardData } from "@/hooks/emissions/useDashboardData";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
 import { NetworkStatus } from "@/components/layout/NetworkStatus";
@@ -12,28 +11,6 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { CarFront, BarChart3, Building2, CheckCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-
-// Component for skeleton loading placeholders
-const LoadingSkeleton = () => {
-    return (
-        <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Skeleton className="w-full h-[120px] rounded-md" />
-                <Skeleton className="w-full h-[120px] rounded-md" />
-                <Skeleton className="w-full h-[120px] rounded-md" />
-                <Skeleton className="w-full h-[120px] rounded-md" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="w-full h-[300px] rounded-md" />
-                <Skeleton className="w-full h-[300px] rounded-md" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Skeleton className="w-full h-[350px] rounded-md" />
-                <Skeleton className="w-full h-[350px] rounded-md" />
-            </div>
-        </div>
-    );
-};
 
 const GovEmissionOverview: React.FC = () => {
     // State for year and quarter selection
@@ -223,75 +200,72 @@ const GovEmissionOverview: React.FC = () => {
                                 </div>
                             </div>
 
-                            {loading ? (
-                                <LoadingSkeleton />
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Statistics Cards Section */}
-                                    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <StatCard
-                                            title="Total Vehicles"
-                                            value={formatNumber(data.totalVehicles)}
-                                            icon={<CarFront className="h-5 w-5" />}
-                                            iconClassName="bg-blue-50 text-blue-700"
-                                        />
-                                        <StatCard
-                                            title="Tested Vehicles"
-                                            value={formatNumber(data.testedVehicles)}
-                                            icon={<CheckCircle className="h-5 w-5" />}
-                                            iconClassName="bg-green-50 text-green-700"
-                                        />
-                                        <StatCard
-                                            title="Compliance Rate"
-                                            value={`${data.complianceRate}%`}
-                                            icon={<BarChart3 className="h-5 w-5" />}
-                                            iconClassName="bg-purple-50 text-purple-700"
-                                        />
-                                        <StatCard
-                                            title="Office Departments"
-                                            value={formatNumber(data.officeDepartments)}
-                                            icon={<Building2 className="h-5 w-5" />}
-                                            iconClassName="bg-amber-50 text-amber-700"
-                                        />
-                                    </section>
+                            {/* Show dashboard with placeholder values when loading */}
+                            <div className="space-y-6">
+                                {/* Statistics Cards Section */}
+                                <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <StatCard
+                                        title="Total Vehicles"
+                                        value={formatNumber(loading ? 0 : data.totalVehicles)}
+                                        icon={<CarFront className="h-5 w-5" />}
+                                        iconClassName="bg-blue-50 text-blue-700"
+                                    />
+                                    <StatCard
+                                        title="Tested Vehicles"
+                                        value={formatNumber(loading ? 0 : data.testedVehicles)}
+                                        icon={<CheckCircle className="h-5 w-5" />}
+                                        iconClassName="bg-green-50 text-green-700"
+                                    />
+                                    <StatCard
+                                        title="Compliance Rate"
+                                        value={`${loading ? 0 : data.complianceRate}%`}
+                                        icon={<BarChart3 className="h-5 w-5" />}
+                                        iconClassName="bg-purple-50 text-purple-700"
+                                    />
+                                    <StatCard
+                                        title="Office Departments"
+                                        value={formatNumber(loading ? 0 : data.officeDepartments)}
+                                        icon={<Building2 className="h-5 w-5" />}
+                                        iconClassName="bg-amber-50 text-amber-700"
+                                    />
+                                </section>
 
-                                    {/* First row of charts - Pie charts */}
-                                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <EChartsPieChart
-                                            title="Vehicles by Engine Type"
-                                            data={data.engineTypeData}
-                                            height={300}
-                                            colors={['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']}
-                                        />
-                                        <EChartsPieChart
-                                            title="Vehicles by Wheel Count"
-                                            data={data.wheelCountData}
-                                            height={300}
-                                            colors={['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']}
-                                        />
-                                    </section>
+                                {/* First row of charts - Pie charts */}
+                                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <EChartsPieChart
+                                        title="Vehicles by Engine Type"
+                                        data={loading ? [] : data.engineTypeData}
+                                        height={300}
+                                        colors={['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']}
+                                    />
+                                    <EChartsPieChart
+                                        title="Vehicles by Wheel Count"
+                                        data={loading ? [] : data.wheelCountData}
+                                        height={300}
+                                        colors={['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']}
+                                    />
+                                </section>
 
-                                    {/* Second row of charts - Bar charts */}
-                                    <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <EChartsBarChart
-                                            title="Vehicles by Type"
-                                            data={data.vehicleTypeData}
-                                            height={350}
-                                            layout="horizontal"
-                                            color="#2563eb"
-                                            valueFormatter={(value) => value.toString()}
-                                        />
-                                        <EChartsBarChart
-                                            title="Compliance by Office"
-                                            data={data.officeComplianceData}
-                                            height={350}
-                                            layout="horizontal"
-                                            color="#7c3aed"
-                                            valueFormatter={(value) => `${value}%`}
-                                        />
-                                    </section>
-                                </div>
-                            )}
+                                {/* Second row of charts - Bar charts */}
+                                <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <EChartsBarChart
+                                        title="Vehicles by Type"
+                                        data={loading ? [] : data.vehicleTypeData}
+                                        height={350}
+                                        layout="horizontal"
+                                        color="#2563eb"
+                                        valueFormatter={(value) => value.toString()}
+                                    />
+                                    <EChartsBarChart
+                                        title="Compliance by Office"
+                                        data={loading ? [] : data.officeComplianceData}
+                                        height={350}
+                                        layout="horizontal"
+                                        color="#7c3aed"
+                                        valueFormatter={(value) => `${value}%`}
+                                    />
+                                </section>
+                            </div>
                         </main>
                     </div>
                 </div>

@@ -17,6 +17,11 @@ export const GET_VEHICLE_SUMMARIES = gql`
       latestTestQuarter
       latestTestYear
       latestTestResult
+      driverHistory {
+        driverName
+        changedAt
+        changedBy
+      }
     }
   }
 `;
@@ -37,6 +42,11 @@ export const GET_VEHICLE_SUMMARY = gql`
       latestTestQuarter
       latestTestYear
       latestTestResult
+      driverHistory {
+        driverName
+        changedAt
+        changedBy
+      }
     }
   }
 `;
