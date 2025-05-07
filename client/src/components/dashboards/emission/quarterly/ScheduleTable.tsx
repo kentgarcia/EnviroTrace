@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import {
     Table,
@@ -13,11 +13,15 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+    DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, ClipboardList, Edit, Trash, Loader2 } from "lucide-react";
+import { MoreHorizontal, ClipboardList, Edit, Trash, Loader2, Settings, GripHorizontal, Rows3, List } from "lucide-react";
 import { TestSchedule } from "@/hooks/quarterly/useQuarterlyTesting";
+import { EmissionTest } from "@/hooks/quarterly/useQuarterlyTesting";
+import EmissionTestTable from "./EmissionTestTable";
 import {
     useReactTable,
     getCoreRowModel,
@@ -27,12 +31,18 @@ import {
     SortingState,
     flexRender,
     PaginationState,
+    VisibilityState,
+    getFilteredRowModel,
 } from "@tanstack/react-table";
 
 interface ScheduleTableProps {
     schedules: TestSchedule[];
     isLoading: boolean;
-    onViewTests: (schedule: TestSchedule) => void;
+    emissionTests: EmissionTest[];
+    selectedScheduleId: string | null;
+    setSelectedScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
+    onEditTest: (test: EmissionTest) => void;
+    onDeleteTest: (test: EmissionTest) => void;
     onEditSchedule: (schedule: TestSchedule) => void;
     onDeleteSchedule: (schedule: TestSchedule) => void;
 }
@@ -40,12 +50,26 @@ interface ScheduleTableProps {
 export const ScheduleTable: React.FC<ScheduleTableProps> = ({
     schedules,
     isLoading,
-    onViewTests,
+    emissionTests,
+    selectedScheduleId,
+    setSelectedScheduleId,
+    onEditTest,
+    onDeleteTest,
     onEditSchedule,
     onDeleteSchedule,
 }) => {
     // Helper to detect if a schedule is pending sync
     const isPendingSync = (id: string) => id.startsWith('pending-');
+
+    // Density state
+    const [density, setDensity] = useState<'compact' | 'normal' | 'spacious'>('normal');
+    const densityClasses = {
+        compact: 'text-xs h-6',
+        normal: 'text-sm h-9',
+        spacious: 'text-base h-12',
+    };
+    // Column visibility state
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
     // Table columns
     const columns: ColumnDef<TestSchedule>[] = [
@@ -71,17 +95,17 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             header: 'Date',
             cell: ({ row }) => {
                 const value = row.original.conductedOn;
-                let date: Date | null = null;
-                if (typeof value === "string" && !isNaN(Date.parse(value))) {
+                let date: Date;
+                if (typeof value === 'number') {
                     date = new Date(value);
-                } else if (typeof value === "number" || (typeof value === "string" && /^\d+$/.test(value))) {
+                } else if (typeof value === 'string' && /^\d+$/.test(value)) {
                     date = new Date(Number(value));
+                } else {
+                    date = new Date(value);
                 }
                 return (
                     <>
-                        {date && !isNaN(date.getTime())
-                            ? format(date, "MMM dd, yyyy")
-                            : "Invalid date"}
+                        {!isNaN(date.getTime()) ? format(date, "MMM dd, yyyy") : "Invalid date"}
                         {isPendingSync(row.original.id) && (
                             <Badge variant="outline" className="ml-2 text-yellow-600 bg-yellow-50">
                                 Pending Sync
@@ -98,13 +122,13 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                 <div className="text-right">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
+                            <Button variant="ghost" className="h-8 w-8 p-0 vehicle-action-btn">
                                 <span className="sr-only">Open menu</span>
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onViewTests(row.original)}>
+                            <DropdownMenuItem onClick={() => setSelectedScheduleId(row.original.id)}>
                                 <ClipboardList className="mr-2 h-4 w-4" />
                                 <span>View Tests</span>
                             </DropdownMenuItem>
@@ -133,21 +157,18 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
     const table = useReactTable({
         data: schedules,
         columns,
-        state: { sorting, pagination },
+        state: { sorting, pagination, columnVisibility },
         onSortingChange: setSorting,
         onPaginationChange: setPagination,
+        onColumnVisibilityChange: setColumnVisibility,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
     });
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Loading schedules...</span>
-            </div>
-        );
+        return <div className="text-center py-8 text-muted-foreground">Loading schedules...</div>;
     }
 
     if (schedules.length === 0) {
@@ -158,40 +179,175 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
         );
     }
 
+    // Split view: left = schedule list, right = details
+    if (selectedScheduleId) {
+        const selectedSchedule = schedules.find(s => s.id === selectedScheduleId);
+        const filteredTests = emissionTests.filter(
+            t => t.year === selectedSchedule?.year && t.quarter === selectedSchedule?.quarter
+        );
+        return (
+            <div className="flex gap-4">
+                {/* Left: Schedule List */}
+                <div className="w-1/2 border-r pr-2">
+                    <div className="font-semibold mb-2">Test Schedules</div>
+                    <div className="rounded-md border overflow-x-auto">
+                        <Table className="text-sm">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Year</TableHead>
+                                    <TableHead>Quarter</TableHead>
+                                    <TableHead>Personnel</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Date</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {schedules.map((schedule) => (
+                                    <TableRow
+                                        key={schedule.id}
+                                        className={`cursor-pointer ${schedule.id === selectedScheduleId ? 'bg-primary/10 font-bold' : ''}`}
+                                        onClick={() => setSelectedScheduleId(schedule.id)}
+                                    >
+                                        <TableCell>{schedule.year}</TableCell>
+                                        <TableCell>{`Q${schedule.quarter}`}</TableCell>
+                                        <TableCell>{schedule.assignedPersonnel}</TableCell>
+                                        <TableCell>{schedule.location}</TableCell>
+                                        <TableCell>{(() => {
+                                            const value = schedule.conductedOn;
+                                            let date: Date;
+                                            if (typeof value === 'number') {
+                                                date = new Date(value);
+                                            } else if (typeof value === 'string' && /^\d+$/.test(value)) {
+                                                date = new Date(Number(value));
+                                            } else {
+                                                date = new Date(value);
+                                            }
+                                            return !isNaN(date.getTime()) ? format(date, "MMM dd, yyyy") : "Invalid date";
+                                        })()}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <Button className="mt-4 w-full" variant="outline" onClick={() => setSelectedScheduleId(null)}>
+                        Back to All Schedules
+                    </Button>
+                </div>
+                {/* Right: Details */}
+                <div className="w-1/2 pl-2">
+                    <div className="font-semibold mb-2">Test Results for Q{selectedSchedule?.quarter}, {selectedSchedule?.year}</div>
+                    <EmissionTestTable
+                        tests={filteredTests}
+                        isLoading={isLoading}
+                        onEditTest={onEditTest}
+                        onDeleteTest={onDeleteTest}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="rounded-md border text-xs">
-            <Table className="text-xs">
-                <TableHeader>
-                    {table.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id} className="h-7">
-                            {headerGroup.headers.map(header => (
-                                <TableHead key={header.id} className="px-2 py-1">
-                                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                                </TableHead>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableHeader>
-                <TableBody>
-                    {table.getRowModel().rows.length ? (
-                        table.getRowModel().rows.map(row => (
-                            <TableRow key={row.id} className="h-7">
-                                {row.getVisibleCells().map(cell => (
-                                    <TableCell key={cell.id} className="px-2 py-1">
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </TableCell>
+        <div className="space-y-2 text-xs">
+            {/* Column Visibility Toggle & Density */}
+            <div className="flex justify-between items-center py-1">
+                <div className="text-xs text-muted-foreground">
+                    {table.getFilteredRowModel().rows.length} schedules
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs">Density:</span>
+                    <Button size="sm" variant={density === 'compact' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('compact')} title="Compact"><GripHorizontal className="h-4 w-4" /></Button>
+                    <Button size="sm" variant={density === 'normal' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('normal')} title="Normal"><Rows3 className="h-4 w-4" /></Button>
+                    <Button size="sm" variant={density === 'spacious' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('spacious')} title="Spacious"><List className="h-4 w-4" /></Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-7 px-2 py-1 text-xs bg-white min-h-[28px]">
+                                <Settings className="mr-2 h-3.5 w-3.5" />
+                                View Options
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] text-xs bg-white">
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("year")?.getIsVisible()}
+                                onCheckedChange={value => table.getColumn("year")?.toggleVisibility(value)}
+                            >
+                                Year
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("quarter")?.getIsVisible()}
+                                onCheckedChange={value => table.getColumn("quarter")?.toggleVisibility(value)}
+                            >
+                                Quarter
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("assignedPersonnel")?.getIsVisible()}
+                                onCheckedChange={value => table.getColumn("assignedPersonnel")?.toggleVisibility(value)}
+                            >
+                                Personnel
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("location")?.getIsVisible()}
+                                onCheckedChange={value => table.getColumn("location")?.toggleVisibility(value)}
+                            >
+                                Location
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("conductedOn")?.getIsVisible()}
+                                onCheckedChange={value => table.getColumn("conductedOn")?.toggleVisibility(value)}
+                            >
+                                Date
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => table.resetColumnVisibility()}
+                                className="justify-center text-center"
+                            >
+                                Reset View
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
+
+            <div className="rounded-md border overflow-x-auto bg-white">
+                <Table className={density === 'compact' ? 'text-xs' : density === 'spacious' ? 'text-base' : 'text-sm'}>
+                    <TableHeader>
+                        {table.getHeaderGroups().map(headerGroup => (
+                            <TableRow key={headerGroup.id} className={densityClasses[density]}>
+                                {headerGroup.headers.map(header => (
+                                    <TableHead key={header.id} className="px-2 py-1">
+                                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                                    </TableHead>
                                 ))}
                             </TableRow>
-                        ))
-                    ) : (
-                        <TableRow className="h-7">
-                            <TableCell colSpan={columns.length} className="text-center py-4">
-                                No schedules found.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
+                        ))}
+                    </TableHeader>
+                    <TableBody>
+                        {table.getRowModel().rows.length ? (
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow
+                                    key={row.id}
+                                    className={`transition cursor-pointer ${densityClasses[density]} ${(row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : '')}`}
+                                    onClick={() => setSelectedScheduleId(row.original.id)}
+                                >
+                                    {row.getVisibleCells().map(cell => (
+                                        <TableCell key={cell.id} className="px-2 py-1">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow className={densityClasses[density]}>
+                                <TableCell colSpan={columns.length} className="text-center py-4">
+                                    No schedules found.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
             {/* Pagination Controls */}
             {table.getRowModel().rows.length > 0 && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs">
@@ -230,14 +386,6 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
                         >
                             Next
                         </Button>
-                    </div>
-                    <div>
-                        {schedules.length === 0
-                            ? "0"
-                            : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min(
-                                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                                table.getFilteredRowModel().rows.length
-                            )}`} of {table.getFilteredRowModel().rows.length} items
                     </div>
                 </div>
             )}

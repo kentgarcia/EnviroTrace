@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { gql, useQuery as useApolloQuery } from '@apollo/client';
-import { create } from 'zustand';
-import { useDebounce } from '../utils/useDebounce';
+import { gql, useQuery } from '@apollo/client';
+import { useMemo, useState, useEffect, useCallback } from 'react';
+
+// Use the vehicle summaries query from emission-api
+import { GET_VEHICLE_SUMMARIES } from '@/lib/emission-api';
 
 /**
  * Office data with emission compliance stats
@@ -27,121 +28,113 @@ export interface OfficesFilter {
     searchTerm?: string;
 }
 
-// GraphQL query for fetching office data
-export const GET_OFFICES = gql`
-  query GetOffices($year: Int!, $quarter: Int!, $searchTerm: String) {
-    offices(year: $year, quarter: $quarter, searchTerm: $searchTerm) {
-      id
-      name
-      code
-      address
-      contact
-      vehicleCount
-      testedCount
-      passedCount
-    }
-  }
-`;
-
-/**
- * Zustand store for offices state
- */
-interface OfficesStore {
-    offices: OfficeData[];
-    selectedOfficeId: string | null;
-    filters: OfficesFilter;
-    setOffices: (offices: OfficeData[]) => void;
-    setSelectedOfficeId: (id: string | null) => void;
-    updateFilters: (filters: Partial<OfficesFilter>) => void;
-}
-
-export const useOfficesStore = create<OfficesStore>((set) => ({
-    offices: [],
-    selectedOfficeId: null,
-    filters: {
+// Main hook for office data fetching and management
+export function useOffices() {
+    // Filters for year, quarter, and search
+    const [filters, setFilters] = useState<OfficesFilter>({
         year: new Date().getFullYear(),
         quarter: Math.ceil((new Date().getMonth() + 1) / 3),
         searchTerm: '',
-    },
-    setOffices: (offices) => set({ offices }),
-    setSelectedOfficeId: (id) => set({ selectedOfficeId: id }),
-    updateFilters: (filters) => set((state) => ({
-        filters: { ...state.filters, ...filters }
-    })),
-}));
-
-// Define interface for GraphQL response
-interface OfficeResponse {
-    id: string;
-    name: string;
-    code: string;
-    address?: string;
-    contact?: string;
-    vehicleCount: number;
-    testedCount: number;
-    passedCount: number;
-}
-
-// Main hook for office data fetching and management
-export function useOffices() {
+    });
     const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
-    const { filters, updateFilters, setOffices } = useOfficesStore();
-    const debouncedSearchTerm = useDebounce(filters.searchTerm || '', 300);
-
-    // Query for fetching office data using Apollo Client
-    const {
-        data,
-        loading: isLoading,
-        error,
-        refetch
-    } = useApolloQuery(GET_OFFICES, {
-        variables: {
-            year: filters.year,
-            quarter: filters.quarter,
-            searchTerm: debouncedSearchTerm,
-        },
-        fetchPolicy: 'network-only', // Don't use cache, always request fresh data
+    // Fetch all vehicles
+    const { data, loading: isLoading, error, refetch } = useQuery(GET_VEHICLE_SUMMARIES, {
+        fetchPolicy: 'network-only',
     });
 
-    // Process the data to match the expected structure
-    const officeData = useMemo(() => data?.offices ? data.offices.map((office: OfficeResponse) => ({
-        ...office,
-        complianceRate: office.vehicleCount > 0
-            ? Math.round((office.passedCount / office.vehicleCount) * 100)
-            : 0
-    })) : [], [data]);
+    // Group vehicles by office and aggregate stats
+    const officeData = useMemo(() => {
+        if (!data?.vehicleSummaries) return [];
 
-    // Update error message if there's an error
+        // Filter vehicles by year/quarter if available
+        let vehicles = data.vehicleSummaries;
+
+        if (filters.year) {
+            vehicles = vehicles.filter(v => !v.latestTestYear || v.latestTestYear === filters.year);
+        }
+
+        if (filters.quarter) {
+            vehicles = vehicles.filter(v => !v.latestTestQuarter || v.latestTestQuarter === filters.quarter);
+        }
+
+        if (filters.searchTerm) {
+            const term = filters.searchTerm.toLowerCase();
+            vehicles = vehicles.filter(v =>
+                v.officeName?.toLowerCase().includes(term) ||
+                v.plateNumber?.toLowerCase().includes(term) ||
+                v.driverName?.toLowerCase().includes(term)
+            );
+        }
+
+        // Group by officeName
+        const officeMap: Record<string, OfficeData> = {};
+
+        vehicles.forEach(v => {
+            if (!v.officeName) return;
+
+            if (!officeMap[v.officeName]) {
+                officeMap[v.officeName] = {
+                    id: v.officeName,
+                    name: v.officeName,
+                    code: v.officeName.split(' ').map(w => w[0]).join('').toUpperCase(),
+                    vehicleCount: 0,
+                    testedCount: 0,
+                    passedCount: 0,
+                    complianceRate: 0,
+                };
+            }
+
+            const office = officeMap[v.officeName];
+            office.vehicleCount++;
+
+            if (v.latestTestResult !== undefined && v.latestTestResult !== null) {
+                office.testedCount++;
+                if (v.latestTestResult === true) office.passedCount++;
+            }
+        });
+
+        // Calculate compliance rate
+        Object.values(officeMap).forEach(office => {
+            office.complianceRate = office.vehicleCount > 0 ? Math.round((office.passedCount / office.vehicleCount) * 100) : 0;
+        });
+
+        return Object.values(officeMap);
+    }, [data?.vehicleSummaries, filters]);
+
+    // Calculate summary stats only when officeData changes
+    const summaryStats = useMemo(() => {
+        const totalOffices = officeData.length;
+        const totalVehicles = officeData.reduce((sum, o) => sum + o.vehicleCount, 0);
+        const totalCompliant = officeData.reduce((sum, o) => sum + (o.complianceRate >= 80 ? 1 : 0), 0);
+        const overallComplianceRate = totalOffices > 0 ? Math.round((totalCompliant / totalOffices) * 100) : 0;
+
+        return {
+            totalOffices,
+            totalVehicles,
+            totalCompliant,
+            overallComplianceRate,
+        };
+    }, [officeData]);
+
+    // Handle error effect
     useEffect(() => {
         if (error) {
-            console.error('Error fetching offices:', error);
             setErrorMessage('Failed to load office data. Please try again.');
         } else {
             setErrorMessage(undefined);
         }
     }, [error]);
 
-    // Update the store when data changes
-    useEffect(() => {
-        if (data?.offices) {
-            setOffices(officeData);
-        }
-    }, [data, setOffices, officeData]);
+    // Memoize the filter change handler to prevent recreation on each render
+    const handleFilterChange = useCallback((filterUpdates: Partial<OfficesFilter>) => {
+        setFilters(prev => ({ ...prev, ...filterUpdates }));
+    }, []);
 
-    // Function to handle filter changes
-    const handleFilterChange = (filterUpdates: Partial<OfficesFilter>) => {
-        updateFilters(filterUpdates);
-    };
-
-    // Calculate summary statistics
-    const totalOffices = officeData.length;
-    const totalVehicles = officeData.reduce((sum, office) => sum + office.vehicleCount, 0);
-    const totalCompliant = officeData.reduce((sum, office) =>
-        sum + (office.complianceRate >= 80 ? 1 : 0), 0);
-    const overallComplianceRate = totalOffices > 0
-        ? Math.round((totalCompliant / totalOffices) * 100)
-        : 0;
+    // Memoize the refetch function to ensure stability
+    const memoizedRefetch = useCallback(() => {
+        return refetch();
+    }, [refetch]);
 
     return {
         officeData,
@@ -149,12 +142,7 @@ export function useOffices() {
         errorMessage,
         filters,
         handleFilterChange,
-        refetch,
-        summaryStats: {
-            totalOffices,
-            totalVehicles,
-            totalCompliant,
-            overallComplianceRate,
-        },
+        refetch: memoizedRefetch,
+        summaryStats,
     };
 }

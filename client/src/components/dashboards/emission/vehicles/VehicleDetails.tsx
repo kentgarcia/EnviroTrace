@@ -1,17 +1,12 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Vehicle, EmissionTest } from "@/hooks/vehicles/useVehicles";
+import { Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
 import { useQuery } from "@apollo/client";
 import { GET_EMISSION_TESTS, GET_VEHICLE_SUMMARY } from "@/lib/emission-api";
 
@@ -19,23 +14,53 @@ interface VehicleDetailsProps {
     vehicle: Vehicle | null;
     isOpen: boolean;
     onClose: () => void;
+    onEditVehicle?: (data: VehicleInput) => void;
+    isEditing?: boolean;
+    onRegisterRefetch?: (refetch: () => void) => void;
 }
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     vehicle,
-    isOpen,
-    onClose
+    isOpen, // not used for inline
+    onClose, // not used for inline
+    onEditVehicle,
+    isEditing: isEditingProp = false,
+    onRegisterRefetch,
 }) => {
     const [activeTab, setActiveTab] = useState("info");
+    const [isEditing, setIsEditing] = useState(isEditingProp);
+    // Always use the latest vehicle data for editing
+    const [editData, setEditData] = useState<VehicleInput | null>(null);
 
     // Fetch full vehicle details (with driverHistory) when modal is open
-    const { data: vehicleData, loading: isVehicleLoading } = useQuery(GET_VEHICLE_SUMMARY, {
+    const { data: vehicleData, loading: isVehicleLoading, refetch } = useQuery(GET_VEHICLE_SUMMARY, {
         variables: { id: vehicle?.id },
         skip: !isOpen || !vehicle || vehicle.id.startsWith('pending-'),
         fetchPolicy: "network-only"
     });
+    // Register the refetch function for parent
+    React.useEffect(() => {
+        if (onRegisterRefetch) {
+            onRegisterRefetch(() => refetch());
+        }
+    }, [refetch, onRegisterRefetch, vehicle?.id]);
     const fullVehicle = vehicleData?.vehicleSummary || vehicle;
     const driverHistory = fullVehicle?.driverHistory || [];
+
+    // When entering edit mode, set editData to current vehicle data
+    React.useEffect(() => {
+        if (isEditing && fullVehicle) {
+            setEditData({
+                plateNumber: fullVehicle.plateNumber,
+                driverName: fullVehicle.driverName,
+                contactNumber: fullVehicle.contactNumber || "",
+                officeName: fullVehicle.officeName,
+                vehicleType: fullVehicle.vehicleType,
+                engineType: fullVehicle.engineType,
+                wheels: fullVehicle.wheels,
+            });
+        }
+    }, [isEditing, fullVehicle]);
 
     // Fetch vehicle test history using Apollo Client
     const { data, loading: isLoading } = useQuery(GET_EMISSION_TESTS, {
@@ -66,77 +91,113 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-semibold">{vehicle?.plateNumber}</DialogTitle>
-                    <DialogDescription>
-                        Vehicle Details
-                        {vehicle?.id.startsWith('pending-') && (
-                            <Badge variant="outline" className="ml-2 text-yellow-600 bg-yellow-50">
-                                Pending Sync
-                            </Badge>
-                        )}
-                    </DialogDescription>
-                </DialogHeader>
-
-                <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="grid grid-cols-3 mb-4">
-                        <TabsTrigger value="info">Vehicle Information</TabsTrigger>
-                        <TabsTrigger value="history" disabled={vehicle?.id.startsWith('pending-')}>Test History</TabsTrigger>
-                        <TabsTrigger value="drivers" disabled={vehicle?.id.startsWith('pending-')}>Driver History</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="info" className="space-y-6">
+        <div className="max-w-3xl w-full mx-auto">
+            <div className="mb-4 flex items-center gap-2">
+                <div className="text-xl font-semibold flex-1">{fullVehicle?.plateNumber}</div>
+                {isEditing ? (
+                    <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                ) : (
+                    <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>Edit</Button>
+                )}
+            </div>
+            <div className="text-muted-foreground text-sm flex items-center gap-2 mb-4">
+                Vehicle Details
+                {fullVehicle?.id.startsWith('pending-') && (
+                    <Badge variant="outline" className="ml-2 text-yellow-600 bg-yellow-50">
+                        Pending Sync
+                    </Badge>
+                )}
+            </div>
+            <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid grid-cols-3 mb-4">
+                    <TabsTrigger value="info">Vehicle Information</TabsTrigger>
+                    <TabsTrigger value="history" disabled={fullVehicle?.id.startsWith('pending-')}>Test History</TabsTrigger>
+                    <TabsTrigger value="drivers" disabled={fullVehicle?.id.startsWith('pending-')}>Driver History</TabsTrigger>
+                </TabsList>
+                <TabsContent value="info" className="space-y-6">
+                    {isEditing && editData ? (
+                        <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={async e => {
+                            e.preventDefault();
+                            if (onEditVehicle && editData) {
+                                await onEditVehicle(editData); // Save to backend
+                                setIsEditing(false);
+                            }
+                        }}>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Plate Number</label>
+                                <Input value={editData.plateNumber} onChange={e => setEditData({ ...editData, plateNumber: e.target.value })} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Driver Name</label>
+                                <Input value={editData.driverName} onChange={e => setEditData({ ...editData, driverName: e.target.value })} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Contact Number</label>
+                                <Input value={editData.contactNumber} onChange={e => setEditData({ ...editData, contactNumber: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Office</label>
+                                <Input value={editData.officeName} onChange={e => setEditData({ ...editData, officeName: e.target.value })} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Vehicle Type</label>
+                                <Input value={editData.vehicleType} onChange={e => setEditData({ ...editData, vehicleType: e.target.value })} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Engine Type</label>
+                                <Input value={editData.engineType} onChange={e => setEditData({ ...editData, engineType: e.target.value })} required />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-500">Wheels</label>
+                                <Input type="number" min={2} max={18} value={editData.wheels} onChange={e => setEditData({ ...editData, wheels: Number(e.target.value) })} required />
+                            </div>
+                            <div className="col-span-2 flex gap-2 pt-2">
+                                <Button type="submit" size="sm">Save</Button>
+                                <Button type="button" size="sm" variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                            </div>
+                        </form>
+                    ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Plate Number</h3>
-                                <p>{vehicle.plateNumber}</p>
+                                <p>{fullVehicle.plateNumber}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Driver Name</h3>
-                                <p>{vehicle.driverName}</p>
+                                <p>{fullVehicle.driverName}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Contact Number</h3>
-                                <p>{vehicle.contactNumber || "Not provided"}</p>
+                                <p>{fullVehicle.contactNumber || "Not provided"}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Office</h3>
-                                <p>{vehicle.officeName}</p>
+                                <p>{fullVehicle.officeName}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Vehicle Type</h3>
-                                <p>{vehicle.vehicleType}</p>
+                                <p>{fullVehicle.vehicleType}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Engine Type</h3>
-                                <p>{vehicle.engineType}</p>
+                                <p>{fullVehicle.engineType}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Wheels</h3>
-                                <p>{vehicle.wheels}</p>
+                                <p>{fullVehicle.wheels}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Latest Test Date</h3>
-                                <p>{vehicle.latestTestDate ? (isNaN(parsePgTimestamp(vehicle.latestTestDate as string)?.getTime() ?? NaN) ? "Invalid date" : format(parsePgTimestamp(vehicle.latestTestDate as string)!, 'MMM dd, yyyy')) : "Not tested"}</p>
+                                <p>{fullVehicle.latestTestDate ? (isNaN(Number(fullVehicle.latestTestDate)) ? "Invalid date" : new Date(Number(fullVehicle.latestTestDate)).toLocaleDateString()) : "Not tested"}</p>
                             </div>
-
                             <div className="space-y-2">
                                 <h3 className="text-sm font-medium text-gray-500">Latest Test Result</h3>
                                 <p>
-                                    {vehicle.latestTestResult === null || vehicle.latestTestResult === undefined ? (
+                                    {fullVehicle.latestTestResult === null || fullVehicle.latestTestResult === undefined ? (
                                         <Badge variant="outline" className="bg-gray-100 text-gray-800">
                                             Not tested
                                         </Badge>
-                                    ) : vehicle.latestTestResult ? (
+                                    ) : fullVehicle.latestTestResult ? (
                                         <Badge variant="outline" className="bg-green-100 text-green-800">
                                             Passed
                                         </Badge>
@@ -148,93 +209,93 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                                 </p>
                             </div>
                         </div>
-                    </TabsContent>
+                    )}
+                </TabsContent>
 
-                    <TabsContent value="history">
-                        {isPendingVehicle ? (
-                            <div className="text-center py-6 text-gray-500">
-                                Test history will be available after syncing this vehicle.
-                            </div>
-                        ) : isLoading ? (
-                            <div className="space-y-3">
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                            </div>
-                        ) : testHistory.length === 0 ? (
-                            <div className="text-center py-6 text-gray-500">
-                                No test history available for this vehicle.
-                            </div>
-                        ) : (
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Test Date</TableHead>
-                                            <TableHead>Period</TableHead>
-                                            <TableHead>Result</TableHead>
+                <TabsContent value="history">
+                    {isPendingVehicle ? (
+                        <div className="text-center py-6 text-gray-500">
+                            Test history will be available after syncing this vehicle.
+                        </div>
+                    ) : isLoading ? (
+                        <div className="space-y-3">
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                        </div>
+                    ) : testHistory.length === 0 ? (
+                        <div className="text-center py-6 text-gray-500">
+                            No test history available for this vehicle.
+                        </div>
+                    ) : (
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Test Date</TableHead>
+                                        <TableHead>Period</TableHead>
+                                        <TableHead>Result</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {testHistory.map((test) => (
+                                        <TableRow key={test.id}>
+                                            <TableCell>{test.testDate && !isNaN(parsePgTimestamp(test.testDate as string)?.getTime() ?? NaN) ? format(parsePgTimestamp(test.testDate as string)!, 'MMM dd, yyyy') : "Invalid date"}</TableCell>
+                                            <TableCell>Q{test.quarter}, {test.year}</TableCell>
+                                            <TableCell>
+                                                {test.result ? (
+                                                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                                                        Passed
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="bg-red-100 text-red-800">
+                                                        Failed
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {testHistory.map((test) => (
-                                            <TableRow key={test.id}>
-                                                <TableCell>{test.testDate && !isNaN(parsePgTimestamp(test.testDate as string)?.getTime() ?? NaN) ? format(parsePgTimestamp(test.testDate as string)!, 'MMM dd, yyyy') : "Invalid date"}</TableCell>
-                                                <TableCell>Q{test.quarter}, {test.year}</TableCell>
-                                                <TableCell>
-                                                    {test.result ? (
-                                                        <Badge variant="outline" className="bg-green-100 text-green-800">
-                                                            Passed
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="outline" className="bg-red-100 text-red-800">
-                                                            Failed
-                                                        </Badge>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </TabsContent>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </TabsContent>
 
-                    <TabsContent value="drivers">
-                        {isVehicleLoading ? (
-                            <div className="space-y-3">
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                            </div>
-                        ) : driverHistory.length === 0 ? (
-                            <div className="text-center py-6 text-gray-500">
-                                No driver history available for this vehicle.
-                            </div>
-                        ) : (
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Driver Name</TableHead>
-                                            <TableHead>Changed At</TableHead>
-                                            <TableHead>Changed By</TableHead>
+                <TabsContent value="drivers">
+                    {isVehicleLoading ? (
+                        <div className="space-y-3">
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                            <Skeleton className="h-8 w-full" />
+                        </div>
+                    ) : driverHistory.length === 0 ? (
+                        <div className="text-center py-6 text-gray-500">
+                            No driver history available for this vehicle.
+                        </div>
+                    ) : (
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Driver Name</TableHead>
+                                        <TableHead>Changed At</TableHead>
+                                        <TableHead>Changed By</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {driverHistory.map((entry, idx) => (
+                                        <TableRow key={idx}>
+                                            <TableCell>{entry.driverName}</TableCell>
+                                            <TableCell>{format(new Date(Number(entry.changedAt)), 'MMM dd, yyyy HH:mm')}</TableCell>
+                                            <TableCell>{entry.changedBy || '—'}</TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {driverHistory.map((entry, idx) => (
-                                            <TableRow key={idx}>
-                                                <TableCell>{entry.driverName}</TableCell>
-                                                <TableCell>{format(new Date(Number(entry.changedAt)), 'MMM dd, yyyy HH:mm')}</TableCell>
-                                                <TableCell>{entry.changedBy || '—'}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </TabsContent>
+            </Tabs>
+        </div>
     );
 };

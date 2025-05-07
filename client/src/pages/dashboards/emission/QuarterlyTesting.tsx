@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -30,102 +30,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { NetworkStatus } from "@/components/layout/NetworkStatus";
 import { useQuarterlyTesting, TestSchedule, EmissionTest } from "@/hooks/quarterly/useQuarterlyTesting";
 import { YearSelector } from "@/components/dashboards/emission/quarterly/YearSelector";
-
-const ScheduleTable = lazy(() => import("@/components/dashboards/emission/quarterly/ScheduleTable").then(
-    module => ({ default: module.ScheduleTable })
-));
-
-const ScheduleForm = lazy(() => import("@/components/dashboards/emission/quarterly/ScheduleForm").then(
-    module => ({ default: module.ScheduleForm })
-));
-
-const EmissionTestTable = lazy(() => import("@/components/dashboards/emission/quarterly/EmissionTestTable").then(
-    module => ({ default: module.EmissionTestTable })
-));
-
-const EmissionTestForm = lazy(() => import("@/components/dashboards/emission/quarterly/EmissionTestForm").then(
-    module => ({ default: module.EmissionTestForm })
-));
-
-// Skeleton components for loading states
-const YearSelectorSkeleton = () => (
-    <div className="flex gap-3 items-center">
-        <Skeleton className="h-10 w-32" />
-        <Skeleton className="h-10 w-32" />
-    </div>
-);
-
-const ScheduleTableSkeleton = () => (
-    <div className="space-y-3">
-        <div className="rounded-md border">
-            <div className="h-10 bg-muted/5 px-4 flex items-center border-b">
-                <div className="flex-1 grid grid-cols-5 gap-2">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-28" />
-                </div>
-            </div>
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="px-4 py-3 flex items-center border-b">
-                    <div className="flex-1 grid grid-cols-5 gap-2">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-4 w-28" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-const TestTableSkeleton = () => (
-    <div className="space-y-3">
-        <div className="rounded-md border">
-            <div className="h-10 bg-muted/5 px-4 flex items-center border-b">
-                <div className="flex-1 grid grid-cols-5 gap-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-16" />
-                </div>
-            </div>
-            {[...Array(5)].map((_, i) => (
-                <div key={i} className="px-4 py-3 flex items-center border-b">
-                    <div className="flex-1 grid grid-cols-5 gap-2">
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-4 w-28" />
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-16" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-const FormSkeleton = () => (
-    <div className="space-y-4 py-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-2/3 mx-auto" />
-    </div>
-);
+import ScheduleTable from "@/components/dashboards/emission/quarterly/ScheduleTable";
+import ScheduleForm from "@/components/dashboards/emission/quarterly/ScheduleForm";
+import EmissionTestTable from "@/components/dashboards/emission/quarterly/EmissionTestTable";
+import EmissionTestForm from "@/components/dashboards/emission/quarterly/EmissionTestForm";
 
 // Main Component
 export default function QuarterlyTesting() {
@@ -144,12 +59,12 @@ export default function QuarterlyTesting() {
     const [search, setSearch] = useState("");
     const [result, setResult] = useState("");
     const [activeTab, setActiveTab] = useState<string>("schedule");
+    const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
 
     // Get data and actions from our custom hook
     const {
         scheduleFilters,
         testFilters,
-        selectedScheduleId,
         schedules,
         emissionTests,
         vehicles,
@@ -307,9 +222,17 @@ export default function QuarterlyTesting() {
         csvContent += "Plate Number,Driver,Office,Test Date,Quarter,Year,Result\n";
 
         emissionTests.forEach(test => {
-            const testDate = format(new Date(test.testDate), 'yyyy-MM-dd');
+            const dateValue = test.testDate;
+            let date: Date;
+            if (typeof dateValue === 'number') {
+                date = new Date(dateValue);
+            } else if (typeof dateValue === 'string' && /^\d+$/.test(dateValue)) {
+                date = new Date(Number(dateValue));
+            } else {
+                date = new Date(dateValue);
+            }
+            const testDate = isNaN(date.getTime()) ? '' : format(date, 'yyyy-MM-dd');
             const result = test.result ? "Passed" : "Failed";
-
             csvContent += `"${test.vehicle?.plateNumber || ''}","${test.vehicle?.driverName || ''}","${test.vehicle?.officeName || ''}","${testDate}","${test.quarter}","${test.year}","${result}"\n`;
         });
 
@@ -330,195 +253,109 @@ export default function QuarterlyTesting() {
                 <AppSidebar dashboardType="government-emission" />
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <DashboardNavbar dashboardTitle="Government Emission" />
-                    <div className="flex-1 overflow-y-auto p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h1 className="text-2xl font-bold">Quarterly Testing</h1>
-                                <p className="text-muted-foreground">
-                                    Manage quarterly emission testing schedules and results
-                                </p>
+                    {/* Header Section */}
+                    <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+                        <h1 className="text-2xl font-semibold text-gray-900">Quarterly Testing</h1>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => refetchSchedules()} size="sm">
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                            <Button onClick={() => setIsAddScheduleOpen(true)} className="hidden md:inline-flex">
+                                <Plus className="mr-2 h-4 w-4" />
+                                New Schedule
+                            </Button>
+                            <Button onClick={handleExportTestResults} variant="outline" size="icon" disabled={!selectedSchedule || emissionTests.length === 0}>
+                                <FileDown className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Body Section */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+                        {/* Controls Row: Search left, Filters right */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            {/* Search (left) */}
+                            <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
+                                <Input
+                                    placeholder="Search by plate, driver, or office..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="pl-8 max-w-xs w-[320px] bg-white"
+                                />
+                                <span className="absolute left-3 text-gray-400">
+                                    <RefreshCw className="h-4 w-4" />
+                                </span>
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" onClick={() => refetchSchedules()} size="sm">
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Refresh
+                            {/* Filters (right) */}
+                            <div className="flex flex-wrap gap-2 items-center justify-end">
+                                <Button variant="outline" className="min-w-[120px] justify-between bg-white pr-8">
+                                    {result ? (result === "passed" ? "Passed" : result === "failed" ? "Failed" : result === "untested" ? "Not Tested" : result) : "All Results"}
+                                    <span className="ml-2 text-gray-400 flex items-center"><RefreshCw className="h-4 w-4" /></span>
                                 </Button>
-                                <Button onClick={() => setIsAddScheduleOpen(true)} size="sm">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    New Schedule
-                                </Button>
+                                {/* Add more filter dropdowns as needed */}
                             </div>
                         </div>
 
-                        {/* Offline Mode Notice */}
+                        {/* Error Notice */}
                         {error && (
-                            <Alert className="mb-4 bg-yellow-50 text-yellow-800 border-yellow-200">
+                            <Alert variant="destructive" className="mb-4">
                                 <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Offline Mode</AlertTitle>
+                                <AlertTitle>Error</AlertTitle>
                                 <AlertDescription>
-                                    You're currently working offline. Changes will be saved locally and synced when you're back online.
+                                    There was a problem loading the quarterly testing data. Please try again later.
                                 </AlertDescription>
                             </Alert>
                         )}
 
-                        {/* Main Content Card */}
-                        <Card className="mb-6">
-                            <CardHeader className="pb-3">
-                                <CardTitle>Testing Management</CardTitle>
-                                <CardDescription>
-                                    View and manage testing schedules and vehicle emission tests
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {/* Tabs for Schedules and Tests */}
-                                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                                    <TabsList className="grid w-full grid-cols-2">
-                                        <TabsTrigger value="schedule">Test Schedules</TabsTrigger>
-                                        <TabsTrigger
-                                            value="tests"
-                                            disabled={!selectedSchedule}
-                                        >
-                                            Vehicle Tests
-                                            {selectedSchedule && (
-                                                <Badge variant="outline" className="ml-2">
-                                                    Q{selectedSchedule.quarter} {selectedSchedule.year}
-                                                </Badge>
-                                            )}
-                                        </TabsTrigger>
-                                    </TabsList>
-
-                                    {/* Schedules Tab Content */}
-                                    <TabsContent value="schedule" className="pt-4">
-                                        <Suspense fallback={<ScheduleTableSkeleton />}>
-                                            <ScheduleTable
-                                                schedules={schedules}
-                                                isLoading={isLoading}
-                                                onViewTests={handleViewTests}
-                                                onEditSchedule={(schedule) => {
-                                                    setScheduleToEdit(schedule);
-                                                    setIsEditScheduleOpen(true);
-                                                }}
-                                                onDeleteSchedule={(schedule) => {
-                                                    setScheduleToDelete(schedule);
-                                                    setIsDeleteScheduleOpen(true);
-                                                }}
-                                            />
-                                        </Suspense>
-                                    </TabsContent>
-
-                                    {/* Tests Tab Content */}
-                                    <TabsContent value="tests" className="pt-4">
-                                        <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-3">
-                                            <div className="flex items-center gap-2">
-                                                <YearSelector
-                                                    selectedYear={testFilters.year || scheduleFilters.year}
-                                                    availableYears={availableYears}
-                                                    onYearChange={(year) => {
-                                                        const y = parseInt(year, 10);
-                                                        handleYearChange(y);
-                                                    }}
-                                                    selectedQuarter={typeof testFilters.quarter === 'number' ? testFilters.quarter : scheduleFilters.quarter}
-                                                    onQuarterChange={(quarter) => {
-                                                        if (quarter === "all") {
-                                                            handleQuarterChange(undefined);
-                                                        } else {
-                                                            handleQuarterChange(parseInt(quarter, 10));
-                                                        }
-                                                    }}
-                                                />
-                                                <Input
-                                                    placeholder="Search by plate, driver, or office..."
-                                                    value={search}
-                                                    onChange={e => setSearch(e.target.value)}
-                                                    className="w-64"
-                                                />
-                                                <select value={result} onChange={e => setResult(e.target.value)}>
-                                                    <option value="">All Results</option>
-                                                    <option value="passed">Passed</option>
-                                                    <option value="failed">Failed</option>
-                                                    <option value="untested">Not Tested</option>
-                                                </select>
-                                                <Button onClick={() => setIsAddTestOpen(true)} size="sm">
-                                                    <Plus className="h-4 w-4 mr-1" />
-                                                    Add
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleExportTestResults}
-                                                    disabled={emissionTests.length === 0}
-                                                >
-                                                    <FileDown className="h-4 w-4 mr-1" />
-                                                    Export
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        {selectedSchedule ? (
-                                            <>
-                                                <div className="space-y-1 mb-4">
-                                                    <h3 className="text-lg font-medium">
-                                                        Test Results: Q{selectedSchedule.quarter}, {selectedSchedule.year}
-                                                    </h3>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Location: {selectedSchedule.location} |
-                                                        Personnel: {selectedSchedule.assignedPersonnel}
-                                                    </p>
-                                                </div>
-                                                <Suspense fallback={<TestTableSkeleton />}>
-                                                    <EmissionTestTable
-                                                        tests={filteredTests}
-                                                        isLoading={isLoading}
-                                                        onEditTest={(test) => {
-                                                            setTestToEdit(test);
-                                                            setIsEditTestOpen(true);
-                                                        }}
-                                                        onDeleteTest={(test) => {
-                                                            setTestToDelete(test);
-                                                            setIsDeleteTestOpen(true);
-                                                        }}
-                                                    />
-                                                </Suspense>
-                                            </>
-                                        ) : (
-                                            <div className="text-center py-8 text-muted-foreground">
-                                                Select a schedule to view vehicle test results.
-                                            </div>
-                                        )}
-                                    </TabsContent>
-                                </Tabs>
-                            </CardContent>
+                        {/* Main Content Card (Schedule Table) */}
+                        <Card className="mt-6">
+                            <div className="p-6">
+                                <ScheduleTable
+                                    schedules={schedules}
+                                    isLoading={isLoading}
+                                    emissionTests={emissionTests}
+                                    selectedScheduleId={selectedScheduleId}
+                                    setSelectedScheduleId={setSelectedScheduleId}
+                                    onEditTest={(test) => {
+                                        setTestToEdit(test);
+                                        setIsEditTestOpen(true);
+                                    }}
+                                    onDeleteTest={(test) => {
+                                        setTestToDelete(test);
+                                        setIsDeleteTestOpen(true);
+                                    }}
+                                    onEditSchedule={(schedule) => {
+                                        setScheduleToEdit(schedule);
+                                        setIsEditScheduleOpen(true);
+                                    }}
+                                    onDeleteSchedule={(schedule) => {
+                                        setScheduleToDelete(schedule);
+                                        setIsDeleteScheduleOpen(true);
+                                    }}
+                                />
+                            </div>
                         </Card>
 
                         {/* Statistics Card */}
                         {activeTab === "tests" && selectedSchedule && emissionTests.length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Test Summary</CardTitle>
-                                    <CardDescription>Summary of emission test results</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                        <div className="p-4 border rounded-lg bg-slate-50">
-                                            <p className="text-sm text-muted-foreground">Total Tests</p>
-                                            <p className="text-3xl font-bold">{emissionTests.length}</p>
-                                        </div>
-
-                                        <div className="p-4 border rounded-lg bg-green-50">
-                                            <p className="text-sm text-muted-foreground">Passed</p>
-                                            <p className="text-3xl font-bold text-green-700">
-                                                {emissionTests.filter(t => t.result).length}
-                                            </p>
-                                        </div>
-
-                                        <div className="p-4 border rounded-lg bg-red-50">
-                                            <p className="text-sm text-muted-foreground">Failed</p>
-                                            <p className="text-3xl font-bold text-red-700">
-                                                {emissionTests.filter(t => !t.result).length}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                                <div className="p-4 border rounded-lg bg-slate-50">
+                                    <p className="text-sm text-muted-foreground">Total Tests</p>
+                                    <p className="text-3xl font-bold">{emissionTests.length}</p>
+                                </div>
+                                <div className="p-4 border rounded-lg bg-green-50">
+                                    <p className="text-sm text-muted-foreground">Passed</p>
+                                    <p className="text-3xl font-bold text-green-700">
+                                        {emissionTests.filter(t => t.result).length}
+                                    </p>
+                                </div>
+                                <div className="p-4 border rounded-lg bg-red-50">
+                                    <p className="text-sm text-muted-foreground">Failed</p>
+                                    <p className="text-3xl font-bold text-red-700">
+                                        {emissionTests.filter(t => !t.result).length}
+                                    </p>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -534,13 +371,11 @@ export default function QuarterlyTesting() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <Suspense fallback={<FormSkeleton />}>
-                        <ScheduleForm
-                            onSubmit={handleAddSchedule}
-                            onCancel={() => setIsAddScheduleOpen(false)}
-                            isSubmitting={isSubmitting}
-                        />
-                    </Suspense>
+                    <ScheduleForm
+                        onSubmit={handleAddSchedule}
+                        onCancel={() => setIsAddScheduleOpen(false)}
+                        isSubmitting={isSubmitting}
+                    />
                 </DialogContent>
             </Dialog>
 
@@ -554,17 +389,15 @@ export default function QuarterlyTesting() {
                     </DialogHeader>
 
                     {scheduleToEdit && (
-                        <Suspense fallback={<FormSkeleton />}>
-                            <ScheduleForm
-                                initialValues={scheduleToEdit}
-                                onSubmit={handleEditSchedule}
-                                onCancel={() => {
-                                    setIsEditScheduleOpen(false);
-                                    setScheduleToEdit(null);
-                                }}
-                                isSubmitting={isSubmitting}
-                            />
-                        </Suspense>
+                        <ScheduleForm
+                            initialValues={scheduleToEdit}
+                            onSubmit={handleEditSchedule}
+                            onCancel={() => {
+                                setIsEditScheduleOpen(false);
+                                setScheduleToEdit(null);
+                            }}
+                            isSubmitting={isSubmitting}
+                        />
                     )}
                 </DialogContent>
             </Dialog>
@@ -601,18 +434,16 @@ export default function QuarterlyTesting() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <Suspense fallback={<FormSkeleton />}>
-                        <EmissionTestForm
-                            onSubmit={handleAddTest}
-                            onCancel={() => setIsAddTestOpen(false)}
-                            isSubmitting={isSubmitting}
-                            vehicles={vehicles}
-                            isLoadingVehicles={isLoading}
-                            onSearchVehicle={getVehicleByPlateOrId}
-                            scheduleYear={selectedSchedule?.year}
-                            scheduleQuarter={selectedSchedule?.quarter}
-                        />
-                    </Suspense>
+                    <EmissionTestForm
+                        onSubmit={handleAddTest}
+                        onCancel={() => setIsAddTestOpen(false)}
+                        isSubmitting={isSubmitting}
+                        vehicles={vehicles}
+                        isLoadingVehicles={isLoading}
+                        onSearchVehicle={getVehicleByPlateOrId}
+                        scheduleYear={selectedSchedule?.year}
+                        scheduleQuarter={selectedSchedule?.quarter}
+                    />
                 </DialogContent>
             </Dialog>
 
@@ -626,20 +457,18 @@ export default function QuarterlyTesting() {
                     </DialogHeader>
 
                     {testToEdit && (
-                        <Suspense fallback={<FormSkeleton />}>
-                            <EmissionTestForm
-                                initialValues={testToEdit}
-                                onSubmit={handleEditTest}
-                                onCancel={() => {
-                                    setIsEditTestOpen(false);
-                                    setTestToEdit(null);
-                                }}
-                                isSubmitting={isSubmitting}
-                                vehicles={vehicles}
-                                isLoadingVehicles={isLoading}
-                                onSearchVehicle={getVehicleByPlateOrId}
-                            />
-                        </Suspense>
+                        <EmissionTestForm
+                            initialValues={testToEdit}
+                            onSubmit={handleEditTest}
+                            onCancel={() => {
+                                setIsEditTestOpen(false);
+                                setTestToEdit(null);
+                            }}
+                            isSubmitting={isSubmitting}
+                            vehicles={vehicles}
+                            isLoadingVehicles={isLoading}
+                            onSearchVehicle={getVehicleByPlateOrId}
+                        />
                     )}
                 </DialogContent>
             </Dialog>

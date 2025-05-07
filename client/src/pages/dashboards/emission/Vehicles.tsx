@@ -321,7 +321,7 @@ export default function Vehicles() {
         <Button
             size="sm"
             variant={(currentValue === value || (currentValue === "" && value === "all")) ? "default" : "outline"}
-            onClick={() => setFilter(filterKey, value === "all" ? "" : value)}
+            onClick={() => setTableFilter(filterKey, value === "all" ? "" : value)}
             className="text-xs whitespace-nowrap"
         >
             {label}
@@ -333,26 +333,97 @@ export default function Vehicles() {
             <div className="flex min-h-screen w-full">
                 <AppSidebar dashboardType="government-emission" />
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    <DashboardNavbar dashboardTitle="Government Vehicles" />
+                    <DashboardNavbar />
+                    {/* Header Section */}
+                    <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+                        <h1 className="text-2xl font-semibold text-gray-900">Vehicles</h1>
+                        <div className="flex gap-2">
+                            <Button onClick={() => setAddModalOpen(true)} className="hidden md:inline-flex">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Vehicle
+                            </Button>
+                            <Button onClick={handleExportToCSV} variant="outline" size="icon" disabled={vehicles.length === 0 || isLoading}>
+                                <FileDown className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    </div>
 
-                    <div className="flex-1 overflow-y-auto p-6">
-                        {/* Header */}
+                    {/* Body Section */}
+                    <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+                        {/* Controls Row: Search left, Filters right */}
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                            <div>
-                                <h1 className="text-2xl font-bold">Vehicles Database</h1>
-                                <p className="text-muted-foreground">
-                                    Manage and view all government vehicles in the system
-                                </p>
+                            {/* Search (left) */}
+                            <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
+                                <Search className="absolute left-3 text-gray-400 h-4 w-4" />
+                                <Input
+                                    placeholder="Search by plate, driver, or office..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="pl-8 max-w-xs w-[320px] bg-white"
+                                />
                             </div>
-                            <div className="flex gap-2 self-end">
-                                <Button variant="outline" onClick={handleExportToCSV} disabled={vehicles.length === 0 || isLoading}>
-                                    <FileDown className="mr-2 h-4 w-4" />
-                                    Export to CSV
-                                </Button>
-                                <Button onClick={() => setAddModalOpen(true)}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Vehicle
-                                </Button>
+                            {/* Filters (right) */}
+                            <div className="flex flex-wrap gap-2 items-center justify-end">
+                                {/* Office Filter Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="min-w-[140px] justify-between bg-white">
+                                            {office ? office : "All Offices"}
+                                            <span className="ml-2 text-gray-400 flex items-center"><Filter className="h-4 w-4" /></span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="bg-white">
+                                        <DropdownMenuItem onClick={() => setOffice("")}>All Offices</DropdownMenuItem>
+                                        {offices.map(o => (
+                                            <DropdownMenuItem key={o as string} onClick={() => setOffice(o as string)}>{o as string}</DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                {/* Vehicle Type Filter Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="min-w-[120px] justify-between bg-white">
+                                            {vehicleType ? vehicleType : "All Types"}
+                                            <span className="ml-2 text-gray-400 flex items-center"><Filter className="h-4 w-4" /></span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="bg-white">
+                                        <DropdownMenuItem onClick={() => setVehicleType("")}>All Types</DropdownMenuItem>
+                                        {vehicleTypes.map(t => (
+                                            <DropdownMenuItem key={t as string} onClick={() => setVehicleType(t as string)}>{t as string}</DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                {/* Engine Type Filter Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="min-w-[120px] justify-between bg-white">
+                                            {engineType ? engineType : "All Engines"}
+                                            <span className="ml-2 text-gray-400 flex items-center"><Filter className="h-4 w-4" /></span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="bg-white">
+                                        <DropdownMenuItem onClick={() => setEngineType("")}>All Engines</DropdownMenuItem>
+                                        {engineTypes.map(e => (
+                                            <DropdownMenuItem key={e as string} onClick={() => setEngineType(e as string)}>{e as string}</DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                {/* Status Filter Dropdown */}
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" className="min-w-[120px] justify-between bg-white">
+                                            {status ? (status === "passed" ? "Passed" : status === "failed" ? "Failed" : status === "untested" ? "Not Tested" : status) : "All Status"}
+                                            <span className="ml-2 text-gray-400 flex items-center"><Filter className="h-4 w-4" /></span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="bg-white">
+                                        <DropdownMenuItem onClick={() => setStatus("")}>All Status</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatus("passed")}>Passed</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatus("failed")}>Failed</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setStatus("untested")}>Not Tested</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
                         </div>
 
@@ -366,37 +437,6 @@ export default function Vehicles() {
                                 </AlertDescription>
                             </Alert>
                         )}
-
-                        {/* Search and Filters */}
-                        <div className="mb-4">
-                            {/* Search Bar */}
-                            <div className="mb-4 flex flex-col sm:flex-row gap-2">
-                                <Input
-                                    placeholder="Search by plate, driver, or office..."
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
-                                    className="pl-8"
-                                />
-                                <select value={office} onChange={e => setOffice(e.target.value)}>
-                                    <option value="">All Offices</option>
-                                    {offices.map(o => <option key={o as string} value={o as string}>{o as string}</option>)}
-                                </select>
-                                <select value={vehicleType} onChange={e => setVehicleType(e.target.value)}>
-                                    <option value="">All Types</option>
-                                    {vehicleTypes.map(t => <option key={t as string} value={t as string}>{t as string}</option>)}
-                                </select>
-                                <select value={engineType} onChange={e => setEngineType(e.target.value)}>
-                                    <option value="">All Engines</option>
-                                    {engineTypes.map(e => <option key={e as string} value={e as string}>{e as string}</option>)}
-                                </select>
-                                <select value={status} onChange={e => setStatus(e.target.value)}>
-                                    <option value="">All Status</option>
-                                    <option value="passed">Passed</option>
-                                    <option value="failed">Failed</option>
-                                    <option value="untested">Not Tested</option>
-                                </select>
-                            </div>
-                        </div>
 
                         {/* Selection Controls */}
                         {Object.keys(tableState.rowSelection).length > 0 && (
@@ -423,9 +463,9 @@ export default function Vehicles() {
                             </div>
                         )}
 
-                        {/* Vehicles Table */}
-                        <Card>
-                            <CardContent className="p-0 sm:p-1">
+                        {/* Vehicles Table (no Card) */}
+                        <Card className="mt-6">
+                            <div className="p-6">
                                 {isLoading ? (
                                     <VehicleTableSkeleton />
                                 ) : (
@@ -437,7 +477,7 @@ export default function Vehicles() {
                                         onDelete={handleDeleteConfirm}
                                     />
                                 )}
-                            </CardContent>
+                            </div>
                         </Card>
                     </div>
                 </div>

@@ -1,4 +1,6 @@
-import { useState } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useMemo, memo, useCallback, useEffect } from "react";
+import type { RowData, VisibilityState } from "@tanstack/react-table";
 import {
     Table,
     TableBody,
@@ -9,22 +11,323 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Info, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, XCircle, GripHorizontal, Rows3, List, Settings, ArrowLeft, FileBarChart, Car, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { OfficeComplianceSkeleton } from "./OfficeComplianceSkeleton";
-import { OfficeData } from "@/hooks/useOffices";
+import { OfficeData } from "@/hooks/offices/useOffices";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+    DropdownMenuSeparator,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+    useReactTable,
+    getCoreRowModel,
+    getSortedRowModel,
+    flexRender,
+    SortingState,
+    ColumnDef,
+} from "@tanstack/react-table";
+import { useQuery } from "@apollo/client";
+import { GET_EMISSION_TESTS } from "@/lib/emission-api";
+import { EmissionTest } from "@/hooks/emissions/useDashboardData";
+
+// Augment the @tanstack/react-table module to include 'align' in ColumnMeta
+declare module '@tanstack/react-table' {
+    interface ColumnMeta<TData extends RowData, TValue> {
+        align?: 'left' | 'center' | 'right';
+    }
+}
+
+// Memoized cell components for better performance
+const ComplianceCell = memo(({ value, passedCount, vehicleCount }: { value: number, passedCount: number, vehicleCount: number }) => {
+    const isCompliant = value >= 80;
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+                <span>{value}%</span>
+                <span className="text-xs text-muted-foreground">
+                    {passedCount}/{vehicleCount}
+                </span>
+            </div>
+            <Progress
+                value={value}
+                className={`h-2 ${isCompliant ? "bg-green-100" : "bg-red-100"}`}
+            />
+        </div>
+    );
+});
+
+const StatusCell = memo(({ isCompliant }: { isCompliant: boolean }) => {
+    return isCompliant ? (
+        <CheckCircle2 className="ml-auto h-5 w-5 text-green-500" />
+    ) : (
+        <XCircle className="ml-auto h-5 w-5 text-red-500" />
+    );
+});
+
+// Office Details View Component
+const OfficeDetailsView = memo(({ office, onBack }: { office: OfficeData, onBack: () => void }) => {
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onBack}
+                    className="flex items-center gap-1"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to List
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                    Office Detail View
+                </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+                <div className="md:col-span-1 border rounded-lg p-4 bg-white">
+                    <div className="space-y-4">
+                        <div className="flex flex-col">
+                            <h3 className="text-lg font-semibold">{office.name}</h3>
+                            <span className="text-sm text-muted-foreground">Code: {office.code}</span>
+                            {office.address && <span className="text-sm">Location: {office.address}</span>}
+                            {office.contact && <span className="text-sm">Contact: {office.contact}</span>}
+                        </div>
+
+                        <div className="pt-2">
+                            <h4 className="text-sm font-medium mb-2">Compliance Summary</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="flex flex-col p-2 border rounded bg-slate-50">
+                                    <span className="text-muted-foreground text-xs">Vehicles</span>
+                                    <span className="font-semibold">{office.vehicleCount}</span>
+                                </div>
+                                <div className="flex flex-col p-2 border rounded bg-slate-50">
+                                    <span className="text-muted-foreground text-xs">Tested</span>
+                                    <span className="font-semibold">{office.testedCount}</span>
+                                </div>
+                                <div className="flex flex-col p-2 border rounded bg-slate-50">
+                                    <span className="text-muted-foreground text-xs">Passed</span>
+                                    <span className="font-semibold">{office.passedCount}</span>
+                                </div>
+                                <div className="flex flex-col p-2 border rounded bg-slate-50">
+                                    <span className="text-muted-foreground text-xs">Rate</span>
+                                    <span className={`font-semibold ${office.complianceRate >= 80 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {office.complianceRate}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="md:col-span-2 border rounded-lg p-4 bg-white">
+                    <div className="flex items-center gap-2 mb-3">
+                        <FileBarChart className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold">Detailed Information</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="rounded border overflow-hidden">
+                            <div className="bg-muted px-4 py-2 font-medium">Compliance Status</div>
+                            <div className="p-3 flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">
+                                        {office.complianceRate >= 80
+                                            ? "Compliant"
+                                            : "Non-Compliant"}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {office.complianceRate >= 80
+                                            ? "This office meets the minimum 80% compliance threshold."
+                                            : "This office does not meet the minimum 80% compliance threshold."}
+                                    </p>
+                                </div>
+                                {office.complianceRate >= 80
+                                    ? <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                    : <XCircle className="h-8 w-8 text-red-500" />
+                                }
+                            </div>
+                        </div>
+
+                        <div className="rounded border overflow-hidden">
+                            <div className="bg-muted px-4 py-2 font-medium flex items-center">
+                                <Car className="h-4 w-4 mr-2" />
+                                Vehicle Compliance
+                            </div>
+                            <div className="p-4">
+                                <div className="flex flex-col space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span>Compliance Rate</span>
+                                        <span className="font-medium">{office.complianceRate}%</span>
+                                    </div>
+                                    <Progress
+                                        value={office.complianceRate}
+                                        className={`h-3 ${office.complianceRate >= 80 ? "bg-green-100" : "bg-red-100"}`}
+                                    />
+                                    <div className="grid grid-cols-3 gap-2 text-sm pt-2">
+                                        <div className="flex flex-col items-center p-2 rounded bg-slate-50">
+                                            <span className="text-muted-foreground">Total</span>
+                                            <span className="font-semibold">{office.vehicleCount}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center p-2 rounded bg-slate-50">
+                                            <span className="text-muted-foreground">Tested</span>
+                                            <span className="font-semibold">{office.testedCount}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center p-2 rounded bg-slate-50">
+                                            <span className="text-muted-foreground">Passed</span>
+                                            <span className="font-semibold">{office.passedCount}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded border overflow-hidden">
+                            <div className="bg-muted px-4 py-2 font-medium flex items-center">
+                                <Car className="h-4 w-4 mr-2" />
+                                Emission Tests
+                            </div>
+                            <div className="p-4">
+                                <OfficeEmissionTests officeName={office.name} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+OfficeDetailsView.displayName = 'OfficeDetailsView';
 
 interface OfficeComplianceTableProps {
     officeData: OfficeData[];
-    isLoading: boolean;
     errorMessage?: string;
 }
 
 export function OfficeComplianceTable({
     officeData,
-    isLoading,
     errorMessage,
 }: OfficeComplianceTableProps) {
+    // Density state
+    const [density, setDensity] = useState<'compact' | 'normal' | 'spacious'>('normal');
+    const densityClasses = useMemo(() => ({
+        compact: 'text-xs h-6',
+        normal: 'text-sm h-9',
+        spacious: 'text-base h-12',
+    }), []);
+
+    // Column visibility state
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        office: true,
+        vehicles: true,
+        tested: true,
+        passed: true,
+        compliance: true,
+        status: true,
+    });
+
+    const [sorting, setSorting] = useState<SortingState>([]);
+
+    // State for selected office
+    const [selectedOffice, setSelectedOffice] = useState<OfficeData | null>(null);
+
+    // Handler for row click
+    const handleRowClick = useCallback((office: OfficeData) => {
+        setSelectedOffice(office);
+    }, []);
+
+    // Handler for going back to the table view
+    const handleBackToTable = useCallback(() => {
+        setSelectedOffice(null);
+    }, []);
+
+    // Table columns config for TanStack Table - memoized to prevent re-creation on render
+    const columns = useMemo<ColumnDef<OfficeData, any>[]>(() => [
+        {
+            accessorKey: 'name',
+            id: 'office',
+            header: 'Office Name',
+            cell: info => info.getValue(),
+            enableSorting: true,
+        },
+        {
+            accessorKey: 'vehicleCount',
+            id: 'vehicles',
+            header: 'Vehicles',
+            cell: info => info.getValue(),
+            enableSorting: true,
+        },
+        {
+            accessorKey: 'testedCount',
+            id: 'tested',
+            header: 'Tested',
+            cell: info => info.getValue(),
+            enableSorting: true,
+        },
+        {
+            accessorKey: 'passedCount',
+            id: 'passed',
+            header: 'Passed',
+            cell: info => info.getValue(),
+            enableSorting: true,
+        },
+        {
+            accessorKey: 'complianceRate',
+            id: 'compliance',
+            header: 'Compliance',
+            cell: info => {
+                const row = info.row.original;
+                return (
+                    <ComplianceCell
+                        value={row.complianceRate}
+                        passedCount={row.passedCount}
+                        vehicleCount={row.vehicleCount}
+                    />
+                );
+            },
+            enableSorting: true,
+        },
+        {
+            id: 'status',
+            header: 'Status',
+            cell: info => {
+                const isCompliant = info.row.original.complianceRate >= 80;
+                return <StatusCell isCompliant={isCompliant} />;
+            },
+            enableSorting: false,
+        },
+    ], []);
+
+    // Reset all columns visibility
+    const resetColumnVisibility = () => {
+        setColumnVisibility({
+            office: true,
+            vehicles: true,
+            tested: true,
+            passed: true,
+            compliance: true,
+            status: true,
+        });
+    };
+
+    const table = useReactTable({
+        data: officeData || [],
+        columns,
+        state: {
+            sorting,
+            columnVisibility,
+        },
+        onSortingChange: setSorting,
+        onColumnVisibilityChange: setColumnVisibility,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        debugTable: false,
+    });
+
     // Handle error state
     if (errorMessage) {
         return (
@@ -37,7 +340,7 @@ export function OfficeComplianceTable({
     }
 
     // Handle empty state
-    if (!isLoading && (!officeData || officeData.length === 0)) {
+    if (!officeData || officeData.length === 0) {
         return (
             <Alert>
                 <Info className="h-4 w-4" />
@@ -50,79 +353,220 @@ export function OfficeComplianceTable({
     }
 
     return (
-        <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="min-w-[200px]">Office Name</TableHead>
-                        <TableHead>Vehicles</TableHead>
-                        <TableHead>Tested</TableHead>
-                        <TableHead>Passed</TableHead>
-                        <TableHead className="min-w-[200px]">Compliance</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                        <OfficeComplianceSkeleton rowCount={8} />
-                    ) : (
-                        officeData.map((office) => {
-                            // Calculate compliance rate if not already provided
-                            const complianceRate =
-                                office.complianceRate !== undefined
-                                    ? office.complianceRate
-                                    : office.vehicleCount > 0
-                                        ? Math.round((office.passedCount / office.vehicleCount) * 100)
-                                        : 0;
-                            const isCompliant = complianceRate >= 80;
+        <div className="space-y-2 text-xs">
+            {/* Column Visibility Toggle & Density */}
+            <div className="flex justify-between items-center py-1">
+                <div className="text-xs text-muted-foreground">
+                    {`${officeData.length} offices`}
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs">Density:</span>
+                    <Button
+                        size="sm"
+                        variant={density === 'compact' ? 'default' : 'outline'}
+                        className="px-2 py-1 text-xs"
+                        onClick={() => setDensity('compact')}
+                        title="Compact"
+                    >
+                        <GripHorizontal className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={density === 'normal' ? 'default' : 'outline'}
+                        className="px-2 py-1 text-xs"
+                        onClick={() => setDensity('normal')}
+                        title="Normal"
+                    >
+                        <Rows3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={density === 'spacious' ? 'default' : 'outline'}
+                        className="px-2 py-1 text-xs"
+                        onClick={() => setDensity('spacious')}
+                        title="Spacious"
+                    >
+                        <List className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground text-xs bg-white h-7 px-2 py-1 min-h-[28px]">
+                            <Settings className="mr-2 h-3.5 w-3.5" />
+                            View Options
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] text-xs bg-white">
+                            {table.getAllLeafColumns().map(col => (
+                                <DropdownMenuCheckboxItem
+                                    key={col.id}
+                                    checked={col.getIsVisible()}
+                                    onCheckedChange={v => col.toggleVisibility(!!v)}
+                                >
+                                    {col.columnDef.header as string}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={resetColumnVisibility}
+                                className="justify-center text-center"
+                            >
+                                Reset View
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </div>
 
-                            return (
-                                <TableRow key={office.id}>
-                                    <TableCell className="font-medium">{office.name}</TableCell>
-                                    <TableCell>{office.vehicleCount}</TableCell>
-                                    <TableCell>{office.testedCount}</TableCell>
-                                    <TableCell>{office.passedCount}</TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center justify-between">
-                                                <span>{complianceRate}%</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {office.passedCount}/{office.vehicleCount}
-                                                </span>
-                                            </div>
-                                            <Progress
-                                                value={complianceRate}
-                                                // TODO: Implement conditional indicator color via CSS or component modification
-                                                // The indicator color defaults to 'bg-primary'.
-                                                // The className below styles the track background.
-                                                className={`h-2 ${isCompliant ? "bg-green-100" : "bg-red-100"
-                                                    }`}
-                                            />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {isCompliant ? (
-                                            <CheckCircle2 className="ml-auto h-5 w-5 text-green-500" />
-                                        ) : (
-                                            <XCircle className="ml-auto h-5 w-5 text-red-500" />
-                                        )}
+            {selectedOffice ? (
+                <OfficeDetailsView
+                    office={selectedOffice}
+                    onBack={handleBackToTable}
+                />
+            ) : (
+                <div className="rounded-md border overflow-x-auto bg-white">
+                    <Table className={density === 'compact' ? 'text-xs' : density === 'spacious' ? 'text-base' : 'text-sm'}>
+                        <TableHeader>
+                            {table.getHeaderGroups().map(headerGroup => (
+                                <TableRow key={headerGroup.id} className={densityClasses[density]}>
+                                    {headerGroup.headers.map(header => (
+                                        header.isPlaceholder ? null : (
+                                            <TableHead
+                                                key={header.id}
+                                                className={header.column.columnDef.meta?.align === 'right' ? 'text-right' : ''}
+                                            >
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                            </TableHead>
+                                        )
+                                    ))}
+                                </TableRow>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.length ? (
+                                table.getRowModel().rows.map(row => (
+                                    <TableRow
+                                        key={row.id}
+                                        className={`${densityClasses[density]} hover:bg-muted/50 cursor-pointer`}
+                                        onClick={() => handleRowClick(row.original)}
+                                    >
+                                        {row.getVisibleCells().map(cell => (
+                                            <TableCell
+                                                key={cell.id}
+                                                className={cell.column.columnDef.meta?.align === 'right' ? 'text-right' : ''}
+                                            >
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow className={densityClasses[density]}>
+                                    <TableCell colSpan={table.getAllLeafColumns().length} className="text-center py-4">
+                                        No data found.
                                     </TableCell>
                                 </TableRow>
-                            );
-                        })
-                    )}
-                </TableBody>
-            </Table>
-
-            {/* Pagination controls could be added here */}
-            <div className="flex items-center justify-end space-x-2 py-4 px-4">
-                <Button variant="outline" size="sm" disabled>
-                    Previous
-                </Button>
-                <Button variant="outline" size="sm" disabled>
-                    Next
-                </Button>
-            </div>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
         </div>
     );
 }
+
+OfficeComplianceTable.displayName = 'OfficeComplianceTable';
+ComplianceCell.displayName = 'ComplianceCell';
+StatusCell.displayName = 'StatusCell';
+
+// Office Emission Tests Component
+const OfficeEmissionTests = memo(({ officeName }: { officeName: string }) => {
+    const { data, loading, error } = useQuery(GET_EMISSION_TESTS, {
+        variables: {
+            filters: {
+                // Use the current year as default
+                year: new Date().getFullYear()
+            }
+        },
+        fetchPolicy: 'network-only',
+    });
+
+    const tests = useMemo(() => {
+        if (!data?.emissionTests) return [];
+        // Filter tests by office name
+        return data.emissionTests.filter(
+            (test: EmissionTest) => test.vehicle?.officeName === officeName
+        );
+    }, [data, officeName]);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+                <span>Loading emission tests...</span>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>Failed to load emission tests.</AlertDescription>
+            </Alert>
+        );
+    }
+
+    if (!tests.length) {
+        return (
+            <div className="text-center py-4 text-muted-foreground">
+                No emission tests found for this office.
+            </div>
+        );
+    }
+
+    return (
+        <div className="overflow-x-auto">
+            <Table className="text-xs">
+                <TableHeader>
+                    <TableRow className="h-8">
+                        <TableHead>Plate Number</TableHead>
+                        <TableHead>Driver</TableHead>
+                        <TableHead>Test Date</TableHead>
+                        <TableHead>Quarter</TableHead>
+                        <TableHead>Year</TableHead>
+                        <TableHead>Result</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {tests.map((test: EmissionTest) => (
+                        <TableRow key={(test as any).id} className="h-8">
+                            <TableCell>{(test.vehicle as { plateNumber?: string })?.plateNumber || 'Unknown'}</TableCell>
+                            <TableCell>{(test.vehicle as { driverName?: string })?.driverName || 'Unknown'}</TableCell>
+                            <TableCell>
+                                {(test as { testDate?: string | number | Date }).testDate ? new Date((test as { testDate?: string | number | Date }).testDate!).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell>Q{(test as unknown as { quarter: number }).quarter}</TableCell>
+                            <TableCell>{(test as unknown as { year: number }).year}</TableCell>
+                            <TableCell>
+                                <div className="flex items-center">
+                                    {test.result ? (
+                                        <>
+                                            <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
+                                            <span className="text-green-600">Passed</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                                            <span className="text-red-600">Failed</span>
+                                        </>
+                                    )}
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+});
+
+OfficeEmissionTests.displayName = 'OfficeEmissionTests';

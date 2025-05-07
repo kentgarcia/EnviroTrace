@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { format } from "date-fns";
 import {
     useReactTable,
@@ -14,6 +14,7 @@ import {
     OnChangeFn,
     RowSelectionState,
     getFilteredRowModel,
+    ColumnResizeMode,
 } from "@tanstack/react-table";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -26,10 +27,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Trash2, MoreHorizontal, ArrowUpDown, Settings } from "lucide-react";
+import { Eye, Edit, Trash2, MoreHorizontal, ArrowUpDown, Settings, GripHorizontal, List, Rows3 } from "lucide-react";
 import { Vehicle } from "@/hooks/vehicles/useVehicles";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { VehicleDetails } from "./VehicleDetails";
+import { useVehicles } from "@/hooks/vehicles/useVehicles";
 
 interface VehicleTableProps {
     vehicles: Vehicle[];
@@ -112,11 +115,34 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     const [internalColumnFilters, setInternalColumnFilters] = React.useState<ColumnFiltersState>(columnFilters);
     const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<VisibilityState>(columnVisibility);
     const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>(rowSelection);
+    const [density, setDensity] = React.useState<'compact' | 'normal' | 'spacious'>('normal');
+    // Add: row-to-details functionality
+    const [detailsVehicle, setDetailsVehicle] = React.useState<Vehicle | null>(null);
+    // Add columnResizeMode state
+    const [columnResizeMode, setColumnResizeMode] = React.useState<ColumnResizeMode>("onChange");
 
-    // Format date helper
-    const formatDate = (dateString?: string) => {
-        if (!dateString) return "Not tested";
-        const date = new Date(dateString);
+    const { editVehicle } = useVehicles();
+
+    // Add a ref to hold the refetch function from VehicleDetails
+    const detailsRefetchRef = useRef<null | (() => void)>(null);
+
+    const densityClasses = {
+        compact: 'text-xs h-6',
+        normal: 'text-sm h-9',
+        spacious: 'text-base h-12',
+    };
+
+    // Helper to format date from milliseconds
+    const formatDate = (dateValue?: string | number) => {
+        if (!dateValue) return "Not tested";
+        let date: Date;
+        if (typeof dateValue === 'number') {
+            date = new Date(dateValue);
+        } else if (!isNaN(Number(dateValue))) {
+            date = new Date(Number(dateValue));
+        } else {
+            date = new Date(dateValue);
+        }
         if (isNaN(date.getTime())) return "Invalid date";
         return format(date, 'MMM dd, yyyy');
     };
@@ -156,30 +182,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     };
 
     // Define columns
+    // Add size, minSize, maxSize to columns
     const columns: ColumnDef<Vehicle>[] = [
         {
-            id: 'select',
-            header: ({ table }) => (
-                <Checkbox
-                    checked={
-                        table.getIsAllPageRowsSelected() ||
-                        (table.getIsSomePageRowsSelected() && "indeterminate")
-                    }
-                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Select all"
-                />
-            ),
-            cell: ({ row }) => (
-                <Checkbox
-                    checked={row.getIsSelected()}
-                    onCheckedChange={(value) => row.toggleSelected(!!value)}
-                    aria-label="Select row"
-                />
-            ),
-            enableSorting: false,
-        },
-        {
             accessorKey: 'plateNumber',
+            size: 160,
+            minSize: 80,
+            maxSize: 400,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -191,17 +200,16 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                 </Button>
             ),
             cell: ({ row }) => (
-                <div
-                    className="font-medium text-blue-900 cursor-pointer hover:text-blue-600"
-                    onClick={() => onView(row.original)}
-                    title="View vehicle details"
-                >
+                <div className="font-medium">
                     {row.original.plateNumber}
                 </div>
             )
         },
         {
             accessorKey: 'officeName',
+            size: 140,
+            minSize: 80,
+            maxSize: 300,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -215,6 +223,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'driverName',
+            size: 140,
+            minSize: 80,
+            maxSize: 300,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -228,6 +239,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'vehicleType',
+            size: 120,
+            minSize: 80,
+            maxSize: 200,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -246,6 +260,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'latestTestDate',
+            size: 120,
+            minSize: 80,
+            maxSize: 200,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -260,6 +277,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'latestTestResult',
+            size: 100,
+            minSize: 80,
+            maxSize: 160,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -271,36 +291,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                 </Button>
             ),
             cell: ({ row }) => renderTestResultBadge(row.original)
-        },
-        {
-            id: 'actions',
-            header: () => <div className="text-right">Actions</div>,
-            cell: ({ row }) => (
-                <div className="text-right">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onView(row.original)}>
-                                <Eye className="mr-2 h-4 w-4" /> View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onEdit(row.original)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => onDelete(row.original)}
-                                className="text-red-600 focus:text-red-600"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            )
         }
     ];
 
@@ -316,6 +306,8 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             rowSelection: onRowSelectionChange ? rowSelection : internalRowSelection,
         },
         enableRowSelection: true,
+        enableColumnResizing: true,
+        columnResizeMode,
         onSortingChange: onSortingChange || ((updater) => {
             setInternalSorting(typeof updater === 'function' ? updater(internalSorting) : updater);
         }),
@@ -341,101 +333,148 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         return <VehicleTableSkeleton />;
     }
 
-    return (
-        <div className="space-y-2 text-xs"> {/* Compressed table: smaller text */}
-            {/* Column Visibility Toggle */}
-            <div className="flex justify-between items-center py-1"> {/* Less vertical padding */}
-                <div className="text-xs text-muted-foreground">
-                    {table.getFilteredRowModel().rows.length} of {vehicles.length} vehicles
+    if (detailsVehicle) {
+        return (
+            <div className="flex gap-6">
+                {/* List of vehicles (left) */}
+                <div className="w-1/3 border-r pr-4 overflow-y-auto max-h-[70vh]">
+                    <ul className="divide-y">
+                        {vehicles.map(v => (
+                            <li
+                                key={v.id}
+                                className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsVehicle.id === v.id ? 'bg-blue-100 font-semibold' : ''}`}
+                                onClick={() => setDetailsVehicle(v)}
+                            >
+                                <div className="text-sm">{v.plateNumber}</div>
+                                <div className="text-xs text-muted-foreground">{v.driverName} • {v.officeName}</div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-7 px-2 py-1 text-xs">
-                            <Settings className="mr-2 h-3.5 w-3.5" />
-                            View Options
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[160px] text-xs">
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("select")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("select")?.toggleVisibility(value)
-                            }
-                        >
-                            Selection
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("plateNumber")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("plateNumber")?.toggleVisibility(value)
-                            }
-                        >
-                            Plate Number
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("officeName")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("officeName")?.toggleVisibility(value)
-                            }
-                        >
-                            Office
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("driverName")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("driverName")?.toggleVisibility(value)
-                            }
-                        >
-                            Driver
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("vehicleType")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("vehicleType")?.toggleVisibility(value)
-                            }
-                        >
-                            Type
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("latestTestDate")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("latestTestDate")?.toggleVisibility(value)
-                            }
-                        >
-                            Latest Test
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={table.getColumn("latestTestResult")?.getIsVisible()}
-                            onCheckedChange={(value) =>
-                                table.getColumn("latestTestResult")?.toggleVisibility(value)
-                            }
-                        >
-                            Result
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                            onClick={() => table.resetColumnVisibility()}
-                            className="justify-center text-center"
-                        >
-                            Reset View
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Details (right) using VehicleDetails component */}
+                <div className="flex-1 p-4">
+                    <div className="mb-4 flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setDetailsVehicle(null)}>&larr; Back to table</Button>
+                    </div>
+                    <VehicleDetails
+                        vehicle={detailsVehicle}
+                        isOpen={true}
+                        onClose={() => setDetailsVehicle(null)}
+                        onEditVehicle={async (data) => {
+                            if (!detailsVehicle) return;
+                            await editVehicle(detailsVehicle.id, data);
+                            // Refetch the details after update
+                            if (detailsRefetchRef.current) detailsRefetchRef.current();
+                        }}
+                        // Pass a callback to get the refetch function
+                        onRegisterRefetch={fn => { detailsRefetchRef.current = fn; }}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-2 text-xs">
+            {/* Column Visibility Toggle */}
+            <div className="flex justify-between items-center py-1">
+                <div className="text-xs text-muted-foreground">
+                    {table.getFilteredRowModel().rows.length} vehicles
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs">Density:</span>
+                    <Button size="sm" variant={density === 'compact' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('compact')} title="Compact"><GripHorizontal className="h-4 w-4" /></Button>
+                    <Button size="sm" variant={density === 'normal' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('normal')} title="Normal"><Rows3 className="h-4 w-4" /></Button>
+                    <Button size="sm" variant={density === 'spacious' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('spacious')} title="Spacious"><List className="h-4 w-4" /></Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-7 px-2 py-1 text-xs bg-white min-h-[28px]">
+                                <Settings className="mr-2 h-3.5 w-3.5" />
+                                View Options
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] text-xs bg-white">
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("plateNumber")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("plateNumber")?.toggleVisibility(value)
+                                }
+                            >
+                                Plate Number
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("officeName")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("officeName")?.toggleVisibility(value)
+                                }
+                            >
+                                Office
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("driverName")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("driverName")?.toggleVisibility(value)
+                                }
+                            >
+                                Driver
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("vehicleType")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("vehicleType")?.toggleVisibility(value)
+                                }
+                            >
+                                Type
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("latestTestDate")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("latestTestDate")?.toggleVisibility(value)
+                                }
+                            >
+                                Latest Test
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={table.getColumn("latestTestResult")?.getIsVisible()}
+                                onCheckedChange={(value) =>
+                                    table.getColumn("latestTestResult")?.toggleVisibility(value)
+                                }
+                            >
+                                Result
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => table.resetColumnVisibility()}
+                                className="justify-center text-center"
+                            >
+                                Reset View
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
             </div>
 
-            <div className="rounded-md border">
-                <Table className="text-xs"> {/* Smaller font for table */}
+            <div className="rounded-md border overflow-x-auto bg-white">
+                <Table className={density === 'compact' ? 'text-xs' : density === 'spacious' ? 'text-base' : 'text-sm'}>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id} className="h-7"> {/* Shorter row height */}
+                            <TableRow key={headerGroup.id} className={densityClasses[density]}>
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id} className="px-2 py-1">
+                                    <TableHead key={header.id} className="px-2 py-1 relative group" style={{ width: header.getSize() }}>
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
                                                 header.column.columnDef.header,
                                                 header.getContext()
                                             )}
+                                        {header.column.getCanResize() && (
+                                            <div
+                                                onMouseDown={header.getResizeHandler()}
+                                                onTouchStart={header.getResizeHandler()}
+                                                className="absolute right-0 top-0 h-full w-2 cursor-col-resize group-hover:bg-blue-200 transition"
+                                                style={{ userSelect: 'none', touchAction: 'none' }}
+                                            />
+                                        )}
                                     </TableHead>
                                 ))}
                             </TableRow>
@@ -444,24 +483,27 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => (
+                            table.getRowModel().rows.map((row, idx) => (
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() ? "selected" : undefined}
-                                    className={
-                                        (row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : '') +
-                                        ' h-7'
-                                    }
+                                    className={`cursor-pointer transition ${densityClasses[density]} ${(row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : '')}`}
+                                    onClick={e => {
+                                        if ((e.target as HTMLElement).closest('.vehicle-action-btn, .vehicle-checkbox')) return;
+                                        setDetailsVehicle(row.original);
+                                    }}
                                 >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="px-2 py-1">
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
-                                    ))}
+                                    {row.getVisibleCells().map((cell) => {
+                                        return (
+                                            <TableCell key={cell.id} className="px-2 py-1" style={{ width: cell.column.getSize() }}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        );
+                                    })}
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow className="h-7">
+                            <TableRow className={densityClasses[density]}>
                                 <TableCell colSpan={columns.length} className="text-center py-4">
                                     No vehicles found.
                                 </TableCell>
@@ -473,7 +515,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
             {/* Pagination Controls */}
             {table.getRowModel().rows?.length > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs"> {/* Less padding, smaller text */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs">
                     <div className="flex items-center gap-2">
                         <span>Rows per page:</span>
                         <select
@@ -514,15 +556,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                         >
                             Next
                         </Button>
-                    </div>
-
-                    <div>
-                        {vehicles.length === 0
-                            ? "0"
-                            : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-${Math.min(
-                                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                                table.getFilteredRowModel().rows.length
-                            )}`} of {table.getFilteredRowModel().rows.length} items
                     </div>
                 </div>
             )}
