@@ -2,6 +2,7 @@ import { authResolvers } from "./auth/resolvers.js";
 import { userResolvers } from "./user/resolvers.js";
 import { profileResolvers } from "./profile/resolvers.js";
 import { emissionResolvers } from "./emission/resolvers.js";
+import { urbanGreeningResolvers } from "./urban/resolvers.js";
 import { mergeResolvers } from "@graphql-tools/merge";
 import { IResolvers } from "@graphql-tools/utils";
 import { GraphQLResolveInfo } from "graphql";
@@ -13,6 +14,7 @@ const resolversArray = [
   userResolvers,
   profileResolvers,
   emissionResolvers,
+  urbanGreeningResolvers,
   // Add other module resolvers here
 ];
 

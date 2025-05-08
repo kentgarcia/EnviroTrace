@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from "@/integrations/types/userData";
@@ -19,7 +19,10 @@ import { fetchMyProfile } from "@/lib/profile-api";
 export default function DashboardSelection() {
   const navigate = useNavigate();
   const { user, userData, loading, signOut: authSignOut } = useAuth();
-  const [profile, setProfile] = useState<{ firstName?: string; lastName?: string } | null>(null);
+  const [profile, setProfile] = useState<{
+    firstName?: string;
+    lastName?: string;
+  } | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
@@ -56,7 +59,9 @@ export default function DashboardSelection() {
   };
 
   const hasRole = (role: UserRole) => {
-    return userData?.roles?.includes(role) || userData?.roles?.includes('admin');
+    return (
+      userData?.roles?.includes(role) || userData?.roles?.includes("admin")
+    );
   };
 
   // Get user display name
@@ -74,7 +79,9 @@ export default function DashboardSelection() {
   // Get initials for avatar
   const getInitials = () => {
     if (profile?.firstName && profile?.lastName) {
-      return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
+      return `${profile.firstName.charAt(0)}${profile.lastName.charAt(
+        0
+      )}`.toUpperCase();
     } else if (profile?.firstName) {
       return profile.firstName.charAt(0).toUpperCase();
     } else if (profile?.lastName) {
@@ -106,12 +113,18 @@ export default function DashboardSelection() {
               alt="Logo 2"
               className="h-16 w-16 rounded-md"
             />
-            <h1 className="text-xl font-semibold">Environmental Management System</h1>
+            <h1 className="text-xl font-semibold">
+              Environmental Management System
+            </h1>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {getInitials()}
@@ -119,18 +132,26 @@ export default function DashboardSelection() {
                 </Avatar>
                 <div className="text-sm text-left hidden md:block">
                   <div className="font-medium">{getDisplayName()}</div>
-                  <div className="text-xs text-muted-foreground">User Profile</div>
+                  <div className="text-xs text-muted-foreground">
+                    User Profile
+                  </div>
                 </div>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate({ to: '/profile' })}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => navigate({ to: "/profile" })}
+              >
                 <User className="mr-2 h-4 w-4" />
                 <span>My Profile</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer" onClick={handleSignOut}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={handleSignOut}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Sign Out</span>
               </DropdownMenuItem>
@@ -144,9 +165,12 @@ export default function DashboardSelection() {
         style={{ backgroundImage: "url('/images/bg_login.png')" }}
       >
         <div className="max-w-(--breakpoint-xl) mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Welcome, {getDisplayName()}!</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Welcome, {getDisplayName()}!
+          </h2>
           <p className="text-xl max-w-2xl">
-            Select a dashboard to access environmental data and management tools for sustainable development
+            Select a dashboard to access environmental data and management tools
+            for sustainable development
           </p>
         </div>
       </div>
@@ -154,7 +178,17 @@ export default function DashboardSelection() {
       <main className="flex-1 px-6 py-10">
         <div className="max-w-(--breakpoint-xl) mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {hasRole('air_quality') && (
+            {hasRole("admin") && (
+              <DashboardCard
+                title="Admin Dashboard"
+                description="Manage system settings and configurations"
+                icon="/images/bg_govemissions.jpg"
+                onClick={() => handleDashboardSelect("admin")}
+                className="border-ems-red-200 hover:border-ems-red-400"
+              />
+            )}
+
+            {hasRole("air_quality") && (
               <DashboardCard
                 title="Air Quality"
                 description="Monitor air quality metrics, pollution levels, and compliance data"
@@ -164,7 +198,7 @@ export default function DashboardSelection() {
               />
             )}
 
-            {hasRole('tree_management') && (
+            {hasRole("tree_management") && (
               <DashboardCard
                 title="Tree Management"
                 description="Track afforestation efforts, tree health data, and forest coverage"
@@ -174,7 +208,7 @@ export default function DashboardSelection() {
               />
             )}
 
-            {hasRole('government_emission') && (
+            {hasRole("government_emission") && (
               <DashboardCard
                 title="Government Emission"
                 description="Analyze emission data from government facilities and public transportation"

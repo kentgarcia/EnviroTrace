@@ -1,312 +1,222 @@
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
-import { useAuthStore } from '@/hooks/auth/useAuthStore';
-import { toast } from 'sonner';
-import SignIn from '@/pages/SignIn';
-import DashboardSelection from '@/pages/DashboardSelection';
-import ProfilePage from '@/pages/ProfilePage';
-import UserManagement from '@/pages/admin/UserManagement';
-import AdminUserManagement from '@/pages/admin/AdminUserManagement';
-import GovEmissionOverview from '@/pages/dashboards/emission/Overview';
-import VehiclesPage from '@/pages/dashboards/emission/Vehicles';
-import QuarterlyTestingPage from '@/pages/dashboards/emission/QuarterlyTesting';
-import OfficesPage from '@/pages/dashboards/emission/Offices';
-import NotFound from '@/pages/NotFound';
-import { UserRole } from '@/integrations/types/userData';
-import { redirect } from '@tanstack/react-router';
-import { Outlet } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouteComponent,
+} from "@tanstack/react-router";
+import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { toast } from "sonner";
+import SignIn from "@/pages/SignIn";
+import DashboardSelection from "@/pages/DashboardSelection";
+import ProfilePage from "@/pages/ProfilePage";
+import UserManagement from "@/pages/admin/UserManagement";
+import AdminUserManagement from "@/pages/admin/AdminUserManagement";
+import GovEmissionOverview from "@/pages/dashboards/emission/Overview";
+import VehiclesPage from "@/pages/dashboards/emission/Vehicles";
+import QuarterlyTestingPage from "@/pages/dashboards/emission/QuarterlyTesting";
+import OfficesPage from "@/pages/dashboards/emission/Offices";
+import SeedlingRequestsPage from "@/pages/dashboards/urban/SeedlingRequests";
+import NotFound from "@/pages/NotFound";
+import { UserRole } from "@/integrations/types/userData";
+import { redirect } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
+import UrbanOverview from "@/pages/dashboards/urban/Overview";
+import AdminDashboard from "@/pages/admin/Overview";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminLogs from "@/pages/admin/AdminLogs";
 
 // Create a root route
 const rootRoute = createRootRoute({
-    component: () => {
-        return <Outlet />;
-    },
+  component: () => {
+    return <Outlet />;
+  },
 });
 
-// Create authentication guards
-const isAuthenticated = () => {
-    const token = useAuthStore.getState().token;
-    return token !== null;
+// Reusable guard functions
+const requireAuth = () => {
+  if (!useAuthStore.getState().token) {
+    throw redirect({
+      to: "/",
+      replace: true,
+    });
+  }
 };
 
-const hasRole = (allowedRoles: UserRole[]) => {
-    const roles = useAuthStore.getState().roles;
-    return roles.some(role => allowedRoles.includes(role));
+const requireRole = (
+  allowedRoles: UserRole[],
+  errorMessage: string = "Access denied. You need appropriate role to access this page"
+) => {
+  const roles = useAuthStore.getState().roles;
+  if (!roles.some((role) => allowedRoles.includes(role))) {
+    toast.error(errorMessage, {
+      duration: 5000,
+      id: "access-denied",
+    });
+    throw redirect({
+      to: "/dashboard-selection",
+      replace: true,
+    });
+  }
 };
 
 // Define routes
 const indexRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: SignIn
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: SignIn,
 });
 
 const dashboardSelectionRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/dashboard-selection',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-    },
-    component: DashboardSelection
+  getParentRoute: () => rootRoute,
+  path: "/dashboard-selection",
+  beforeLoad: requireAuth,
+  component: DashboardSelection,
 });
 
 const profileRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/profile',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-    },
-    component: ProfilePage
+  getParentRoute: () => rootRoute,
+  path: "/profile",
+  beforeLoad: requireAuth,
+  component: ProfilePage,
 });
 
 // Admin routes
-const userManagementRoute = createRoute({
+const createAdminRoute = (path: string, component: RouteComponent) => {
+  return createRoute({
     getParentRoute: () => rootRoute,
-    path: '/admin/user-management',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin'])) {
-            toast.error('Access denied. You need admin role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
+    path,
+    beforeLoad: () => {
+      requireAuth();
+      requireRole(
+        ["admin"],
+        "Access denied. You need admin role to access this page"
+      );
     },
-    component: UserManagement
-});
+    component,
+  });
+};
 
-const adminUsersRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/admin/users',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin'])) {
-            toast.error('Access denied. You need admin role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
-    },
-    component: AdminUserManagement
-});
+const adminOverviewRoute = createAdminRoute("/admin/overview", AdminDashboard);
+
+const userManagementRoute = createAdminRoute(
+  "/admin/user-management",
+  UserManagement
+);
+
+const adminUsersRoute = createAdminRoute("/admin/users", AdminUserManagement);
+
+const adminSettingsRoute = createAdminRoute("/admin/settings", AdminSettings);
+
+const adminLogsRoute = createAdminRoute("/admin/logs", AdminLogs);
 
 // Government Emission routes
-const govEmissionOverviewRoute = createRoute({
+const createGovEmissionRoute = (path: string, component: RouteComponent) => {
+  return createRoute({
     getParentRoute: () => rootRoute,
-    path: '/government-emission/overview',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
+    path,
+    beforeLoad: () => {
+      requireAuth();
+      requireRole(["admin", "government_emission"]);
     },
-    component: GovEmissionOverview
-});
+    component,
+  });
+};
 
-const vehiclesPageRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/government-emission/vehicles',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
-    },
-    component: VehiclesPage
-});
+const govEmissionOverviewRoute = createGovEmissionRoute(
+  "/government-emission/overview",
+  GovEmissionOverview
+);
+const vehiclesPageRoute = createGovEmissionRoute(
+  "/government-emission/vehicles",
+  VehiclesPage
+);
+const quarterlyTestingRoute = createGovEmissionRoute(
+  "/government-emission/quarterly-testing",
+  QuarterlyTestingPage
+);
+const officesRoute = createGovEmissionRoute(
+  "/government-emission/offices",
+  OfficesPage
+);
+const reportsRoute = createGovEmissionRoute(
+  "/government-emission/reports",
+  GovEmissionOverview
+);
+const settingsRoute = createGovEmissionRoute(
+  "/government-emission/settings",
+  GovEmissionOverview
+);
 
-const quarterlyTestingRoute = createRoute({
+// Urban Greening / Tree Management routes
+const createTreeManagementRoute = (path: string, component: RouteComponent) => {
+  return createRoute({
     getParentRoute: () => rootRoute,
-    path: '/government-emission/quarterly-testing',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
+    path,
+    beforeLoad: () => {
+      requireAuth();
+      requireRole(["admin", "tree_management"]);
     },
-    component: QuarterlyTestingPage
-});
+    component,
+  });
+};
 
-const officesRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/government-emission/offices',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
-    },
-    component: OfficesPage
-});
-
-const reportsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/government-emission/reports',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
-    },
-    component: GovEmissionOverview
-});
-
-const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/government-emission/settings',
-    beforeLoad: async () => {
-        if (!isAuthenticated()) {
-            throw redirect({
-                to: '/',
-                replace: true
-            });
-        }
-        if (!hasRole(['admin', 'government_emission'])) {
-            toast.error('Access denied. You need appropriate role to access this page', {
-                duration: 5000,
-                id: 'access-denied'
-            });
-            throw redirect({
-                to: '/dashboard-selection',
-                replace: true
-            });
-        }
-    },
-    component: GovEmissionOverview
-});
+const treeManagementRoute = createTreeManagementRoute(
+  "/tree-management/overview",
+  UrbanOverview
+);
+const seedlingRequestsRoute = createTreeManagementRoute(
+  "/tree-management/seedling-requests",
+  SeedlingRequestsPage
+);
 
 const notFoundRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '*',
-    component: NotFound
+  getParentRoute: () => rootRoute,
+  path: "*",
+  component: NotFound,
 });
 
 // Create and export the router
 export const routeTree = rootRoute.addChildren([
-    indexRoute,
-    dashboardSelectionRoute,
-    profileRoute,
-    userManagementRoute,
-    adminUsersRoute,
-    govEmissionOverviewRoute,
-    vehiclesPageRoute,
-    quarterlyTestingRoute,
-    officesRoute,
-    reportsRoute,
-    settingsRoute,
-    notFoundRoute
+  indexRoute,
+  dashboardSelectionRoute,
+  profileRoute,
+  adminOverviewRoute,
+  adminSettingsRoute,
+  adminLogsRoute,
+  userManagementRoute,
+  adminUsersRoute,
+  govEmissionOverviewRoute,
+  vehiclesPageRoute,
+  quarterlyTestingRoute,
+  officesRoute,
+  reportsRoute,
+  settingsRoute,
+  seedlingRequestsRoute,
+  treeManagementRoute,
+  notFoundRoute,
 ]);
 
 // Create the router instance
 export const router = createRouter({
-    routeTree,
-    defaultPreload: 'intent',
-    // This is the key addition - a defaultPendingComponent to show during route transitions
-    defaultPendingComponent: () => (
-        <div className="p-4 flex justify-center">
-            <div className="animate-pulse text-gray-500">Loading...</div>
-        </div>
-    ),
-    // Add defaultErrorComponent to handle errors
-    defaultErrorComponent: ({ error }) => (
-        <div className="p-4 text-red-500">
-            <h1>Error: {error.message}</h1>
-        </div>
-    ),
+  routeTree,
+  defaultPreload: "intent",
+  defaultPendingComponent: () => (
+    <div className="p-4 flex justify-center">
+      <div className="animate-pulse text-gray-500">Loading...</div>
+    </div>
+  ),
+  defaultErrorComponent: ({ error }) => (
+    <div className="p-4 text-red-500">
+      <h1>Error: {error.message}</h1>
+    </div>
+  ),
 });
 
 // Register the router for maximum type safety
-declare module '@tanstack/react-router' {
-    interface Register {
-        router: typeof router;
-    }
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
 }
 
 // Router instance is ready to be used by RouterProvider

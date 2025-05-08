@@ -11,11 +11,28 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { BarChart2, Building, Car, ClipboardList, FileStack, Leaf, Settings, Calendar } from "lucide-react";
+import {
+  BarChart2,
+  Building,
+  Car,
+  ClipboardList,
+  FileStack,
+  Leaf,
+  Settings,
+  Calendar,
+  Users,
+  Activity,
+  Shield,
+  Database,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 interface SidebarProps {
-  dashboardType: "air-quality" | "tree-management" | "government-emission";
+  dashboardType:
+    | "air-quality"
+    | "tree-management"
+    | "government-emission"
+    | "admin";
 }
 
 export function AppSidebar({ dashboardType }: SidebarProps) {
@@ -25,7 +42,40 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
   const getMenuItems = () => {
     const basePath = `/${dashboardType}`;
 
-    if (dashboardType === "government-emission") {
+    if (dashboardType === "admin") {
+      return [
+        {
+          title: "Overview",
+          icon: BarChart2,
+          path: `${basePath}/overview`,
+        },
+        {
+          title: "User Management",
+          icon: Users,
+          path: `${basePath}/user-management`,
+        },
+        {
+          title: "Settings",
+          icon: Settings,
+          path: `${basePath}/settings`,
+        },
+        {
+          title: "Activity Logs",
+          icon: Activity,
+          path: `${basePath}/logs`,
+        },
+        {
+          title: "Security",
+          icon: Shield,
+          path: `${basePath}/security`,
+        },
+        {
+          title: "Data Management",
+          icon: Database,
+          path: `${basePath}/data`,
+        },
+      ];
+    } else if (dashboardType === "government-emission") {
       return [
         {
           title: "Dashboard",
@@ -51,10 +101,22 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           title: "Settings",
           icon: Settings,
           path: `${basePath}/settings`,
-        }
+        },
+      ];
+    } else if (dashboardType === "tree-management") {
+      return [
+        {
+          title: "Dashboard",
+          icon: BarChart2,
+          path: `${basePath}/overview`,
+        },
+        {
+          title: "Seedling Requests",
+          icon: ClipboardList,
+          path: `${basePath}/seedling-requests`,
+        },
       ];
     }
-
     const commonItems = [
       {
         title: "Dashboard",
@@ -75,7 +137,7 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
         title: "Settings",
         icon: Settings,
         path: `${basePath}/settings`,
-      }
+      },
     ];
 
     return commonItems;
@@ -89,6 +151,8 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
         return "Tree Management";
       case "government-emission":
         return "Government Emission";
+      case "admin":
+        return "Admin Dashboard";
       default:
         return "Dashboard";
     }
@@ -127,9 +191,7 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                <SidebarMenuItem
-                  key={item.title}
-                  className="pl-2 pr-2 py-1">
+                <SidebarMenuItem key={item.title} className="pl-2 pr-2 py-1">
                   <SidebarMenuButton
                     asChild
                     isActive={!!matchRoute({ to: item.path, fuzzy: false })}
