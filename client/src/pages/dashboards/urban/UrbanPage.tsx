@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { UrbanOverview } from "@/components/dashboards/urban/overview/UrbanOverview";
+import { UrbanOverview } from "@/pages/dashboards/urban/components/overview/UrbanOverview";
 import { useUrbanOverview } from "@/hooks/urban/useUrbanOverview";
-import { YearSelector } from "@/components/dashboards/emission/offices/YearSelector";
+import { YearSelector } from "@/pages/dashboards/emission/components/offices/YearSelector";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";

@@ -100,7 +100,7 @@ const adminOverviewRoute = createAdminRoute("/admin/overview", AdminDashboard);
 
 const userManagementRoute = createAdminRoute(
   "/admin/user-management",
-  UserManagement
+  AdminUserManagement
 );
 
 const adminUsersRoute = createAdminRoute("/admin/users", AdminUserManagement);

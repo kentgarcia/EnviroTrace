@@ -12,6 +12,10 @@ import {
   Shield,
   Database,
   BarChart3,
+  Leaf,
+  Car,
+  Building,
+  FileText,
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -38,22 +42,34 @@ export default function AdminDashboard() {
       path: "/admin/logs",
     },
     {
-      title: "Security",
-      description: "Manage security settings and access controls",
-      icon: <Shield className="h-6 w-6" />,
-      path: "/admin/security",
+      title: "Tree Management",
+      description: "Manage urban greening and afforestation data",
+      icon: <Leaf className="h-6 w-6" />,
+      path: "/tree-management/overview",
+    },
+    {
+      title: "Emission Control",
+      description: "Monitor and manage government vehicle emissions",
+      icon: <Car className="h-6 w-6" />,
+      path: "/government-emission/overview",
+    },
+    {
+      title: "Facility Management",
+      description: "Track environmental compliance of government facilities",
+      icon: <Building className="h-6 w-6" />,
+      path: "/government-emission/offices",
+    },
+    {
+      title: "Reports",
+      description: "Generate and manage environmental reports",
+      icon: <FileText className="h-6 w-6" />,
+      path: "/admin/reports",
     },
     {
       title: "Data Management",
-      description: "Manage and backup system data",
+      description: "Manage and backup environmental data",
       icon: <Database className="h-6 w-6" />,
       path: "/admin/data",
-    },
-    {
-      title: "Analytics",
-      description: "View system analytics and reports",
-      icon: <BarChart3 className="h-6 w-6" />,
-      path: "/admin/analytics",
     },
   ];
 
@@ -63,9 +79,12 @@ export default function AdminDashboard() {
         <AppSidebar dashboardType="admin" />
         <main className="flex-1 overflow-y-auto p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <h1 className="text-3xl font-bold">
+              Environmental Management System
+            </h1>
             <p className="text-muted-foreground mt-2">
-              Manage your system settings and configurations
+              Admin dashboard for managing environmental monitoring and
+              compliance
             </p>
           </div>
 
@@ -77,8 +96,8 @@ export default function AdminDashboard() {
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="logs">Logs</TabsTrigger>
+              <TabsTrigger value="compliance">Compliance</TabsTrigger>
+              <TabsTrigger value="reports">Reports</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -111,29 +130,50 @@ export default function AdminDashboard() {
                   <CardTitle>User Management</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button>Manage Users</Button>
+                  <Button
+                    onClick={() => navigate({ to: "/admin/user-management" })}
+                  >
+                    Manage Users
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings">
+            <TabsContent value="compliance">
               <Card>
                 <CardHeader>
-                  <CardTitle>System Settings</CardTitle>
+                  <CardTitle>Environmental Compliance</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button>Configure Settings</Button>
+                  <div className="space-y-4">
+                    <Button
+                      onClick={() =>
+                        navigate({ to: "/government-emission/overview" })
+                      }
+                    >
+                      View Emission Data
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        navigate({ to: "/tree-management/overview" })
+                      }
+                    >
+                      View Tree Management
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="logs">
+            <TabsContent value="reports">
               <Card>
                 <CardHeader>
-                  <CardTitle>Activity Logs</CardTitle>
+                  <CardTitle>Environmental Reports</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Button>View Logs</Button>
+                  <Button onClick={() => navigate({ to: "/admin/reports" })}>
+                    Generate Reports
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

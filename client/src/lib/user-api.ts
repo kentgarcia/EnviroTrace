@@ -26,6 +26,7 @@ interface User {
   lastSignInAt?: string;
   createdAt: string;
   updatedAt?: string;
+  isSuperAdmin: boolean;
   roles?: UserRoleEntity[];
   profile?: UserProfile;
 }
@@ -59,8 +60,12 @@ export const GET_USERS = gql`
       lastSignInAt
       createdAt
       updatedAt
+      isSuperAdmin
       roles {
         role
+      }
+      profile {
+        fullName
       }
     }
   }
@@ -75,8 +80,12 @@ export const GET_USER = gql`
       lastSignInAt
       createdAt
       updatedAt
+      isSuperAdmin
       roles {
         role
+      }
+      profile {
+        fullName
       }
     }
   }
@@ -88,6 +97,7 @@ export const GET_USER_ROLES = gql`
     userRoles(userId: $userId) {
       id
       role
+      createdAt
     }
   }
 `;
@@ -99,6 +109,10 @@ export const CREATE_USER = gql`
       id
       email
       createdAt
+      isSuperAdmin
+      roles {
+        role
+      }
     }
   }
 `;
@@ -109,6 +123,7 @@ export const ADD_USER_ROLE = gql`
     addUserRole(userId: $userId, role: $role) {
       id
       role
+      createdAt
     }
   }
 `;
@@ -155,9 +170,11 @@ export async function fetchUsers() {
       id: user.id,
       email: user.email,
       full_name: user.profile?.fullName || "N/A",
-      role: validateRole(user.roles?.[0]?.role ?? "user"),
-      status: "active", // Default status
+      roles: user.roles?.map((role) => validateRole(role.role)) || ["user"],
+      status: user.isSuperAdmin ? "super_admin" : "active",
       created_at: user.createdAt,
+      last_sign_in: user.lastSignInAt,
+      updated_at: user.updatedAt,
     }));
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -169,7 +186,7 @@ export async function fetchUsers() {
 export async function createUser(
   email: string,
   password: string,
-  role: UserRole
+  roles: UserRole[]
 ) {
   try {
     // First create the user
@@ -182,8 +199,8 @@ export async function createUser(
       throw new Error("No data returned from createUser mutation");
     }
 
-    // Then add the role
-    if (role) {
+    // Then add all roles
+    for (const role of roles) {
       await apolloClient.mutate<AddUserRoleResponse>({
         mutation: ADD_USER_ROLE,
         variables: { userId: data.createUser.id, role },
@@ -200,22 +217,23 @@ export async function createUser(
 // Helper function to update user roles
 export async function updateUserRole(
   userId: string,
-  oldRole: UserRole | string,
-  newRole: UserRole | string
+  oldRoles: UserRole[],
+  newRoles: UserRole[]
 ) {
   try {
-    // Only update if the role has changed
-    if (oldRole !== newRole) {
-      // First remove the old role if it exists
-      if (oldRole) {
+    // Remove roles that are no longer present
+    for (const oldRole of oldRoles) {
+      if (!newRoles.includes(oldRole)) {
         await apolloClient.mutate({
           mutation: REMOVE_USER_ROLE,
           variables: { userId, role: oldRole },
         });
       }
+    }
 
-      // Then add the new role
-      if (newRole) {
+    // Add new roles
+    for (const newRole of newRoles) {
+      if (!oldRoles.includes(newRole)) {
         await apolloClient.mutate({
           mutation: ADD_USER_ROLE,
           variables: { userId, role: newRole },
@@ -225,7 +243,7 @@ export async function updateUserRole(
 
     return true;
   } catch (error) {
-    console.error("Error updating user role:", error);
+    console.error("Error updating user roles:", error);
     throw error;
   }
 }
@@ -236,20 +254,6 @@ export async function deleteUser(id: string) {
     const { data } = await apolloClient.mutate<DeleteUserResponse>({
       mutation: DELETE_USER,
       variables: { id },
-      update: (cache) => {
-        // Update the cache to remove the deleted user
-        const existingData = cache.readQuery<GetUsersResponse>({
-          query: GET_USERS,
-        });
-        if (existingData && existingData.users) {
-          cache.writeQuery<GetUsersResponse>({
-            query: GET_USERS,
-            data: {
-              users: existingData.users.filter((user) => user.id !== id),
-            },
-          });
-        }
-      },
     });
 
     return data?.deleteUser;

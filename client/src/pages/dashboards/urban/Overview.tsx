@@ -25,7 +25,7 @@ import {
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
-import { UrbanOverview } from "@/components/dashboards/urban/overview/UrbanOverview";
+import { UrbanOverview } from "@/pages/dashboards/urban/components/overview/UrbanOverview";
 import { useUrbanOverview } from "@/hooks/urban/useUrbanOverview";
 
 const Overview: React.FC = () => {

@@ -9,8 +9,8 @@ import {
   SeedlingRequest,
   SeedlingRequestInput,
 } from "@/hooks/urban/useSeedlingRequests";
-import { SeedlingRequestTable } from "@/components/dashboards/urban/seedlings/SeedlingRequestTable";
-import { SeedlingRequestModals } from "@/components/dashboards/urban/seedlings/SeedlingRequestModals";
+import { SeedlingRequestTable } from "@/pages/dashboards/urban/components/seedlings/SeedlingRequestTable";
+import { SeedlingRequestModals } from "@/pages/dashboards/urban/components/seedlings/SeedlingRequestModals";
 import {
   FileDown,
   Plus,
