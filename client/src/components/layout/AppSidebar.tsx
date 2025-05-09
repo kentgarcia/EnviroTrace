@@ -24,6 +24,9 @@ import {
   Activity,
   Shield,
   Database,
+  Cloud,
+  Wallet,
+  UserCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
@@ -32,7 +35,8 @@ interface SidebarProps {
     | "air-quality"
     | "tree-management"
     | "government-emission"
-    | "admin";
+    | "admin"
+    | "smoke-belching";
 }
 
 export function AppSidebar({ dashboardType }: SidebarProps) {
@@ -42,7 +46,35 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
   const getMenuItems = () => {
     const basePath = `/${dashboardType}`;
 
-    if (dashboardType === "admin") {
+    if (dashboardType === "smoke-belching") {
+      return [
+        {
+          title: "Overview",
+          icon: BarChart2,
+          path: `${basePath}/overview`,
+        },
+        {
+          title: "Smoke Belcher",
+          icon: Cloud,
+          path: `${basePath}/smoke-belcher`,
+        },
+        {
+          title: "Account Control",
+          icon: UserCircle,
+          path: `${basePath}/account-control`,
+        },
+        {
+          title: "Fee Control",
+          icon: Wallet,
+          path: `${basePath}/fee-control`,
+        },
+        {
+          title: "Reports",
+          icon: FileStack,
+          path: `${basePath}/reports`,
+        },
+      ];
+    } else if (dashboardType === "admin") {
       return [
         {
           title: "Overview",
@@ -153,6 +185,8 @@ export function AppSidebar({ dashboardType }: SidebarProps) {
         return "Government Emission";
       case "admin":
         return "Admin Dashboard";
+      case "smoke-belching":
+        return "Smoke Belching";
       default:
         return "Dashboard";
     }

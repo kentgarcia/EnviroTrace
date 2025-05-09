@@ -1,20 +1,14 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { format } from "date-fns";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
   ColumnDef,
   SortingState,
-  flexRender,
   PaginationState,
   VisibilityState,
   ColumnFiltersState,
   OnChangeFn,
   RowSelectionState,
-  getFilteredRowModel,
-  ColumnResizeMode,
+  Row,
 } from "@tanstack/react-table";
 import {
   Table,
@@ -32,7 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Eye,
@@ -40,13 +33,9 @@ import {
   Trash2,
   MoreHorizontal,
   ArrowUpDown,
-  Settings,
-  GripHorizontal,
-  List,
-  Rows3,
 } from "lucide-react";
 import { SeedlingRequest } from "@/hooks/urban/useSeedlingRequests";
-import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/ui/data-table";
 
 // Skeleton loader component
 export const SeedlingRequestTableSkeleton: React.FC = () => {
@@ -127,30 +116,9 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
   rowSelection = {},
   onRowSelectionChange,
 }) => {
-  // Internal state management when parent doesn't provide state handlers
-  const [internalSorting, setInternalSorting] =
-    React.useState<SortingState>(sorting);
-  const [internalPagination, setInternalPagination] =
-    React.useState<PaginationState>(pagination);
-  const [internalColumnFilters, setInternalColumnFilters] =
-    React.useState<ColumnFiltersState>(columnFilters);
-  const [internalColumnVisibility, setInternalColumnVisibility] =
-    React.useState<VisibilityState>(columnVisibility);
-  const [internalRowSelection, setInternalRowSelection] =
-    React.useState<RowSelectionState>(rowSelection);
-  const [density, setDensity] = React.useState<
-    "compact" | "normal" | "spacious"
-  >("normal");
-  const [detailsRequest, setDetailsRequest] =
-    React.useState<SeedlingRequest | null>(null);
-  const [columnResizeMode, setColumnResizeMode] =
-    React.useState<ColumnResizeMode>("onChange");
-
-  const densityClasses = {
-    compact: "text-xs h-6",
-    normal: "text-sm h-9",
-    spacious: "text-base h-12",
-  };
+  const [detailsRequest, setDetailsRequest] = useState<SeedlingRequest | null>(
+    null
+  );
 
   // Format date
   const formatDate = (dateValue?: string | number) => {
@@ -176,9 +144,6 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
   const columns: ColumnDef<SeedlingRequest>[] = [
     {
       accessorKey: "dateReceived",
-      size: 120,
-      minSize: 80,
-      maxSize: 200,
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -193,9 +158,6 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
     },
     {
       accessorKey: "requesterName",
-      size: 140,
-      minSize: 80,
-      maxSize: 300,
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -212,9 +174,6 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
     },
     {
       accessorKey: "address",
-      size: 200,
-      minSize: 100,
-      maxSize: 400,
       header: "Address",
       cell: ({ row }) => (
         <div className="truncate max-w-xs" title={row.original.address}>
@@ -224,9 +183,6 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
     },
     {
       accessorKey: "items",
-      size: 120,
-      minSize: 80,
-      maxSize: 200,
       header: "Items",
       cell: ({ row }) => {
         const items = row.original.items;
@@ -240,9 +196,7 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
     },
     {
       id: "actions",
-      size: 100,
-      minSize: 80,
-      maxSize: 160,
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => {
         const request = row.original;
 
@@ -252,7 +206,7 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-8 w-8 p-0 vehicle-action-btn"
+                  className="h-8 w-8 p-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -298,70 +252,6 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
     },
   ];
 
-  const table = useReactTable({
-    data: requests,
-    columns,
-    state: {
-      sorting: onSortingChange ? sorting : internalSorting,
-      pagination: onPaginationChange ? pagination : internalPagination,
-      columnFilters: onColumnFiltersChange
-        ? columnFilters
-        : internalColumnFilters,
-      columnVisibility: onColumnVisibilityChange
-        ? columnVisibility
-        : internalColumnVisibility,
-      rowSelection: onRowSelectionChange ? rowSelection : internalRowSelection,
-    },
-    enableRowSelection: true,
-    enableColumnResizing: true,
-    columnResizeMode,
-    onSortingChange:
-      onSortingChange ||
-      ((updater) => {
-        setInternalSorting(
-          typeof updater === "function" ? updater(internalSorting) : updater
-        );
-      }),
-    onPaginationChange:
-      onPaginationChange ||
-      ((updater) => {
-        setInternalPagination(
-          typeof updater === "function" ? updater(internalPagination) : updater
-        );
-      }),
-    onColumnFiltersChange:
-      onColumnFiltersChange ||
-      ((updater) => {
-        setInternalColumnFilters(
-          typeof updater === "function"
-            ? updater(internalColumnFilters)
-            : updater
-        );
-      }),
-    onColumnVisibilityChange:
-      onColumnVisibilityChange ||
-      ((updater) => {
-        setInternalColumnVisibility(
-          typeof updater === "function"
-            ? updater(internalColumnVisibility)
-            : updater
-        );
-      }),
-    onRowSelectionChange:
-      onRowSelectionChange ||
-      ((updater) => {
-        setInternalRowSelection(
-          typeof updater === "function"
-            ? updater(internalRowSelection)
-            : updater
-        );
-      }),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
-
   if (isLoading) {
     return <SeedlingRequestTableSkeleton />;
   }
@@ -375,9 +265,8 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
             {requests.map((r) => (
               <li
                 key={r.id}
-                className={`p-3 cursor-pointer hover:bg-blue-50 ${
-                  detailsRequest.id === r.id ? "bg-blue-100 font-semibold" : ""
-                }`}
+                className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsRequest.id === r.id ? "bg-blue-100 font-semibold" : ""
+                  }`}
                 onClick={() => setDetailsRequest(r)}
               >
                 <div className="text-sm">{r.requesterName}</div>
@@ -455,239 +344,17 @@ export const SeedlingRequestTable: React.FC<SeedlingRequestTableProps> = ({
   }
 
   return (
-    <div className="space-y-2 text-xs">
-      {/* Column Visibility Toggle */}
-      <div className="flex justify-between items-center py-1">
-        <div className="text-xs text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} requests
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs">Density:</span>
-          <Button
-            size="sm"
-            variant={density === "compact" ? "default" : "outline"}
-            className="px-2 py-1 text-xs"
-            onClick={() => setDensity("compact")}
-            title="Compact"
-          >
-            <GripHorizontal className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant={density === "normal" ? "default" : "outline"}
-            className="px-2 py-1 text-xs"
-            onClick={() => setDensity("normal")}
-            title="Normal"
-          >
-            <Rows3 className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant={density === "spacious" ? "default" : "outline"}
-            className="px-2 py-1 text-xs"
-            onClick={() => setDensity("spacious")}
-            title="Spacious"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 py-1 text-xs bg-white min-h-[28px]"
-              >
-                <Settings className="mr-2 h-3.5 w-3.5" />
-                View Options
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-[160px] text-xs bg-white"
-            >
-              <DropdownMenuCheckboxItem
-                checked={table.getColumn("dateReceived")?.getIsVisible()}
-                onCheckedChange={(value) =>
-                  table.getColumn("dateReceived")?.toggleVisibility(value)
-                }
-              >
-                Date Received
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={table.getColumn("requesterName")?.getIsVisible()}
-                onCheckedChange={(value) =>
-                  table.getColumn("requesterName")?.toggleVisibility(value)
-                }
-              >
-                Requester
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={table.getColumn("address")?.getIsVisible()}
-                onCheckedChange={(value) =>
-                  table.getColumn("address")?.toggleVisibility(value)
-                }
-              >
-                Address
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={table.getColumn("items")?.getIsVisible()}
-                onCheckedChange={(value) =>
-                  table.getColumn("items")?.toggleVisibility(value)
-                }
-              >
-                Items
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => table.resetColumnVisibility()}
-                className="justify-center text-center"
-              >
-                Reset View
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      <div className="rounded-md border overflow-x-auto bg-white">
-        <Table
-          className={
-            density === "compact"
-              ? "text-xs"
-              : density === "spacious"
-              ? "text-base"
-              : "text-sm"
-          }
-        >
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className={densityClasses[density]}
-              >
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="px-2 py-1 relative group"
-                    style={{ width: header.getSize() }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    {header.column.getCanResize() && (
-                      <div
-                        onMouseDown={header.getResizeHandler()}
-                        onTouchStart={header.getResizeHandler()}
-                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize group-hover:bg-blue-200 transition"
-                        style={{ userSelect: "none", touchAction: "none" }}
-                      />
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                  className={`cursor-pointer transition ${densityClasses[density]}`}
-                  onClick={(e) => {
-                    // Don't trigger view if clicking on dropdown or its contents
-                    if (
-                      (e.target as HTMLElement).closest(
-                        '.vehicle-action-btn, [role="menu"]'
-                      )
-                    )
-                      return;
-                    setDetailsRequest(row.original);
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className="px-2 py-1"
-                      style={{ width: cell.column.getSize() }}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow className={densityClasses[density]}>
-                <TableCell
-                  colSpan={columns.length}
-                  className="text-center py-4"
-                >
-                  No seedling requests found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination Controls */}
-      {table.getRowModel().rows?.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs">
-          <div className="flex items-center gap-2">
-            <span>Rows per page:</span>
-            <select
-              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[5, 10, 20, 50, 100].map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 py-1"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-
-            <span>
-              Page{" "}
-              <span className="font-semibold">
-                {table.getState().pagination.pageIndex + 1}
-              </span>{" "}
-              of <span className="font-semibold">{table.getPageCount()}</span>
-            </span>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 py-1"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+    <DataTable
+      columns={columns}
+      data={requests}
+      isLoading={isLoading}
+      loadingMessage="Loading seedling requests..."
+      emptyMessage="No seedling requests found for the selected filters."
+      onRowClick={(row: Row<SeedlingRequest>) => setDetailsRequest(row.original)}
+      showDensityToggle={true}
+      showColumnVisibility={true}
+      showPagination={true}
+      defaultPageSize={10}
+    />
   );
 };

@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, memo, useCallback, useEffect } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import type { RowData, VisibilityState } from "@tanstack/react-table";
 import {
     Table,
@@ -11,28 +10,18 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Info, XCircle, GripHorizontal, Rows3, List, Settings, ArrowLeft, FileBarChart, Car, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, XCircle, ArrowLeft, FileBarChart, Car, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OfficeData } from "@/hooks/offices/useOffices";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuTrigger,
-    DropdownMenuCheckboxItem,
-    DropdownMenuSeparator,
-    DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-    useReactTable,
-    getCoreRowModel,
-    getSortedRowModel,
-    flexRender,
     SortingState,
     ColumnDef,
+    Row
 } from "@tanstack/react-table";
 import { useQuery } from "@apollo/client";
 import { GET_EMISSION_TESTS } from "@/lib/emission-api";
 import { EmissionTest } from "@/hooks/emissions/useDashboardData";
+import { DataTable } from "@/components/ui/data-table";
 
 // Augment the @tanstack/react-table module to include 'align' in ColumnMeta
 declare module '@tanstack/react-table' {
@@ -212,32 +201,15 @@ export function OfficeComplianceTable({
     officeData,
     errorMessage,
 }: OfficeComplianceTableProps) {
-    // Density state
-    const [density, setDensity] = useState<'compact' | 'normal' | 'spacious'>('normal');
-    const densityClasses = useMemo(() => ({
-        compact: 'text-xs h-6',
-        normal: 'text-sm h-9',
-        spacious: 'text-base h-12',
-    }), []);
-
-    // Column visibility state
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
-        office: true,
-        vehicles: true,
-        tested: true,
-        passed: true,
-        compliance: true,
-        status: true,
-    });
-
+    // State for sorting
     const [sorting, setSorting] = useState<SortingState>([]);
 
     // State for selected office
     const [selectedOffice, setSelectedOffice] = useState<OfficeData | null>(null);
 
     // Handler for row click
-    const handleRowClick = useCallback((office: OfficeData) => {
-        setSelectedOffice(office);
+    const handleRowClick = useCallback((row: Row<OfficeData>) => {
+        setSelectedOffice(row.original);
     }, []);
 
     // Handler for going back to the table view
@@ -302,32 +274,6 @@ export function OfficeComplianceTable({
         },
     ], []);
 
-    // Reset all columns visibility
-    const resetColumnVisibility = () => {
-        setColumnVisibility({
-            office: true,
-            vehicles: true,
-            tested: true,
-            passed: true,
-            compliance: true,
-            status: true,
-        });
-    };
-
-    const table = useReactTable({
-        data: officeData || [],
-        columns,
-        state: {
-            sorting,
-            columnVisibility,
-        },
-        onSortingChange: setSorting,
-        onColumnVisibilityChange: setColumnVisibility,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        debugTable: false,
-    });
-
     // Handle error state
     if (errorMessage) {
         return (
@@ -352,123 +298,29 @@ export function OfficeComplianceTable({
         );
     }
 
-    return (
-        <div className="space-y-2 text-xs">
-            {/* Column Visibility Toggle & Density */}
-            <div className="flex justify-between items-center py-1">
-                <div className="text-xs text-muted-foreground">
-                    {`${officeData.length} offices`}
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs">Density:</span>
-                    <Button
-                        size="sm"
-                        variant={density === 'compact' ? 'default' : 'outline'}
-                        className="px-2 py-1 text-xs"
-                        onClick={() => setDensity('compact')}
-                        title="Compact"
-                    >
-                        <GripHorizontal className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant={density === 'normal' ? 'default' : 'outline'}
-                        className="px-2 py-1 text-xs"
-                        onClick={() => setDensity('normal')}
-                        title="Normal"
-                    >
-                        <Rows3 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant={density === 'spacious' ? 'default' : 'outline'}
-                        className="px-2 py-1 text-xs"
-                        onClick={() => setDensity('spacious')}
-                        title="Spacious"
-                    >
-                        <List className="h-4 w-4" />
-                    </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input hover:bg-accent hover:text-accent-foreground text-xs bg-white h-7 px-2 py-1 min-h-[28px]">
-                            <Settings className="mr-2 h-3.5 w-3.5" />
-                            View Options
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[160px] text-xs bg-white">
-                            {table.getAllLeafColumns().map(col => (
-                                <DropdownMenuCheckboxItem
-                                    key={col.id}
-                                    checked={col.getIsVisible()}
-                                    onCheckedChange={v => col.toggleVisibility(!!v)}
-                                >
-                                    {col.columnDef.header as string}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={resetColumnVisibility}
-                                className="justify-center text-center"
-                            >
-                                Reset View
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
+    if (selectedOffice) {
+        return (
+            <OfficeDetailsView
+                office={selectedOffice}
+                onBack={handleBackToTable}
+            />
+        );
+    }
 
-            {selectedOffice ? (
-                <OfficeDetailsView
-                    office={selectedOffice}
-                    onBack={handleBackToTable}
-                />
-            ) : (
-                <div className="rounded-md border overflow-x-auto bg-white">
-                    <Table className={density === 'compact' ? 'text-xs' : density === 'spacious' ? 'text-base' : 'text-sm'}>
-                        <TableHeader>
-                            {table.getHeaderGroups().map(headerGroup => (
-                                <TableRow key={headerGroup.id} className={densityClasses[density]}>
-                                    {headerGroup.headers.map(header => (
-                                        header.isPlaceholder ? null : (
-                                            <TableHead
-                                                key={header.id}
-                                                className={header.column.columnDef.meta?.align === 'right' ? 'text-right' : ''}
-                                            >
-                                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                            </TableHead>
-                                        )
-                                    ))}
-                                </TableRow>
-                            ))}
-                        </TableHeader>
-                        <TableBody>
-                            {table.getRowModel().rows.length ? (
-                                table.getRowModel().rows.map(row => (
-                                    <TableRow
-                                        key={row.id}
-                                        className={`${densityClasses[density]} hover:bg-muted/50 cursor-pointer`}
-                                        onClick={() => handleRowClick(row.original)}
-                                    >
-                                        {row.getVisibleCells().map(cell => (
-                                            <TableCell
-                                                key={cell.id}
-                                                className={cell.column.columnDef.meta?.align === 'right' ? 'text-right' : ''}
-                                            >
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow className={densityClasses[density]}>
-                                    <TableCell colSpan={table.getAllLeafColumns().length} className="text-center py-4">
-                                        No data found.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-        </div>
+    return (
+        <DataTable
+            columns={columns}
+            data={officeData}
+            showDensityToggle={true}
+            showColumnVisibility={true}
+            showPagination={true}
+            defaultPageSize={10}
+            loadingMessage="Loading office data..."
+            emptyMessage="No office data found for the selected filters."
+            onRowClick={handleRowClick}
+            defaultDensity="normal"
+            stickyHeader={true}
+        />
     );
 }
 

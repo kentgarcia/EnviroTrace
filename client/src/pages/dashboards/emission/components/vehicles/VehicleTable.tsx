@@ -1,38 +1,38 @@
 import React, { useState, useRef } from "react";
 import { format } from "date-fns";
 import {
-    useReactTable,
-    getCoreRowModel,
-    getSortedRowModel,
-    getPaginationRowModel,
     ColumnDef,
     SortingState,
-    flexRender,
     PaginationState,
     VisibilityState,
     ColumnFiltersState,
     OnChangeFn,
     RowSelectionState,
-    getFilteredRowModel,
-    ColumnResizeMode,
+    Row
 } from "@tanstack/react-table";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
     DropdownMenuSeparator,
-    DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
-import { Eye, Edit, Trash2, MoreHorizontal, ArrowUpDown, Settings, GripHorizontal, List, Rows3 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
 import { Vehicle } from "@/hooks/vehicles/useVehicles";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { VehicleDetails } from "./VehicleDetails";
 import { useVehicles } from "@/hooks/vehicles/useVehicles";
+import { DataTable } from "@/components/ui/data-table";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 interface VehicleTableProps {
     vehicles: Vehicle[];
@@ -109,28 +109,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     rowSelection = {},
     onRowSelectionChange,
 }) => {
-    // Internal state management when parent doesn't provide state handlers
-    const [internalSorting, setInternalSorting] = React.useState<SortingState>(sorting);
-    const [internalPagination, setInternalPagination] = React.useState<PaginationState>(pagination);
-    const [internalColumnFilters, setInternalColumnFilters] = React.useState<ColumnFiltersState>(columnFilters);
-    const [internalColumnVisibility, setInternalColumnVisibility] = React.useState<VisibilityState>(columnVisibility);
-    const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>(rowSelection);
-    const [density, setDensity] = React.useState<'compact' | 'normal' | 'spacious'>('normal');
     // Add: row-to-details functionality
-    const [detailsVehicle, setDetailsVehicle] = React.useState<Vehicle | null>(null);
-    // Add columnResizeMode state
-    const [columnResizeMode, setColumnResizeMode] = React.useState<ColumnResizeMode>("onChange");
-
+    const [detailsVehicle, setDetailsVehicle] = useState<Vehicle | null>(null);
+    
     const { editVehicle } = useVehicles();
 
     // Add a ref to hold the refetch function from VehicleDetails
     const detailsRefetchRef = useRef<null | (() => void)>(null);
-
-    const densityClasses = {
-        compact: 'text-xs h-6',
-        normal: 'text-sm h-9',
-        spacious: 'text-base h-12',
-    };
 
     // Helper to format date from milliseconds
     const formatDate = (dateValue?: string | number) => {
@@ -182,13 +167,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     };
 
     // Define columns
-    // Add size, minSize, maxSize to columns
     const columns: ColumnDef<Vehicle>[] = [
         {
             accessorKey: 'plateNumber',
-            size: 160,
-            minSize: 80,
-            maxSize: 400,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -207,9 +188,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'officeName',
-            size: 140,
-            minSize: 80,
-            maxSize: 300,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -223,9 +201,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'driverName',
-            size: 140,
-            minSize: 80,
-            maxSize: 300,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -239,9 +214,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'vehicleType',
-            size: 120,
-            minSize: 80,
-            maxSize: 200,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -260,9 +232,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'latestTestDate',
-            size: 120,
-            minSize: 80,
-            maxSize: 200,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -277,9 +246,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         },
         {
             accessorKey: 'latestTestResult',
-            size: 100,
-            minSize: 80,
-            maxSize: 160,
             header: ({ column }) => (
                 <Button
                     variant="ghost"
@@ -291,43 +257,42 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                 </Button>
             ),
             cell: ({ row }) => renderTestResultBadge(row.original)
+        },
+        {
+            id: 'actions',
+            header: () => <div className="text-right">Actions</div>,
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 vehicle-action-btn">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setDetailsVehicle(row.original)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                <span>View Details</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                                onClick={() => onDelete(row.original)}
+                                className="text-red-600"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )
         }
     ];
-
-    // Initialize table
-    const table = useReactTable({
-        data: vehicles,
-        columns,
-        state: {
-            sorting: onSortingChange ? sorting : internalSorting,
-            pagination: onPaginationChange ? pagination : internalPagination,
-            columnFilters: onColumnFiltersChange ? columnFilters : internalColumnFilters,
-            columnVisibility: onColumnVisibilityChange ? columnVisibility : internalColumnVisibility,
-            rowSelection: onRowSelectionChange ? rowSelection : internalRowSelection,
-        },
-        enableRowSelection: true,
-        enableColumnResizing: true,
-        columnResizeMode,
-        onSortingChange: onSortingChange || ((updater) => {
-            setInternalSorting(typeof updater === 'function' ? updater(internalSorting) : updater);
-        }),
-        onPaginationChange: onPaginationChange || ((updater) => {
-            setInternalPagination(typeof updater === 'function' ? updater(internalPagination) : updater);
-        }),
-        onColumnFiltersChange: onColumnFiltersChange || ((updater) => {
-            setInternalColumnFilters(typeof updater === 'function' ? updater(internalColumnFilters) : updater);
-        }),
-        onColumnVisibilityChange: onColumnVisibilityChange || ((updater) => {
-            setInternalColumnVisibility(typeof updater === 'function' ? updater(internalColumnVisibility) : updater);
-        }),
-        onRowSelectionChange: onRowSelectionChange || ((updater) => {
-            setInternalRowSelection(typeof updater === 'function' ? updater(internalRowSelection) : updater);
-        }),
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-    });
 
     if (isLoading) {
         return <VehicleTableSkeleton />;
@@ -375,190 +340,18 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     }
 
     return (
-        <div className="space-y-2 text-xs">
-            {/* Column Visibility Toggle */}
-            <div className="flex justify-between items-center py-1">
-                <div className="text-xs text-muted-foreground">
-                    {table.getFilteredRowModel().rows.length} vehicles
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs">Density:</span>
-                    <Button size="sm" variant={density === 'compact' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('compact')} title="Compact"><GripHorizontal className="h-4 w-4" /></Button>
-                    <Button size="sm" variant={density === 'normal' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('normal')} title="Normal"><Rows3 className="h-4 w-4" /></Button>
-                    <Button size="sm" variant={density === 'spacious' ? 'default' : 'outline'} className="px-2 py-1 text-xs" onClick={() => setDensity('spacious')} title="Spacious"><List className="h-4 w-4" /></Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-7 px-2 py-1 text-xs bg-white min-h-[28px]">
-                                <Settings className="mr-2 h-3.5 w-3.5" />
-                                View Options
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[160px] text-xs bg-white">
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("plateNumber")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("plateNumber")?.toggleVisibility(value)
-                                }
-                            >
-                                Plate Number
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("officeName")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("officeName")?.toggleVisibility(value)
-                                }
-                            >
-                                Office
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("driverName")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("driverName")?.toggleVisibility(value)
-                                }
-                            >
-                                Driver
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("vehicleType")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("vehicleType")?.toggleVisibility(value)
-                                }
-                            >
-                                Type
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("latestTestDate")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("latestTestDate")?.toggleVisibility(value)
-                                }
-                            >
-                                Latest Test
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                                checked={table.getColumn("latestTestResult")?.getIsVisible()}
-                                onCheckedChange={(value) =>
-                                    table.getColumn("latestTestResult")?.toggleVisibility(value)
-                                }
-                            >
-                                Result
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                                onClick={() => table.resetColumnVisibility()}
-                                className="justify-center text-center"
-                            >
-                                Reset View
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </div>
-
-            <div className="rounded-md border overflow-x-auto bg-white">
-                <Table className={density === 'compact' ? 'text-xs' : density === 'spacious' ? 'text-base' : 'text-sm'}>
-                    <TableHeader>
-                        {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id} className={densityClasses[density]}>
-                                {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id} className="px-2 py-1 relative group" style={{ width: header.getSize() }}>
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                        {header.column.getCanResize() && (
-                                            <div
-                                                onMouseDown={header.getResizeHandler()}
-                                                onTouchStart={header.getResizeHandler()}
-                                                className="absolute right-0 top-0 h-full w-2 cursor-col-resize group-hover:bg-blue-200 transition"
-                                                style={{ userSelect: 'none', touchAction: 'none' }}
-                                            />
-                                        )}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-
-                    <TableBody>
-                        {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row, idx) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() ? "selected" : undefined}
-                                    className={`cursor-pointer transition ${densityClasses[density]} ${(row.original.id.toString().startsWith('pending-') ? 'opacity-60 bg-gray-50' : '')}`}
-                                    onClick={e => {
-                                        if ((e.target as HTMLElement).closest('.vehicle-action-btn, .vehicle-checkbox')) return;
-                                        setDetailsVehicle(row.original);
-                                    }}
-                                >
-                                    {row.getVisibleCells().map((cell) => {
-                                        return (
-                                            <TableCell key={cell.id} className="px-2 py-1" style={{ width: cell.column.getSize() }}>
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        );
-                                    })}
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow className={densityClasses[density]}>
-                                <TableCell colSpan={columns.length} className="text-center py-4">
-                                    No vehicles found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {/* Pagination Controls */}
-            {table.getRowModel().rows?.length > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs">
-                    <div className="flex items-center gap-2">
-                        <span>Rows per page:</span>
-                        <select
-                            className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
-                            value={table.getState().pagination.pageSize}
-                            onChange={(e) => {
-                                table.setPageSize(Number(e.target.value));
-                            }}
-                        >
-                            {[5, 10, 20, 50, 100].map((pageSize) => (
-                                <option key={pageSize} value={pageSize}>{pageSize}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 py-1"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage()}
-                        >
-                            Previous
-                        </Button>
-
-                        <span>
-                            Page <span className="font-semibold">{table.getState().pagination.pageIndex + 1}</span> of{" "}
-                            <span className="font-semibold">{table.getPageCount()}</span>
-                        </span>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 py-1"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage()}
-                        >
-                            Next
-                        </Button>
-                    </div>
-                </div>
-            )}
-        </div>
+        <DataTable
+            columns={columns}
+            data={vehicles}
+            isLoading={isLoading}
+            loadingMessage="Loading vehicles..."
+            emptyMessage="No vehicles found."
+            onRowClick={(row: Row<Vehicle>) => setDetailsVehicle(row.original)}
+            showDensityToggle={true}
+            showColumnVisibility={true}
+            showPagination={true}
+            defaultPageSize={10}
+            defaultDensity="normal"
+        />
     );
 };

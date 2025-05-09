@@ -9,8 +9,7 @@ import { toast } from "sonner";
 import SignIn from "@/pages/SignIn";
 import DashboardSelection from "@/pages/DashboardSelection";
 import ProfilePage from "@/pages/ProfilePage";
-import UserManagement from "@/pages/admin/UserManagement";
-import AdminUserManagement from "@/pages/admin/AdminUserManagement";
+import AdminUserManagement from "@/pages/dashboards/admin/AdminUserManagement";
 import GovEmissionOverview from "@/pages/dashboards/emission/Overview";
 import VehiclesPage from "@/pages/dashboards/emission/Vehicles";
 import QuarterlyTestingPage from "@/pages/dashboards/emission/QuarterlyTesting";
@@ -21,9 +20,14 @@ import { UserRole } from "@/integrations/types/userData";
 import { redirect } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
 import UrbanOverview from "@/pages/dashboards/urban/Overview";
-import AdminDashboard from "@/pages/admin/Overview";
-import AdminSettings from "@/pages/admin/AdminSettings";
-import AdminLogs from "@/pages/admin/AdminLogs";
+import AdminDashboard from "@/pages/dashboards/admin/Overview";
+import AdminSettings from "@/pages/dashboards/admin/AdminSettings";
+import AdminLogs from "@/pages/dashboards/admin/AdminLogs";
+import AirQualityOverview from "@/pages/dashboards/belching/Overview";
+import SmokeBelcher from "@/pages/dashboards/belching/SmokeBelcher";
+import AccountControlPage from "@/pages/dashboards/belching/AccountControl";
+import FeeControlPage from "@/pages/dashboards/belching/FeeControl";
+import ReportsPage from "@/pages/dashboards/belching/Reports";
 
 // Create a root route
 const rootRoute = createRootRoute({
@@ -169,6 +173,62 @@ const seedlingRequestsRoute = createTreeManagementRoute(
   SeedlingRequestsPage
 );
 
+// Air Quality routes
+const createAirQualityRoute = (path: string, component: RouteComponent) => {
+  return createRoute({
+    getParentRoute: () => rootRoute,
+    path,
+    beforeLoad: () => {
+      requireAuth();
+      requireRole(["admin", "air_quality"]);
+    },
+    component,
+  });
+};
+
+const airQualityOverviewRoute = createAirQualityRoute(
+  "/air-quality/overview",
+  AirQualityOverview
+);
+
+// Smoke Belching routes
+const createSmokeBelchingRoute = (path: string, component: RouteComponent) => {
+  return createRoute({
+    getParentRoute: () => rootRoute,
+    path,
+    beforeLoad: () => {
+      requireAuth();
+      requireRole(["admin", "air_quality"]);
+    },
+    component,
+  });
+};
+
+const smokeBelchingOverviewRoute = createSmokeBelchingRoute(
+  "/smoke-belching/overview",
+  AirQualityOverview
+);
+
+const smokeBelcherRoute = createSmokeBelchingRoute(
+  "/smoke-belching/smoke-belcher",
+  SmokeBelcher
+);
+
+const accountControlRoute = createSmokeBelchingRoute(
+  "/smoke-belching/account-control",
+  AccountControlPage
+);
+
+const feeControlRoute = createSmokeBelchingRoute(
+  "/smoke-belching/fee-control",
+  FeeControlPage
+);
+
+const smokeBelchingReportsRoute = createSmokeBelchingRoute(
+  "/smoke-belching/reports",
+  ReportsPage
+);
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "*",
@@ -193,6 +253,12 @@ export const routeTree = rootRoute.addChildren([
   settingsRoute,
   seedlingRequestsRoute,
   treeManagementRoute,
+  airQualityOverviewRoute,
+  smokeBelchingOverviewRoute,
+  smokeBelcherRoute,
+  accountControlRoute,
+  feeControlRoute,
+  smokeBelchingReportsRoute,
   notFoundRoute,
 ]);
 
