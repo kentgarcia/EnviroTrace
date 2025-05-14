@@ -1,5 +1,5 @@
 -- Create seedling requests table
-CREATE TABLE seedling_requests (
+CREATE TABLE IF NOT EXISTS seedling_requests (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date_received DATE NOT NULL,
   requester_name TEXT NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE seedling_requests (
 );
 
 -- Create urban greening table
-CREATE TABLE urban_greening (
+CREATE TABLE IF NOT EXISTS urban_greening (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL,
   establishment_name TEXT NOT NULL,

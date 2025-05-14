@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { QueryProvider } from "./lib/query-client";
 import { ApolloClientProvider } from "@/lib/apollo-client";
 
 // Import Inter font

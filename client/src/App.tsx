@@ -1,14 +1,24 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/presentation/components/shared/ui/toaster";
+import { Toaster as Sonner } from "@/presentation/components/shared/ui/sonner";
+import { TooltipProvider } from "@/presentation/components/shared/ui/tooltip";
 import { RouterProvider } from "@tanstack/react-router";
-import { router } from "./lib/router";
+import { router } from "./presentation/routeTree";
+import TitleBar from "./presentation/components/shared/layout/TitleBar";
 
 const App = () => (
   <TooltipProvider>
     <Toaster />
     <Sonner />
-    <RouterProvider router={router} />
+    <TitleBar />
+    <div
+      style={{
+        paddingTop: 30,
+        height: "calc(100vh - 30px)",
+        overflow: "auto",
+      }}
+    >
+      <RouterProvider router={router} />
+    </div>
   </TooltipProvider>
 );
 

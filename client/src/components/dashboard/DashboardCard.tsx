@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import React from "react";
+import { Card, CardContent } from "@/presentation/components/shared/ui/card";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
@@ -24,19 +23,29 @@ export function DashboardCard({
   onClick,
 }: DashboardCardProps) {
   return (
-    <Card 
+    <Card
       className={cn(
         "cursor-pointer transition-all hover:shadow-md hover:-translate-y-1",
         className
       )}
       onClick={onClick}
     >
-      <CardContent className={cn("p-6 flex flex-col items-center text-center", contentClassName)}>
+      <CardContent
+        className={cn(
+          "p-6 flex flex-col items-center text-center",
+          contentClassName
+        )}
+      >
         {typeof icon === "string" ? (
-          <div className={cn("w-full h-40 mb-4 overflow-hidden rounded-md", iconClassName)}>
-            <img 
-              src={icon} 
-              alt={title} 
+          <div
+            className={cn(
+              "w-full h-40 mb-4 overflow-hidden rounded-md",
+              iconClassName
+            )}
+          >
+            <img
+              src={icon}
+              alt={title}
               className="w-full h-full object-cover"
             />
           </div>

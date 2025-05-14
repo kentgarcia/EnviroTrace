@@ -1,15 +1,25 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/presentation/components/shared/ui/button";
+import { Input } from "@/presentation/components/shared/ui/input";
+import { Label } from "@/presentation/components/shared/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/presentation/components/shared/ui/card";
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 import { signIn } from "@/lib/auth";
 import { useForm } from "react-hook-form";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+} from "@/presentation/components/shared/ui/alert";
 
 interface SignInFormData {
   email: string;
@@ -24,7 +34,7 @@ export function SignInForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm<SignInFormData>();
 
   const onSignIn = async (data: SignInFormData) => {
@@ -51,10 +61,11 @@ export function SignInForm() {
       // Set a user-friendly error message
       let errorMessage = "Failed to sign in. Please check your credentials.";
       if (error instanceof Error) {
-        errorMessage = error.message === "Failed to fetch"
-          ? "Cannot connect to server. Please check your internet connection."
-          : error.message;
-      } else if (typeof error === 'string') {
+        errorMessage =
+          error.message === "Failed to fetch"
+            ? "Cannot connect to server. Please check your internet connection."
+            : error.message;
+      } else if (typeof error === "string") {
         errorMessage = error;
       }
 
@@ -80,7 +91,9 @@ export function SignInForm() {
             className="h-16 w-16 rounded-md"
           />
         </div>
-        <CardTitle className="text-2xl text-center">Environmental Management System</CardTitle>
+        <CardTitle className="text-2xl text-center">
+          Environmental Management System
+        </CardTitle>
         <CardDescription className="text-center">
           Enter your credentials to access your dashboard
         </CardDescription>
@@ -106,8 +119,8 @@ export function SignInForm() {
                 required: "Email is required",
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "Invalid email address"
-                }
+                  message: "Invalid email address",
+                },
               })}
             />
             {errors.email && (
@@ -125,7 +138,9 @@ export function SignInForm() {
               {...register("password", { required: "Password is required" })}
             />
             {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.password.message}
+              </p>
             )}
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
@@ -135,9 +150,7 @@ export function SignInForm() {
                 Signing in...
               </>
             ) : (
-              <>
-                Sign in
-              </>
+              <>Sign in</>
             )}
           </Button>
         </form>

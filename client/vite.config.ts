@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => ({
       "86a28b8a-1703-4911-ac0d-b2499663ab17.lovableproject.com",
       "all",
     ],
+
     watch: {
       ignored: ["**/src-tauri/**"],
     },

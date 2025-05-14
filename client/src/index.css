@@ -7,6 +7,8 @@
 @theme {
   --font-sans: Inter, system-ui, sans-serif;
 
+  --color-main: #003595;
+  
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -143,14 +145,14 @@
   :root {
     --background: 140 33% 98%;
     --foreground: 222.2 84% 4.9%;
-
+    
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 142 72% 29%;
+    --primary: 219 100% 29%;
     --primary-foreground: 0 0% 98%;
 
     --secondary: 195 70% 32%;
@@ -159,7 +161,7 @@
     --muted: 140 5% 92%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 140 35% 88%;
+    --accent: 219 100% 88%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
