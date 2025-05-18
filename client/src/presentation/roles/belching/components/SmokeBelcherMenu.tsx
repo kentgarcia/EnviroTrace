@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import {
@@ -13,57 +13,52 @@ import RecordInfo from "./smokeBelcher/RecordInfo";
 import Violations from "./smokeBelcher/Violations";
 import RecordHistory from "./smokeBelcher/RecordHistory";
 import { ChevronUp, ChevronDown, FileText, AlertTriangle } from "lucide-react";
+import {
+  fetchBelchingRecords,
+  createBelchingRecord,
+  updateBelchingRecord,
+  deleteBelchingRecord,
+} from "@/lib/api/belching-api";
 
-const mockBelchers = [
-  {
-    id: "1",
-    plateNumber: "ABC-1234",
-    vehicleType: "Truck",
-    operator: "Juan Dela Cruz",
-    operatorAddress: "123 Main St, City",
-    recordAddress: "456 Record Ave, City",
-    recordStatus: "apprehended",
-    licenseValidUntil: "2025-01-01",
-    offenseLevel: 2,
-    lastDateApprehended: "2024-05-01",
-    orderOfPayment: "OP-2024-001",
-    violationSummary: "Excessive smoke emission detected.",
-    history: [
-      { date: "2024-05-01", action: "Apprehended", user: "Officer A" },
-      {
-        date: "2024-05-02",
-        action: "Order of Payment Issued",
-        user: "Officer B",
-      },
-    ],
-  },
-  {
-    id: "2",
-    plateNumber: "XYZ-5678",
-    vehicleType: "Bus",
-    operator: "Maria Santos",
-    operatorAddress: "789 Main St, City",
-    recordAddress: "101 Record Ave, City",
-    recordStatus: "new",
-    licenseValidUntil: "2024-12-31",
-    offenseLevel: 1,
-    lastDateApprehended: "2024-04-15",
-    orderOfPayment: "OP-2024-002",
-    violationSummary: "Failed emission test.",
-    history: [{ date: "2024-04-15", action: "Apprehended", user: "Officer C" }],
-  },
-];
+type BelchingRecord = {
+  id: number | string;
+  plateNumber: string;
+  vehicleType: string;
+  operator: string;
+  operatorAddress: string;
+  recordAddress: string;
+  recordStatus: string;
+  licenseValidUntil: string;
+  offenseLevel: number;
+  lastDateApprehended: string;
+  orderOfPayment: string;
+  violationSummary: string;
+  createdAt?: string;
+  updatedAt?: string;
+  history?: any[]; // Adjust as needed for your history structure
+};
 
 const SmokeBelcherMenu = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(
-    mockBelchers[0].id
-  );
+  const [records, setRecords] = useState<BelchingRecord[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<"violations" | "history">("violations");
   const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" }>({
     col: "plateNumber",
     dir: "asc",
   });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchBelchingRecords()
+      .then((data) => {
+        setRecords(data);
+        if (data.length > 0 && !selectedId)
+          setSelectedId(data[0].id.toString());
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSort = (col: string) => {
     setSort((prev) =>
@@ -73,7 +68,7 @@ const SmokeBelcherMenu = () => {
     );
   };
 
-  const filtered = mockBelchers.filter(
+  const filtered = records.filter(
     (b) =>
       b.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.operator.toLowerCase().includes(searchQuery.toLowerCase())
@@ -87,7 +82,7 @@ const SmokeBelcherMenu = () => {
     return 0;
   });
   const selected =
-    mockBelchers.find((b) => b.id === selectedId) || mockBelchers[0];
+    records.find((b) => b.id.toString() === selectedId) || records[0];
 
   return (
     <div className="flex h-full">
@@ -152,12 +147,12 @@ const SmokeBelcherMenu = () => {
                 <TableRow
                   key={b.id}
                   className={
-                    (selectedId === b.id
+                    (selectedId === b.id.toString()
                       ? "bg-blue-100 border-l-4 border-blue-500 "
                       : "") +
                     "hover:bg-blue-50 transition-colors cursor-pointer text-sm h-8"
                   }
-                  onClick={() => setSelectedId(b.id)}
+                  onClick={() => setSelectedId(b.id.toString())}
                   style={{ cursor: "pointer" }}
                 >
                   <TableCell className="py-1.5 px-2 align-middle">
@@ -178,19 +173,21 @@ const SmokeBelcherMenu = () => {
       {/* Right: Record Info + Tabs */}
       <div className="flex-1 flex flex-col gap-4 overflow-auto bg-gray-50">
         <div className="border-b bg-white">
-          <RecordInfo
-            plateNumber={selected.plateNumber}
-            vehicleType={selected.vehicleType}
-            operatorName={selected.operator}
-            operatorAddress={selected.operatorAddress}
-            recordAddress={selected.recordAddress}
-            recordStatus={
-              selected.recordStatus as "apprehended" | "new" | "no offense"
-            }
-            licenseValidUntil={selected.licenseValidUntil}
-            onAddToCEC={() => alert("Add to CEC Queue")}
-            onPrintClearance={() => alert("Print Clearance")}
-          />
+          {selected && (
+            <RecordInfo
+              plateNumber={selected.plateNumber}
+              vehicleType={selected.vehicleType}
+              operatorName={selected.operator}
+              operatorAddress={selected.operatorAddress}
+              recordAddress={selected.recordAddress}
+              recordStatus={
+                selected.recordStatus as "new" | "apprehended" | "no offense"
+              }
+              licenseValidUntil={selected.licenseValidUntil}
+              onAddToCEC={() => alert("Add to CEC Queue")}
+              onPrintClearance={() => alert("Print Clearance")}
+            />
+          )}
         </div>
 
         {/* Flat tab buttons */}
@@ -229,7 +226,7 @@ const SmokeBelcherMenu = () => {
               violationSummary={selected.violationSummary}
             />
           ) : (
-            <RecordHistory history={selected.history} />
+            <RecordHistory history={selected.history ?? []} />
           )}
         </div>
       </div>
