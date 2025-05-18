@@ -5,6 +5,7 @@ import { emissionTypeDefs } from "./emission/schema.js";
 import { urbanGreeningTypeDefs } from "./urban/schema.js";
 import { belchingTypeDefs } from "./belching/schema.js";
 import { orderOfPaymentsTypeDefs } from "./orderOfPayments/schema.js";
+import { driverTypeDefs } from "./driver/schema.js";
 import { mergeTypeDefs } from "@graphql-tools/merge";
 
 // Base schema definition with empty Query and Mutation types
@@ -29,5 +30,6 @@ export const typeDefs = mergeTypeDefs([
   urbanGreeningTypeDefs,
   belchingTypeDefs,
   orderOfPaymentsTypeDefs,
+  driverTypeDefs,
   // Add other module schemas here
 ]);
