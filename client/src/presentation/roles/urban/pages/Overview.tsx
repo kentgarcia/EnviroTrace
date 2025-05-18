@@ -21,9 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/presentation/components/shared/ui/select";
-import { EChartsPieChart } from "@/components/dashboard/EChartsPieChart";
-import { EChartsBarChart } from "@/components/dashboard/EChartsBarChart";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { EChartsPieChart } from "@/presentation/components/shared/dashboard/EChartsPieChart";
+import { EChartsBarChart } from "@/presentation/components/shared/dashboard/EChartsBarChart";
+import { StatCard } from "@/presentation/components/shared/dashboard/StatCard";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { useToast } from "@/presentation/components/shared/ui/use-toast";
 import {

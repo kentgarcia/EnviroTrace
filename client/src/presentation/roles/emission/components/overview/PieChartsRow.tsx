@@ -1,5 +1,5 @@
 import React from "react";
-import { EChartsPieChart } from "@/components/dashboard/EChartsPieChart";
+import { EChartsPieChart } from "@/presentation/components/shared/dashboard/EChartsPieChart";
 
 const PieChartsRow = ({ data, loading }: any) => (
   <section className="grid grid-cols-1 md:grid-cols-3 gap-6">

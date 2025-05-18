@@ -4,6 +4,7 @@ import { profileResolvers } from "./profile/resolvers.js";
 import { emissionResolvers } from "./emission/resolvers.js";
 import { urbanGreeningResolvers } from "./urban/resolvers.js";
 import { belchingResolvers } from "./belching/resolvers.js";
+import { orderOfPaymentsResolvers } from "./orderOfPayments/resolvers.js";
 import { mergeResolvers } from "@graphql-tools/merge";
 import { IResolvers } from "@graphql-tools/utils";
 import { GraphQLResolveInfo } from "graphql";
@@ -17,6 +18,7 @@ const resolversArray = [
   emissionResolvers,
   urbanGreeningResolvers,
   belchingResolvers,
+  orderOfPaymentsResolvers,
   // Add other module resolvers here
 ];
 

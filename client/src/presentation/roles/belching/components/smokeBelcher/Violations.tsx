@@ -47,10 +47,10 @@ const Violations: React.FC<ViolationsProps> = ({
   ],
 }) => {
   return (
-    <div className="bg-gradient-to-br from-red-50 to-white border-2 border-red-200 rounded-2xl shadow-xl p-4">
+    <div className="bg-white border border-red-200 rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <div className="text-lg font-bold text-red-900">Violations</div>
+          <div className="text-lg font-bold text-red-800">Violations</div>
           <div className="text-xs text-gray-500">
             Operator Offense Level:{" "}
             <span className="font-semibold text-red-700">{offenseLevel}</span>
@@ -63,22 +63,22 @@ const Violations: React.FC<ViolationsProps> = ({
         <div className="flex flex-col gap-2 min-w-[160px] items-end">
           <Button
             size="sm"
-            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-md flex items-center gap-2 px-4 py-2 rounded-lg transition"
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center gap-2 px-4 py-2 rounded transition border border-red-600 shadow-none"
           >
             <Receipt size={16} /> Order of Payment
           </Button>
           <Button
             size="sm"
             variant="outline"
-            className="border-red-200 text-red-700 hover:bg-red-50 flex items-center gap-2 px-4 py-2 rounded-lg transition"
+            className="border-red-200 text-red-700 hover:bg-red-50 flex items-center gap-2 px-4 py-2 rounded transition shadow-none"
           >
             <FileText size={16} /> Violation Summary
           </Button>
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full text-xs border rounded shadow bg-white">
-          <thead className="bg-red-100">
+        <table className="min-w-full text-xs border rounded bg-white">
+          <thead className="bg-red-50 border-b border-red-200">
             <tr>
               <th className="px-2 py-1 font-semibold text-left">
                 Operator Offense

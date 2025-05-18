@@ -3,7 +3,7 @@ import { gql } from "@apollo/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "../apollo/apollo-client";
 
 // GraphQL mutations aligned with our backend server
 const SIGN_IN = gql`

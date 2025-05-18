@@ -20,7 +20,7 @@ import { RefreshCw } from "lucide-react";
 import { useToast } from "@/presentation/components/shared/ui/use-toast";
 import FeeControlComponent from "../components/fee/FeeTable";
 import type { ViolationRate } from "../components/fee/FeeTable";
-
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 interface Fee {
   id: string;
   vehiclePlate: string;
@@ -130,24 +130,20 @@ const FeeControlPage = () => {
   };
 
   return (
-    <SidebarProvider>
+    <>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="smoke-belching" />
         <div className="flex-1 flex flex-col overflow-hidden">
+          <TopNavBarContainer dashboardType="air-quality" />
+
           {/* Header Section */}
           <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Fee Control
-              </h1>
-              <p className="text-muted-foreground">
-                Manage smoke belching violation rates
-              </p>
-            </div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Fee Control
+            </h1>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
             <Card>
               <CardHeader>
                 <CardTitle>Fee Management</CardTitle>
@@ -161,7 +157,7 @@ const FeeControlPage = () => {
       </div>
 
       <NetworkStatus />
-    </SidebarProvider>
+    </>
   );
 };
 

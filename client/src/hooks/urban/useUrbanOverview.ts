@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client";
-import { GET_URBAN_OVERVIEW } from "@/lib/urban-api";
+import { GET_URBAN_OVERVIEW } from "@/lib/api/urban-api";
 
 export interface UrbanOverviewData {
   plantSaplingsCollected: number;

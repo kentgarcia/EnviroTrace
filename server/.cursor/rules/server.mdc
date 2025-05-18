@@ -1,0 +1,45 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for eco-dash-navigator Server
+
+## Project Structure
+- `src/`: Main server source code (TypeScript).
+  - `modules/`: Feature-based modules (e.g., user, auth, emission). Each module should encapsulate its schema, resolvers, and repository logic.
+  - `db/`: Database management and connection logic.
+  - `utils/`: Shared utility functions.
+  - `middlewares/`: Express or GraphQL middleware for request/response handling.
+  - `config/`: Configuration files (e.g., database, JWT).
+- `migrations/`: SQL migration scripts. Each migration should be atomic and named with an incremental prefix.
+- Do not place source code outside `src/`.
+
+## Coding Standards
+- Use TypeScript for all code.
+- Prefer modular, feature-based organization in `modules/`.
+- Use async/await for asynchronous code.
+- Follow the project's ESLint and Prettier configurations.
+
+## Naming Conventions
+- Filenames: kebab-case for files, PascalCase for classes/types.
+- Variables: camelCase.
+- Constants: UPPER_SNAKE_CASE.
+- Types/Interfaces: PascalCase, prefix interfaces with `I` only if necessary.
+- Migration files: Use incremental numeric prefixes (e.g., `001_create_users.sql`).
+
+## Dependencies
+- Add new dependencies with `cd server` and `npm install`.
+- Avoid unnecessary dependencies; prefer built-in or standard libraries.
+
+## Database & Migrations
+- All schema changes must be accompanied by a migration in `migrations/`.
+- Use the provided migration runner script for applying migrations.
+- Do not edit existing migration files after they have been applied.
+
+## Testing
+- Place tests in `src/__tests__/`.
+- Use Jest for unit/integration tests.
+- All new features should include relevant tests.
+
+# End of rules

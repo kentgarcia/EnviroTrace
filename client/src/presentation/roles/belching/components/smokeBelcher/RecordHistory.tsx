@@ -12,8 +12,8 @@ interface RecordHistoryProps {
 
 const RecordHistory: React.FC<RecordHistoryProps> = ({ history }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-4 space-y-2">
-      <div className="font-bold text-lg">Record History</div>
+    <div className="bg-white border border-gray-200 p-4">
+      <div className="font-bold text-lg mb-2 text-gray-800">Record History</div>
       <ul className="divide-y divide-gray-200">
         {history.map((item, idx) => (
           <li key={idx} className="py-2">
@@ -21,7 +21,7 @@ const RecordHistory: React.FC<RecordHistoryProps> = ({ history }) => {
               <span className="text-sm text-gray-700">{item.date}</span>
               <span className="text-xs text-gray-500">{item.user}</span>
             </div>
-            <div className="text-sm">{item.action}</div>
+            <div className="text-sm text-gray-900">{item.action}</div>
           </li>
         ))}
       </ul>

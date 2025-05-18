@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "../apollo/apollo-client";
 
 // GraphQL Queries & Mutations
 export const GET_BELCHING_FEES = gql`

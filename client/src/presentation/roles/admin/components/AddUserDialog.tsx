@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/presentation/components/shared/ui/select";
-import { UserRole } from "@/lib/user-api";
+import { UserRole } from "@/lib/api/user-api";
 
 const addUserFormSchema = z.object({
   email: z.string().email("Invalid email address"),

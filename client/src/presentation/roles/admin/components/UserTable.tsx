@@ -41,7 +41,7 @@ import {
   Rows3,
   ArrowUpDown,
 } from "lucide-react";
-import { UserRole } from "@/lib/user-api";
+import { UserRole } from "@/lib/api/user-api";
 
 interface User {
   id: string;

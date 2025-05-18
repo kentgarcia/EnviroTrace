@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "../apollo/apollo-client";
 
 // Query to fetch the current user's profile
 const GET_MY_PROFILE = gql`

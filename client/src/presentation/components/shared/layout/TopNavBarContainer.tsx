@@ -18,7 +18,7 @@ import {
   Wallet,
   UserCircle,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/auth";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import TopNavBar, { NavItem } from "./TopNavBar";
@@ -38,37 +38,37 @@ function getMenuItems(
   matchRoute: ReturnType<typeof useMatchRoute>
 ) {
   const basePath = `/${dashboardType}`;
-  if (dashboardType === "smoke-belching") {
+  if (dashboardType === "air-quality") {
     return [
       {
         label: "Overview",
         icon: <BarChart2 className="w-4 h-4 mr-1" />,
-        path: `${basePath}/overview`,
+        path: `/smoke-belching/overview`,
       },
       {
         label: "Smoke Belcher",
         icon: <Cloud className="w-4 h-4 mr-1" />,
-        path: `${basePath}/smoke-belcher`,
+        path: `/smoke-belching/smoke-belcher`,
       },
       {
         label: "Order of Payments",
         icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `${basePath}/order-of-payments`,
+        path: `/smoke-belching/order-of-payments`,
       },
       {
         label: "Account Control",
         icon: <UserCircle className="w-4 h-4 mr-1" />,
-        path: `${basePath}/account-control`,
+        path: `/smoke-belching/account-control`,
       },
       {
         label: "Fee Control",
         icon: <Wallet className="w-4 h-4 mr-1" />,
-        path: `${basePath}/fee-control`,
+        path: `/smoke-belching/fee-control`,
       },
       {
         label: "Reports",
         icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `${basePath}/reports`,
+        path: `/smoke-belching/reports`,
       },
     ];
   } else if (dashboardType === "admin") {
@@ -205,7 +205,7 @@ export default function TopNavBarContainer({
     {
       role: "air_quality",
       label: "Air Quality",
-      path: "/air-quality/overview",
+      path: "/smoke-belching/overview",
     },
     {
       role: "tree_management",
@@ -232,6 +232,7 @@ export default function TopNavBarContainer({
   if (userDashboards.length > 1) {
     switchDashboardDropdown = {
       label: <span className="flex items-center">Switch Dashboard</span>,
+      onClick: () => navigate({ to: "/dashboard-selection" }),
       children: (
         <div className="absolute bg-white text-black rounded shadow mt-2 min-w-[180px] z-50">
           {userDashboards.map((d) => (

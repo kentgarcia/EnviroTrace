@@ -11,7 +11,7 @@ import {
   UPDATE_EMISSION_TEST,
   DELETE_EMISSION_TEST,
   GET_VEHICLE_SUMMARY,
-} from "@/lib/emission-api";
+} from "@/lib/api/emission-api";
 
 // Type definitions
 export interface TestSchedule {

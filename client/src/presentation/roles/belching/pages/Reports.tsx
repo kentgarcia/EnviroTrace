@@ -20,6 +20,7 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useToast } from "@/presentation/components/shared/ui/use-toast";
 import ReportsComponent from "../components/Reports";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 const ReportsPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -45,11 +46,10 @@ const ReportsPage = () => {
   };
 
   return (
-    <SidebarProvider>
+    <>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="smoke-belching" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardNavbar />
+          <TopNavBarContainer dashboardType="air-quality" />
 
           {/* Header Section */}
           <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
@@ -102,7 +102,7 @@ const ReportsPage = () => {
         </div>
       </div>
       <NetworkStatus />
-    </SidebarProvider>
+    </>
   );
 };
 

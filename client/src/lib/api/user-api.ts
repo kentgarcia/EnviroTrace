@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "../apollo/apollo-client";
 
 // Define the UserRole type to match the one in AdminUserManagement.tsx
 export type UserRole =

@@ -28,7 +28,7 @@ import {
 import { OfficeData } from "@/hooks/offices/useOffices";
 import { SortingState, ColumnDef, Row } from "@tanstack/react-table";
 import { useQuery } from "@apollo/client";
-import { GET_EMISSION_TESTS } from "@/lib/emission-api";
+import { GET_EMISSION_TESTS } from "@/lib/api/emission-api";
 import { EmissionTest } from "@/hooks/emissions/useDashboardData";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { EChartsBarChart } from "@/components/dashboard/EChartsBarChart";
+import { EChartsBarChart } from "@/presentation/components/shared/dashboard/EChartsBarChart";
 
 const BarChartsRow = ({ data, loading }: any) => (
   <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">

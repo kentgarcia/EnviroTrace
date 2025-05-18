@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for eco-dash-navigator Client
+
+## Project Structure
+- `src/`: Main source code for the frontend (React/TypeScript).
+- `src-tauri/`: Tauri backend and configuration.
+- `public/`: Static assets served directly.
+- `build-resources/`, `cert/`, `dist/`: Build outputs, certificates, and distribution files.
+- Do not place source code outside `src/` or `src-tauri/`.
+
+## Coding Standards
+- Use TypeScript for all new code in `src/`.
+- Prefer functional React components and hooks.
+- Use named exports unless a file has a single main export.
+- Follow the project's ESLint and Prettier configurations.
+- Use components in `@presentation/components/shared/` if necessary.
+
+## Naming Conventions
+- Filenames: kebab-case for files, PascalCase for React components.
+- Variables: camelCase.
+- Constants: UPPER_SNAKE_CASE.
+- Types/Interfaces: PascalCase, prefix interfaces with `I` only if necessary.
+
+## Dependencies
+- Add new dependencies with `cd client` and `npm install`.
+- Avoid unnecessary dependencies; prefer built-in or standard libraries.
+
+## Testing
+- Place tests in `src/__tests__/`.
+- Use Jest for unit tests.
+- All new features should include relevant tests.
+
+
+# End of rules

@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/presentation/components/shared/layout/AppSidebar";
 import { SidebarProvider } from "@/presentation/components/shared/ui/sidebar";
 import { useState, useEffect } from "react";
-import { StatCard } from "@/components/dashboard/StatCard";
+import { StatCard } from "@/presentation/components/shared/dashboard/StatCard";
 import {
   ArrowRight,
   Leaf,
@@ -33,7 +33,7 @@ import {
 } from "@/presentation/components/shared/ui/table";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 
 // Sample user data

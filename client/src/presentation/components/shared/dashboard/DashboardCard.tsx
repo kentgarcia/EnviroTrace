@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/presentation/components/shared/ui/card";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { LucideIcon } from "lucide-react";
 
 interface DashboardCardProps {

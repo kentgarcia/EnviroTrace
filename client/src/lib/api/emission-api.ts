@@ -1,5 +1,5 @@
 import { gql } from "@apollo/client";
-import { apolloClient } from "./apollo-client";
+import { apolloClient } from "../apollo/apollo-client";
 
 // Query to fetch vehicle summaries
 export const GET_VEHICLE_SUMMARIES = gql`

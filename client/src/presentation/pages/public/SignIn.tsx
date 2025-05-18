@@ -1,7 +1,7 @@
-import { SignInForm } from "@/components/auth/SignInForm";
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/auth";
+import { SignInForm } from "@/presentation/components/shared/auth/SignInForm";
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -22,12 +22,12 @@ export default function SignIn() {
   }
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center p-4"
       style={{ backgroundImage: "url('/images/bg_login.png')" }}
     >
       <div className="w-full max-w-md animate-fade-in">
-          <SignInForm />
+        <SignInForm />
       </div>
     </div>
   );

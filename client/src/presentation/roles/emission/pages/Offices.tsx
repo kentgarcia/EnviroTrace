@@ -15,6 +15,7 @@ import { useOffices } from "@/hooks/offices/useOffices";
 import { AppSidebar } from "@/presentation/components/shared/layout/AppSidebar";
 import { SidebarProvider } from "@/presentation/components/shared/ui/sidebar";
 import { DashboardNavbar } from "@/presentation/components/shared/layout/DashboardNavbar";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
@@ -80,11 +81,10 @@ export default function OfficesPage() {
   }, [refetch]);
 
   return (
-    <SidebarProvider>
+    <>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardNavbar />
+          <TopNavBarContainer dashboardType="government-emission" />
           {/* Header Section */}
           <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-semibold text-gray-900">
@@ -199,6 +199,6 @@ export default function OfficesPage() {
           </div>
         </div>
       </div>
-    </SidebarProvider>
+    </>
   );
 }

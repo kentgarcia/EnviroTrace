@@ -20,7 +20,10 @@ import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
 import { Vehicle, VehicleInput } from "@/hooks/vehicles/useVehicles";
 import { useQuery } from "@apollo/client";
-import { GET_EMISSION_TESTS, GET_VEHICLE_SUMMARY } from "@/lib/emission-api";
+import {
+  GET_EMISSION_TESTS,
+  GET_VEHICLE_SUMMARY,
+} from "@/lib/api/emission-api";
 
 interface VehicleDetailsProps {
   vehicle: Vehicle | null;

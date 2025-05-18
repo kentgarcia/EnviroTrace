@@ -52,6 +52,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/presentation/components/shared/ui/dropdown-menu";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 export default function Vehicles() {
   // Modal and dialog states
@@ -388,17 +389,18 @@ export default function Vehicles() {
   );
 
   return (
-    <SidebarProvider>
+    <>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 flex flex-col overflow-hidden">
+          <TopNavBarContainer dashboardType="government-emission" />
+
           {/* Header Section */}
-          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 shadow-none">
             <h1 className="text-2xl font-semibold text-gray-900">Vehicles</h1>
             <div className="flex gap-2">
               <Button
                 onClick={() => setAddModalOpen(true)}
-                className="hidden md:inline-flex"
+                className="hidden md:inline-flex text-white border-none shadow-none rounded-none"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add Vehicle
@@ -408,6 +410,7 @@ export default function Vehicles() {
                 variant="outline"
                 size="icon"
                 disabled={vehicles.length === 0 || isLoading}
+                className="border border-gray-200 bg-white shadow-none rounded-none"
               >
                 <FileDown className="h-5 w-5" />
               </Button>
@@ -420,13 +423,15 @@ export default function Vehicles() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               {/* Search (left) */}
               <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
-                <Search className="absolute left-3 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Search by plate, driver, or office..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8 max-w-xs w-[320px] bg-white"
                 />
+                <span className="absolute left-3 text-gray-400">
+                  <Search className="h-4 w-4" />
+                </span>
               </div>
               {/* Filters (right) */}
               <div className="flex flex-wrap gap-2 items-center justify-end">
@@ -435,7 +440,7 @@ export default function Vehicles() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="min-w-[140px] justify-between bg-white"
+                      className="min-w-[140px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
                     >
                       {office ? office : "All Offices"}
                       <span className="ml-2 text-gray-400 flex items-center">
@@ -443,14 +448,21 @@ export default function Vehicles() {
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white">
-                    <DropdownMenuItem onClick={() => setOffice("")}>
+                  <DropdownMenuContent
+                    align="start"
+                    className="bg-white border border-gray-200 shadow-none rounded-none"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setOffice("")}
+                      className="rounded-none"
+                    >
                       All Offices
                     </DropdownMenuItem>
                     {offices.map((o) => (
                       <DropdownMenuItem
                         key={o as string}
                         onClick={() => setOffice(o as string)}
+                        className="rounded-none"
                       >
                         {o as string}
                       </DropdownMenuItem>
@@ -462,7 +474,7 @@ export default function Vehicles() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="min-w-[120px] justify-between bg-white"
+                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
                     >
                       {vehicleType ? vehicleType : "All Types"}
                       <span className="ml-2 text-gray-400 flex items-center">
@@ -470,14 +482,21 @@ export default function Vehicles() {
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white">
-                    <DropdownMenuItem onClick={() => setVehicleType("")}>
+                  <DropdownMenuContent
+                    align="start"
+                    className="bg-white border border-gray-200 shadow-none rounded-none"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setVehicleType("")}
+                      className="rounded-none"
+                    >
                       All Types
                     </DropdownMenuItem>
                     {vehicleTypes.map((t) => (
                       <DropdownMenuItem
                         key={t as string}
                         onClick={() => setVehicleType(t as string)}
+                        className="rounded-none"
                       >
                         {t as string}
                       </DropdownMenuItem>
@@ -489,7 +508,7 @@ export default function Vehicles() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="min-w-[120px] justify-between bg-white"
+                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
                     >
                       {engineType ? engineType : "All Engines"}
                       <span className="ml-2 text-gray-400 flex items-center">
@@ -497,14 +516,21 @@ export default function Vehicles() {
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white">
-                    <DropdownMenuItem onClick={() => setEngineType("")}>
+                  <DropdownMenuContent
+                    align="start"
+                    className="bg-white border border-gray-200 shadow-none rounded-none"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setEngineType("")}
+                      className="rounded-none"
+                    >
                       All Engines
                     </DropdownMenuItem>
                     {engineTypes.map((e) => (
                       <DropdownMenuItem
                         key={e as string}
                         onClick={() => setEngineType(e as string)}
+                        className="rounded-none"
                       >
                         {e as string}
                       </DropdownMenuItem>
@@ -516,7 +542,7 @@ export default function Vehicles() {
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="min-w-[120px] justify-between bg-white"
+                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
                     >
                       {status
                         ? status === "passed"
@@ -532,17 +558,32 @@ export default function Vehicles() {
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="bg-white">
-                    <DropdownMenuItem onClick={() => setStatus("")}>
+                  <DropdownMenuContent
+                    align="start"
+                    className="bg-white border border-gray-200 shadow-none rounded-none"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setStatus("")}
+                      className="rounded-none"
+                    >
                       All Status
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatus("passed")}>
+                    <DropdownMenuItem
+                      onClick={() => setStatus("passed")}
+                      className="rounded-none"
+                    >
                       Passed
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatus("failed")}>
+                    <DropdownMenuItem
+                      onClick={() => setStatus("failed")}
+                      className="rounded-none"
+                    >
                       Failed
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setStatus("untested")}>
+                    <DropdownMenuItem
+                      onClick={() => setStatus("untested")}
+                      className="rounded-none"
+                    >
                       Not Tested
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -552,7 +593,10 @@ export default function Vehicles() {
 
             {/* Error Notice */}
             {error && (
-              <Alert variant="destructive" className="mb-4">
+              <Alert
+                variant="destructive"
+                className="mb-4 border border-red-200 bg-white shadow-none rounded-none"
+              >
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>
@@ -564,7 +608,7 @@ export default function Vehicles() {
 
             {/* Selection Controls */}
             {Object.keys(tableState.rowSelection).length > 0 && (
-              <div className="mb-4 p-3 bg-muted rounded-md flex items-center justify-between">
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-none flex items-center justify-between shadow-none">
                 <p className="text-sm">
                   <span className="font-medium">
                     {Object.keys(tableState.rowSelection).length}
@@ -576,6 +620,7 @@ export default function Vehicles() {
                     size="sm"
                     variant="outline"
                     onClick={() => setRowSelection({})}
+                    className="border border-gray-200 bg-white shadow-none rounded-none"
                   >
                     Deselect All
                   </Button>
@@ -583,6 +628,7 @@ export default function Vehicles() {
                     size="sm"
                     variant="destructive"
                     onClick={handleDeleteSelected}
+                    className="bg-red-600 text-white border-none shadow-none rounded-none"
                   >
                     Delete Selected
                   </Button>
@@ -591,7 +637,7 @@ export default function Vehicles() {
             )}
 
             {/* Vehicles Table */}
-            <Card className="mt-6">
+            <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
               <div className="p-6">
                 {/* Status Tabs */}
                 {(() => {
@@ -621,21 +667,21 @@ export default function Vehicles() {
                         <button
                           key={tab.key}
                           onClick={() => setStatus(tab.key)}
-                          className={`flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors
+                          className={`flex items-center px-4 py-2 rounded-none text-sm font-medium transition-colors border border-gray-200 shadow-none
                             ${
                               status === tab.key || (!status && tab.key === "")
-                                ? "bg-green-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-green-50"
+                                ? "bg-primary text-white"
+                                : "hover:bg-gray-100 text-gray-700"
                             }
                           `}
                         >
                           {tab.label}
                           <span
-                            className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold
+                            className={`ml-2 px-2 py-0.5 rounded-none text-xs font-semibold
                             ${
                               status === tab.key || (!status && tab.key === "")
-                                ? "bg-white text-green-700"
-                                : "bg-gray-200 text-gray-700"
+                                ? "bg-primary text-white"
+                                : "bg-gray-100 text-gray-700 border-gray-200"
                             }
                           `}
                           >
@@ -717,6 +763,6 @@ export default function Vehicles() {
       </AlertDialog>
 
       <NetworkStatus />
-    </SidebarProvider>
+    </>
   );
 }

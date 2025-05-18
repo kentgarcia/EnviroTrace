@@ -26,7 +26,7 @@ import {
   PopoverTrigger,
 } from "@/presentation/components/shared/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // Form schema with validation
 const vehicleSchema = z.object({

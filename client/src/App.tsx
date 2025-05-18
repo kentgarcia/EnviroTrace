@@ -13,8 +13,8 @@ const App = () => (
     <div
       style={{
         paddingTop: 30,
-        height: "calc(100vh - 30px)",
         overflow: "auto",
+        height: "100%",
       }}
     >
       <RouterProvider router={router} />

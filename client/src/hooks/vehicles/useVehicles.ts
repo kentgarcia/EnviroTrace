@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { GET_VEHICLE_SUMMARIES } from "@/lib/emission-api";
+import { GET_VEHICLE_SUMMARIES } from "@/lib/api/emission-api";
 import { gql, useQuery, useMutation } from "@apollo/client";
 
 // GraphQL mutations for vehicles

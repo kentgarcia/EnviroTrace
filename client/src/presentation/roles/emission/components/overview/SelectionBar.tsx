@@ -25,7 +25,7 @@ const SelectionBar = ({
         value={selectedYear.toString()}
         onValueChange={(value) => setSelectedYear(Number(value))}
       >
-        <SelectTrigger className="w-[120px] bg-white border-green-300 shadow-sm text-green-900 font-semibold">
+        <SelectTrigger className="w-[120px] bg-white border-green-300 text-green-900 font-semibold">
           <SelectValue placeholder="Year" />
         </SelectTrigger>
         <SelectContent>
@@ -42,7 +42,7 @@ const SelectionBar = ({
           setSelectedQuarter(value === "all" ? undefined : Number(value))
         }
       >
-        <SelectTrigger className="w-[140px] bg-white border-green-300 shadow-sm text-green-900 font-semibold">
+        <SelectTrigger className="w-[140px] bg-white border-green-300 text-green-900 font-semibold">
           <SelectValue placeholder="Quarter" />
         </SelectTrigger>
         <SelectContent>
@@ -57,7 +57,7 @@ const SelectionBar = ({
         variant="outline"
         onClick={handleRefresh}
         disabled={isRefreshing || loading}
-        className="border-green-300 text-green-900 font-semibold hover:bg-green-100 transition"
+        className="border-green-300 text-green-900 font-semibold bg-white hover:bg-green-100 transition"
       >
         <RefreshCw
           className={`h-4 w-4 mr-2 ${

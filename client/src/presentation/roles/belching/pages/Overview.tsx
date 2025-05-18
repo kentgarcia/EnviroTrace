@@ -28,6 +28,7 @@ import SmokeBelcherMenu from "../components/SmokeBelcherMenu";
 import AccountControl from "../components/AccountControl";
 import FeeControl from "../components/fee/FeeTable";
 import Reports from "../components/Reports";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 const AirQuality = () => {
   const [activeTab, setActiveTab] = useState("smoke-belcher");
@@ -54,124 +55,122 @@ const AirQuality = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="smoke-belching" />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header Section */}
-          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Smoke Belching Management
-              </h1>
-              <p className="text-muted-foreground">
-                Monitor and manage smoke belching violations and compliance
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(parseInt(value))}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableYears.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-              </Button>
-            </div>
+    <div className="flex min-h-screen w-full">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TopNavBarContainer dashboardType="air-quality" />
+
+        {/* Header Section */}
+        <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Smoke Belching Management
+            </h1>
+            <p className="text-muted-foreground">
+              Monitor and manage smoke belching violations and compliance
+            </p>
           </div>
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-auto p-6">
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full"
+          <div className="flex items-center gap-4">
+            <Select
+              value={selectedYear.toString()}
+              onValueChange={(value) => setSelectedYear(parseInt(value))}
             >
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="smoke-belcher">
-                  <Cloud className="h-4 w-4 mr-2" />
-                  Smoke Belcher Menu
-                </TabsTrigger>
-                <TabsTrigger value="account">
-                  <UserCircle className="h-4 w-4 mr-2" />
-                  Account Control
-                </TabsTrigger>
-                <TabsTrigger value="fee">
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Fee Control
-                </TabsTrigger>
-                <TabsTrigger value="reports">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Reports
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="smoke-belcher" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Smoke Belcher Management</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <SmokeBelcherMenu />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="account" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Control</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AccountControl />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="fee" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Fee Control</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FeeControl />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="reports" className="mt-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Reports</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Reports />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+            </Button>
           </div>
         </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-auto p-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="smoke-belcher">
+                <Cloud className="h-4 w-4 mr-2" />
+                Smoke Belcher Menu
+              </TabsTrigger>
+              <TabsTrigger value="account">
+                <UserCircle className="h-4 w-4 mr-2" />
+                Account Control
+              </TabsTrigger>
+              <TabsTrigger value="fee">
+                <Wallet className="h-4 w-4 mr-2" />
+                Fee Control
+              </TabsTrigger>
+              <TabsTrigger value="reports">
+                <FileText className="h-4 w-4 mr-2" />
+                Reports
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="smoke-belcher" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Smoke Belcher Management</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SmokeBelcherMenu />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="account" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Control</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AccountControl />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="fee" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Fee Control</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FeeControl />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="reports" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Reports</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Reports />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-      <NetworkStatus />
-    </SidebarProvider>
+    </div>
   );
 };
 

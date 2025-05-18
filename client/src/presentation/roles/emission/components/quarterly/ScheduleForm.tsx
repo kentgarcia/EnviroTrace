@@ -38,7 +38,7 @@ import {
   PopoverTrigger,
 } from "@/presentation/components/shared/ui/popover";
 import { Calendar } from "@/presentation/components/shared/ui/calendar";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 
 // Form validation schema
 const scheduleFormSchema = z.object({

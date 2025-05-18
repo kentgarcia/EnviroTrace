@@ -12,8 +12,8 @@ import {
   CardTitle,
 } from "@/presentation/components/shared/ui/card";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Wifi, WifiOff } from "lucide-react";
-import { signIn } from "@/lib/auth";
+import { Loader2, AlertCircle } from "lucide-react";
+import { signIn } from "@/lib/auth/auth";
 import { useForm } from "react-hook-form";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import {

@@ -23,7 +23,7 @@ import {
   useChatbot,
 } from "../components/overview/ChatbotProvider";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-
+import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
 const FloatingChatUI: React.FC<{
   data: any;
   loading: boolean;
@@ -45,7 +45,7 @@ const FloatingChatUI: React.FC<{
       {/* Floating Assistant Button */}
       {!chatOpen && !chatMinimized && (
         <button
-          className="fixed z-[9999] bottom-8 right-8 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg p-4 flex items-center justify-center transition-all"
+          className="fixed z-[9999] bottom-8 right-8 bg-green-600 hover:bg-green-700 text-white p-4 flex items-center justify-center transition-all"
           aria-label="Open Summary Assistant"
           onClick={handleOpenChat}
         >
@@ -55,7 +55,7 @@ const FloatingChatUI: React.FC<{
       {/* Minimized Button with animation and text */}
       {chatMinimized && !chatOpen && (
         <button
-          className="fixed z-[9999] bottom-8 right-8 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center gap-2 px-4 py-4 transition-all animate-fade-in-left"
+          className="fixed z-[9999] bottom-8 right-8 bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-4 transition-all animate-fade-in-left"
           aria-label="Continue Chat"
           onClick={handleOpenChat}
           style={{ minWidth: 0 }}
@@ -68,15 +68,15 @@ const FloatingChatUI: React.FC<{
       )}
       {/* Floating Chat Window (not draggable, fixed position) */}
       {chatOpen && (
-        <div className="fixed z-[9999] bottom-8 right-8 w-[95vw] max-w-md h-[70vh] bg-white shadow-2xl rounded-2xl flex flex-col border border-green-100 animate-fade-in-left">
+        <div className="fixed z-[9999] bottom-8 right-8 w-[95vw] max-w-md h-[70vh] bg-white flex flex-col border border-green-100 animate-fade-in-left">
           <div
-            className="font-bold text-lg text-green-900 mb-2 flex items-center gap-2 p-4 border-b relative rounded-t-2xl bg-green-50"
+            className="font-bold text-lg text-green-900 mb-2 flex items-center gap-2 p-4 border-b relative bg-green-100"
             style={{ userSelect: "none" }}
           >
             <MessageCircle className="h-6 w-6 text-green-700" />
             Summary Assistant
             <button
-              className="absolute right-12 top-4 text-green-700 hover:text-green-900 p-1 rounded-full transition"
+              className="absolute right-12 top-4 text-green-700 hover:text-green-900 p-1 transition"
               aria-label="Minimize Chatbot"
               onClick={handleMinimizeChat}
             >
@@ -98,7 +98,7 @@ const FloatingChatUI: React.FC<{
               </svg>
             </button>
             <button
-              className="absolute right-4 top-4 text-green-700 hover:text-green-900 p-1 rounded-full transition"
+              className="absolute right-4 top-4 text-green-700 hover:text-green-900 p-1 transition"
               aria-label="Close Chatbot"
               onClick={handleCloseChat}
             >
@@ -278,30 +278,39 @@ const GovEmissionOverview: React.FC = () => {
   }
 
   return (
-    <SidebarProvider>
+    <>
       <ChatbotProvider>
         <div className="flex min-h-screen w-full">
-          <div className="flex-1 overflow-auto bg-white">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <TopNavBarContainer dashboardType="government-emission" />
+            {/* Header Section */}
+            <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Government Emission
+              </h1>
+            </div>
 
-            <div className="px-6">
-              <TopSection
-                data={data}
-                loading={loading}
-                formatNumber={formatNumber}
-              />
-              <div className="bg-white rounded-t-3xl shadow-lg p-8 mt-8">
-                <SelectionBar
-                  selectedYear={selectedYear}
-                  setSelectedYear={setSelectedYear}
-                  selectedQuarter={selectedQuarter}
-                  setSelectedQuarter={setSelectedQuarter}
-                  availableYears={availableYears}
-                  handleRefresh={handleRefresh}
-                  isRefreshing={isRefreshing}
+            {/* Body Section */}
+            <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+              <div className="px-6">
+                <TopSection
+                  data={data}
                   loading={loading}
+                  formatNumber={formatNumber}
                 />
+                <ColorDivider />
+
                 <div className="pt-6">
+                  <SelectionBar
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                    selectedQuarter={selectedQuarter}
+                    setSelectedQuarter={setSelectedQuarter}
+                    availableYears={availableYears}
+                    handleRefresh={handleRefresh}
+                    isRefreshing={isRefreshing}
+                    loading={loading}
+                  />
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                       <PieChartsRow data={data} loading={loading} />
@@ -322,7 +331,7 @@ const GovEmissionOverview: React.FC = () => {
         />
         <NetworkStatus />
       </ChatbotProvider>
-    </SidebarProvider>
+    </>
   );
 };
 
@@ -515,9 +524,9 @@ function MenuChatbot({
             }`}
           >
             <div
-              className={`rounded-xl px-4 py-3 max-w-[80%] shadow text-sm transition-all duration-500 ${
+              className={`px-4 py-3 max-w-[80%] text-sm transition-all duration-500 ${
                 msg.role === "assistant"
-                  ? "bg-green-50 text-green-900 animate-fade-in-left"
+                  ? "bg-green-100 text-green-900 animate-fade-in-left"
                   : "bg-green-600 text-white animate-fade-in-right"
               }`}
               style={{ animationDelay: `${i * 80}ms` }}
@@ -528,7 +537,7 @@ function MenuChatbot({
         ))}
         {pending && (
           <div className="flex justify-start">
-            <div className="rounded-xl px-4 py-3 max-w-[80%] shadow text-sm bg-green-50 text-green-900 animate-pulse">
+            <div className="px-4 py-3 max-w-[80%] text-sm bg-green-100 text-green-900 animate-pulse">
               ...
             </div>
           </div>
@@ -539,7 +548,7 @@ function MenuChatbot({
         {getFollowUpOptions(lastMenu).map((option) => (
           <button
             key={option.key}
-            className="text-left px-4 py-2 rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 text-green-900 font-medium transition"
+            className="text-left px-4 py-2 border border-green-200 bg-green-100 hover:bg-green-200 text-green-900 font-medium transition"
             onClick={() => handleMenu(option.key, option.label)}
             disabled={pending}
           >

@@ -28,14 +28,14 @@ import {
   AlertDialogTitle,
 } from "@/presentation/components/shared/ui/alert-dialog";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils/utils";
 import { Row } from "@tanstack/react-table";
 import {
   fetchBelchingFees,
   createBelchingFee,
   updateBelchingFee,
   deleteBelchingFee,
-} from "@/lib/belching-api";
+} from "@/lib/api/belching-api";
 
 export interface ViolationRate {
   id: string;
@@ -273,13 +273,14 @@ const FeeTable: React.FC = () => {
             loadingMessage="Loading violation rates..."
             emptyMessage="No violation rates found."
             onRowClick={handleRowClick}
+            className="bg-white border border-gray-200 rounded-none shadow-none"
           />
         </div>
       </div>
 
       <div className="w-1/2 flex flex-col">
-        <div className="bg-white rounded-lg border shadow-sm">
-          <div className="p-6 border-b">
+        <div className="bg-white border border-gray-200 rounded-none shadow-none">
+          <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold text-gray-700">
@@ -300,7 +301,7 @@ const FeeTable: React.FC = () => {
               <div className="flex gap-2">
                 <Button
                   onClick={handleNewRate}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-500 hover:bg-blue-600 text-white border-none shadow-none rounded-none"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   New Rate
@@ -310,14 +311,14 @@ const FeeTable: React.FC = () => {
                     <Button
                       variant="outline"
                       onClick={handleEdit}
-                      className="border-gray-300 hover:bg-gray-50"
+                      className="border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
                     >
                       Edit Rate
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={handleDeleteClick}
-                      className="bg-red-600 hover:bg-red-700"
+                      className="bg-red-500 hover:bg-red-600 text-white border-none shadow-none rounded-none"
                     >
                       Delete Rate
                     </Button>
@@ -341,13 +342,13 @@ const FeeTable: React.FC = () => {
                           variant="outline"
                           role="combobox"
                           aria-expanded={open}
-                          className="w-full justify-between border-gray-300 hover:bg-gray-50"
+                          className="w-full justify-between border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
                         >
                           {formData.category || "Select category..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-full p-0">
+                      <PopoverContent className="w-full p-0 border border-gray-200 bg-white rounded-none shadow-none">
                         <Command>
                           <CommandInput
                             placeholder="Search category..."
@@ -363,7 +364,7 @@ const FeeTable: React.FC = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleAddCategory}
-                                className="h-8 text-blue-600 hover:text-blue-700"
+                                className="h-8 text-blue-600 hover:text-blue-700 border-none shadow-none rounded-none"
                               >
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add "{newCategory}"
@@ -379,6 +380,7 @@ const FeeTable: React.FC = () => {
                                   setFormData({ ...formData, category });
                                   setOpen(false);
                                 }}
+                                className="rounded-none"
                               >
                                 <Check
                                   className={cn(
@@ -398,7 +400,7 @@ const FeeTable: React.FC = () => {
                   ) : (
                     <Badge
                       className={cn(
-                        "text-sm px-3 py-1",
+                        "text-sm px-3 py-1 border-none shadow-none rounded-none bg-gray-200 text-gray-800",
                         getCategoryBadgeColor(selectedRate?.category || "")
                       )}
                     >
@@ -422,12 +424,12 @@ const FeeTable: React.FC = () => {
                           level: Number(e.target.value),
                         })
                       }
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
                     />
                   ) : (
                     <Badge
                       className={cn(
-                        "text-sm px-3 py-1",
+                        "text-sm px-3 py-1 border-none shadow-none rounded-none bg-gray-200 text-gray-800",
                         getLevelBadgeColor(selectedRate?.level || 0)
                       )}
                     >
@@ -450,7 +452,7 @@ const FeeTable: React.FC = () => {
                           amount: Number(e.target.value),
                         })
                       }
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
                     />
                   ) : (
                     <p className="text-lg font-medium text-gray-900">
@@ -473,7 +475,7 @@ const FeeTable: React.FC = () => {
                           effectiveDate: e.target.value,
                         })
                       }
-                      className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
                     />
                   ) : (
                     <p className="text-lg font-medium text-gray-900">
@@ -486,18 +488,18 @@ const FeeTable: React.FC = () => {
                 </div>
 
                 {isEditing && (
-                  <div className="flex justify-end space-x-2 pt-6 mt-6 border-t">
+                  <div className="flex justify-end space-x-2 pt-6 mt-6 border-t border-gray-200">
                     <Button
                       variant="outline"
                       onClick={handleCancel}
-                      className="border-gray-300 hover:bg-gray-50"
+                      className="border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
                     >
                       <X className="mr-2 h-4 w-4" />
                       Cancel
                     </Button>
                     <Button
                       onClick={handleSave}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-blue-500 hover:bg-blue-600 text-white border-none shadow-none rounded-none"
                     >
                       <Save className="mr-2 h-4 w-4" />
                       Save Changes
@@ -520,14 +522,14 @@ const FeeTable: React.FC = () => {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white border border-gray-200 rounded-none shadow-none">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Violation Rate</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete this violation rate? This action
               cannot be undone.
               {selectedRate && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-md">
+                <div className="mt-2 p-3 bg-gray-100 rounded-none border border-gray-200">
                   <p className="font-medium">{selectedRate.category}</p>
                   <p className="text-sm text-gray-600">
                     Level {selectedRate.level} - ₱
@@ -538,11 +540,16 @@ const FeeTable: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="bg-white border border-gray-300 text-gray-700 shadow-none rounded-none"
+            >
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              className="bg-red-500 hover:bg-red-600 text-white border-none shadow-none rounded-none focus:ring-red-500"
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>

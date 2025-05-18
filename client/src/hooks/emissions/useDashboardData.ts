@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apolloClient } from "@/lib/apollo-client";
+import { apolloClient } from "@/lib/apollo/apollo-client";
 import { gql, ApolloError } from "@apollo/client";
 
 const DASHBOARD_DATA_QUERY_WITH_QUARTER = gql`

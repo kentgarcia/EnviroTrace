@@ -73,7 +73,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { UserRole } from "@/lib/user-api";
+import { UserRole } from "@/lib/api/user-api";
 import {
   Select,
   SelectContent,

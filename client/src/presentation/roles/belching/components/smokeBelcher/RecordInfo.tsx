@@ -15,9 +15,9 @@ interface RecordInfoProps {
 }
 
 const statusColor = {
-  new: "bg-blue-500 text-white",
-  apprehended: "bg-red-500 text-white",
-  "no offense": "bg-green-500 text-white",
+  new: "bg-blue-100 text-blue-800 border border-blue-400",
+  apprehended: "bg-red-100 text-red-800 border border-red-400",
+  "no offense": "bg-green-100 text-green-800 border border-green-400",
 };
 const statusLabel = {
   new: "New",
@@ -37,7 +37,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
   onPrintClearance,
 }) => {
   return (
-    <div className="flex overflow-hidden">
+    <div className="flex overflow-hidden border-b border-gray-200 bg-white">
       {/* Left: Info Fields */}
       <div className="flex-1 p-6">
         <div className="mb-4">
@@ -52,7 +52,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
           <div>
             <label className="text-xs text-gray-500">Plate Number</label>
             <input
-              className="w-full bg-gray-100 rounded px-2 py-1 text-base font-semibold"
+              className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base font-semibold"
               value={plateNumber}
               readOnly
               tabIndex={-1}
@@ -61,7 +61,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
           <div>
             <label className="text-xs text-gray-500">Vehicle Type</label>
             <input
-              className="w-full bg-gray-100 rounded px-2 py-1 text-base"
+              className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
               value={vehicleType}
               readOnly
               tabIndex={-1}
@@ -70,7 +70,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
           <div>
             <label className="text-xs text-gray-500">Operator Name</label>
             <input
-              className="w-full bg-gray-100 rounded px-2 py-1 text-base"
+              className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
               value={operatorName}
               readOnly
               tabIndex={-1}
@@ -79,7 +79,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
           <div>
             <label className="text-xs text-gray-500">Operator Address</label>
             <input
-              className="w-full bg-gray-100 rounded px-2 py-1 text-base"
+              className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
               value={operatorAddress}
               readOnly
               tabIndex={-1}
@@ -88,7 +88,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
           <div className="col-span-2">
             <label className="text-xs text-gray-500">Record Address</label>
             <input
-              className="w-full bg-gray-100 rounded px-2 py-1 text-base"
+              className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
               value={recordAddress}
               readOnly
               tabIndex={-1}
@@ -97,10 +97,10 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
         </div>
       </div>
       {/* Right: Status & Actions */}
-      <div className="flex flex-col items-center justify-between w-60 py-8 px-4 bg-white border-l">
+      <div className="flex flex-col items-center justify-between w-60 py-8 px-4 bg-gray-50 border-l border-gray-200">
         <div className="flex flex-col items-center gap-4 w-full">
           <span
-            className={`px-5 py-2 rounded-xl text-base font-bold mb-1 shadow ${statusColor[recordStatus]}`}
+            className={`px-5 py-2 rounded text-base font-bold mb-1 ${statusColor[recordStatus]}`}
           >
             {statusLabel[recordStatus]}
           </span>
@@ -114,7 +114,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
             size="sm"
             onClick={onAddToCEC}
             title="Add to CEC Queue"
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold shadow-md flex items-center gap-2 w-full justify-center px-4 py-2 rounded-lg transition"
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-2 w-full justify-center px-4 py-2 rounded transition border border-green-600 shadow-none"
           >
             <PlusCircle size={18} /> Add to CEC Queue
           </Button>
@@ -123,7 +123,7 @@ const RecordInfo: React.FC<RecordInfoProps> = ({
             variant="outline"
             onClick={onPrintClearance}
             title="Print Clearance"
-            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-md flex items-center gap-2 w-full justify-center px-4 py-2 rounded-lg transition border-0"
+            className="border-blue-400 text-blue-700 hover:bg-blue-50 flex items-center gap-2 w-full justify-center px-4 py-2 rounded transition shadow-none"
           >
             <Printer size={18} /> Print Clearance
           </Button>

@@ -33,10 +33,10 @@ import {
   ChevronDown,
   PanelLeft,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/auth";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { useState, useEffect } from "react";
-import { fetchMyProfile } from "@/lib/profile-api";
+import { fetchMyProfile } from "@/lib/api/profile-api";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 

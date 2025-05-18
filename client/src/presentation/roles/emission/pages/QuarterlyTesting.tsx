@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { AppSidebar } from "@/presentation/components/shared/layout/AppSidebar";
 import { SidebarProvider } from "@/presentation/components/shared/ui/sidebar";
 import { DashboardNavbar } from "@/presentation/components/shared/layout/DashboardNavbar";
-import { Plus, RefreshCw, AlertTriangle, FileDown } from "lucide-react";
+import { Plus, RefreshCw, AlertTriangle, FileDown, Search } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -49,6 +49,7 @@ import ScheduleTable from "@/presentation/roles/emission/components/quarterly/Sc
 import ScheduleForm from "@/presentation/roles/emission/components/quarterly/ScheduleForm";
 import EmissionTestTable from "@/presentation/roles/emission/components/quarterly/EmissionTestTable";
 import EmissionTestForm from "@/presentation/roles/emission/components/quarterly/EmissionTestForm";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 // Main Component
 export default function QuarterlyTesting() {
@@ -276,24 +277,16 @@ export default function QuarterlyTesting() {
   };
 
   return (
-    <SidebarProvider>
+    <>
       <div className="flex min-h-screen w-full">
-        <AppSidebar dashboardType="government-emission" />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <DashboardNavbar dashboardTitle="Government Emission" />
+          <TopNavBarContainer dashboardType="government-emission" />
           {/* Header Section */}
           <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-semibold text-gray-900">
               Quarterly Testing
             </h1>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => refetchSchedules()}
-                size="sm"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
               <Button
                 onClick={() => setIsAddScheduleOpen(true)}
                 className="hidden md:inline-flex"
@@ -325,7 +318,7 @@ export default function QuarterlyTesting() {
                   className="pl-8 max-w-xs w-[320px] bg-white"
                 />
                 <span className="absolute left-3 text-gray-400">
-                  <RefreshCw className="h-4 w-4" />
+                  <Search className="h-4 w-4" />
                 </span>
               </div>
               {/* Filters (right) */}
@@ -364,7 +357,7 @@ export default function QuarterlyTesting() {
             )}
 
             {/* Main Content Card (Schedule Table) */}
-            <Card className="mt-6">
+            <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
               <div className="p-6">
                 <ScheduleTable
                   schedules={schedules}
@@ -561,6 +554,6 @@ export default function QuarterlyTesting() {
       </AlertDialog>
 
       <NetworkStatus />
-    </SidebarProvider>
+    </>
   );
 }
