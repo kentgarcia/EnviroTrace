@@ -4,95 +4,84 @@ import { Driver, DriverSearchInput, DriverOffense } from "./types.js";
 export async function driverSearch(
   input: DriverSearchInput = {}
 ): Promise<Driver[]> {
-  // Build dynamic WHERE clause
+  // Build dynamic WHERE clause for belching_records
   const where: string[] = [];
   const params: any[] = [];
   let idx = 1;
-  if (input.driverName) {
-    where.push(`LOWER(driver_name) LIKE $${idx++}`);
-    params.push(`%${input.driverName.toLowerCase()}%`);
-  }
   if (input.plateNo) {
-    where.push(`LOWER(plate_no) LIKE $${idx++}`);
+    where.push(`LOWER(plate_number) LIKE $${idx++}`);
     params.push(`%${input.plateNo.toLowerCase()}%`);
   }
   if (input.orNo) {
-    where.push(`LOWER(or_no) LIKE $${idx++}`);
+    where.push(`LOWER(order_of_payment) LIKE $${idx++}`);
     params.push(`%${input.orNo.toLowerCase()}%`);
   }
   if (input.transportGroup) {
-    where.push(`LOWER(transport_group) LIKE $${idx++}`);
+    where.push(`LOWER(operator) LIKE $${idx++}`);
     params.push(`%${input.transportGroup.toLowerCase()}%`);
   }
+  // We'll filter by driverName in the JOINed violations below
   const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  // Query drivers
-  const driverRows = (
+  // Query belching_records
+  const recordRows = (
     await dbManager.query(
-      `SELECT * FROM drivers ${whereClause} ORDER BY driver_name`,
+      `SELECT * FROM belching_records ${whereClause} ORDER BY id`,
       params
     )
   ).rows;
+  if (recordRows.length === 0) return [];
+  const recordIds = recordRows.map((r) => r.id);
 
-  // Query offenses for all drivers
-  const driverIds = driverRows.map((d) => d.id);
-  let offensesByDriver: Record<number, DriverOffense[]> = {};
-  if (driverIds.length > 0) {
-    const offenseRows = (
-      await dbManager.query(
-        `SELECT * FROM driver_offenses WHERE driver_id = ANY($1::int[])`,
-        [driverIds]
-      )
-    ).rows;
-    for (const row of offenseRows) {
-      const offense: DriverOffense = {
-        date: row.date,
-        type: row.type,
-        status: row.status,
-        paid: row.paid,
-      };
-      if (!offensesByDriver[row.driver_id])
-        offensesByDriver[row.driver_id] = [];
-      offensesByDriver[row.driver_id].push(offense);
-    }
+  // Query violations for these records
+  let violationWhere = "WHERE record_id = ANY($1::int[])";
+  let violationParams: any[] = [recordIds];
+  if (input.driverName) {
+    violationWhere += ` AND LOWER(driver_name) LIKE $2`;
+    violationParams.push(`%${input.driverName.toLowerCase()}%`);
+  }
+  const violationRows = (
+    await dbManager.query(
+      `SELECT * FROM belching_violations ${violationWhere} ORDER BY date_of_apprehension DESC`,
+      violationParams
+    )
+  ).rows;
+
+  // Group violations by record_id
+  const violationsByRecord: Record<number, DriverOffense[]> = {};
+  for (const row of violationRows) {
+    const offense: DriverOffense = {
+      date: row.date_of_apprehension
+        ? row.date_of_apprehension.toISOString().split("T")[0]
+        : "",
+      type: row.driver_offense,
+      status: row.operator_offense,
+      paid: row.paid,
+    };
+    if (!violationsByRecord[row.record_id])
+      violationsByRecord[row.record_id] = [];
+    violationsByRecord[row.record_id].push(offense);
   }
 
-  // Map to Driver shape
-  return driverRows.map((d) => ({
-    id: d.id,
-    driverName: d.driver_name,
-    plateNo: d.plate_no,
-    orNo: d.or_no,
-    transportGroup: d.transport_group,
-    offenses: offensesByDriver[d.id] || [],
-  }));
+  // Map to Driver shape (one per belching_record)
+  return recordRows
+    .map((r) => ({
+      id: r.id,
+      driverName:
+        violationRows.find((v) => v.record_id === r.id)?.driver_name || "",
+      plateNo: r.plate_number,
+      orNo: r.order_of_payment,
+      transportGroup: r.operator,
+      offenses: violationsByRecord[r.id] || [],
+    }))
+    .filter(
+      (d) =>
+        !input.driverName ||
+        d.driverName.toLowerCase().includes(input.driverName.toLowerCase())
+    );
 }
 
 export async function driverById(id: number): Promise<Driver | null> {
-  const driverRes = await dbManager.query(
-    `SELECT * FROM drivers WHERE id = $1`,
-    [id]
-  );
-  const d = driverRes.rows[0];
-  if (!d) return null;
-  const offenseRows = (
-    await dbManager.query(
-      `SELECT * FROM driver_offenses WHERE driver_id = $1`,
-      [id]
-    )
-  ).rows;
-  const offenses: DriverOffense[] = offenseRows.map((row) => ({
-    date: row.date,
-    type: row.type,
-    status: row.status,
-    paid: row.paid,
-  }));
-  return {
-    id: d.id,
-    driverName: d.driver_name,
-    plateNo: d.plate_no,
-    orNo: d.or_no,
-    transportGroup: d.transport_group,
-    offenses,
-  };
+  // Not implemented for belching_records yet
+  return null;
 }

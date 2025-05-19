@@ -155,6 +155,139 @@ export const DELETE_BELCHING_RECORD = gql`
   }
 `;
 
+// --- Belching Record History ---
+export const GET_BELCHING_RECORD_HISTORIES = gql`
+  query BelchingRecordHistories($recordId: Int) {
+    belchingRecordHistories(recordId: $recordId) {
+      id
+      recordId
+      type
+      date
+      details
+      orNo
+      status
+    }
+  }
+`;
+
+export const GET_BELCHING_RECORD_HISTORY = gql`
+  query BelchingRecordHistory($id: ID!) {
+    belchingRecordHistory(id: $id) {
+      id
+      recordId
+      type
+      date
+      details
+      orNo
+      status
+    }
+  }
+`;
+
+export const CREATE_BELCHING_RECORD_HISTORY = gql`
+  mutation CreateBelchingRecordHistory($input: BelchingRecordHistoryInput!) {
+    createBelchingRecordHistory(input: $input) {
+      id
+      recordId
+      type
+      date
+      details
+      orNo
+      status
+    }
+  }
+`;
+
+export const UPDATE_BELCHING_RECORD_HISTORY = gql`
+  mutation UpdateBelchingRecordHistory(
+    $id: ID!
+    $input: BelchingRecordHistoryInput!
+  ) {
+    updateBelchingRecordHistory(id: $id, input: $input) {
+      id
+      recordId
+      type
+      date
+      details
+      orNo
+      status
+    }
+  }
+`;
+
+export const DELETE_BELCHING_RECORD_HISTORY = gql`
+  mutation DeleteBelchingRecordHistory($id: ID!) {
+    deleteBelchingRecordHistory(id: $id)
+  }
+`;
+
+// --- Belching Violations ---
+export const GET_BELCHING_VIOLATIONS = gql`
+  query BelchingViolations($recordId: Int) {
+    belchingViolations(recordId: $recordId) {
+      id
+      recordId
+      operatorOffense
+      dateOfApprehension
+      place
+      driverName
+      driverOffense
+      paid
+    }
+  }
+`;
+
+export const GET_BELCHING_VIOLATION = gql`
+  query BelchingViolation($id: ID!) {
+    belchingViolation(id: $id) {
+      id
+      recordId
+      operatorOffense
+      dateOfApprehension
+      place
+      driverName
+      driverOffense
+      paid
+    }
+  }
+`;
+
+export const CREATE_BELCHING_VIOLATION = gql`
+  mutation CreateBelchingViolation($input: BelchingViolationInput!) {
+    createBelchingViolation(input: $input) {
+      id
+      recordId
+      operatorOffense
+      dateOfApprehension
+      place
+      driverName
+      driverOffense
+      paid
+    }
+  }
+`;
+
+export const UPDATE_BELCHING_VIOLATION = gql`
+  mutation UpdateBelchingViolation($id: ID!, $input: BelchingViolationInput!) {
+    updateBelchingViolation(id: $id, input: $input) {
+      id
+      recordId
+      operatorOffense
+      dateOfApprehension
+      place
+      driverName
+      driverOffense
+      paid
+    }
+  }
+`;
+
+export const DELETE_BELCHING_VIOLATION = gql`
+  mutation DeleteBelchingViolation($id: ID!) {
+    deleteBelchingViolation(id: $id)
+  }
+`;
+
 // API Helper Functions
 export async function fetchBelchingFees() {
   try {
@@ -290,6 +423,170 @@ export async function deleteBelchingRecord(id) {
     return data.deleteBelchingRecord;
   } catch (error) {
     console.error("Error deleting belching record:", error);
+    throw error;
+  }
+}
+
+export async function fetchBelchingRecordHistories(recordId) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_BELCHING_RECORD_HISTORIES,
+      variables: { recordId },
+      fetchPolicy: "network-only",
+    });
+    return data.belchingRecordHistories;
+  } catch (error) {
+    console.error("Error fetching belching record histories:", error);
+    throw error;
+  }
+}
+
+export async function fetchBelchingRecordHistoryById(id) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_BELCHING_RECORD_HISTORY,
+      variables: { id },
+      fetchPolicy: "network-only",
+    });
+    return data.belchingRecordHistory;
+  } catch (error) {
+    console.error("Error fetching belching record history:", error);
+    throw error;
+  }
+}
+
+export async function createBelchingRecordHistory(input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: CREATE_BELCHING_RECORD_HISTORY,
+      variables: { input },
+      refetchQueries: [
+        {
+          query: GET_BELCHING_RECORD_HISTORIES,
+          variables: { recordId: input.recordId },
+        },
+      ],
+    });
+    return data.createBelchingRecordHistory;
+  } catch (error) {
+    console.error("Error creating belching record history:", error);
+    throw error;
+  }
+}
+
+export async function updateBelchingRecordHistory(id, input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_BELCHING_RECORD_HISTORY,
+      variables: { id, input },
+      refetchQueries: [
+        {
+          query: GET_BELCHING_RECORD_HISTORIES,
+          variables: { recordId: input.recordId },
+        },
+      ],
+    });
+    return data.updateBelchingRecordHistory;
+  } catch (error) {
+    console.error("Error updating belching record history:", error);
+    throw error;
+  }
+}
+
+export async function deleteBelchingRecordHistory(id, recordId) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: DELETE_BELCHING_RECORD_HISTORY,
+      variables: { id },
+      refetchQueries: [
+        { query: GET_BELCHING_RECORD_HISTORIES, variables: { recordId } },
+      ],
+    });
+    return data.deleteBelchingRecordHistory;
+  } catch (error) {
+    console.error("Error deleting belching record history:", error);
+    throw error;
+  }
+}
+
+export async function fetchBelchingViolations(recordId) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_BELCHING_VIOLATIONS,
+      variables: { recordId },
+      fetchPolicy: "network-only",
+    });
+    return data.belchingViolations;
+  } catch (error) {
+    console.error("Error fetching belching violations:", error);
+    throw error;
+  }
+}
+
+export async function fetchBelchingViolationById(id) {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_BELCHING_VIOLATION,
+      variables: { id },
+      fetchPolicy: "network-only",
+    });
+    return data.belchingViolation;
+  } catch (error) {
+    console.error("Error fetching belching violation:", error);
+    throw error;
+  }
+}
+
+export async function createBelchingViolation(input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: CREATE_BELCHING_VIOLATION,
+      variables: { input },
+      refetchQueries: [
+        {
+          query: GET_BELCHING_VIOLATIONS,
+          variables: { recordId: input.recordId },
+        },
+      ],
+    });
+    return data.createBelchingViolation;
+  } catch (error) {
+    console.error("Error creating belching violation:", error);
+    throw error;
+  }
+}
+
+export async function updateBelchingViolation(id, input) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_BELCHING_VIOLATION,
+      variables: { id, input },
+      refetchQueries: [
+        {
+          query: GET_BELCHING_VIOLATIONS,
+          variables: { recordId: input.recordId },
+        },
+      ],
+    });
+    return data.updateBelchingViolation;
+  } catch (error) {
+    console.error("Error updating belching violation:", error);
+    throw error;
+  }
+}
+
+export async function deleteBelchingViolation(id, recordId) {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: DELETE_BELCHING_VIOLATION,
+      variables: { id },
+      refetchQueries: [
+        { query: GET_BELCHING_VIOLATIONS, variables: { recordId } },
+      ],
+    });
+    return data.deleteBelchingViolation;
+  } catch (error) {
+    console.error("Error deleting belching violation:", error);
     throw error;
   }
 }

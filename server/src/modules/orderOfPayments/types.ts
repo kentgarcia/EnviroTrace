@@ -6,6 +6,14 @@ export interface OrderOfPayment {
   amount: number;
   dateIssued: string; // YYYY-MM-DD
   status: string;
+  testingOfficer: string;
+  testResults: string;
+  dateOfTesting: string;
+  apprehensionFee: number;
+  voluntaryFee: number;
+  impoundFee: number;
+  driverAmount: number;
+  operatorAmount: number;
 }
 
 export interface OrderOfPaymentInput {
@@ -15,4 +23,12 @@ export interface OrderOfPaymentInput {
   amount: number;
   dateIssued: string; // YYYY-MM-DD
   status: string;
+  testingOfficer: string;
+  testResults: string;
+  dateOfTesting: string;
+  apprehensionFee: number;
+  voluntaryFee: number;
+  impoundFee: number;
+  driverAmount: number;
+  operatorAmount: number;
 }

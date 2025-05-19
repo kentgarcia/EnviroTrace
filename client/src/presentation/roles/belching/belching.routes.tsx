@@ -6,6 +6,8 @@ import AccountControlPage from "@/presentation/roles/belching/pages/AccountContr
 import FeeControlPage from "@/presentation/roles/belching/pages/FeeControl";
 import OrderOfPayments from "@/presentation/roles/belching/pages/OrderOfPayments";
 import ReportsPage from "@/presentation/roles/belching/pages/Reports";
+import DriverQuery from "@/presentation/roles/belching/pages/DriverQuery";
+import OrderOfPaymentEntry from "@/presentation/roles/belching/pages/OrderOfPaymentEntry";
 
 const createSmokeBelchingRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -32,4 +34,9 @@ export const smokeBelchingRoute = [
     OrderOfPayments
   ),
   createSmokeBelchingRoute("/smoke-belching/reports", ReportsPage),
+  createSmokeBelchingRoute("/smoke-belching/driver-query", DriverQuery),
+  createSmokeBelchingRoute(
+    "/smoke-belching/order-of-payment-entry",
+    OrderOfPaymentEntry
+  ),
 ];

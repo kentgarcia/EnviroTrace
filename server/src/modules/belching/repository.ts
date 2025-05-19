@@ -4,6 +4,10 @@ import {
   BelchingFeeInput,
   BelchingRecord,
   BelchingRecordInput,
+  BelchingRecordHistory,
+  BelchingRecordHistoryInput,
+  BelchingViolation,
+  BelchingViolationInput,
 } from "./types.js";
 
 export const getBelchingFees = async (): Promise<BelchingFee[]> => {
@@ -86,17 +90,24 @@ export const getBelchingRecords = async (): Promise<BelchingRecord[]> => {
   const result = await dbManager.query(
     "SELECT * FROM belching_records ORDER BY id"
   );
-  return result.rows.map((row) => ({
-    ...row,
-    recordStatus: row.record_status,
-    licenseValidUntil: row.license_valid_until,
-    offenseLevel: row.offense_level,
-    lastDateApprehended: row.last_date_apprehended,
-    orderOfPayment: row.order_of_payment,
-    violationSummary: row.violation_summary,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
+  return result.rows
+    .filter((row) => row.plate_number && row.plate_number.trim() !== "")
+    .map((row) => ({
+      id: row.id,
+      plateNumber: row.plate_number,
+      vehicleType: row.vehicle_type,
+      operator: row.operator,
+      operatorAddress: row.operator_address,
+      recordAddress: row.record_address,
+      recordStatus: row.record_status,
+      licenseValidUntil: row.license_valid_until,
+      offenseLevel: row.offense_level,
+      lastDateApprehended: row.last_date_apprehended,
+      orderOfPayment: row.order_of_payment,
+      violationSummary: row.violation_summary,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
 };
 
 export const getBelchingRecordById = async (
@@ -145,7 +156,12 @@ export const createBelchingRecord = async (
   );
   const row = result.rows[0];
   return {
-    ...row,
+    id: row.id,
+    plateNumber: row.plate_number,
+    vehicleType: row.vehicle_type,
+    operator: row.operator,
+    operatorAddress: row.operator_address,
+    recordAddress: row.record_address,
     recordStatus: row.record_status,
     licenseValidUntil: row.license_valid_until,
     offenseLevel: row.offense_level,
@@ -194,7 +210,12 @@ export const updateBelchingRecord = async (
   if (!result.rows[0]) return null;
   const row = result.rows[0];
   return {
-    ...row,
+    id: row.id,
+    plateNumber: row.plate_number,
+    vehicleType: row.vehicle_type,
+    operator: row.operator,
+    operatorAddress: row.operator_address,
+    recordAddress: row.record_address,
     recordStatus: row.record_status,
     licenseValidUntil: row.license_valid_until,
     offenseLevel: row.offense_level,
@@ -209,6 +230,230 @@ export const updateBelchingRecord = async (
 export const deleteBelchingRecord = async (id: number): Promise<boolean> => {
   const result = await dbManager.query(
     "DELETE FROM belching_records WHERE id = $1",
+    [id]
+  );
+  return result.rowCount > 0;
+};
+
+// Belching Record History CRUD
+export const getBelchingRecordHistories = async (
+  recordId?: number
+): Promise<BelchingRecordHistory[]> => {
+  const query = recordId
+    ? "SELECT * FROM belching_record_history WHERE record_id = $1 ORDER BY id"
+    : "SELECT * FROM belching_record_history ORDER BY id";
+  const params = recordId ? [recordId] : [];
+  const result = await dbManager.query(query, params);
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    recordId: row.record_id,
+    type: row.type,
+    date: row.date ? row.date.toISOString().split("T")[0] : "",
+    details: row.details,
+    orNo: row.or_no,
+    status: row.status,
+  }));
+};
+
+export const getBelchingRecordHistoryById = async (
+  id: number
+): Promise<BelchingRecordHistory | null> => {
+  const result = await dbManager.query(
+    "SELECT * FROM belching_record_history WHERE id = $1",
+    [id]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    type: row.type,
+    date: row.date ? row.date.toISOString().split("T")[0] : "",
+    details: row.details,
+    orNo: row.or_no,
+    status: row.status,
+  };
+};
+
+export const createBelchingRecordHistory = async (
+  input: BelchingRecordHistoryInput
+): Promise<BelchingRecordHistory> => {
+  const result = await dbManager.query(
+    `INSERT INTO belching_record_history (record_id, type, date, details, or_no, status)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [
+      input.recordId,
+      input.type,
+      input.date,
+      input.details,
+      input.orNo,
+      input.status,
+    ]
+  );
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    type: row.type,
+    date: row.date ? row.date.toISOString().split("T")[0] : "",
+    details: row.details,
+    orNo: row.or_no,
+    status: row.status,
+  };
+};
+
+export const updateBelchingRecordHistory = async (
+  id: number,
+  input: BelchingRecordHistoryInput
+): Promise<BelchingRecordHistory | null> => {
+  const result = await dbManager.query(
+    `UPDATE belching_record_history SET record_id = $1, type = $2, date = $3, details = $4, or_no = $5, status = $6 WHERE id = $7 RETURNING *`,
+    [
+      input.recordId,
+      input.type,
+      input.date,
+      input.details,
+      input.orNo,
+      input.status,
+      id,
+    ]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    type: row.type,
+    date: row.date ? row.date.toISOString().split("T")[0] : "",
+    details: row.details,
+    orNo: row.or_no,
+    status: row.status,
+  };
+};
+
+export const deleteBelchingRecordHistory = async (
+  id: number
+): Promise<boolean> => {
+  const result = await dbManager.query(
+    "DELETE FROM belching_record_history WHERE id = $1",
+    [id]
+  );
+  return result.rowCount > 0;
+};
+
+// Belching Violation CRUD
+export const getBelchingViolations = async (
+  recordId?: number
+): Promise<BelchingViolation[]> => {
+  const query = recordId
+    ? "SELECT * FROM belching_violations WHERE record_id = $1 ORDER BY id"
+    : "SELECT * FROM belching_violations ORDER BY id";
+  const params = recordId ? [recordId] : [];
+  const result = await dbManager.query(query, params);
+  return result.rows.map((row: any) => ({
+    id: row.id,
+    recordId: row.record_id,
+    operatorOffense: row.operator_offense,
+    dateOfApprehension: row.date_of_apprehension
+      ? row.date_of_apprehension.toISOString().split("T")[0]
+      : "",
+    place: row.place,
+    driverName: row.driver_name,
+    driverOffense: row.driver_offense,
+    paid: row.paid,
+  }));
+};
+
+export const getBelchingViolationById = async (
+  id: number
+): Promise<BelchingViolation | null> => {
+  const result = await dbManager.query(
+    "SELECT * FROM belching_violations WHERE id = $1",
+    [id]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    operatorOffense: row.operator_offense,
+    dateOfApprehension: row.date_of_apprehension
+      ? row.date_of_apprehension.toISOString().split("T")[0]
+      : "",
+    place: row.place,
+    driverName: row.driver_name,
+    driverOffense: row.driver_offense,
+    paid: row.paid,
+  };
+};
+
+export const createBelchingViolation = async (
+  input: BelchingViolationInput
+): Promise<BelchingViolation> => {
+  const result = await dbManager.query(
+    `INSERT INTO belching_violations (record_id, operator_offense, date_of_apprehension, place, driver_name, driver_offense, paid)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [
+      input.recordId,
+      input.operatorOffense,
+      input.dateOfApprehension,
+      input.place,
+      input.driverName,
+      input.driverOffense,
+      input.paid,
+    ]
+  );
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    operatorOffense: row.operator_offense,
+    dateOfApprehension: row.date_of_apprehension
+      ? row.date_of_apprehension.toISOString().split("T")[0]
+      : "",
+    place: row.place,
+    driverName: row.driver_name,
+    driverOffense: row.driver_offense,
+    paid: row.paid,
+  };
+};
+
+export const updateBelchingViolation = async (
+  id: number,
+  input: BelchingViolationInput
+): Promise<BelchingViolation | null> => {
+  const result = await dbManager.query(
+    `UPDATE belching_violations SET record_id = $1, operator_offense = $2, date_of_apprehension = $3, place = $4, driver_name = $5, driver_offense = $6, paid = $7 WHERE id = $8 RETURNING *`,
+    [
+      input.recordId,
+      input.operatorOffense,
+      input.dateOfApprehension,
+      input.place,
+      input.driverName,
+      input.driverOffense,
+      input.paid,
+      id,
+    ]
+  );
+  if (!result.rows[0]) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    recordId: row.record_id,
+    operatorOffense: row.operator_offense,
+    dateOfApprehension: row.date_of_apprehension
+      ? row.date_of_apprehension.toISOString().split("T")[0]
+      : "",
+    place: row.place,
+    driverName: row.driver_name,
+    driverOffense: row.driver_offense,
+    paid: row.paid,
+  };
+};
+
+export const deleteBelchingViolation = async (id: number): Promise<boolean> => {
+  const result = await dbManager.query(
+    "DELETE FROM belching_violations WHERE id = $1",
     [id]
   );
   return result.rowCount > 0;

@@ -49,16 +49,25 @@ function getMenuItems(
         label: "Smoke Belcher",
         icon: <Cloud className="w-4 h-4 mr-1" />,
         path: `/smoke-belching/smoke-belcher`,
+        children: [
+          {
+            label: "Driver Query",
+            icon: <Users className="w-4 h-4 mr-1" />,
+            path: `/smoke-belching/driver-query`,
+          },
+        ],
       },
       {
         label: "Order of Payments",
         icon: <FileStack className="w-4 h-4 mr-1" />,
         path: `/smoke-belching/order-of-payments`,
-      },
-      {
-        label: "Account Control",
-        icon: <UserCircle className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/account-control`,
+        children: [
+          {
+            label: "Add Order of Payment",
+            icon: <FileStack className="w-4 h-4 mr-1" />,
+            path: `/smoke-belching/order-of-payment-entry`,
+          },
+        ],
       },
       {
         label: "Fee Control",
@@ -187,16 +196,43 @@ export default function TopNavBarContainer({
   };
 
   const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute).map(
-    (item) => ({
-      label: (
-        <span className="flex items-center">
-          {item.icon}
-          {item.label}
-        </span>
-      ),
-      active: !!matchRoute({ to: item.path, fuzzy: false }),
-      onClick: () => navigate({ to: item.path }),
-    })
+    (item) => {
+      if (item.children) {
+        // If children exist, map them to buttons for dropdown
+        return {
+          label: (
+            <span className="flex items-center">
+              {item.icon}
+              {item.label}
+            </span>
+          ),
+          active: !!matchRoute({ to: item.path, fuzzy: false }),
+          onClick: () => navigate({ to: item.path }),
+          children: item.children.map((child: any) => (
+            <button
+              key={child.path}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100 uppercase"
+              onClick={() => navigate({ to: child.path })}
+            >
+              <span className="flex items-center">
+                {child.icon}
+                {child.label}
+              </span>
+            </button>
+          )),
+        };
+      }
+      return {
+        label: (
+          <span className="flex items-center">
+            {item.icon}
+            {item.label}
+          </span>
+        ),
+        active: !!matchRoute({ to: item.path, fuzzy: false }),
+        onClick: () => navigate({ to: item.path }),
+      };
+    }
   );
 
   // --- Dashboard Switch Dropdown Logic ---

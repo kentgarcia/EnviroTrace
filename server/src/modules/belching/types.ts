@@ -45,3 +45,43 @@ export interface BelchingRecordInput {
   orderOfPayment: string;
   violationSummary: string;
 }
+
+export interface BelchingRecordHistory {
+  id: number;
+  recordId: number;
+  type: string;
+  date: string;
+  details: string;
+  orNo: string;
+  status: string;
+}
+
+export interface BelchingRecordHistoryInput {
+  recordId: number;
+  type: string;
+  date: string;
+  details: string;
+  orNo: string;
+  status: string;
+}
+
+export interface BelchingViolation {
+  id: number;
+  recordId: number;
+  operatorOffense: string;
+  dateOfApprehension: string;
+  place: string;
+  driverName: string;
+  driverOffense: string;
+  paid: boolean;
+}
+
+export interface BelchingViolationInput {
+  recordId: number;
+  operatorOffense: string;
+  dateOfApprehension: string;
+  place: string;
+  driverName: string;
+  driverOffense: string;
+  paid: boolean;
+}

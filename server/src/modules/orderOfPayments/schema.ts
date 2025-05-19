@@ -8,6 +8,14 @@ export const orderOfPaymentsTypeDefs = `
     amount: Float!
     dateIssued: String!
     status: String!
+    testingOfficer: String!
+    testResults: String!
+    dateOfTesting: String!
+    apprehensionFee: Float!
+    voluntaryFee: Float!
+    impoundFee: Float!
+    driverAmount: Float!
+    operatorAmount: Float!
   }
 
   input OrderOfPaymentInput {
@@ -17,6 +25,14 @@ export const orderOfPaymentsTypeDefs = `
     amount: Float!
     dateIssued: String!
     status: String!
+    testingOfficer: String!
+    testResults: String!
+    dateOfTesting: String!
+    apprehensionFee: Float!
+    voluntaryFee: Float!
+    impoundFee: Float!
+    driverAmount: Float!
+    operatorAmount: Float!
   }
 
   type Query {

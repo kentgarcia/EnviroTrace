@@ -149,6 +149,14 @@ const OrderOfPayments = () => {
     amount: 0,
     dateIssued: new Date().toISOString().split("T")[0],
     status: "Unpaid",
+    testingOfficer: "",
+    testResults: "Pending",
+    dateOfTesting: new Date().toISOString().split("T")[0],
+    apprehensionFee: 0,
+    voluntaryFee: 0,
+    impoundFee: 0,
+    driverAmount: 0,
+    operatorAmount: 0,
   });
   const [adding, setAdding] = useState(false);
 
@@ -199,11 +207,20 @@ const OrderOfPayments = () => {
       await createOrderOfPayment(addForm);
       setShowAddModal(false);
       setAddForm({
-        ...addForm,
+        orderNo: "",
         plateNo: "",
         operator: "",
         amount: 0,
+        dateIssued: new Date().toISOString().split("T")[0],
         status: "Unpaid",
+        testingOfficer: "",
+        testResults: "Pending",
+        dateOfTesting: new Date().toISOString().split("T")[0],
+        apprehensionFee: 0,
+        voluntaryFee: 0,
+        impoundFee: 0,
+        driverAmount: 0,
+        operatorAmount: 0,
       });
       // Refresh orders
       setLoading(true);
@@ -216,6 +233,37 @@ const OrderOfPayments = () => {
       setLoading(false);
     }
   };
+
+  // Cancel handler for modal
+  const handleCancelOrder = () => {
+    setShowAddModal(false);
+    setAddForm({
+      orderNo: "",
+      plateNo: "",
+      operator: "",
+      amount: 0,
+      dateIssued: new Date().toISOString().split("T")[0],
+      status: "Unpaid",
+      testingOfficer: "",
+      testResults: "Pending",
+      dateOfTesting: new Date().toISOString().split("T")[0],
+      apprehensionFee: 0,
+      voluntaryFee: 0,
+      impoundFee: 0,
+      driverAmount: 0,
+      operatorAmount: 0,
+    });
+  };
+
+  // Compute totals
+  const totalUndiscounted =
+    Number(addForm.apprehensionFee) +
+    Number(addForm.voluntaryFee) +
+    Number(addForm.impoundFee);
+  const grandTotal =
+    totalUndiscounted +
+    Number(addForm.driverAmount) +
+    Number(addForm.operatorAmount);
 
   return (
     <div className="flex min-h-screen w-full">
@@ -375,17 +423,171 @@ const OrderOfPayments = () => {
                     <option value="Paid">Paid</option>
                   </select>
                 </div>
+                {/* Testing Information Section */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Testing Officer
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.testingOfficer}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        testingOfficer: e.target.value,
+                      }))
+                    }
+                    required
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Test Results
+                  </label>
+                  <select
+                    value={addForm.testResults}
+                    onChange={(e) =>
+                      setAddForm((f) => ({ ...f, testResults: e.target.value }))
+                    }
+                    required
+                    className="border rounded px-2 py-1 w-full"
+                  >
+                    <option value="Passed">Passed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Date of Testing
+                  </label>
+                  <input
+                    type="date"
+                    value={addForm.dateOfTesting}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        dateOfTesting: e.target.value,
+                      }))
+                    }
+                    required
+                    className="border rounded px-2 py-1 w-full"
+                    max={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+                {/* Payment Checklists & Input Section */}
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Apprehension Fee
+                  </label>
+                  <input
+                    type="number"
+                    value={addForm.apprehensionFee}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        apprehensionFee: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Voluntary Fee
+                  </label>
+                  <input
+                    type="number"
+                    value={addForm.voluntaryFee}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        voluntaryFee: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Impound Fee
+                  </label>
+                  <input
+                    type="number"
+                    value={addForm.impoundFee}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        impoundFee: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Driver Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={addForm.driverAmount}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        driverAmount: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1">
+                    Operator Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={addForm.operatorAmount}
+                    onChange={(e) =>
+                      setAddForm((f) => ({
+                        ...f,
+                        operatorAmount: Number(e.target.value),
+                      }))
+                    }
+                    min={0}
+                    className="border rounded px-2 py-1 w-full"
+                  />
+                </div>
+                {/* Totals Display */}
+                <div className="mb-3 flex flex-col gap-1">
+                  <div className="text-sm font-medium">
+                    Total Undiscounted:{" "}
+                    <span className="font-bold">
+                      ₱{totalUndiscounted.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-sm font-medium">
+                    Grand Total:{" "}
+                    <span className="font-bold text-blue-700">
+                      ₱{grandTotal.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex justify-end gap-2 mt-4">
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setShowAddModal(false)}
+                    onClick={handleCancelOrder}
                     disabled={adding}
                   >
                     Cancel
                   </Button>
                   <Button type="submit" disabled={adding}>
-                    {adding ? "Adding..." : "Add Order"}
+                    {adding ? "Saving..." : "Save Order of Payment"}
                   </Button>
                 </div>
               </form>
