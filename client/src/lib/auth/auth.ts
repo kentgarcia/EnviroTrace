@@ -1,78 +1,45 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { gql } from "@apollo/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
-import { apolloClient } from "../apollo/apollo-client";
+import {
+  useCurrentUser,
+  useLogin,
+  useRegister,
+  logout,
+} from "../api/auth-service";
 
-// GraphQL mutations aligned with our backend server
-const SIGN_IN = gql`
-  mutation SignIn($email: String!, $password: String!) {
-    signIn(email: $email, password: $password) {
-      token
-      user {
-        id
-        email
-        lastSignInAt
-        isSuperAdmin
-        roles
-      }
-    }
-  }
-`;
-
-const SIGN_UP = gql`
-  mutation SignUp($email: String!, $password: String!) {
-    signUp(email: $email, password: $password) {
-      token
-      user {
-        id
-        email
-        lastSignInAt
-        isSuperAdmin
-        roles
-      }
-    }
-  }
-`;
-
-const GET_ME = gql`
-  query Me {
-    me {
-      id
-      email
-      lastSignInAt
-      isSuperAdmin
-      createdAt
-      updatedAt
-      roles
-    }
-  }
-`;
-
+/**
+ * Sign in with email and password
+ */
 export async function signIn(email: string, password: string) {
   try {
-    const { data, errors } = await apolloClient.mutate({
-      mutation: SIGN_IN,
-      variables: { email, password },
-    });
+    // Use the login mutation directly without the hook (for compatibility)
+    const loginMutation = useLogin();
+    const tokenResponse = await loginMutation.mutateAsync({ email, password });
 
-    if (errors) {
-      throw new Error(errors[0].message);
+    // Since this is called outside of a component, we need to fetch user data manually
+    const response = await fetch(
+      `${
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+      }/auth/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${tokenResponse.access_token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch user data");
     }
 
-    if (!data || !data.signIn) {
-      throw new Error("Login failed");
-    }
+    const user = await response.json();
 
-    const { token, user } = data.signIn;
-
-    // Store the token
-    useAuthStore.getState().setToken(token);
-
-    // Store user roles
-    if (user.roles) {
-      useAuthStore.getState().setRoles(user.roles);
+    // Extract and store user roles
+    const roles = user.roles || [];
+    if (roles.length > 0) {
+      useAuthStore.getState().setRoles(roles as UserRole[]);
     }
 
     // Store user data
@@ -84,7 +51,7 @@ export async function signIn(email: string, password: string) {
     });
 
     return {
-      token,
+      token: tokenResponse.access_token,
       user,
     };
   } catch (error) {
@@ -93,57 +60,30 @@ export async function signIn(email: string, password: string) {
   }
 }
 
+/**
+ * Register a new user
+ */
 export async function signUp(email: string, password: string) {
   try {
-    const { data, errors } = await apolloClient.mutate({
-      mutation: SIGN_UP,
-      variables: { email, password },
-    });
+    // Use the register mutation directly (for compatibility)
+    const registerMutation = useRegister();
+    await registerMutation.mutateAsync({ email, password });
 
-    if (errors) {
-      throw new Error(errors[0].message);
-    }
-
-    if (!data || !data.signUp) {
-      throw new Error("Sign up failed");
-    }
-
-    const { token, user } = data.signUp;
-
-    // Store the token
-    useAuthStore.getState().setToken(token);
-
-    // Store user roles
-    if (user.roles) {
-      useAuthStore.getState().setRoles(user.roles);
-    }
-
-    // Store user data
-    useAuthStore.getState().setUserData({
-      id: user.id,
-      email: user.email,
-      lastSignInAt: user.lastSignInAt,
-      isSuperAdmin: user.isSuperAdmin || false,
-    });
-
-    return {
-      token,
-      user,
-    };
+    // After registration, sign in to get the token
+    return signIn(email, password);
   } catch (error) {
     console.error("Sign up error:", error);
     throw error;
   }
 }
 
+/**
+ * Sign out the current user
+ */
 export async function signOut() {
   try {
-    // Reset the entire store
-    useAuthStore.getState().resetStore();
-
-    // Clear Apollo client cache
-    await apolloClient.clearStore();
-
+    // Use the logout function from auth-service
+    logout();
     return true;
   } catch (error) {
     console.error("Sign out error:", error);
@@ -151,65 +91,100 @@ export async function signOut() {
   }
 }
 
-export function useAuth() {
-  const { token, roles } = useAuthStore();
-  const [user, setUser] = useState<any>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * Get the current user data from the API
+ */
+export async function getCurrentUser(): Promise<UserData> {
+  try {
+    const { token } = useAuthStore.getState();
 
-  // Define the initAuth function outside the useEffect, wrapped in useCallback
-  const initAuth = useCallback(async () => {
-    try {
-      // Check if we have a valid token
-      if (!token) {
-        setLoading(false);
-        return;
+    if (!token) {
+      throw new Error("No authentication token");
+    }
+
+    // Fetch current user manually (for compatibility with old code)
+    const response = await fetch(
+      `${
+        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
+      }/auth/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
+    );
 
-      // Fetch current user data using the token
-      const { data } = await apolloClient.query({
-        query: GET_ME,
-        fetchPolicy: "network-only",
+    if (!response.ok) {
+      throw new Error("Failed to fetch user data");
+    }
+
+    const data = await response.json();
+
+    // Extract and store user roles
+    const roles = data.roles || [];
+    if (roles.length > 0) {
+      useAuthStore.getState().setRoles(roles as UserRole[]);
+    }
+
+    // Store user data
+    useAuthStore.getState().setUserData({
+      id: data.id,
+      email: data.email,
+      lastSignInAt: data.lastSignInAt,
+      isSuperAdmin: data.isSuperAdmin || false,
+    });
+
+    return data;
+  } catch (error) {
+    console.error("Get current user error:", error);
+    throw error;
+  }
+}
+
+// Note: Duplicate signUp and signOut functions removed as they are already defined above
+
+/**
+ * Hook for authentication state and methods
+ * This updated version uses TanStack Query underneath while maintaining
+ * the same API for backwards compatibility with existing code
+ */
+export function useAuth() {
+  const { token } = useAuthStore();
+
+  // Use TanStack Query hooks for auth operations
+  const { data: user, isLoading, isError, error } = useCurrentUser();
+
+  // Effect to handle auth errors
+  useEffect(() => {
+    if (isError) {
+      const authError = error as Error;
+      console.error("Auth error:", authError?.message);
+      useAuthStore.getState().resetStore();
+    }
+  }, [isError, error]);
+
+  // Effect to handle successful auth
+  useEffect(() => {
+    if (user && token && typeof user === "object" && "id" in user) {
+      // Make sure user data is in sync with auth store
+      useAuthStore.getState().setUserData({
+        id: (user as any).id,
+        email: (user as any).email,
+        lastSignInAt: (user as any).lastSignInAt,
+        isSuperAdmin: (user as any).isSuperAdmin || false,
       });
 
-      if (data && data.me) {
-        setUser(data.me);
-
-        // Set user data including roles
-        setUserData({
-          id: data.me.id,
-          email: data.me.email,
-          roles: data.me.roles || [],
-        });
-
-        // Update roles in the store if needed
-        if (data.me.roles) {
-          useAuthStore.getState().setRoles(data.me.roles);
-        }
-      } else {
-        // Invalid token or user not found
-        useAuthStore.getState().clearToken();
-        useAuthStore.getState().clearRoles();
+      if ((user as any).roles) {
+        useAuthStore.getState().setRoles((user as any).roles as UserRole[]);
       }
-    } catch (error) {
-      console.error("Auth initialization error:", error);
-      // Clear invalid token
-      useAuthStore.getState().clearToken();
-      useAuthStore.getState().clearRoles();
-    } finally {
-      setLoading(false);
     }
-  }, [token]); // Add token as a dependency for useCallback
-
-  // Initialize auth on component mount
-  useEffect(() => {
-    initAuth();
-  }, [initAuth]); // Now initAuth is stable unless token changes
+  }, [user, token]);
 
   return {
     user,
-    userData,
-    loading,
+    loading: isLoading,
+    isAuthenticated: !!token && !!user,
+    error: isError ? error : null,
     signIn,
     signUp,
     signOut,

@@ -4,22 +4,25 @@ import { TooltipProvider } from "@/presentation/components/shared/ui/tooltip";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./presentation/routeTree";
 import TitleBar from "./presentation/components/shared/layout/TitleBar";
+import { QueryProvider } from "./lib/api/query-provider";
 
 const App = () => (
-  <TooltipProvider>
-    <Toaster />
-    <Sonner />
-    <TitleBar />
-    <div
-      style={{
-        paddingTop: 30,
-        overflow: "auto",
-        height: "100%",
-      }}
-    >
-      <RouterProvider router={router} />
-    </div>
-  </TooltipProvider>
+  <QueryProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <TitleBar />
+      <div
+        style={{
+          paddingTop: 30,
+          overflow: "auto",
+          height: "100%",
+        }}
+      >
+        <RouterProvider router={router} />
+      </div>
+    </TooltipProvider>
+  </QueryProvider>
 );
 
 export default App;
