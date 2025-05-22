@@ -16,6 +16,7 @@ import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
 import { smokeBelchingRoute } from "./roles/belching/belching.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
 import { urbanGreeningRoute } from "./roles/urban/urban.route";
+import Unauthorized from "./pages/public/Unauthorized";
 
 // Create a root route
 const rootRoute = createRootRoute({
@@ -72,6 +73,12 @@ const profileRoute = createRoute({
   component: ProfilePage,
 });
 
+const unauthorizedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/403",
+  component: Unauthorized,
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "*",
@@ -87,6 +94,7 @@ export const routeTree = rootRoute.addChildren([
   ...smokeBelchingRoute,
   ...govEmissionRoute,
   ...urbanGreeningRoute,
+  unauthorizedRoute,
   notFoundRoute,
 ]);
 

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Plus, Save, X } from "lucide-react";
-import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import {
@@ -36,6 +35,7 @@ import {
   updateBelchingFee,
   deleteBelchingFee,
 } from "@/lib/api/belching-api";
+import { Badge } from "@/presentation/components/shared/ui/badge";
 
 export interface ViolationRate {
   id: string;
@@ -219,18 +219,28 @@ const FeeTable: React.FC = () => {
       accessorKey: "category",
       header: "Category",
       cell: ({ row }: any) => (
-        <Badge className={getCategoryBadgeColor(row.original.category)}>
+        <span
+          className={
+            getCategoryBadgeColor(row.original.category) +
+            " px-2 py-1 rounded text-white text-sm"
+          }
+        >
           {row.original.category}
-        </Badge>
+        </span>
       ),
     },
     {
       accessorKey: "level",
       header: "Violation Level",
       cell: ({ row }: any) => (
-        <Badge className={getLevelBadgeColor(row.original.level)}>
+        <span
+          className={
+            getLevelBadgeColor(row.original.level) +
+            " px-2 py-1 rounded text-white text-sm"
+          }
+        >
           Level {row.original.level}
-        </Badge>
+        </span>
       ),
     },
     {
@@ -254,14 +264,6 @@ const FeeTable: React.FC = () => {
   return (
     <div className="flex gap-8 h-[calc(100vh-12rem)]">
       <div className="w-1/2 flex flex-col">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-700">
-            Violation Rates
-          </h2>
-          <p className="text-sm text-gray-500">
-            Select a rate to view or edit its details
-          </p>
-        </div>
         <div className="flex-1 overflow-auto">
           <DataTable
             columns={columns}
@@ -273,24 +275,24 @@ const FeeTable: React.FC = () => {
             loadingMessage="Loading violation rates..."
             emptyMessage="No violation rates found."
             onRowClick={handleRowClick}
-            className="bg-white border border-gray-200 rounded-none shadow-none"
+            className="rounded-none shadow-none"
           />
         </div>
       </div>
 
       <div className="w-1/2 flex flex-col">
-        <div className="bg-white border border-gray-200 rounded-none shadow-none">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-primary border border-gray-200 rounded-none shadow-none">
+          <div className="p-6 border-b border-gray-600">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-semibold text-gray-700">
+                <h2 className="text-lg font-semibold text-white">
                   {isNew
                     ? "New Violation Rate"
                     : selectedRate
                     ? "Rate Details"
                     : "Select a Rate"}
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-300">
                   {isNew
                     ? "Create a new violation rate"
                     : selectedRate
@@ -311,7 +313,7 @@ const FeeTable: React.FC = () => {
                     <Button
                       variant="outline"
                       onClick={handleEdit}
-                      className="border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
+                      className="border border-white bg-transparent hover:bg-blue-700 text-white shadow-none rounded-none"
                     >
                       Edit Rate
                     </Button>
@@ -328,11 +330,11 @@ const FeeTable: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 bg-primary text-white">
             {selectedRate || isNew ? (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-gray-200">
                     Category
                   </Label>
                   {isEditing ? (
@@ -342,7 +344,7 @@ const FeeTable: React.FC = () => {
                           variant="outline"
                           role="combobox"
                           aria-expanded={open}
-                          className="w-full justify-between border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
+                          className="w-full justify-between border border-gray-400 bg-transparent hover:bg-blue-700 text-white shadow-none rounded-none"
                         >
                           {formData.category || "Select category..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -398,19 +400,21 @@ const FeeTable: React.FC = () => {
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <Badge
-                      className={cn(
-                        "text-sm px-3 py-1 border-none shadow-none rounded-none bg-gray-200 text-gray-800",
-                        getCategoryBadgeColor(selectedRate?.category || "")
-                      )}
-                    >
-                      {selectedRate?.category}
-                    </Badge>
+                    <div className="flex flex-col items-start">
+                      <Badge
+                        className={cn(
+                          "mt-1 text-sm px-3 py-1 border-none shadow-none rounded-none",
+                          getCategoryBadgeColor(selectedRate?.category || "")
+                        )}
+                      >
+                        {selectedRate?.category}
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-gray-200">
                     Violation Level
                   </Label>
                   {isEditing ? (
@@ -424,22 +428,27 @@ const FeeTable: React.FC = () => {
                           level: Number(e.target.value),
                         })
                       }
-                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
+                      className="border border-gray-400 bg-transparent text-white focus:border-blue-300 focus:ring-blue-300 shadow-none rounded-none"
                     />
                   ) : (
-                    <Badge
-                      className={cn(
-                        "text-sm px-3 py-1 border-none shadow-none rounded-none bg-gray-200 text-gray-800",
-                        getLevelBadgeColor(selectedRate?.level || 0)
-                      )}
-                    >
-                      Level {selectedRate?.level}
-                    </Badge>
+                    <div className="flex flex-col items-start">
+                      <span className="text-base font-medium text-white">
+                        Level {selectedRate?.level}
+                      </span>
+                      <Badge
+                        className={cn(
+                          "mt-1 text-sm px-3 py-1 border-none shadow-none rounded-none",
+                          getLevelBadgeColor(selectedRate?.level || 0)
+                        )}
+                      >
+                        Level {selectedRate?.level}
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-gray-200">
                     Amount (₱)
                   </Label>
                   {isEditing ? (
@@ -452,17 +461,17 @@ const FeeTable: React.FC = () => {
                           amount: Number(e.target.value),
                         })
                       }
-                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
+                      className="border border-gray-400 bg-transparent text-white focus:border-blue-300 focus:ring-blue-300 shadow-none rounded-none"
                     />
                   ) : (
-                    <p className="text-lg font-medium text-gray-900">
+                    <p className="text-lg font-medium text-white">
                       ₱{selectedRate?.amount.toLocaleString()}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-gray-200">
                     Effective Date
                   </Label>
                   {isEditing ? (
@@ -475,10 +484,10 @@ const FeeTable: React.FC = () => {
                           effectiveDate: e.target.value,
                         })
                       }
-                      className="border border-gray-300 bg-white focus:border-blue-500 focus:ring-blue-500 shadow-none rounded-none"
+                      className="border border-gray-400 bg-transparent text-white focus:border-blue-300 focus:ring-blue-300 shadow-none rounded-none"
                     />
                   ) : (
-                    <p className="text-lg font-medium text-gray-900">
+                    <p className="text-lg font-medium text-white">
                       {selectedRate?.effectiveDate &&
                         new Date(
                           selectedRate.effectiveDate
@@ -488,11 +497,11 @@ const FeeTable: React.FC = () => {
                 </div>
 
                 {isEditing && (
-                  <div className="flex justify-end space-x-2 pt-6 mt-6 border-t border-gray-200">
+                  <div className="flex justify-end space-x-2 pt-6 mt-6 border-t border-gray-600">
                     <Button
                       variant="outline"
                       onClick={handleCancel}
-                      className="border border-gray-300 bg-white hover:bg-gray-100 shadow-none rounded-none"
+                      className="border border-gray-400 bg-transparent hover:bg-blue-700 text-white shadow-none rounded-none"
                     >
                       <X className="mr-2 h-4 w-4" />
                       Cancel
@@ -509,7 +518,7 @@ const FeeTable: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center justify-center h-64">
-                <p className="text-gray-500">
+                <p className="text-gray-200">
                   Select a rate to view its details
                 </p>
               </div>

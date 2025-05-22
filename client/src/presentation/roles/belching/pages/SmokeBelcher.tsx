@@ -12,6 +12,7 @@ import {
 import RecordInfo from "../components/smokeBelcher/RecordInfo";
 import Violations from "../components/smokeBelcher/Violations";
 import RecordHistory from "../components/smokeBelcher/RecordHistory";
+import OrderOfPaymentsTab from "../components/smokeBelcher/OrderOfPaymentsTab";
 import {
   ChevronUp,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  DollarSign,
 } from "lucide-react";
 import {
   fetchBelchingRecords,
@@ -28,6 +30,7 @@ import {
   deleteBelchingRecord,
 } from "@/lib/api/belching-api";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
+import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
 
 type BelchingRecord = {
   id: number | string;
@@ -82,7 +85,7 @@ const SmokeBelcher = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [records, setRecords] = useState<BelchingRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"violations" | "history">("violations");
+  const [tab, setTab] = useState<"violations" | "history" | "payments">("violations");
   const [sort, setSort] = useState<{ col: string; dir: "asc" | "desc" }>({
     col: "plateNumber",
     dir: "asc",
@@ -193,13 +196,7 @@ const SmokeBelcher = () => {
     <div className="flex min-h-screen w-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopNavBarContainer dashboardType="air-quality" />
-
-        {/* Header Section */}
-        <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Smoke Belcher
-          </h1>
-        </div>
+        <ColorDivider variant="secondary" />
 
         <div className="flex h-full">
           {/* Left: Search + Table */}
@@ -369,9 +366,9 @@ const SmokeBelcher = () => {
                   recordAddress={selected.recordAddress}
                   recordStatus={
                     selected.recordStatus as
-                      | "new"
-                      | "apprehended"
-                      | "no offense"
+                    | "new"
+                    | "apprehended"
+                    | "no offense"
                   }
                   licenseValidUntil={selected.licenseValidUntil}
                   onAddToCEC={() => alert("Add to CEC Queue")}
@@ -396,8 +393,7 @@ const SmokeBelcher = () => {
                     style={{ borderRadius: 0 }}
                   >
                     <AlertTriangle size={16} /> Violations
-                  </button>
-                  <button
+                  </button>                  <button
                     onClick={() => setTab("history")}
                     className={
                       (tab === "history"
@@ -409,8 +405,19 @@ const SmokeBelcher = () => {
                   >
                     <FileText size={16} /> Record History
                   </button>
-                </div>
-                <div className="flex-1 mt-0 overflow-auto px-4">
+                  <button
+                    onClick={() => setTab("payments")}
+                    className={
+                      (tab === "payments"
+                        ? "border-b-2 border-blue-600 text-blue-700 bg-transparent "
+                        : "text-gray-700 bg-transparent hover:bg-gray-100 ") +
+                      "flex items-center gap-2 px-4 py-2 transition font-semibold focus:outline-none"
+                    }
+                    style={{ borderRadius: 0 }}
+                  >
+                    <DollarSign size={16} /> Order of Payments
+                  </button>
+                </div>                <div className="flex-1 mt-0 overflow-auto px-4">
                   {tab === "violations" ? (
                     <Violations
                       recordId={Number(selected.id)}
@@ -419,8 +426,13 @@ const SmokeBelcher = () => {
                       orderOfPayment={selected.orderOfPayment}
                       violationSummary={selected.violationSummary}
                     />
-                  ) : (
+                  ) : tab === "history" ? (
                     <RecordHistory recordId={Number(selected.id)} />
+                  ) : (
+                    <OrderOfPaymentsTab
+                      recordId={Number(selected.id)}
+                      plateNumber={selected.plateNumber}
+                    />
                   )}
                 </div>
               </>

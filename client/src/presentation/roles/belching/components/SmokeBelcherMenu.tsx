@@ -372,9 +372,9 @@ const SmokeBelcherMenu = () => {
                   recordAddress={selected.recordAddress}
                   recordStatus={
                     selected.recordStatus as
-                      | "new"
-                      | "apprehended"
-                      | "no offense"
+                    | "new"
+                    | "apprehended"
+                    | "no offense"
                   }
                   licenseValidUntil={selected.licenseValidUntil}
                   onAddToCEC={() => alert("Add to CEC Queue")}

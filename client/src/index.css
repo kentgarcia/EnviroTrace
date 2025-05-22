@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @plugin 'tailwindcss-animate';
 
@@ -8,7 +8,9 @@
   --font-sans: Inter, system-ui, sans-serif;
 
   --color-main: #003595;
-  
+  --color-secondary: #ffd700;
+  --color-tertiary: #ee1c25;
+
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -145,7 +147,7 @@
   :root {
     --background: 140 33% 98%;
     --foreground: 222.2 84% 4.9%;
-    
+
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
 

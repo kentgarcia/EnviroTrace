@@ -156,88 +156,12 @@ export function DataTable<TData, TValue>({
       {/* Table Controls: Density & Column Visibility */}
       {(showDensityToggle || showColumnVisibility) && (
         <div className="flex justify-between items-center py-1">
-          <div className="text-xs text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} items
-          </div>
-          <div className="flex items-center gap-2">
-            {showDensityToggle && (
-              <>
-                <span className="text-xs">Density:</span>
-                <Button
-                  size="sm"
-                  variant={density === "compact" ? "default" : "outline"}
-                  className="px-2 py-1 text-xs"
-                  onClick={() => setDensity("compact")}
-                  title="Compact"
-                >
-                  <GripHorizontal className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={density === "normal" ? "default" : "outline"}
-                  className="px-2 py-1 text-xs"
-                  onClick={() => setDensity("normal")}
-                  title="Normal"
-                >
-                  <Rows3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant={density === "spacious" ? "default" : "outline"}
-                  className="px-2 py-1 text-xs"
-                  onClick={() => setDensity("spacious")}
-                  title="Spacious"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-            {showColumnVisibility && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 py-1 text-xs bg-white min-h-[28px]"
-                  >
-                    <Settings className="mr-2 h-3.5 w-3.5" />
-                    View Options
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-[160px] text-xs bg-white"
-                >
-                  {table
-                    .getAllColumns()
-                    .filter((column) => column.getCanHide())
-                    .map((column) => (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(value)
-                        }
-                      >
-                        {column.columnDef.header as string}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => table.resetColumnVisibility()}
-                    className="justify-center text-center"
-                  >
-                    Reset View
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+          {/* Removed density buttons, view options UI, and number of items from top */}
         </div>
       )}
 
       {/* Main Table */}
-      <div className="rounded-md border overflow-x-auto bg-white">
+      <div className="border overflow-x-auto bg-white">
         <Table
           className={
             density === "compact"
@@ -248,7 +172,8 @@ export function DataTable<TData, TValue>({
           }
         >
           <TableHeader
-            className={stickyHeader ? "sticky top-0 z-10 bg-white" : ""}
+            className={stickyHeader ? "sticky top-0 z-10" : ""}
+            style={{ background: "var(--primary)", color: "white" }}
           >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
@@ -262,7 +187,7 @@ export function DataTable<TData, TValue>({
                       !disableSorting && header.column.getCanSort()
                         ? "cursor-pointer select-none"
                         : ""
-                    }`}
+                    } bg-primary text-white`}
                     onClick={
                       !disableSorting && header.column.getCanSort()
                         ? header.column.getToggleSortingHandler()
@@ -327,52 +252,57 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination Controls */}
-      {showPagination && table.getRowModel().rows.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-2 py-1 text-xs">
-          <div className="flex items-center gap-2">
-            <span>Rows per page:</span>
-            <select
-              className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-            >
-              {pageSizeOptions.map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 py-1"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <span>
-              Page{" "}
-              <span className="font-semibold">
-                {table.getState().pagination.pageIndex + 1}
-              </span>{" "}
-              of <span className="font-semibold">{table.getPageCount()}</span>
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 py-1"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
+      {/* Number of items and Pagination Controls */}
+      <div className="flex flex-col gap-1 px-2 py-1 text-xs">
+        <div className="text-xs text-muted-foreground">
+          {table.getFilteredRowModel().rows.length} items
         </div>
-      )}
+        {showPagination && table.getRowModel().rows.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span>Rows per page:</span>
+              <select
+                className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
+                value={table.getState().pagination.pageSize}
+                onChange={(e) => table.setPageSize(Number(e.target.value))}
+              >
+                {pageSizeOptions.map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 py-1"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Previous
+              </Button>
+              <span>
+                Page{" "}
+                <span className="font-semibold">
+                  {table.getState().pagination.pageIndex + 1}
+                </span>{" "}
+                of <span className="font-semibold">{table.getPageCount()}</span>
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 py-1"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,12 +1,16 @@
 import React from "react";
 import { Button } from "@/presentation/components/shared/ui/button";
-import { Info, Printer, PlusCircle } from "lucide-react";
+import { Info, Printer, PlusCircle, FileText, Car, User } from "lucide-react";
 
 interface RecordInfoProps {
   plateNumber: string;
   vehicleType: string;
+  transportGroup?: string;
   operatorName: string;
   operatorAddress: string;
+  ownerFirstName?: string;
+  ownerMiddleName?: string;
+  ownerLastName?: string;
   recordAddress: string;
   recordStatus: "new" | "apprehended" | "no offense";
   licenseValidUntil: string;
@@ -25,6 +29,9 @@ interface RecordInfoProps {
   onPrintClearance?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onRecordsAndFile?: () => void;
+  onGarageTesting?: () => void;
+  onDriverQuery?: () => void;
 }
 
 const statusColor = {
@@ -42,8 +49,12 @@ const RecordInfo: React.FC<RecordInfoProps> = (props) => {
   const {
     plateNumber,
     vehicleType,
+    transportGroup,
     operatorName,
     operatorAddress,
+    ownerFirstName,
+    ownerMiddleName,
+    ownerLastName,
     recordAddress,
     recordStatus,
     licenseValidUntil,
@@ -60,245 +71,255 @@ const RecordInfo: React.FC<RecordInfoProps> = (props) => {
     onPrintClearance,
     onEdit,
     onDelete,
+    onRecordsAndFile,
+    onGarageTesting,
+    onDriverQuery,
   } = props;
   const isEdit = mode === "edit" || mode === "add";
   return (
     <form
       onSubmit={isEdit ? onSubmit : undefined}
-      className="flex overflow-hidden border-b border-gray-200 bg-white"
+      className="p-6 border-b border-gray-200 bg-white"
     >
-      {/* Left: Info Fields */}
-      <div className="flex-1 p-6">
-        <div className="mb-4">
-          <div className="text-lg font-bold tracking-wide mb-1 text-blue-900">
-            {mode === "add"
-              ? "Add New Record"
-              : mode === "edit"
-              ? "Edit Record"
-              : "Record Information"}
-          </div>
-          <div className="text-xs text-gray-400">
-            Vehicle and operator details
+      <div className="mb-4">
+        <div className="text-lg font-bold tracking-wide mb-1 text-blue-900">
+          {mode === "add"
+            ? "Add New Record"
+            : mode === "edit"
+              ? "Update Record"
+              : ""}
+        </div>
+      </div>
+
+      {/* Main Content: Two Column Layout */}
+      <div className="flex flex-wrap gap-6">
+        {/* Column 1: Vehicle and Operator Information */}
+        <div className="flex-1 min-w-[320px]">
+          <div className="space-y-4">
+            {/* Row 1: Plate Number, Vehicle Type */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-gray-500">Plate Number</label>
+                {isEdit ? (
+                  <input
+                    className="w-full border rounded px-3 py-2 text-base font-semibold"
+                    name="plateNumber"
+                    value={formData?.plateNumber || ""}
+                    onChange={onChange}
+                    required
+                  />
+                ) : (
+                  <input
+                    className="w-full bg-gray-100 border border-gray-200 rounded px-3 py-2 text-base font-semibold"
+                    value={plateNumber}
+                    readOnly
+                    tabIndex={-1}
+                  />
+                )}
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Vehicle Type</label>
+                {isEdit ? (
+                  <input
+                    className="w-full border rounded px-3 py-2 text-base"
+                    name="vehicleType"
+                    value={formData?.vehicleType || ""}
+                    onChange={onChange}
+                    required
+                  />
+                ) : (
+                  <input
+                    className="w-full bg-gray-100 border border-gray-200 rounded px-3 py-2 text-base"
+                    value={vehicleType}
+                    readOnly
+                    tabIndex={-1}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Operator Name */}
+            <div>
+              <label className="text-xs text-gray-500">Operator Name</label>
+              {isEdit ? (
+                <input
+                  className="w-full border rounded px-3 py-2 text-base"
+                  name="operator"
+                  value={formData?.operator || ""}
+                  onChange={onChange}
+                  required
+                />
+              ) : (
+                <input
+                  className="w-full bg-gray-100 border border-gray-200 rounded px-3 py-2 text-base"
+                  value={operatorName}
+                  readOnly
+                  tabIndex={-1}
+                />
+              )}
+            </div>
+
+            {/* Row 3: Operator Address */}
+            <div>
+              <label className="text-xs text-gray-500">Operator Address</label>
+              {isEdit ? (
+                <input
+                  className="w-full border rounded px-3 py-2 text-base"
+                  name="operatorAddress"
+                  value={formData?.operatorAddress || ""}
+                  onChange={onChange}
+                />
+              ) : (
+                <input
+                  className="w-full bg-gray-100 border border-gray-200 rounded px-3 py-2 text-base"
+                  value={operatorAddress}
+                  readOnly
+                  tabIndex={-1}
+                />
+              )}
+            </div>
+
+            {/* Edit mode additional fields */}
+            {isEdit && (
+              <>
+                <div>
+                  <label className="text-xs text-gray-500">Record Address</label>
+                  <input
+                    className="w-full border rounded px-3 py-2 text-base"
+                    name="recordAddress"
+                    value={formData?.recordAddress || ""}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Record Status</label>
+                  <select
+                    name="recordStatus"
+                    value={formData?.recordStatus || "new"}
+                    onChange={onChange}
+                    className="w-full border rounded px-3 py-2"
+                  >
+                    <option value="new">New</option>
+                    <option value="apprehended">Apprehended</option>
+                    <option value="no offense">No Offense</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">
+                    License Valid Until
+                  </label>
+                  <input
+                    name="licenseValidUntil"
+                    type="date"
+                    className="w-full border rounded px-3 py-2"
+                    value={formData?.licenseValidUntil || ""}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Offense Level</label>
+                  <input
+                    name="offenseLevel"
+                    type="number"
+                    min={1}
+                    className="w-full border rounded px-3 py-2"
+                    value={formData?.offenseLevel || 1}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">
+                    Date Last Apprehended
+                  </label>
+                  <input
+                    name="lastDateApprehended"
+                    type="date"
+                    className="w-full border rounded px-3 py-2"
+                    value={formData?.lastDateApprehended || ""}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">
+                    Order of Payment
+                  </label>
+                  <input
+                    name="orderOfPayment"
+                    className="w-full border rounded px-3 py-2"
+                    value={formData?.orderOfPayment || ""}
+                    onChange={onChange}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">
+                    Violation Summary
+                  </label>
+                  <input
+                    name="violationSummary"
+                    className="w-full border rounded px-3 py-2"
+                    value={formData?.violationSummary || ""}
+                    onChange={onChange}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-4">
-          <div>
-            <label className="text-xs text-gray-500">Plate Number</label>
-            {isEdit ? (
-              <input
-                className="w-full border rounded px-2 py-1 text-base font-semibold"
-                name="plateNumber"
-                value={formData?.plateNumber || ""}
-                onChange={onChange}
-                required
-              />
-            ) : (
-              <input
-                className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base font-semibold"
-                value={plateNumber}
-                readOnly
-                tabIndex={-1}
-              />
-            )}
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Vehicle Type</label>
-            {isEdit ? (
-              <input
-                className="w-full border rounded px-2 py-1 text-base"
-                name="vehicleType"
-                value={formData?.vehicleType || ""}
-                onChange={onChange}
-                required
-              />
-            ) : (
-              <input
-                className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
-                value={vehicleType}
-                readOnly
-                tabIndex={-1}
-              />
-            )}
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Operator Name</label>
-            {isEdit ? (
-              <input
-                className="w-full border rounded px-2 py-1 text-base"
-                name="operator"
-                value={formData?.operator || ""}
-                onChange={onChange}
-                required
-              />
-            ) : (
-              <input
-                className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
-                value={operatorName}
-                readOnly
-                tabIndex={-1}
-              />
-            )}
-          </div>
-          <div>
-            <label className="text-xs text-gray-500">Operator Address</label>
-            {isEdit ? (
-              <input
-                className="w-full border rounded px-2 py-1 text-base"
-                name="operatorAddress"
-                value={formData?.operatorAddress || ""}
-                onChange={onChange}
-              />
-            ) : (
-              <input
-                className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
-                value={operatorAddress}
-                readOnly
-                tabIndex={-1}
-              />
-            )}
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs text-gray-500">Record Address</label>
-            {isEdit ? (
-              <input
-                className="w-full border rounded px-2 py-1 text-base"
-                name="recordAddress"
-                value={formData?.recordAddress || ""}
-                onChange={onChange}
-              />
-            ) : (
-              <input
-                className="w-full bg-gray-100 border border-gray-200 rounded px-2 py-1 text-base"
-                value={recordAddress}
-                readOnly
-                tabIndex={-1}
-              />
-            )}
-          </div>
-          {/* Hidden fields in view, shown in edit/add */}
-          {isEdit && (
+
+        {/* Column 2: Status & Actions */}
+        <div className="w-full md:w-auto md:min-w-[280px] space-y-6">
+          {mode === "view" ? (
             <>
-              <div>
-                <label className="text-xs text-gray-500">Record Status</label>
-                <select
-                  name="recordStatus"
-                  value={formData?.recordStatus || "new"}
-                  onChange={onChange}
-                  className="w-full border rounded px-2 py-1"
-                >
-                  <option value="new">New</option>
-                  <option value="apprehended">Apprehended</option>
-                  <option value="no offense">No Offense</option>
-                </select>
+              {/* Status Display */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-full text-center py-3 mb-3 rounded-md font-bold ${statusColor[recordStatus]}`}
+                  >
+                    {statusLabel[recordStatus]}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">License valid until</div>
+                    <div className="text-sm font-medium">{licenseValidUntil}</div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">
-                  License Valid Until
-                </label>
-                <input
-                  name="licenseValidUntil"
-                  type="date"
-                  className="w-full border rounded px-2 py-1"
-                  value={formData?.licenseValidUntil || ""}
-                  onChange={onChange}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Offense Level</label>
-                <input
-                  name="offenseLevel"
-                  type="number"
-                  min={1}
-                  className="w-full border rounded px-2 py-1"
-                  value={formData?.offenseLevel || 1}
-                  onChange={onChange}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">
-                  Date Last Apprehended
-                </label>
-                <input
-                  name="lastDateApprehended"
-                  type="date"
-                  className="w-full border rounded px-2 py-1"
-                  value={formData?.lastDateApprehended || ""}
-                  onChange={onChange}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">
-                  Order of Payment
-                </label>
-                <input
-                  name="orderOfPayment"
-                  className="w-full border rounded px-2 py-1"
-                  value={formData?.orderOfPayment || ""}
-                  onChange={onChange}
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="text-xs text-gray-500">
-                  Violation Summary
-                </label>
-                <input
-                  name="violationSummary"
-                  className="w-full border rounded px-2 py-1"
-                  value={formData?.violationSummary || ""}
-                  onChange={onChange}
-                />
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    size="sm"
+                    onClick={onAddToCEC}
+                    title="Add to CEC Queue"
+                    className="bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-1 justify-center px-3 py-2 rounded transition border border-green-600 shadow-none"
+                  >
+                    <PlusCircle size={16} /> Add to CEC
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onPrintClearance}
+                    title="Print Clearance"
+                    className="border-blue-400 text-blue-700 hover:bg-blue-50 flex items-center gap-1 justify-center px-3 py-2 rounded transition shadow-none"
+                  >
+                    <Printer size={16} /> Print
+                  </Button>
+                </div>
               </div>
             </>
+          ) : (
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-blue-700 text-white">
+                {mode === "add" ? "Add" : "Save"}
+              </Button>
+            </div>
           )}
         </div>
-        {isEdit && (
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-blue-700 text-white">
-              {mode === "add" ? "Add" : "Save"}
-            </Button>
-          </div>
-        )}
       </div>
-      {/* Right: Status & Actions (view mode only) */}
-      {mode === "view" && (
-        <div className="flex flex-col items-center justify-between w-60 py-8 px-4 bg-gray-50 border-l border-gray-200">
-          <div className="flex flex-col items-center gap-4 w-full">
-            <span
-              className={`px-5 py-2 rounded text-base font-bold mb-1 ${statusColor[recordStatus]}`}
-            >
-              {statusLabel[recordStatus]}
-            </span>
-            <span className="text-xs text-gray-500 mt-1">
-              License valid until
-            </span>
-            <span className="text-sm font-medium mb-2">
-              {licenseValidUntil}
-            </span>
-          </div>
-          <div className="flex flex-col gap-3 w-full mt-6">
-            <Button
-              size="sm"
-              onClick={onAddToCEC}
-              title="Add to CEC Queue"
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold flex items-center gap-2 w-full justify-center px-4 py-2 rounded transition border border-green-600 shadow-none"
-            >
-              <PlusCircle size={18} /> Add to CEC Queue
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onPrintClearance}
-              title="Print Clearance"
-              className="border-blue-400 text-blue-700 hover:bg-blue-50 flex items-center gap-2 w-full justify-center px-4 py-2 rounded transition shadow-none"
-            >
-              <Printer size={18} /> Print Clearance
-            </Button>
-          </div>
-        </div>
-      )}
     </form>
   );
 };

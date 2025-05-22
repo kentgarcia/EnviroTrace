@@ -5,9 +5,17 @@ export type UserRole =
   | "government_emission";
 
 export interface UserData {
-  id: string;
-  email: string;
-  roles: UserRole[];
+  id?: string;
+  email?: string;
+  roles?: UserRole[];
   lastSignInAt?: string;
   isSuperAdmin?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Authentication response
+export interface AuthResponse {
+  token: string;
+  user: UserData;
 }

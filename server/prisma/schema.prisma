@@ -1,0 +1,228 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["multiSchema", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "public")]
+  schemas    = ["auth", "belching", "emission", "public"]
+}
+
+model User {
+  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email             String                 @unique @db.VarChar(255)
+  encryptedPassword String                 @map("encrypted_password") @db.VarChar(255)
+  isSuperAdmin      Boolean?               @default(false) @map("is_super_admin")
+  lastSignInAt      DateTime?              @map("last_sign_in_at") @db.Timestamptz(6)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime?              @map("deleted_at") @db.Timestamptz(6)
+  profile           Profile?
+  UserRoleMapping   UserRoleMapping[]
+  tests             Test[]                 @relation("CreatedByUser")
+  driverHistories   VehicleDriverHistory[] @relation("ChangedByUser")
+
+  @@map("users")
+  @@schema("auth")
+}
+
+model UserRoleMapping {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  role      user_role
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, role], map: "user_roles_user_id_role_unique")
+  @@index([userId], map: "idx_auth_user_roles_user_id")
+  @@map("user_roles")
+  @@schema("auth")
+}
+
+model Profile {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  firstName   String?  @map("first_name") @db.VarChar(100)
+  lastName    String?  @map("last_name") @db.VarChar(100)
+  bio         String?
+  jobTitle    String?  @map("job_title") @db.VarChar(200)
+  department  String?  @db.VarChar(200)
+  phoneNumber String?  @map("phone_number") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId], map: "idx_auth_profiles_user_id")
+  @@map("profiles")
+  @@schema("auth")
+}
+
+model Fee {
+  id            Int       @id @default(autoincrement())
+  amount        Decimal   @db.Decimal(10, 2)
+  category      String    @db.VarChar(100)
+  level         Int       @default(1)
+  effectiveDate DateTime  @default(dbgenerated("CURRENT_DATE")) @map("effective_date") @db.Date
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("fees")
+  @@schema("belching")
+}
+
+model Driver {
+  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  firstName     String      @map("first_name") @db.VarChar(100)
+  middleName    String?     @map("middle_name") @db.VarChar(100)
+  lastName      String      @map("last_name") @db.VarChar(100)
+  address       String
+  licenseNumber String      @unique @map("license_number") @db.VarChar(50)
+  createdAt     DateTime?   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime?   @default(now()) @map("updated_at") @db.Timestamptz(6)
+  violations    Violation[]
+
+  @@index([licenseNumber], map: "idx_belching_drivers_license")
+  @@index([lastName, firstName], map: "idx_belching_drivers_name")
+  @@map("drivers")
+  @@schema("belching")
+}
+
+model Record {
+  id                  Int             @id @default(autoincrement())
+  plateNumber         String          @map("plate_number") @db.VarChar(32)
+  vehicleType         String          @map("vehicle_type") @db.VarChar(64)
+  transportGroup      String?         @map("transport_group") @db.VarChar(100)
+  operatorCompanyName String          @map("operator_company_name") @db.VarChar(200)
+  operatorAddress     String?         @map("operator_address")
+  ownerFirstName      String?         @map("owner_first_name") @db.VarChar(100)
+  ownerMiddleName     String?         @map("owner_middle_name") @db.VarChar(100)
+  ownerLastName       String?         @map("owner_last_name") @db.VarChar(100)
+  motorNo             String?         @map("motor_no") @db.VarChar(100)
+  motorVehicleName    String?         @map("motor_vehicle_name") @db.VarChar(200)
+  createdAt           DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime?       @default(now()) @map("updated_at") @db.Timestamptz(6)
+  recordHistory       RecordHistory[]
+  violations          Violation[]
+
+  @@index([operatorCompanyName], map: "idx_belching_records_operator")
+  @@index([plateNumber], map: "idx_belching_records_plate")
+  @@map("records")
+  @@schema("belching")
+}
+
+model Violation {
+  id                          Int       @id @default(autoincrement())
+  recordId                    Int       @map("record_id")
+  ordinanceInfractionReportNo String?   @map("ordinance_infraction_report_no") @db.VarChar(100)
+  smokeDensityTestResultNo    String?   @map("smoke_density_test_result_no") @db.VarChar(100)
+  placeOfApprehension         String    @map("place_of_apprehension") @db.VarChar(200)
+  dateOfApprehension          DateTime  @map("date_of_apprehension") @db.Date
+  paidDriver                  Boolean?  @default(false) @map("paid_driver")
+  paidOperator                Boolean?  @default(false) @map("paid_operator")
+  driverId                    String?   @map("driver_id") @db.Uuid
+  createdAt                   DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                   DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  driver                      Driver?   @relation(fields: [driverId], references: [id], onUpdate: NoAction, map: "fk_belching_violations_driver")
+  record                      Record    @relation(fields: [recordId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_belching_violations_record")
+
+  @@index([dateOfApprehension], map: "idx_belching_violations_date")
+  @@index([recordId], map: "idx_belching_violations_record")
+  @@map("violations")
+  @@schema("belching")
+}
+
+model RecordHistory {
+  id        Int       @id @default(autoincrement())
+  recordId  Int       @map("record_id")
+  type      String    @db.VarChar(64)
+  date      DateTime  @db.Date
+  details   String?
+  orNumber  String?   @map("or_number") @db.VarChar(64)
+  status    String    @db.VarChar(32)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime? @default(now()) @map("updated_at") @db.Timestamptz(6)
+  record    Record    @relation(fields: [recordId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_belching_record_history_record")
+
+  @@index([date], map: "idx_belching_record_history_date")
+  @@index([recordId], map: "idx_belching_record_history_record")
+  @@map("record_history")
+  @@schema("belching")
+}
+
+model Vehicle {
+  id            String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  driverName    String                 @map("driver_name") @db.VarChar(255)
+  contactNumber String?                @map("contact_number") @db.VarChar(50)
+  engineType    String                 @map("engine_type") @db.VarChar(100)
+  officeName    String                 @map("office_name") @db.VarChar(255)
+  plateNumber   String                 @unique @map("plate_number") @db.VarChar(50)
+  vehicleType   String                 @map("vehicle_type") @db.VarChar(100)
+  wheels        Int
+  createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+  tests         Test[]
+  driverHistory VehicleDriverHistory[]
+
+  @@map("vehicles")
+  @@schema("emission")
+}
+
+model VehicleDriverHistory {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  vehicleId  String   @map("vehicle_id") @db.Uuid
+  driverName String   @map("driver_name") @db.VarChar(255)
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  changedBy  String?  @map("changed_by") @db.Uuid
+  user       User?    @relation("ChangedByUser", fields: [changedBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([vehicleId], map: "idx_vehicle_driver_history_vehicle_id")
+  @@map("vehicle_driver_history")
+  @@schema("emission")
+}
+
+model TestSchedule {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  assignedPersonnel String   @map("assigned_personnel") @db.VarChar(255)
+  conductedOn       DateTime @map("conducted_on") @db.Timestamptz(6)
+  location          String   @db.VarChar(255)
+  quarter           Int
+  year              Int
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@index([year, quarter], map: "idx_test_schedule_year_quarter")
+  @@map("test_schedules")
+  @@schema("emission")
+}
+
+model Test {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  vehicleId String   @map("vehicle_id") @db.Uuid
+  testDate  DateTime @map("test_date") @db.Timestamptz(6)
+  quarter   Int
+  year      Int
+  result    Boolean
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+  user      User?    @relation("CreatedByUser", fields: [createdBy], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([vehicleId], map: "idx_test_vehicle_id")
+  @@index([year, quarter], map: "idx_test_year_quarter")
+  @@map("tests")
+  @@schema("emission")
+}
+
+enum user_role {
+  admin
+  air_quality
+  tree_management
+  government_emission
+
+  @@schema("auth")
+}
