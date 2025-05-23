@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/presentation/components/shared/ui/card";
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/core/utils/utils";
 
 interface StatCardProps {
   title: string;
@@ -50,13 +50,12 @@ export function StatCard({
           </span>
           {trendValue && (
             <span
-              className={`text-xs ${
-                trend === "up"
+              className={`text-xs ${trend === "up"
                   ? "text-green-600"
                   : trend === "down"
-                  ? "text-red-600"
-                  : "text-gray-500"
-              }`}
+                    ? "text-red-600"
+                    : "text-gray-500"
+                }`}
             >
               {trendValue}
             </span>

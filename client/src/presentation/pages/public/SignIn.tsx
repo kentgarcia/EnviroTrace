@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth/auth";
+import { useAuth } from "@/core/api/auth";
 import { SignInForm } from "@/presentation/components/shared/auth/SignInForm";
 
 export default function SignIn() {

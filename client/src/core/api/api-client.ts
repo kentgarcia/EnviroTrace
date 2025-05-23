@@ -1,6 +1,6 @@
 // Client for FastAPI backend interactions
 import axios, { AxiosError, AxiosInstance } from "axios";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 // API base URL - will default to localhost:8000 if env variable is not set
 const API_BASE_URL =

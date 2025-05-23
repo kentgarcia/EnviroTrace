@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/core/utils/utils";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hoverable?: boolean;
@@ -13,7 +13,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       className={cn(
         "rounded-lg border border-border bg-card text-card-foreground transition-all",
         hoverable &&
-          "hover:border-primary hover:outline-none hover:outline-2 hover:outline-primary focus-visible:border-primary focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-primary",
+        "hover:border-primary hover:outline-none hover:outline-2 hover:outline-primary focus-visible:border-primary focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-primary",
         className
       )}
       {...props}

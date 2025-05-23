@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/core/utils/utils";
 import { ChevronDown } from "lucide-react";
 
 export interface NavItem {
@@ -73,7 +73,7 @@ export default function TopNavBar({ items, className }: TopNavBarProps) {
                 className={cn(
                   "absolute left-0 top-full z-[9999] bg-main text-white border-none min-w-[180px] shadow-none transition-all duration-200 opacity-0 scale-y-95 pointer-events-none",
                   openDropdownIdx === idx &&
-                    "opacity-100 scale-y-100 pointer-events-auto"
+                  "opacity-100 scale-y-100 pointer-events-auto"
                 )}
                 style={{ transformOrigin: "top" }}
                 onMouseEnter={() => handleDropdownEnter(idx)}
@@ -82,26 +82,26 @@ export default function TopNavBar({ items, className }: TopNavBarProps) {
                 {React.Children.map(item.children, (child, childIdx) =>
                   React.isValidElement(child)
                     ? React.cloneElement(
-                        child as React.ReactElement<any, any>,
-                        {
-                          onClick: (...args: any[]) => {
-                            setOpenDropdownIdx(null);
-                            if (
-                              (child as React.ReactElement<any, any>).props
-                                .onClick
-                            )
-                              (
-                                child as React.ReactElement<any, any>
-                              ).props.onClick(...args);
-                          },
-                          className: cn(
+                      child as React.ReactElement<any, any>,
+                      {
+                        onClick: (...args: any[]) => {
+                          setOpenDropdownIdx(null);
+                          if (
                             (child as React.ReactElement<any, any>).props
-                              .className,
-                            "block w-full text-left px-4 py-2 uppercase bg-main text-white border-0",
-                            childIdx !== 0 ? "border-t border-white/30" : ""
-                          ),
-                        }
-                      )
+                              .onClick
+                          )
+                            (
+                              child as React.ReactElement<any, any>
+                            ).props.onClick(...args);
+                        },
+                        className: cn(
+                          (child as React.ReactElement<any, any>).props
+                            .className,
+                          "block w-full text-left px-4 py-2 uppercase bg-main text-white border-0",
+                          childIdx !== 0 ? "border-t border-white/30" : ""
+                        ),
+                      }
+                    )
                     : child
                 )}
               </div>

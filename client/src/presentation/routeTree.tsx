@@ -3,7 +3,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import SignIn from "@/presentation/pages/public/SignIn";
 import DashboardSelection from "@/presentation/pages/public/DashboardSelection";

@@ -14,7 +14,7 @@ import {
 } from "@/presentation/components/shared/ui/avatar";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
-import { useAuth } from "@/lib/auth/auth";
+import { useAuth } from "@/core/api/auth";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -28,7 +28,7 @@ import {
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Separator } from "@/presentation/components/shared/ui/separator";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { fetchMyProfile, updateProfile } from "@/lib/api/profile-api";
+import { fetchMyProfile, updateProfile } from "@/core/api/profile-api";
 
 export default function ProfilePage() {
   const navigate = useNavigate();

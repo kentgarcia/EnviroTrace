@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/presentation/components/shared/ui/tooltip";
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./presentation/routeTree";
 import TitleBar from "./presentation/components/shared/layout/TitleBar";
-import { QueryProvider } from "./lib/api/query-provider";
+import { QueryProvider } from "./core/api/query-provider";
 
 const App = () => (
   <QueryProvider>

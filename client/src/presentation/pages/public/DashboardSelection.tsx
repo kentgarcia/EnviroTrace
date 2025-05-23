@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/lib/auth/auth";
+import { useAuth } from "@/core/api/auth";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,7 +17,7 @@ import {
   AvatarFallback,
 } from "@/presentation/components/shared/ui/avatar";
 import { UserRole } from "@/integrations/types/userData";
-import { fetchMyProfile } from "@/lib/api/profile-api";
+import { fetchMyProfile } from "@/core/api/profile-api";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();

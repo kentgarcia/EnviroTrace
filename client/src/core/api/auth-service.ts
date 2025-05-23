@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import apiClient from "./api-client";
 import { UserData, UserRole } from "@/integrations/types/userData";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 // Interface for login data
 interface LoginCredentials {

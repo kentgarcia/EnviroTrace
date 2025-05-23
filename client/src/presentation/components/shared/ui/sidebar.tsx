@@ -4,7 +4,7 @@ import { VariantProps, cva } from "class-variance-authority";
 import { PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/ui/use-mobile";
-import { cn } from "@/lib/utils/utils";
+import { cn } from "@/core/utils/utils";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Separator } from "@/presentation/components/shared/ui/separator";
@@ -73,8 +73,8 @@ const SidebarProvider = React.forwardRef<
       const match = document.cookie.match(
         new RegExp(
           "(?:^|; )" +
-            SIDEBAR_COOKIE_NAME.replace(/([.$?*|{}()\[\]\\\/\+^])/g, "\\$1") +
-            "=([^;]*)"
+          SIDEBAR_COOKIE_NAME.replace(/([.$?*|{}()\[\]\\\/\+^])/g, "\\$1") +
+          "=([^;]*)"
         )
       );
       if (match) {
@@ -627,7 +627,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className
       )}
       {...props}

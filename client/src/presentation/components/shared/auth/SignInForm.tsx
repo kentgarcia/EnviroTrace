@@ -13,7 +13,7 @@ import {
 } from "@/presentation/components/shared/ui/card";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
-import { signIn } from "@/lib/auth/auth";
+import { signIn } from "@/core/api/auth";
 import { useForm } from "react-hook-form";
 import {
   Alert,

@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { SidebarTrigger } from "@/presentation/components/shared/ui/sidebar";
 import { Button } from "@/presentation/components/shared/ui/button";
-import { useAuth } from "@/lib/auth/auth";
+import { useAuth } from "@/core/api/auth";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -15,9 +15,9 @@ import {
   Avatar,
   AvatarFallback,
 } from "@/presentation/components/shared/ui/avatar";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { useState, useEffect } from "react";
-import { fetchMyProfile } from "@/lib/api/profile-api";
+import { fetchMyProfile } from "@/core/api/profile-api";
 
 export function DashboardNavbar({
   dashboardTitle = "Environmental Management System",

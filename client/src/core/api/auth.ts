@@ -1,13 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
-import {
-  useCurrentUser,
-  useLogin,
-  useRegister,
-  logout,
-} from "../api/auth-service";
+import { useCurrentUser, useLogin, useRegister, logout } from "./auth-service";
 
 /**
  * Sign in with email and password

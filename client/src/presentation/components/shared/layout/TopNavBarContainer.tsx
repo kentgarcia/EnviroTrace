@@ -18,19 +18,19 @@ import {
   Wallet,
   UserCircle,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth/auth";
-import { useAuthStore } from "@/hooks/auth/useAuthStore";
+import { useAuth } from "@/core/api/auth";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import TopNavBar, { NavItem } from "./TopNavBar";
 import React from "react";
 
 interface TopNavBarContainerProps {
   dashboardType:
-    | "air-quality"
-    | "tree-management"
-    | "government-emission"
-    | "admin"
-    | "smoke-belching";
+  | "air-quality"
+  | "tree-management"
+  | "government-emission"
+  | "admin"
+  | "smoke-belching";
 }
 
 function getMenuItems(
