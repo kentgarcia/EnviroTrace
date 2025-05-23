@@ -45,17 +45,20 @@ export const useAuthStore = create<AuthState>()(
       // User role operations
       setRoles: (roles) => set({ roles }),
       hasRole: (role) => get().roles.includes(role),
-      clearRoles: () => set({ roles: [] }),
-
-      // User data operations
+      clearRoles: () => set({ roles: [] }), // User data operations
       setUserData: (userData) =>
         set({
           userId: userData.id || get().userId,
           email: userData.email || get().email,
-          lastSignInAt: userData.lastSignInAt || get().lastSignInAt,
+          lastSignInAt:
+            userData.lastSignInAt ||
+            userData.last_sign_in_at ||
+            get().lastSignInAt,
           isSuperAdmin:
             userData.isSuperAdmin !== undefined
               ? userData.isSuperAdmin
+              : userData.is_super_admin !== undefined
+              ? userData.is_super_admin
               : get().isSuperAdmin,
         }),
       clearUserData: () =>

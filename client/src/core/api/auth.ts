@@ -28,21 +28,20 @@ export async function signIn(email: string, password: string) {
     if (!response.ok) {
       throw new Error("Failed to fetch user data");
     }
-
     const user = await response.json();
 
-    // Extract and store user roles
-    const roles = user.roles || [];
+    // Extract and store user roles (handle both roles and assigned_roles)
+    const roles = user.assigned_roles || user.roles || [];
     if (roles.length > 0) {
       useAuthStore.getState().setRoles(roles as UserRole[]);
     }
 
-    // Store user data
+    // Store user data (handle both camelCase and snake_case fields)
     useAuthStore.getState().setUserData({
       id: user.id,
       email: user.email,
-      lastSignInAt: user.lastSignInAt,
-      isSuperAdmin: user.isSuperAdmin || false,
+      lastSignInAt: user.lastSignInAt || user.last_sign_in_at,
+      isSuperAdmin: user.isSuperAdmin || user.is_super_admin || false,
     });
 
     return {
@@ -112,21 +111,20 @@ export async function getCurrentUser(): Promise<UserData> {
     if (!response.ok) {
       throw new Error("Failed to fetch user data");
     }
-
     const data = await response.json();
 
-    // Extract and store user roles
-    const roles = data.roles || [];
+    // Extract and store user roles (handle both roles and assigned_roles)
+    const roles = data.assigned_roles || data.roles || [];
     if (roles.length > 0) {
       useAuthStore.getState().setRoles(roles as UserRole[]);
     }
 
-    // Store user data
+    // Store user data (handle both camelCase and snake_case fields)
     useAuthStore.getState().setUserData({
       id: data.id,
       email: data.email,
-      lastSignInAt: data.lastSignInAt,
-      isSuperAdmin: data.isSuperAdmin || false,
+      lastSignInAt: data.lastSignInAt || data.last_sign_in_at,
+      isSuperAdmin: data.isSuperAdmin || data.is_super_admin || false,
     });
 
     return data;
@@ -147,11 +145,22 @@ export function useAuth() {
   const { token } = useAuthStore();
 
   // Use TanStack Query hooks for auth operations
-  const { data: user, isLoading, isError, error } = useCurrentUser();
+  const currentUserQuery = useCurrentUser();
+  const {
+    data: user,
+    isLoading,
+    isError,
+    error,
+  } = currentUserQuery ?? {
+    data: null,
+    isLoading: false,
+    isError: false,
+    error: null,
+  };
 
   // Effect to handle auth errors
   useEffect(() => {
-    if (isError) {
+    if (isError && error) {
       const authError = error as Error;
       console.error("Auth error:", authError?.message);
       useAuthStore.getState().resetStore();
@@ -161,16 +170,29 @@ export function useAuth() {
   // Effect to handle successful auth
   useEffect(() => {
     if (user && token && typeof user === "object" && "id" in user) {
-      // Make sure user data is in sync with auth store
-      useAuthStore.getState().setUserData({
+      // Create a normalized user data object with our expected property names
+      const userData: UserData = {
         id: (user as any).id,
         email: (user as any).email,
-        lastSignInAt: (user as any).lastSignInAt,
-        isSuperAdmin: (user as any).isSuperAdmin || false,
-      });
+        lastSignInAt:
+          (user as any).lastSignInAt || (user as any).last_sign_in_at,
+        isSuperAdmin:
+          (user as any).isSuperAdmin || (user as any).is_super_admin || false,
+        // Map both types of role structures
+        roles: (user as any).roles || [],
+        assigned_roles: (user as any).assigned_roles || [],
+      };
 
-      if ((user as any).roles) {
-        useAuthStore.getState().setRoles((user as any).roles as UserRole[]);
+      // Store user data in auth store
+      useAuthStore.getState().setUserData(userData);
+
+      // Use assigned_roles if available, otherwise use roles (keep one source of truth in auth store)
+      const rolesArray = userData.assigned_roles?.length
+        ? userData.assigned_roles
+        : userData.roles || [];
+
+      if (rolesArray.length > 0) {
+        useAuthStore.getState().setRoles(rolesArray);
       }
     }
   }, [user, token]);

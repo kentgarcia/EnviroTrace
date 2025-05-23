@@ -1,7 +1,6 @@
 import { DashboardCard } from "@/presentation/components/shared/dashboard/DashboardCard";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/api/auth";
@@ -17,34 +16,18 @@ import {
   AvatarFallback,
 } from "@/presentation/components/shared/ui/avatar";
 import { UserRole } from "@/integrations/types/userData";
-import { fetchMyProfile } from "@/core/api/profile-api";
+import { useMyProfile } from "@/core/api/profile-service";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();
-  const { user, userData, loading, signOut: authSignOut } = useAuth();
-  const [profile, setProfile] = useState<{
-    firstName?: string;
-    lastName?: string;
-  } | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const { user, loading, signOut: authSignOut } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
 
-  useEffect(() => {
-    if (user && userData) {
-      const getProfileData = async () => {
-        try {
-          setProfileLoading(true);
-          const profileData = await fetchMyProfile();
-          setProfile(profileData);
-        } catch (error) {
-          console.error("Error fetching profile data:", error);
-        } finally {
-          setProfileLoading(false);
-        }
-      };
-
-      getProfileData();
-    }
-  }, [user, userData]);
+  // Debug logging for user data
+  console.log("User data in DashboardSelection:", user);
+  console.log("User roles:", user?.roles);
+  console.log("User assigned_roles:", user?.assigned_roles);
 
   const handleDashboardSelect = (dashboardType: string) => {
     navigate({ to: `/${dashboardType}/overview` });
@@ -59,24 +42,34 @@ export default function DashboardSelection() {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
     }
-  };
+  }; const hasRole = (role: UserRole) => {
+    // Check both assigned_roles and roles properties of the user object
+    const hasDirectRole =
+      user?.assigned_roles?.includes(role) ||
+      user?.assigned_roles?.includes("admin") ||
+      user?.roles?.includes(role) ||
+      user?.roles?.includes("admin");
 
-  const hasRole = (role: UserRole) => {
-    return (
-      userData?.roles?.includes(role) || userData?.roles?.includes("admin")
-    );
-  };
+    if (hasDirectRole) {
+      return true;
+    }
 
+    // Fall back to checking the auth store if no roles directly on user object
+    const { roles } = useAuthStore.getState();
+    return roles.includes(role) || roles.includes("admin");
+  };
   // Get user display name
   const getDisplayName = () => {
-    if (profile?.firstName && profile?.lastName) {
+    if (profile?.fullName) {
+      return profile.fullName;
+    } else if (profile?.firstName && profile?.lastName) {
       return `${profile.firstName} ${profile.lastName}`;
     } else if (profile?.firstName) {
       return profile.firstName;
     } else if (profile?.lastName) {
       return profile.lastName;
     }
-    return userData?.email || "User";
+    return user?.email || "User";
   };
 
   // Get initials for avatar
@@ -90,7 +83,7 @@ export default function DashboardSelection() {
     } else if (profile?.lastName) {
       return profile.lastName.charAt(0).toUpperCase();
     }
-    return userData?.email?.charAt(0).toUpperCase() || "U";
+    return user?.email?.charAt(0).toUpperCase() || "U";
   };
 
   if (loading || profileLoading) {
@@ -100,6 +93,13 @@ export default function DashboardSelection() {
       </div>
     );
   }
+  // Debug log to see what roles we have right before rendering
+  const storeRoles = useAuthStore.getState().roles;
+  console.log("Auth store roles:", storeRoles);
+  console.log("Admin role check:", hasRole("admin"));
+  console.log("Air quality role check:", hasRole("air_quality"));
+  console.log("Tree management role check:", hasRole("tree_management"));
+  console.log("Government emission role check:", hasRole("government_emission"));
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-b from-ems-green-50 to-ems-blue-50">

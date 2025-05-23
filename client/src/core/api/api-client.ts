@@ -6,6 +6,9 @@ import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
+// Log the API URL for debugging
+console.log("Using API URL:", API_BASE_URL);
+
 // Create an axios instance for our API calls
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -34,6 +37,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Log the error for debugging
+    console.error("API Error:", error.message, error.code, error.config?.url);
+
     // Handle unauthorized errors (401) - could trigger logout
     if (error.response?.status === 401) {
       useAuthStore.getState().resetStore();

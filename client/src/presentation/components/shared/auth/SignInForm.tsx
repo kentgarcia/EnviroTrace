@@ -13,7 +13,7 @@ import {
 } from "@/presentation/components/shared/ui/card";
 import { toast } from "sonner";
 import { Loader2, AlertCircle } from "lucide-react";
-import { signIn } from "@/core/api/auth";
+import { useLogin } from "@/core/api/auth-service";
 import { useForm } from "react-hook-form";
 import {
   Alert,
@@ -26,25 +26,26 @@ interface SignInFormData {
 }
 
 export function SignInForm() {
-  const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const loginMutation = useLogin();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<SignInFormData>();
-
   const onSignIn = async (data: SignInFormData) => {
     // Clear any previous errors
     setAuthError(null);
-    setIsLoading(true);
 
     try {
-      const result = await signIn(data.email, data.password);
+      const result = await loginMutation.mutateAsync({
+        email: data.email,
+        password: data.password
+      });
 
-      if (result && result.token) {
+      if (result && result.access_token) {
         toast.success("Signed in successfully!");
 
         // Small delay before navigation to allow the toast to be seen
@@ -60,18 +61,19 @@ export function SignInForm() {
       // Set a user-friendly error message
       let errorMessage = "Failed to sign in. Please check your credentials.";
       if (error instanceof Error) {
-        errorMessage =
-          error.message === "Failed to fetch"
-            ? "Cannot connect to server. Please check your internet connection."
-            : error.message;
+        if (error.message.includes("Network Error")) {
+          errorMessage = "Cannot connect to the backend server. Please make sure the server is running at http://localhost:8000.";
+        } else if (error.message.includes("401")) {
+          errorMessage = "Invalid email or password. Please try again.";
+        } else {
+          errorMessage = error.message;
+        }
       } else if (typeof error === "string") {
         errorMessage = error;
       }
 
       setAuthError(errorMessage);
       toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -111,9 +113,8 @@ export function SignInForm() {
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
-              autoComplete="email"
-              disabled={isLoading}
+              placeholder="name@example.com" autoComplete="email"
+              disabled={loginMutation.isPending}
               {...register("email", {
                 required: "Email is required",
                 pattern: {
@@ -130,10 +131,9 @@ export function SignInForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
-              type="password"
-              placeholder="Password"
+              type="password" placeholder="Password"
               autoComplete="current-password"
-              disabled={isLoading}
+              disabled={loginMutation.isPending}
               {...register("password", { required: "Password is required" })}
             />
             {errors.password && (
@@ -142,8 +142,8 @@ export function SignInForm() {
               </p>
             )}
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
+          <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...

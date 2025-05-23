@@ -10,10 +10,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None
-    
-    # CORS settings
+      # CORS settings
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", 
-                                       "http://127.0.0.1:3000", "http://127.0.0.1:5173"]
+                                       "http://127.0.0.1:3000", "http://127.0.0.1:5173",
+                                       "http://localhost:8080", "https://localhost:8080"]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

@@ -1,9 +1,10 @@
 # app/apis/v1/api.py
 from fastapi import APIRouter
-from . import auth_router, users_router, belching_router, emission_router # Create these files
+from . import auth_router, profile_router, users_router, belching_router, emission_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router.router, prefix="/auth", tags=["Authentication"])
+api_v1_router.include_router(profile_router.router, prefix="/profile", tags=["Profile"])
 # api_v1_router.include_router(users_router.router, prefix="/users", tags=["Users"])
 # api_v1_router.include_router(belching_router.router, prefix="/belching", tags=["Belching Data"])
-# api_v1_router.include_router(emission_router.router, prefix="/emission", tags=["Emission Data"])
+api_v1_router.include_router(emission_router.router, prefix="/emission", tags=["Emission Data"])

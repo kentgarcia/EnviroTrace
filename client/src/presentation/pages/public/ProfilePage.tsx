@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/presentation/components/shared/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { useAuth } from "@/core/api/auth";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -28,13 +29,11 @@ import {
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Separator } from "@/presentation/components/shared/ui/separator";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { fetchMyProfile, updateProfile } from "@/core/api/profile-api";
+import { useMyProfile, useUpdateProfile } from "@/core/api/profile-service";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, userData, loading } = useAuth();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
   const [profileData, setProfileData] = useState({
     firstName: "",
     lastName: "",
@@ -44,59 +43,88 @@ export default function ProfilePage() {
     department: "",
     phoneNumber: "",
   });
+  // Use the profile query hook
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError
+  } = useMyProfile();
 
-  // Memoize fetchProfileData to prevent unnecessary re-renders
-  const fetchProfileData = useCallback(async () => {
-    try {
-      if (!user) return;
+  // Use the update profile mutation hook
+  const updateProfileMutation = useUpdateProfile();
 
-      setProfileLoading(true);
+  // Update profile data when the profile is loaded
+  useEffect(() => {
+    console.log("Profile data in component:", profile);
+    // Debug log to see the user object structure
+    console.log("User data in component:", user);
 
-      // First set the email which we already have from auth
-      setProfileData((prev) => ({
+    if (profile) {
+      setProfileData({
+        // Handle both camelCase and snake_case field names from backend
+        firstName: profile.firstName || profile.first_name || "",
+        lastName: profile.lastName || profile.last_name || "",
+        email: user?.email || "",
+        bio: profile.bio || "",
+        jobTitle: profile.jobTitle || profile.job_title || "",
+        department: profile.department || "",
+        phoneNumber: profile.phoneNumber || profile.phone_number || "",
+      });
+
+      console.log("Profile data updated in state");
+    } else if (user) {
+      setProfileData(prev => ({
         ...prev,
         email: user.email || "",
       }));
+    }
+  }, [profile, user]);
+  // Check for roles specifically
+  useEffect(() => {
+    if (user) {
+      console.log("Full user object:", user);
+      console.log("User roles property:", user.roles);
+      console.log("User assigned_roles property:", user.assigned_roles);
 
-      // Then fetch the profile data from GraphQL
-      const profile = await fetchMyProfile();
+      const userRoles = user.assigned_roles || user.roles || [];
+      console.log("Combined user roles:", userRoles);
+      console.log("Is array?", Array.isArray(userRoles));
 
-      if (profile) {
-        setProfileData((prev) => ({
-          ...prev,
-          firstName: profile.firstName || "",
-          lastName: profile.lastName || "",
-          bio: profile.bio || "",
-          jobTitle: profile.jobTitle || "",
-          department: profile.department || "",
-          phoneNumber: profile.phoneNumber || "",
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching profile data:", error);
-      toast.error("Failed to load profile data");
-    } finally {
-      setProfileLoading(false);
+      // Also check the auth store directly
+      const { roles } = useAuthStore.getState();
+      console.log("Roles in auth store:", roles);
     }
   }, [user]);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate({ to: "/" });
-    } else if (user && userData) {
-      fetchProfileData();
     }
-  }, [user, userData, loading, navigate, fetchProfileData]);
+  }, [user, authLoading, navigate]);
+  // Show error toast if profile fetch fails
+  useEffect(() => {
+    if (profileError) {
+      toast.error("Failed to load profile data. You may need to create a profile first.");
+      console.error("Error fetching profile data:", profileError);
 
+      // Even if there's an error, we can still populate with user data
+      if (user) {
+        setProfileData(prev => ({
+          ...prev,
+          email: user.email || "",
+          // Initialize other fields as empty so the form still works
+          firstName: prev.firstName || "",
+          lastName: prev.lastName || "",
+        }));
+      }
+    }
+  }, [profileError, user]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsUpdating(true);
 
     try {
-      if (!user) return;
-
-      // Update profile with GraphQL
-      await updateProfile({
+      // Ensure we pass data in the format expected by our mutation hook
+      await updateProfileMutation.mutateAsync({
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         bio: profileData.bio,
@@ -108,9 +136,8 @@ export default function ProfilePage() {
       toast.success("Profile updated successfully");
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
-    } finally {
-      setIsUpdating(false);
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
+      toast.error(`Failed to update profile: ${errorMessage}`);
     }
   };
 
@@ -129,7 +156,9 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading || profileLoading) {
+  const isLoading = authLoading || profileLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -215,23 +244,42 @@ export default function ProfilePage() {
                       {profileData.jobTitle}
                     </p>
                   )}
-                </div>
-
-                <div className="w-full">
-                  <Separator className="my-4" />
+                </div>                <div className="w-full">                  <Separator className="my-4" />
                   <h4 className="font-semibold mb-2 flex items-center">
                     <ShieldCheck className="h-4 w-4 mr-1" /> Roles
-                  </h4>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {userData?.roles.map((role, index) => (
-                      <Badge
-                        key={index}
-                        variant="outline"
-                        className={getRoleColor(role)}
-                      >
-                        {role}
-                      </Badge>
-                    ))}
+                  </h4>                  <div className="flex flex-wrap gap-2 mt-1">
+                    {(() => {
+                      // Determine which roles array to use
+                      const userRoles = user?.assigned_roles || user?.roles || [];
+
+                      if (Array.isArray(userRoles) && userRoles.length > 0) {
+                        return userRoles.map((role, index) => (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className={getRoleColor(role)}
+                          >
+                            {role}
+                          </Badge>
+                        ));
+                      } else {
+                        // Fallback to auth store roles if needed
+                        const { roles } = useAuthStore.getState();
+                        if (Array.isArray(roles) && roles.length > 0) {
+                          return roles.map((role, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className={getRoleColor(role)}
+                            >
+                              {role}
+                            </Badge>
+                          ));
+                        } else {
+                          return <p className="text-sm text-muted-foreground">No roles assigned</p>;
+                        }
+                      }
+                    })()}
                   </div>
                 </div>
               </CardContent>
@@ -367,9 +415,9 @@ export default function ProfilePage() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={isUpdating}
+                    disabled={updateProfileMutation.isPending}
                   >
-                    {isUpdating ? (
+                    {updateProfileMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Updating...

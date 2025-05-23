@@ -27,21 +27,28 @@ interface TokenResponse {
 const loginUser = async (
   credentials: LoginCredentials
 ): Promise<TokenResponse> => {
+  console.log("Attempting login with email:", credentials.email);
+
   const formData = new URLSearchParams();
   formData.append("username", credentials.email); // FastAPI OAuth2 expects 'username'
   formData.append("password", credentials.password);
 
-  const { data } = await apiClient.post<TokenResponse>(
-    "/auth/login",
-    formData.toString(),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    }
-  );
-
-  return data;
+  try {
+    const { data } = await apiClient.post<TokenResponse>(
+      "/auth/login",
+      formData.toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+    console.log("Login successful, received token");
+    return data;
+  } catch (error) {
+    console.error("Login error details:", error);
+    throw error;
+  }
 };
 
 // Register a new user
@@ -110,16 +117,17 @@ export function useCurrentUser() {
   // Handle successful data fetch
   useEffect(() => {
     if (query.data) {
-      // Extract roles from user data
-      const roles = query.data.roles || [];
+      // Extract roles from user data (handle both roles and assigned_roles)
+      const roles = query.data.assigned_roles || query.data.roles || [];
 
       // Update auth store with user data
       useAuthStore.getState().setRoles(roles as UserRole[]);
       useAuthStore.getState().setUserData({
         id: query.data.id,
         email: query.data.email,
-        lastSignInAt: query.data.lastSignInAt,
-        isSuperAdmin: query.data.isSuperAdmin || false,
+        lastSignInAt: query.data.lastSignInAt || query.data.last_sign_in_at,
+        isSuperAdmin:
+          query.data.isSuperAdmin || query.data.is_super_admin || false,
       });
     }
   }, [query.data]);
