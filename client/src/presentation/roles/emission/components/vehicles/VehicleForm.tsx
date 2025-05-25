@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Button } from "@/presentation/components/shared/ui/button";
 import * as z from "zod";
-import { VehicleInput } from "@/core/hooks/vehicles/useVehicles";
+import { VehicleFormInput } from "@/core/api/emission-service";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -62,8 +62,8 @@ const vehicleSchema = z.object({
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
 
 interface VehicleFormProps {
-  initialValues?: VehicleInput;
-  onSubmit: (values: VehicleInput) => void;
+  initialValues?: VehicleFormInput;
+  onSubmit: (values: VehicleFormInput) => void;
   onCancel: () => void;
   isLoading: boolean;
   vehicleTypes: string[];

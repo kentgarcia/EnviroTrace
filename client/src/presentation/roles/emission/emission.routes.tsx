@@ -1,9 +1,9 @@
 import { RouteComponent, createRoute } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
-//import GovEmissionOverview from "@/presentation/roles/emission/pages/Overview";
+import GovEmissionOverview from "@/presentation/roles/emission/pages/Overview";
 import VehiclesPage from "@/presentation/roles/emission/pages/Vehicles";
 import QuarterlyTestingPage from "@/presentation/roles/emission/pages/QuarterlyTesting";
-// import OfficesPage from "@/presentation/roles/emission/pages/Offices";
+import OfficesPage from "@/presentation/roles/emission/pages/Offices";
 
 const createGovEmissionRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -18,13 +18,13 @@ const createGovEmissionRoute = (path: string, component: RouteComponent) => {
 };
 
 export const govEmissionRoute = [
-  //createGovEmissionRoute("/government-emission/overview", GovEmissionOverview),
+  createGovEmissionRoute("/government-emission/overview", GovEmissionOverview),
   createGovEmissionRoute("/government-emission/vehicles", VehiclesPage),
   createGovEmissionRoute(
     "/government-emission/quarterly-testing",
     QuarterlyTestingPage
   ),
-  // createGovEmissionRoute("/government-emission/offices", OfficesPage),
-  // createGovEmissionRoute("/government-emission/reports", GovEmissionOverview),
-  // createGovEmissionRoute("/government-emission/settings", GovEmissionOverview),
+  createGovEmissionRoute("/government-emission/offices", OfficesPage),
+  createGovEmissionRoute("/government-emission/reports", GovEmissionOverview),
+  createGovEmissionRoute("/government-emission/settings", GovEmissionOverview),
 ];

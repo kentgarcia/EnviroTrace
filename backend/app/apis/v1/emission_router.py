@@ -1,19 +1,164 @@
-from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.apis.deps import get_current_user, get_current_active_superuser, get_db, get_current_active_user
+from app.apis.deps import get_db, get_current_active_user
 from app.crud import crud_emission
 from app.models.auth_models import User
+from app.models.emission_models import VehicleDriverHistory
 from app.schemas.emission_schemas import (
+    Office, OfficeCreate, OfficeUpdate, OfficeListResponse,
     Vehicle, VehicleCreate, VehicleUpdate, VehicleListResponse,
     Test, TestCreate, TestUpdate, TestListResponse,
     TestSchedule, TestScheduleCreate, TestScheduleUpdate, TestScheduleListResponse,
-    VehicleDriverHistory, VehicleDriverHistoryCreate, VehicleDriverHistoryListResponse
+    VehicleDriverHistoryCreate, VehicleDriverHistoryListResponse,
+    OfficeComplianceResponse
 )
 
 router = APIRouter()
+
+
+# Offices endpoints
+@router.get("/offices", response_model=OfficeListResponse)
+def get_offices(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get all offices with optional search.
+    """
+    if search:
+        return crud_emission.office.search(db, search_term=search, skip=skip, limit=limit)
+    
+    return crud_emission.office.get_multi_sync(db, skip=skip, limit=limit)
+
+
+@router.post("/offices", response_model=Office, status_code=status.HTTP_201_CREATED)
+def create_office(
+    *,
+    db: Session = Depends(get_db),
+    office_in: OfficeCreate,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Create new office.
+    """    # Check for duplicate office name
+    existing = crud_emission.office.get_by_name(db, name=office_in.name)
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An office with this name already exists"
+        )
+    office = crud_emission.office.create_sync(db, obj_in=office_in)
+    return office
+
+
+# Office Compliance endpoints
+@router.get("/offices/compliance", response_model=OfficeComplianceResponse)
+def get_office_compliance(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    search_term: Optional[str] = None,
+    year: Optional[int] = None,
+    quarter: Optional[int] = None,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get office compliance data aggregated from vehicles and tests.
+    """
+    filters = {}
+    if search_term:
+        filters["search_term"] = search_term
+    if year:
+        filters["year"] = year
+    if quarter:
+        filters["quarter"] = quarter
+    
+    return crud_emission.office_compliance.get_office_compliance_data(
+        db, skip=skip, limit=limit, filters=filters
+    )
+
+
+@router.get("/offices/{office_id}", response_model=Office)
+def get_office(
+    office_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get a specific office by ID.
+    """
+    office = crud_emission.office.get_sync(db, id=office_id)
+    if not office:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Office not found"
+        )
+    return office
+
+
+@router.put("/offices/{office_id}", response_model=Office)
+def update_office(
+    *,
+    office_id: UUID,
+    db: Session = Depends(get_db),
+    office_in: OfficeUpdate,
+    current_user: User = Depends(get_current_active_user)
+):    
+    """
+    Update an office.
+    """
+    office = crud_emission.office.get_sync(db, id=office_id)
+    if not office:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Office not found"
+        )
+    
+    # If name is being updated, check for duplicates
+    if office_in.name and office_in.name != office.name:
+        existing = crud_emission.office.get_by_name(db, name=office_in.name)
+        
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An office with this name already exists"
+            )
+    office = crud_emission.office.update_sync(db, db_obj=office, obj_in=office_in)
+    return office
+
+
+@router.delete("/offices/{office_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_office(
+    office_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Delete an office.
+    """
+    office = crud_emission.office.get(db, id=office_id)
+    if not office:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Office not found"
+        )
+    
+    # Check if office has vehicles
+    vehicles_count = db.query(Vehicle).filter(Vehicle.office_id == office_id).count()
+    if vehicles_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete office. It has {vehicles_count} vehicles assigned to it."
+        )
+    crud_emission.office.remove_sync(db, id=office_id)
+    return None
 
 
 # Vehicles endpoints
@@ -25,10 +170,10 @@ def get_vehicles(
     plate_number: Optional[str] = None,
     driver_name: Optional[str] = None,
     office_name: Optional[str] = None,
+    office_id: Optional[UUID] = None,
     vehicle_type: Optional[str] = None,
     engine_type: Optional[str] = None,
-    wheels: Optional[int] = None,
-    search: Optional[str] = None,
+    wheels: Optional[int] = None,    search: Optional[str] = None,
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -44,6 +189,8 @@ def get_vehicles(
         filters["driver_name"] = driver_name
     if office_name:
         filters["office_name"] = office_name
+    if office_id:
+        filters["office_id"] = office_id
     if vehicle_type:
         filters["vehicle_type"] = vehicle_type
     if engine_type:
@@ -64,10 +211,16 @@ def create_vehicle(
     """
     Create new vehicle.
     """
+    # Check if office exists
+    office = crud_emission.office.get_sync(db, id=vehicle_in.office_id)
+    if not office:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Office not found"
+        )
+    
     # Check for duplicate plate number
-    existing = db.query(crud_emission.vehicle.model).filter(
-        crud_emission.vehicle.model.plate_number == vehicle_in.plate_number
-    ).first()
+    existing = crud_emission.vehicle.get_by_plate_number(db, plate_number=vehicle_in.plate_number)
     
     if existing:
         raise HTTPException(
@@ -75,8 +228,27 @@ def create_vehicle(
             detail="A vehicle with this plate number already exists"
         )
     
-    vehicle = crud_emission.vehicle.create(db, obj_in=vehicle_in)
-    return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
+    try:
+        # Create the vehicle using a transaction to ensure all operations succeed or fail together
+        vehicle = crud_emission.vehicle.create_sync(db, obj_in=vehicle_in)
+        
+        # Create driver history directly with SQL model to avoid async/sync issues
+        history = VehicleDriverHistory(
+            vehicle_id=vehicle.id,
+            driver_name=vehicle.driver_name,
+            changed_by_id=current_user.id  # Use changed_by_id to match the column name in the model
+        )
+        db.add(history)
+        db.commit()
+        
+        # Return the vehicle with test info
+        return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating vehicle: {str(e)}"
+        )
 
 
 @router.get("/vehicles/{vehicle_id}", response_model=Vehicle)
@@ -104,22 +276,29 @@ def update_vehicle(
     db: Session = Depends(get_db),
     vehicle_in: VehicleUpdate,
     current_user: User = Depends(get_current_active_user)
-):
+):    
     """
     Update a vehicle.
     """
-    vehicle = crud_emission.vehicle.get(db, id=vehicle_id)
+    vehicle = crud_emission.vehicle.get_sync(db, id=vehicle_id)
     if not vehicle:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehicle not found"
         )
+      
+    # If office is being updated, check if it exists
+    if vehicle_in.office_id and vehicle_in.office_id != vehicle.office_id:
+        office = crud_emission.office.get_sync(db, id=vehicle_in.office_id)
+        if not office:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Office not found"
+            )
     
     # If plate number is being updated, check for duplicates
     if vehicle_in.plate_number and vehicle_in.plate_number != vehicle.plate_number:
-        existing = db.query(crud_emission.vehicle.model).filter(
-            crud_emission.vehicle.model.plate_number == vehicle_in.plate_number
-        ).first()
+        existing = crud_emission.vehicle.get_by_plate_number(db, plate_number=vehicle_in.plate_number)
         
         if existing:
             raise HTTPException(
@@ -127,20 +306,29 @@ def update_vehicle(
                 detail="A vehicle with this plate number already exists"
             )
     
-    # If driver name is changed, record in history
-    if vehicle_in.driver_name and vehicle_in.driver_name != vehicle.driver_name:
-        # Create driver history record
-        history_data = VehicleDriverHistoryCreate(
-            vehicle_id=vehicle.id,
-            driver_name=vehicle.driver_name
+    try:
+        # If driver name is changed, record in history
+        if vehicle_in.driver_name and vehicle_in.driver_name != vehicle.driver_name:
+            # Create driver history record directly using the model
+            history = VehicleDriverHistory(
+                vehicle_id=vehicle.id,
+                driver_name=vehicle.driver_name,  # Store the OLD driver name
+                changed_by_id=current_user.id
+            )
+            db.add(history)
+            db.commit()
+        
+        # Update the vehicle
+        vehicle = crud_emission.vehicle.update_sync(db, db_obj=vehicle, obj_in=vehicle_in)
+        
+        # Return with full test info
+        return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error updating vehicle: {str(e)}"
         )
-        crud_emission.vehicle_driver_history.create(
-            db, 
-            obj_in=history_data
-        )
-    
-    vehicle = crud_emission.vehicle.update(db, db_obj=vehicle, obj_in=vehicle_in)
-    return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
 
 
 @router.delete("/vehicles/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -148,17 +336,17 @@ def delete_vehicle(
     vehicle_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
-):
+):    
     """
     Delete a vehicle.
     """
-    vehicle = crud_emission.vehicle.get(db, id=vehicle_id)
+    vehicle = crud_emission.vehicle.get_sync(db, id=vehicle_id)
     if not vehicle:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehicle not found"
         )
-    crud_emission.vehicle.remove(db, id=vehicle_id)
+    crud_emission.vehicle.remove_sync(db, id=vehicle_id)
     return None
 
 
@@ -187,9 +375,9 @@ def get_tests(
     """
     if vehicle_id:
         return crud_emission.test.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
-    
-    tests = crud_emission.test.get_multi(db, skip=skip, limit=limit)
-    total = crud_emission.test.count(db)
+      # Use synchronous methods since db is a synchronous Session
+    tests = crud_emission.test.get_multi_sync(db, skip=skip, limit=limit)
+    total = crud_emission.test.count_sync(db)
     return {"tests": tests, "total": total}
 
 
@@ -199,19 +387,19 @@ def create_test(
     db: Session = Depends(get_db),
     test_in: TestCreate,
     current_user: User = Depends(get_current_active_user)
-):
+):    
     """
     Create a new test record.
     """
     # Check if vehicle exists
-    vehicle = crud_emission.vehicle.get(db, id=test_in.vehicle_id)
+    vehicle = crud_emission.vehicle.get_sync(db, id=test_in.vehicle_id)
     if not vehicle:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Vehicle not found"
         )
     
-    test = crud_emission.test.create(db, obj_in=test_in)
+    test = crud_emission.test.create_sync(db, obj_in=test_in)
     return test
 
 
@@ -224,7 +412,7 @@ def get_test(
     """
     Get a specific test by ID.
     """
-    test = crud_emission.test.get(db, id=test_id)
+    test = crud_emission.test.get_sync(db, id=test_id)
     if not test:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -244,14 +432,14 @@ def update_test(
     """
     Update a test record.
     """
-    test = crud_emission.test.get(db, id=test_id)
+    test = crud_emission.test.get_sync(db, id=test_id)
     if not test:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Test not found"
         )
     
-    test = crud_emission.test.update(db, db_obj=test, obj_in=test_in)
+    test = crud_emission.test.update_sync(db, db_obj=test, obj_in=test_in)
     return test
 
 
@@ -264,13 +452,13 @@ def delete_test(
     """
     Delete a test record.
     """
-    test = crud_emission.test.get(db, id=test_id)
+    test = crud_emission.test.get_sync(db, id=test_id)
     if not test:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Test not found"
         )
-    crud_emission.test.remove(db, id=test_id)
+    crud_emission.test.remove_sync(db, id=test_id)
     return None
 
 
@@ -280,8 +468,7 @@ def get_test_schedules(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
-    year: Optional[int] = None,
-    quarter: Optional[int] = None,
+    year: Optional[int] = None,    quarter: Optional[int] = None,
     current_user: User = Depends(get_current_active_user)
 ):
     """
@@ -291,8 +478,8 @@ def get_test_schedules(
         schedules = crud_emission.test_schedule.get_by_year_quarter(db, year=year, quarter=quarter)
         return {"schedules": schedules, "total": len(schedules)}
     
-    schedules = crud_emission.test_schedule.get_multi(db, skip=skip, limit=limit)
-    total = crud_emission.test_schedule.count(db)
+    schedules = crud_emission.test_schedule.get_multi_sync(db, skip=skip, limit=limit)
+    total = crud_emission.test_schedule.count_sync(db)
     return {"schedules": schedules, "total": total}
 
 
@@ -306,7 +493,7 @@ def create_test_schedule(
     """
     Create a new test schedule.
     """
-    schedule = crud_emission.test_schedule.create(db, obj_in=schedule_in)
+    schedule = crud_emission.test_schedule.create_sync(db, obj_in=schedule_in)
     return schedule
 
 
@@ -319,7 +506,7 @@ def get_test_schedule(
     """
     Get a specific test schedule by ID.
     """
-    schedule = crud_emission.test_schedule.get(db, id=schedule_id)
+    schedule = crud_emission.test_schedule.get_sync(db, id=schedule_id)
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -339,14 +526,14 @@ def update_test_schedule(
     """
     Update a test schedule.
     """
-    schedule = crud_emission.test_schedule.get(db, id=schedule_id)
+    schedule = crud_emission.test_schedule.get_sync(db, id=schedule_id)
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Test schedule not found"
         )
     
-    schedule = crud_emission.test_schedule.update(db, db_obj=schedule, obj_in=schedule_in)
+    schedule = crud_emission.test_schedule.update_sync(db, db_obj=schedule, obj_in=schedule_in)
     return schedule
 
 
@@ -359,13 +546,13 @@ def delete_test_schedule(
     """
     Delete a test schedule.
     """
-    schedule = crud_emission.test_schedule.get(db, id=schedule_id)
+    schedule = crud_emission.test_schedule.get_sync(db, id=schedule_id)
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Test schedule not found"
         )
-    crud_emission.test_schedule.remove(db, id=schedule_id)
+    crud_emission.test_schedule.remove_sync(db, id=schedule_id)
     return None
 
 
@@ -384,6 +571,8 @@ def get_driver_history(
     if vehicle_id:
         return crud_emission.vehicle_driver_history.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
     
-    history = crud_emission.vehicle_driver_history.get_multi(db, skip=skip, limit=limit)
-    total = crud_emission.vehicle_driver_history.count(db)
+    history = crud_emission.vehicle_driver_history.get_multi_sync(db, skip=skip, limit=limit)
+    total = crud_emission.vehicle_driver_history.count_sync(db)
     return {"history": history, "total": total}
+
+

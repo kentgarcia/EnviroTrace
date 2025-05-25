@@ -6,18 +6,30 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Vehicle,
   useVehicle as useApiVehicle,
-  useDriverHistory,
+  DriverHistory,
 } from "@/core/api/emission-service";
+import apiClient from "@/core/api/api-client";
+import { adaptVehicleDriverHistoryFromApi } from "@/core/hooks/vehicles/adapters";
 
 // Enhanced vehicle with driver history
 interface EnhancedVehicle extends Vehicle {
-  driverHistory?: {
-    id: string;
-    driver_name: string;
-    contact_number?: string;
-    start_date: string;
-    end_date?: string;
-  }[];
+  driverHistory?: DriverHistory[];
+}
+
+function useDriverHistory(vehicleId: string) {
+  return useQuery({
+    queryKey: ["driverHistory", vehicleId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        history: any[];
+        total: number;
+      }>(`/emission/vehicle-driver-history?vehicle_id=${vehicleId}`);
+
+      // Adapt the API response to match the expected format
+      return data.history.map(adaptVehicleDriverHistoryFromApi);
+    },
+    enabled: !!vehicleId,
+  });
 }
 
 export function useVehicle(id: string, options = {}) {

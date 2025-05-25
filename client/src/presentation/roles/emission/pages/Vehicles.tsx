@@ -17,10 +17,11 @@ import {
   useAddVehicle,
   useUpdateVehicle,
   useDeleteVehicle,
+  useOffices,
   Vehicle,
   VehicleFilters,
+  VehicleFormInput,
 } from "@/core/api/emission-service";
-import { VehicleInput } from "@/core/hooks/vehicles/useVehicles";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   VehicleTable,
@@ -99,22 +100,34 @@ export default function Vehicles() {
     pagination.pageIndex * pagination.pageSize,
     pagination.pageSize
   );
-
   // Get filter options from the API
   const {
     data: filterOptions,
     isLoading: isLoadingOptions,
   } = useFilterOptions();
 
+  // Get offices for office name/ID conversion
+  const { data: officesData } = useOffices();
+  const officesList = officesData?.offices || [];
   // Use mutation hooks for CRUD operations
   const addVehicleMutation = useAddVehicle();
   const updateVehicleMutation = useUpdateVehicle();
   const deleteVehicleMutation = useDeleteVehicle();
+
+  // Helper functions for office name/ID conversion
+  const getOfficeIdByName = (officeName: string): string | undefined => {
+    const office = officesList.find(office => office.name === officeName);
+    return office?.id;
+  };
+
+  const getOfficeNameById = (officeId: string): string => {
+    const office = officesList.find(office => office.id === officeId);
+    return office?.name || "Unknown Office";
+  };
   // Get array of vehicles
   const vehicles = useMemo(() => {
     return vehiclesData?.vehicles || [];
   }, [vehiclesData]);
-
   // Filter vehicles by test status (this is done client-side since we already have the data)
   const filteredVehicles = useMemo(() => {
     if (!status) return vehicles;
@@ -126,24 +139,6 @@ export default function Vehicles() {
       return true;
     });
   }, [vehicles, status]);
-
-  // Convert API vehicles to the format expected by VehicleTable component
-  const adaptedVehicles = useMemo(() => {
-    return filteredVehicles.map(v => ({
-      id: v.id,
-      plateNumber: v.plate_number,
-      driverName: v.driver_name,
-      contactNumber: v.contact_number,
-      officeName: v.office_name,
-      vehicleType: v.vehicle_type,
-      engineType: v.engine_type,
-      wheels: v.wheels,
-      latestTestResult: v.latest_test_result,
-      latestTestDate: v.latest_test_date,
-      createdAt: v.created_at,
-      updatedAt: v.updated_at
-    }));
-  }, [filteredVehicles]);
 
   // Get unique values for filters
   const offices = useMemo(() => filterOptions?.offices || [], [filterOptions]);
@@ -158,46 +153,38 @@ export default function Vehicles() {
 
   // Row selection state
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
-
   // Handler for viewing vehicle details
-  const handleViewVehicle = useCallback((adaptedVehicle: any) => {
-    // Find the original vehicle by ID
-    const originalVehicle = vehicles.find(v => v.id === adaptedVehicle.id);
-    if (originalVehicle) {
-      setSelectedVehicle(originalVehicle);
-      setViewModalOpen(true);
-    }
-  }, [vehicles]);
+  const handleViewVehicle = useCallback((vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setViewModalOpen(true);
+  }, []);
 
   // Handler for editing vehicle
-  const handleEditVehicle = useCallback((adaptedVehicle: any) => {
-    // Find the original vehicle by ID
-    const originalVehicle = vehicles.find(v => v.id === adaptedVehicle.id);
-    if (originalVehicle) {
-      setSelectedVehicle(originalVehicle);
-      setEditModalOpen(true);
-    }
-  }, [vehicles]);
+  const handleEditVehicle = useCallback((vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setEditModalOpen(true);
+  }, []);
 
   // Handler for deleting vehicle
-  const handleDeleteConfirm = useCallback((adaptedVehicle: any) => {
-    // Find the original vehicle by ID
-    const originalVehicle = vehicles.find(v => v.id === adaptedVehicle.id);
-    if (originalVehicle) {
-      setSelectedVehicle(originalVehicle);
-      setDeleteDialogOpen(true);
-    }
-  }, [vehicles]);
-  // Handler for saving edited vehicle
-  const handleSaveEdit = async (vehicleData: VehicleInput) => {
+  const handleDeleteConfirm = useCallback((vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    setDeleteDialogOpen(true);
+  }, []);// Handler for saving edited vehicle
+  const handleSaveEdit = async (vehicleData: VehicleFormInput) => {
     if (!selectedVehicle) return;
 
-    // Convert from UI VehicleInput to API VehicleInput
+    // Find the office ID by office name
+    const officeId = getOfficeIdByName(vehicleData.officeName); if (!officeId) {
+      toast.error(`Office "${vehicleData.officeName}" not found`);
+      return;
+    }
+
+    // Convert from UI VehicleFormInput to API VehicleInput
     const apiVehicleData = {
       driver_name: vehicleData.driverName,
       contact_number: vehicleData.contactNumber,
       engine_type: vehicleData.engineType,
-      office_name: vehicleData.officeName,
+      office_id: officeId,
       plate_number: vehicleData.plateNumber,
       vehicle_type: vehicleData.vehicleType,
       wheels: vehicleData.wheels
@@ -216,15 +203,19 @@ export default function Vehicles() {
       console.error("Error updating vehicle:", error);
       toast.error(error.response?.data?.detail || "Failed to update vehicle");
     }
-  };
-  // Handler for adding new vehicle
-  const handleAddVehicle = (vehicle: VehicleInput) => {
-    // Convert from UI VehicleInput to API VehicleInput
+  };  // Handler for adding new vehicle
+  const handleAddVehicle = (vehicle: VehicleFormInput) => {
+    // Find the office ID by office name
+    const officeId = getOfficeIdByName(vehicle.officeName);
+    if (!officeId) {
+      toast.error(`Office "${vehicle.officeName}" not found`);
+      return;
+    }    // Convert from UI VehicleFormInput to API VehicleInput
     const apiVehicle = {
       driver_name: vehicle.driverName,
       contact_number: vehicle.contactNumber,
       engine_type: vehicle.engineType,
-      office_name: vehicle.officeName,
+      office_id: officeId,
       plate_number: vehicle.plateNumber,
       vehicle_type: vehicle.vehicleType,
       wheels: vehicle.wheels
@@ -268,7 +259,6 @@ export default function Vehicles() {
     );
     // Implementation would go here
   };
-
   // Export vehicles to CSV
   const handleExportToCSV = () => {
     if (vehicles.length === 0) {
@@ -292,7 +282,9 @@ export default function Vehicles() {
             ? "Passed"
             : "Failed";
 
-      csvContent += `"${vehicle.plate_number}","${vehicle.office_name}","${vehicle.driver_name
+      const officeName = vehicle.office?.name || "Unknown Office";
+
+      csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
         }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
         }","${vehicle.contact_number || ""}","${testDate}","${testResult}"\n`;
     });
@@ -653,14 +645,39 @@ export default function Vehicles() {
                   </button>
                 </div>                {isLoading ? (
                   <VehicleTableSkeleton />
-                ) : (
-                  <VehicleTable
-                    vehicles={adaptedVehicles}
-                    isLoading={isLoading}
-                    onView={handleViewVehicle}
-                    onEdit={handleEditVehicle}
-                    onDelete={handleDeleteConfirm}
-                  />
+                ) : (<VehicleTable
+                  vehicles={filteredVehicles}
+                  isLoading={isLoading}
+                  onView={handleViewVehicle}
+                  onEdit={handleEditVehicle}
+                  onDelete={handleDeleteConfirm}
+                  onEditVehicle={async (id: string, data: VehicleFormInput) => {
+                    // Find the office ID by office name
+                    const officeId = getOfficeIdByName(data.officeName);
+                    if (!officeId) {
+                      toast.error(`Office "${data.officeName}" not found`);
+                      return;
+                    }
+
+                    // Convert from UI VehicleFormInput to API VehicleInput
+                    const apiVehicleData = {
+                      driver_name: data.driverName,
+                      contact_number: data.contactNumber,
+                      engine_type: data.engineType,
+                      office_id: officeId,
+                      plate_number: data.plateNumber,
+                      vehicle_type: data.vehicleType,
+                      wheels: data.wheels
+                    };
+
+                    await updateVehicleMutation.mutateAsync({
+                      id,
+                      vehicleData: apiVehicleData,
+                    });
+
+                    toast.success("Vehicle updated successfully");
+                  }}
+                />
                 )}
               </div>
             </Card>
@@ -675,49 +692,21 @@ export default function Vehicles() {
         onEditModalClose={() => {
           setEditModalOpen(false);
           setSelectedVehicle(null);
-        }}
-        onEditVehicle={handleSaveEdit}
-        selectedVehicle={selectedVehicle ? {
-          id: selectedVehicle.id,
-          driverName: selectedVehicle.driver_name,
-          contactNumber: selectedVehicle.contact_number,
-          engineType: selectedVehicle.engine_type,
-          officeName: selectedVehicle.office_name,
-          plateNumber: selectedVehicle.plate_number,
-          vehicleType: selectedVehicle.vehicle_type,
-          wheels: selectedVehicle.wheels,
-          createdAt: selectedVehicle.created_at,
-          updatedAt: selectedVehicle.updated_at,
-          latestTestResult: selectedVehicle.latest_test_result,
-          latestTestDate: selectedVehicle.latest_test_date
-        } : null}
+        }} onEditVehicle={handleSaveEdit}
+        selectedVehicle={selectedVehicle}
         isLoading={isLoading}
         vehicleTypes={vehicleTypes}
         engineTypes={engineTypes}
         wheelCounts={wheelCounts.map((w) => w.toString())}
         offices={offices}
-      />
-
-      <VehicleDetails
-        vehicle={selectedVehicle ? {
-          id: selectedVehicle.id,
-          driverName: selectedVehicle.driver_name,
-          contactNumber: selectedVehicle.contact_number,
-          engineType: selectedVehicle.engine_type,
-          officeName: selectedVehicle.office_name,
-          plateNumber: selectedVehicle.plate_number,
-          vehicleType: selectedVehicle.vehicle_type,
-          wheels: selectedVehicle.wheels,
-          createdAt: selectedVehicle.created_at,
-          updatedAt: selectedVehicle.updated_at,
-          latestTestResult: selectedVehicle.latest_test_result,
-          latestTestDate: selectedVehicle.latest_test_date
-        } : null}
+      />      <VehicleDetails
+        vehicle={selectedVehicle}
         isOpen={viewModalOpen}
         onClose={() => {
           setViewModalOpen(false);
           setSelectedVehicle(null);
         }}
+        onEditVehicle={handleSaveEdit}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

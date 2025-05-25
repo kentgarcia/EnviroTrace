@@ -20,10 +20,9 @@ import {
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
 import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
-import { Vehicle } from "@/core/hooks/vehicles/useVehicles";
+import { Vehicle, VehicleFormInput } from "@/core/api/emission-service";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { VehicleDetails } from "./VehicleDetails";
-import { useVehicles } from "@/core/hooks/vehicles/useVehicles";
 import { Vehicle as ApiVehicle } from "@/core/api/emission-service";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import {
@@ -41,6 +40,7 @@ interface VehicleTableProps {
   onView: (vehicle: Vehicle) => void;
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicle: Vehicle) => void;
+  onEditVehicle?: (id: string, data: VehicleFormInput) => Promise<void>;
 
   // Optional TanStack Table state
   sorting?: SortingState;
@@ -113,6 +113,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onView,
   onEdit,
   onDelete,
+  onEditVehicle,
 
   // Optional TanStack Table state props (with defaults)
   sorting = [{ id: "plateNumber", desc: false }],
@@ -125,11 +126,8 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onColumnVisibilityChange,
   rowSelection = {},
   onRowSelectionChange,
-}) => {
-  // Add: row-to-details functionality
+}) => {  // Add: row-to-details functionality
   const [detailsVehicle, setDetailsVehicle] = useState<Vehicle | null>(null);
-
-  const { editVehicle } = useVehicles();
 
   // Add a ref to hold the refetch function from VehicleDetails
   const detailsRefetchRef = useRef<null | (() => void)>(null);
@@ -148,7 +146,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     if (isNaN(date.getTime())) return "Invalid date";
     return format(date, "MMM dd, yyyy");
   };
-
   // Render test result badge
   const renderTestResultBadge = (vehicle: Vehicle) => {
     // If it's a pending vehicle (not yet synced)
@@ -164,8 +161,8 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
     // If there's no test result
     if (
-      vehicle.latestTestResult === undefined ||
-      vehicle.latestTestResult === null
+      vehicle.latest_test_result === undefined ||
+      vehicle.latest_test_result === null
     ) {
       return (
         <Badge variant="outline" className="bg-gray-100 text-gray-800">
@@ -175,7 +172,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     }
 
     // Pass/Fail status
-    return vehicle.latestTestResult ? (
+    return vehicle.latest_test_result ? (
       <Badge variant="outline" className="bg-green-100 text-green-800">
         Passed
       </Badge>
@@ -185,11 +182,10 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       </Badge>
     );
   };
-
   // Define columns
   const columns: ColumnDef<Vehicle>[] = [
     {
-      accessorKey: "plateNumber",
+      accessorKey: "plate_number",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -201,11 +197,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-medium">{row.original.plateNumber}</div>
+        <div className="font-medium">{row.original.plate_number}</div>
       ),
     },
     {
-      accessorKey: "officeName",
+      accessorKey: "office.name",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -216,9 +212,10 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
           <ArrowUpDown className="ml-1 h-4 w-4" />
         </Button>
       ),
+      cell: ({ row }) => row.original.office?.name || "Unknown Office",
     },
     {
-      accessorKey: "driverName",
+      accessorKey: "driver_name",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -229,9 +226,10 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
           <ArrowUpDown className="ml-1 h-4 w-4" />
         </Button>
       ),
+      cell: ({ row }) => row.original.driver_name,
     },
     {
-      accessorKey: "vehicleType",
+      accessorKey: "vehicle_type",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -244,14 +242,14 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       ),
       cell: ({ row }) => (
         <span
-          title={`${row.original.vehicleType}, ${row.original.engineType} engine, ${row.original.wheels} wheels`}
+          title={`${row.original.vehicle_type}, ${row.original.engine_type} engine, ${row.original.wheels} wheels`}
         >
-          {row.original.vehicleType}
+          {row.original.vehicle_type}
         </span>
       ),
     },
     {
-      accessorKey: "latestTestDate",
+      accessorKey: "latest_test_date",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -262,10 +260,10 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
           <ArrowUpDown className="ml-1 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => formatDate(row.original.latestTestDate),
+      cell: ({ row }) => formatDate(row.original.latest_test_date),
     },
     {
-      accessorKey: "latestTestResult",
+      accessorKey: "latest_test_result",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -326,20 +324,19 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       <div className="flex gap-6">
         {/* List of vehicles (left) */}
         <div className="w-1/3 border-r pr-4 overflow-y-auto max-h-[70vh]">
-          <ul className="divide-y">
-            {vehicles.map((v) => (
-              <li
-                key={v.id}
-                className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsVehicle.id === v.id ? "bg-blue-100 font-semibold" : ""
-                  }`}
-                onClick={() => setDetailsVehicle(v)}
-              >
-                <div className="text-sm">{v.plateNumber}</div>
-                <div className="text-xs text-muted-foreground">
-                  {v.driverName} • {v.officeName}
-                </div>
-              </li>
-            ))}
+          <ul className="divide-y">            {vehicles.map((v) => (
+            <li
+              key={v.id}
+              className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsVehicle.id === v.id ? "bg-blue-100 font-semibold" : ""
+                }`}
+              onClick={() => setDetailsVehicle(v)}
+            >
+              <div className="text-sm">{v.plate_number}</div>
+              <div className="text-xs text-muted-foreground">
+                {v.driver_name} • {v.office?.name || "Unknown Office"}
+              </div>
+            </li>
+          ))}
           </ul>
         </div>
         {/* Details (right) using VehicleDetails component */}
@@ -352,14 +349,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             >
               &larr; Back to table
             </Button>
-          </div>
-          <VehicleDetails
+          </div>          <VehicleDetails
             vehicle={detailsVehicle}
             isOpen={true}
             onClose={() => setDetailsVehicle(null)}
             onEditVehicle={async (data) => {
-              if (!detailsVehicle) return;
-              await editVehicle(detailsVehicle.id, data);
+              if (!detailsVehicle || !onEditVehicle) return;
+              await onEditVehicle(detailsVehicle.id, data);
               // Refetch the details after update
               if (detailsRefetchRef.current) detailsRefetchRef.current();
             }}

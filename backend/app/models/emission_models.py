@@ -1,4 +1,3 @@
-import uuid
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -8,6 +7,20 @@ from app.db.database import Base
 # from app.models.auth_models import User # This creates a circular dependency if imported directly for type hint
                                      # Use string for ForeignKey and define relationships carefully
 
+class Office(Base):
+    __tablename__ = "offices"
+    __table_args__ = {"schema": "emission"}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    name = Column(String(255), unique=True, nullable=False)
+    address = Column(String(500), nullable=True)
+    contact_number = Column(String(50), nullable=True)
+    email = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    vehicles = relationship("Vehicle", back_populates="office")
+
 class Vehicle(Base):
     __tablename__ = "vehicles"
     __table_args__ = {"schema": "emission"}
@@ -16,13 +29,14 @@ class Vehicle(Base):
     driver_name = Column(String(255), nullable=False)
     contact_number = Column(String(50), nullable=True)
     engine_type = Column(String(100), nullable=False)
-    office_name = Column(String(255), nullable=False)
+    office_id = Column(UUID(as_uuid=True), ForeignKey("emission.offices.id"), nullable=False)
     plate_number = Column(String(50), unique=True, nullable=False)
     vehicle_type = Column(String(100), nullable=False)
     wheels = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    office = relationship("Office", back_populates="vehicles")
     tests = relationship("Test", back_populates="vehicle", cascade="all, delete-orphan")
     driver_history = relationship("VehicleDriverHistory", back_populates="vehicle", cascade="all, delete-orphan")
 

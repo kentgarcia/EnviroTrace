@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-import uuid
 
-from app.apis.deps import get_current_user, get_db_session
+from app.apis.deps import get_current_user_async, get_db_session
 from app.services.auth_service import auth_service
 from app.schemas.token_schemas import Token
 from app.schemas.user_schemas import UserCreate, UserPublic, UserFullPublic
@@ -30,7 +29,7 @@ async def login_access_token(
 @router.get("/me", response_model=UserFullPublic)
 async def read_users_me(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user_async)
 ):
     """Get current user details including profile and roles"""
     return await auth_service.get_user_details(db=db, user_id=current_user.id)

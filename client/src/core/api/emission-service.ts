@@ -2,12 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/core/api/api-client";
 
 // Types
+export interface Office {
+  id: string;
+  name: string;
+  address?: string;
+  contact_number?: string;
+  email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Vehicle {
   id: string;
   driver_name: string;
   contact_number?: string;
   engine_type: string;
-  office_name: string;
+  office_id: string;
+  office?: Office;
   plate_number: string;
   vehicle_type: string;
   wheels: number;
@@ -15,15 +26,27 @@ export interface Vehicle {
   updated_at: string;
   latest_test_result: boolean | null;
   latest_test_date: string | null;
+  driverHistory?: DriverHistory[];
 }
 
 export interface VehicleInput {
   driver_name: string;
   contact_number?: string;
   engine_type: string;
-  office_name: string;
+  office_id: string;
   plate_number: string;
   vehicle_type: string;
+  wheels: number;
+}
+
+// UI-friendly vehicle input that uses office names instead of IDs
+export interface VehicleFormInput {
+  driverName: string;
+  contactNumber?: string;
+  engineType: string;
+  officeName: string;
+  plateNumber: string;
+  vehicleType: string;
   wheels: number;
 }
 
@@ -31,6 +54,7 @@ export interface VehicleFilters {
   plate_number?: string;
   driver_name?: string;
   office_name?: string;
+  office_id?: string;
   vehicle_type?: string;
   engine_type?: string;
   wheels?: number;
@@ -39,6 +63,11 @@ export interface VehicleFilters {
 
 interface VehiclesResponse {
   vehicles: Vehicle[];
+  total: number;
+}
+
+interface OfficesResponse {
+  offices: Office[];
   total: number;
 }
 
@@ -51,12 +80,86 @@ interface FilterOptions {
 
 // API endpoints
 const API_ENDPOINTS = {
+  OFFICES: "/emission/offices",
   VEHICLES: "/emission/vehicles",
   FILTER_OPTIONS: "/emission/vehicles/filters/options",
   TESTS: "/emission/tests",
   SCHEDULES: "/emission/schedules",
   DRIVER_HISTORY: "/emission/vehicles/driver-history",
+  OFFICE_COMPLIANCE: "/emission/offices/compliance",
 };
+
+// Hooks for offices
+export function useOffices(search?: string, skip = 0, limit = 100) {
+  return useQuery<OfficesResponse>({
+    queryKey: ["offices", search, skip, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (skip) params.append("skip", skip.toString());
+      if (limit) params.append("limit", limit.toString());
+      if (search) params.append("search", search);
+
+      const { data } = await apiClient.get<OfficesResponse>(
+        `${API_ENDPOINTS.OFFICES}?${params.toString()}`
+      );
+      return data;
+    },
+  });
+}
+
+export function useCreateOffice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      office: Omit<Office, "id" | "created_at" | "updated_at">
+    ) => {
+      const { data } = await apiClient.post<Office>(
+        API_ENDPOINTS.OFFICES,
+        office
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["offices"] });
+    },
+  });
+}
+
+export function useUpdateOffice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data: officeData,
+    }: {
+      id: string;
+      data: Partial<Omit<Office, "id" | "created_at" | "updated_at">>;
+    }) => {
+      const { data } = await apiClient.put<Office>(
+        `${API_ENDPOINTS.OFFICES}/${id}`,
+        officeData
+      );
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["offices"] });
+      queryClient.invalidateQueries({ queryKey: ["office", variables.id] });
+    },
+  });
+}
+
+export function useDeleteOffice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`${API_ENDPOINTS.OFFICES}/${id}`);
+      return id;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["offices"] });
+    },
+  });
+}
 
 // Hooks for vehicles
 export function useVehicles(filters?: VehicleFilters, skip = 0, limit = 100) {
@@ -228,6 +331,17 @@ export interface DriverHistoryRecord {
   updated_at: string;
 }
 
+// UI-friendly driver history type
+export interface DriverHistory {
+  id: string;
+  driverName: string;
+  contactNumber?: string;
+  startDate: string;
+  endDate: string | null;
+  changedAt: string;
+  changedBy: string | null;
+}
+
 // Emission tests queries
 export function useEmissionTests(
   params: { vehicleId?: string } = {},
@@ -241,10 +355,11 @@ export function useEmissionTests(
         queryParams.append("vehicle_id", params.vehicleId);
       }
 
-      const { data } = await apiClient.get<EmissionTest[]>(
-        `${API_ENDPOINTS.TESTS}?${queryParams.toString()}`
-      );
-      return data;
+      const { data } = await apiClient.get<{
+        tests: EmissionTest[];
+        total: number;
+      }>(`${API_ENDPOINTS.TESTS}?${queryParams.toString()}`);
+      return data.tests;
     },
     ...options,
   });
@@ -308,6 +423,85 @@ export function useAddTestSchedule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["test-schedules"] });
+    },
+  });
+}
+
+// Office Compliance Types
+export interface OfficeData {
+  office_name: string;
+  total_vehicles: number;
+  tested_vehicles: number;
+  compliant_vehicles: number;
+  non_compliant_vehicles: number;
+  compliance_rate: number;
+  last_test_date: string | null;
+}
+
+export interface OfficeComplianceSummary {
+  total_offices: number;
+  total_vehicles: number;
+  total_compliant: number;
+  overall_compliance_rate: number;
+}
+
+export interface OfficeComplianceResponse {
+  offices: OfficeData[];
+  summary: OfficeComplianceSummary;
+  total: number;
+}
+
+export interface OfficeFilters {
+  search_term?: string;
+  year?: number;
+  quarter?: number;
+}
+
+// API endpoints
+const OFFICE_API_ENDPOINTS = {
+  COMPLIANCE: "/emission/offices/compliance",
+  FILTER_OPTIONS: "/emission/offices/filters/options",
+};
+
+// Hooks for office compliance
+export function useOfficeCompliance(
+  filters?: OfficeFilters,
+  skip = 0,
+  limit = 100
+) {
+  return useQuery<OfficeComplianceResponse>({
+    queryKey: ["officeCompliance", filters, skip, limit],
+    queryFn: async () => {
+      // Build query params
+      const params = new URLSearchParams();
+
+      if (skip) params.append("skip", skip.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            params.append(key, value.toString());
+          }
+        });
+      }
+
+      const { data } = await apiClient.get<OfficeComplianceResponse>(
+        `${API_ENDPOINTS.OFFICE_COMPLIANCE}?${params.toString()}`
+      );
+      return data;
+    },
+  });
+}
+
+export function useOfficeFilterOptions() {
+  return useQuery<FilterOptions>({
+    queryKey: ["officeFilterOptions"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<FilterOptions>(
+        API_ENDPOINTS.FILTER_OPTIONS
+      );
+      return data;
     },
   });
 }

@@ -1,13 +1,40 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, UUID4
+from pydantic import BaseModel, UUID4
+
+# Office schemas
+class OfficeBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    contact_number: Optional[str] = None
+    email: Optional[str] = None
+
+class OfficeCreate(OfficeBase):
+    pass
+
+class OfficeUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    contact_number: Optional[str] = None
+    email: Optional[str] = None
+
+class OfficeInDB(OfficeBase):
+    id: UUID4
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class Office(OfficeInDB):
+    pass
 
 # Vehicle schemas
 class VehicleBase(BaseModel):
     driver_name: str
     contact_number: Optional[str] = None
     engine_type: str
-    office_name: str
+    office_id: UUID4
     plate_number: str
     vehicle_type: str
     wheels: int
@@ -19,7 +46,7 @@ class VehicleUpdate(BaseModel):
     driver_name: Optional[str] = None
     contact_number: Optional[str] = None
     engine_type: Optional[str] = None
-    office_name: Optional[str] = None
+    office_id: Optional[UUID4] = None
     plate_number: Optional[str] = None
     vehicle_type: Optional[str] = None
     wheels: Optional[int] = None
@@ -34,6 +61,7 @@ class VehicleInDB(VehicleBase):
 
 class Vehicle(VehicleInDB):
     # Add any computed fields or additional info here
+    office: Optional[Office] = None
     latest_test_result: Optional[bool] = None
     latest_test_date: Optional[datetime] = None
     
@@ -75,7 +103,7 @@ class VehicleDriverHistoryBase(BaseModel):
     driver_name: str
 
 class VehicleDriverHistoryCreate(VehicleDriverHistoryBase):
-    pass
+    changed_by: Optional[UUID4] = None
 
 class VehicleDriverHistoryInDB(VehicleDriverHistoryBase):
     id: UUID4
@@ -117,7 +145,32 @@ class TestScheduleInDB(TestScheduleBase):
 class TestSchedule(TestScheduleInDB):
     pass
 
+# Office Compliance schemas
+class OfficeComplianceData(BaseModel):
+    office_name: str
+    total_vehicles: int
+    tested_vehicles: int
+    compliant_vehicles: int
+    non_compliant_vehicles: int
+    compliance_rate: float
+    last_test_date: Optional[datetime] = None
+    
+class OfficeComplianceSummary(BaseModel):
+    total_offices: int
+    total_vehicles: int
+    total_compliant: int
+    overall_compliance_rate: float
+
+class OfficeComplianceResponse(BaseModel):
+    offices: List[OfficeComplianceData]
+    summary: OfficeComplianceSummary
+    total: int
+
 # Response models
+class OfficeListResponse(BaseModel):
+    offices: List[Office]
+    total: int
+
 class VehicleListResponse(BaseModel):
     vehicles: List[Vehicle]
     total: int

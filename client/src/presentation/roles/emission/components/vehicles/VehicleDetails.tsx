@@ -18,15 +18,18 @@ import {
 } from "@/presentation/components/shared/ui/table";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
-import { Vehicle, VehicleInput } from "@/core/hooks/vehicles/useVehicles";
+import {
+  Vehicle,
+  VehicleFormInput,
+  useEmissionTests
+} from "@/core/api/emission-service";
 import { useVehicle } from "@/core/api/vehicle-service";
-import { useEmissionTests } from "@/core/api/emission-service";
 
 interface VehicleDetailsProps {
   vehicle: Vehicle | null;
   isOpen: boolean;
   onClose: () => void;
-  onEditVehicle?: (data: VehicleInput) => void;
+  onEditVehicle?: (data: VehicleFormInput) => void;
   isEditing?: boolean;
   onRegisterRefetch?: (refetch: () => void) => void;
 }
@@ -40,9 +43,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onRegisterRefetch,
 }) => {
   const [activeTab, setActiveTab] = useState("info");
-  const [isEditing, setIsEditing] = useState(isEditingProp);
-  // Always use the latest vehicle data for editing
-  const [editData, setEditData] = useState<VehicleInput | null>(null);
+  const [isEditing, setIsEditing] = useState(isEditingProp);  // Always use the latest vehicle data for editing
+  const [editData, setEditData] = useState<VehicleFormInput | null>(null);
   // Fetch full vehicle details (with driverHistory) when modal is open
   const {
     data: vehicleData,
@@ -60,22 +62,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   }, [refetch, onRegisterRefetch, vehicle?.id]);
 
   const fullVehicle = vehicleData || vehicle;
-  const driverHistory = fullVehicle?.driverHistory || [];
-
-  // When entering edit mode, set editData to current vehicle data
+  const driverHistory = fullVehicle?.driverHistory || [];  // When entering edit mode, set editData to current vehicle data
   React.useEffect(() => {
     if (isEditing && fullVehicle) {
       setEditData({
-        plateNumber: fullVehicle.plateNumber,
-        driverName: fullVehicle.driverName,
-        contactNumber: fullVehicle.contactNumber || "",
-        officeName: fullVehicle.officeName,
-        vehicleType: fullVehicle.vehicleType,
-        engineType: fullVehicle.engineType,
+        plateNumber: fullVehicle.plate_number,
+        driverName: fullVehicle.driver_name,
+        contactNumber: fullVehicle.contact_number || "",
+        officeName: fullVehicle.office?.name || "Unknown Office",
+        vehicleType: fullVehicle.vehicle_type,
+        engineType: fullVehicle.engine_type,
         wheels: fullVehicle.wheels,
       });
     }
-  }, [isEditing, fullVehicle]);
+  }, [isEditing, fullVehicle?.id]); // Only depend on vehicle ID to prevent infinite re-renders
   // Fetch vehicle test history using TanStack Query
   const {
     data: testData,
@@ -105,10 +105,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   return (
     <div className="max-w-3xl w-full mx-auto">
-      <div className="mb-4 flex items-center gap-2">
-        <div className="text-xl font-semibold flex-1">
-          {fullVehicle?.plateNumber}
-        </div>
+      <div className="mb-4 flex items-center gap-2">        <div className="text-xl font-semibold flex-1">
+        {fullVehicle?.plate_number}
+      </div>
         {isEditing ? (
           <Button
             size="sm"
@@ -275,36 +274,35 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Plate Number
-                </h3>
-                <p>{fullVehicle.plateNumber}</p>
+                </h3>                <p>{fullVehicle.plate_number}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Driver Name
                 </h3>
-                <p>{fullVehicle.driverName}</p>
+                <p>{fullVehicle.driver_name}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Contact Number
                 </h3>
-                <p>{fullVehicle.contactNumber || "Not provided"}</p>
+                <p>{fullVehicle.contact_number || "Not provided"}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">Office</h3>
-                <p>{fullVehicle.officeName}</p>
+                <p>{fullVehicle.office?.name || "Unknown Office"}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Vehicle Type
                 </h3>
-                <p>{fullVehicle.vehicleType}</p>
+                <p>{fullVehicle.vehicle_type}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Engine Type
                 </h3>
-                <p>{fullVehicle.engineType}</p>
+                <p>{fullVehicle.engine_type}</p>
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">Wheels</h3>
@@ -315,36 +313,34 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                   Latest Test Date
                 </h3>
                 <p>
-                  {fullVehicle.latestTestDate
-                    ? isNaN(Number(fullVehicle.latestTestDate))
+                  {fullVehicle.latest_test_date
+                    ? isNaN(Number(fullVehicle.latest_test_date))
                       ? "Invalid date"
                       : new Date(
-                        Number(fullVehicle.latestTestDate)
+                        Number(fullVehicle.latest_test_date)
                       ).toLocaleDateString()
                     : "Not tested"}
                 </p>
-              </div>
-              <div className="space-y-2">
+              </div>              <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Latest Test Result
                 </h3>
-                <p>
-                  {fullVehicle.latestTestResult === null ||
-                    fullVehicle.latestTestResult === undefined ? (
+                <div>
+                  {fullVehicle.latest_test_result === null ||
+                    fullVehicle.latest_test_result === undefined ? (
                     <Badge
                       variant="outline"
                       className="bg-gray-100 text-gray-800"
                     >
                       Not tested
-                    </Badge>
-                  ) : fullVehicle.latestTestResult ? (
-                    <Badge
-                      variant="outline"
-                      className="bg-green-100 text-green-800"
-                    >
-                      Passed
-                    </Badge>
-                  ) : (
+                    </Badge>) : fullVehicle.latest_test_result ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-green-100 text-green-800"
+                      >
+                        Passed
+                      </Badge>
+                    ) : (
                     <Badge
                       variant="outline"
                       className="bg-red-100 text-red-800"
@@ -352,7 +348,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       Failed
                     </Badge>
                   )}
-                </p>
+                </div>
               </div>
             </div>
           )}
@@ -385,20 +381,19 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </TableHeader>
                 <TableBody>
                   {testHistory.map((test) => (
-                    <TableRow key={test.id}>
-                      <TableCell>
-                        {test.testDate &&
-                          !isNaN(
-                            parsePgTimestamp(
-                              test.testDate as string
-                            )?.getTime() ?? NaN
-                          )
-                          ? format(
-                            parsePgTimestamp(test.testDate as string)!,
-                            "MMM dd, yyyy"
-                          )
-                          : "Invalid date"}
-                      </TableCell>
+                    <TableRow key={test.id}>                      <TableCell>
+                      {test.test_date &&
+                        !isNaN(
+                          parsePgTimestamp(
+                            test.test_date as string
+                          )?.getTime() ?? NaN
+                        )
+                        ? format(
+                          parsePgTimestamp(test.test_date as string)!,
+                          "MMM dd, yyyy"
+                        )
+                        : "Invalid date"}
+                    </TableCell>
                       <TableCell>
                         Q{test.quarter}, {test.year}
                       </TableCell>

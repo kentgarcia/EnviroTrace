@@ -7,16 +7,15 @@ sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..'
 from sqlalchemy import engine_from_config, pool, text # Added text
 from alembic import context
 
+from app.db.base_class import Base
+from app.core.config import settings as app_settings # <--- YOUR APP SETTINGS
+
 # This is the Alembic Config object...
 config = context.config
 
 # Interpret the config file for Python logging...
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-# Import your Base and app settings
-from app.db.base_class import Base
-from app.core.config import settings as app_settings # <--- YOUR APP SETTINGS
 
 target_metadata = Base.metadata
 

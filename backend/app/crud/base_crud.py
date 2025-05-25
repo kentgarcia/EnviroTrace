@@ -3,10 +3,10 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, update
+from sqlalchemy import update, func
 from app.db.database import Base
 
-ModelType = TypeVar("ModelType", bound=Base)
+ModelType = TypeVar("ModelType", bound=Base) # type: ignore
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
@@ -22,7 +22,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         result = await db.execute(select(self.model).offset(skip).limit(limit))
-        return result.scalars().all()
+        return result.scalars().all() # type: ignore
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = obj_in.model_dump()
@@ -77,8 +77,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(stmt)
         await db.commit()
         return result.scalars().first()
-
-
     async def remove(self, db: AsyncSession, *, id: Any) -> Optional[ModelType]:
         # stmt = delete(self.model).where(self.model.id == id).returning(self.model.id) # If you only need ID
         obj = await self.get(db, id=id)
@@ -86,3 +84,8 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await db.delete(obj)
             await db.commit()
         return obj # Return the deleted object or None
+        
+    async def count(self, db: AsyncSession) -> int:
+        """Count all records of the model"""
+        result = await db.execute(select(func.count()).select_from(self.model))
+        return result.scalar_one()

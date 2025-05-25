@@ -5,8 +5,9 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.apis.v1.api import api_v1_router
-from app.db.database import engine, AsyncSessionLocal # For potential startup tasks
-from app.db.utils import create_extensions # If you want to run it at startup
+from app.db.database import engine
+
+from app.middleware.cors_exception_handler import CORSExceptionMiddleware
 
 # Lifespan for startup/shutdown events (FastAPI's new way)
 @asynccontextmanager
@@ -29,7 +30,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="My Production-Ready API",
-    openapi_url=f"/api/v1/openapi.json",
+    openapi_url="/api/v1/openapi.json",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     lifespan=lifespan
@@ -38,14 +39,19 @@ app = FastAPI(
 # CORS Middleware
 origins = settings.BACKEND_CORS_ORIGINS
 print(f"Configured CORS origins: {origins}")
+
+# Add our custom CORS exception middleware first
+app.add_middleware(CORSExceptionMiddleware)
+
+# Add the standard CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[str(origin) for origin in origins],
+    allow_origins=["*"],  # For development, allow all origins
+    allow_origin_regex="https?://localhost:.*",  # Allow all localhost ports with both http and https
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 app.include_router(api_v1_router, prefix="/api/v1")
 
