@@ -1,12 +1,14 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from uuid import UUID
+import traceback
 
 from app.apis.deps import get_db, get_current_active_user
 from app.crud import crud_emission
 from app.models.auth_models import User
-from app.models.emission_models import VehicleDriverHistory
+from app.models.emission_models import VehicleDriverHistory, Test as TestModel
 from app.schemas.emission_schemas import (
     Office, OfficeCreate, OfficeUpdate, OfficeListResponse,
     Vehicle, VehicleCreate, VehicleUpdate, VehicleListResponse,
@@ -227,24 +229,35 @@ def create_vehicle(
             status_code=status.HTTP_409_CONFLICT,
             detail="A vehicle with this plate number already exists"
         )
-    
     try:
-        # Create the vehicle using a transaction to ensure all operations succeed or fail together
+        # Create the vehicle using the CRUD method
+        print("DEBUG: Creating vehicle")
         vehicle = crud_emission.vehicle.create_sync(db, obj_in=vehicle_in)
+        print("DEBUG: Vehicle created with ID:", vehicle.id)
         
-        # Create driver history directly with SQL model to avoid async/sync issues
+        # Create driver history - DIRECTLY using the model to avoid any async/sync confusion
+        print("DEBUG: Creating driver history for vehicle ID:", vehicle.id)
+        print("DEBUG: Current user ID:", current_user.id)
+        # Skip the CRUD layer entirely and create directly with the model
         history = VehicleDriverHistory(
             vehicle_id=vehicle.id,
             driver_name=vehicle.driver_name,
-            changed_by_id=current_user.id  # Use changed_by_id to match the column name in the model
+            changed_by_id=current_user.id  # Use column name from model
         )
+        print("DEBUG: Adding history to session")
         db.add(history)
         db.commit()
-        
-        # Return the vehicle with test info
-        return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
+        print("DEBUG: History committed")        # Return the vehicle directly instead of using get_with_test_info
+        print("DEBUG: Returning vehicle directly")
+        # Set test info directly to avoid any potential async issues
+        setattr(vehicle, "latest_test_result", None)
+        setattr(vehicle, "latest_test_date", None)
+        return vehicle
     except Exception as e:
         db.rollback()
+        print(f"DEBUG ERROR in create_vehicle: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating vehicle: {str(e)}"
@@ -305,10 +318,11 @@ def update_vehicle(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="A vehicle with this plate number already exists"
             )
-    
     try:
         # If driver name is changed, record in history
         if vehicle_in.driver_name and vehicle_in.driver_name != vehicle.driver_name:
+            print("DEBUG: Creating driver history for vehicle update")
+            print("DEBUG: Current user ID:", current_user.id)
             # Create driver history record directly using the model
             history = VehicleDriverHistory(
                 vehicle_id=vehicle.id,
@@ -317,14 +331,34 @@ def update_vehicle(
             )
             db.add(history)
             db.commit()
+            print("DEBUG: History committed")
         
         # Update the vehicle
+        print("DEBUG: Updating vehicle")
         vehicle = crud_emission.vehicle.update_sync(db, db_obj=vehicle, obj_in=vehicle_in)
+        print("DEBUG: Vehicle updated")
         
-        # Return with full test info
-        return crud_emission.vehicle.get_with_test_info(db, id=vehicle.id)
+        # Return vehicle with attributes set directly
+        print("DEBUG: Setting attributes directly on vehicle")
+        # Get latest test
+        latest_test = db.query(TestModel)\
+            .filter(TestModel.vehicle_id == vehicle.id)\
+            .order_by(desc(TestModel.test_date))\
+            .first()
+            
+        if latest_test:
+            setattr(vehicle, "latest_test_result", latest_test.result)
+            setattr(vehicle, "latest_test_date", latest_test.test_date)
+        else:
+            setattr(vehicle, "latest_test_result", None)
+            setattr(vehicle, "latest_test_date", None)
+            
+        print("DEBUG: Returning updated vehicle")
+        return vehicle
     except Exception as e:
         db.rollback()
+        print(f"DEBUG ERROR in update_vehicle: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error updating vehicle: {str(e)}"
@@ -375,9 +409,11 @@ def get_tests(
     """
     if vehicle_id:
         return crud_emission.test.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
-      # Use synchronous methods since db is a synchronous Session
-    tests = crud_emission.test.get_multi_sync(db, skip=skip, limit=limit)
-    total = crud_emission.test.count_sync(db)
+    
+    # Query directly to avoid nested dictionary issues
+    query = db.query(TestModel)
+    total = query.count()
+    tests = query.order_by(desc(TestModel.test_date)).offset(skip).limit(limit).all()
     return {"tests": tests, "total": total}
 
 

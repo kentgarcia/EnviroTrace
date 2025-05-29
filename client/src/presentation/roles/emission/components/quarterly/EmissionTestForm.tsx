@@ -15,13 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/presentation/components/shared/ui/select";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/presentation/components/shared/ui/radio-group";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
 import { Loader2, Search } from "lucide-react";
-import { EmissionTest, Vehicle } from "@/core/hooks/quarterly/useQuarterlyTesting";
+import { EmissionTest } from "@/core/hooks/emission/useQuarterlyTesting";
+import { Vehicle } from "@/core/api/emission-service";
 import {
   Command,
   CommandEmpty,
@@ -36,12 +41,8 @@ import {
   PopoverTrigger,
 } from "@/presentation/components/shared/ui/popover";
 import { cn } from "@/core/utils/utils";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/presentation/components/shared/ui/radio-group";
 
-// Form validation schema
+// Form validation schema - Aligned with database schema
 const testFormSchema = z.object({
   vehicleId: z.string().min(1, { message: "Vehicle must be selected" }),
   testDate: z.string().refine(
@@ -63,7 +64,7 @@ const testFormSchema = z.object({
     .int()
     .min(1, { message: "Quarter must be between 1 and 4" })
     .max(4, { message: "Quarter must be between 1 and 4" }),
-  result: z.boolean(),
+  result: z.union([z.boolean(), z.null()]).optional(),
 });
 
 type TestFormValues = z.infer<typeof testFormSchema>;
@@ -105,20 +106,18 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
     } catch (error) {
       return format(new Date(), "yyyy-MM-dd");
     }
-  };
-
-  // Set default values
+  };  // Set default values - Aligned with database schema
   const defaultValues: TestFormValues = {
-    vehicleId: initialValues?.vehicleId || "",
-    testDate: initialValues?.testDate
-      ? formatDate(initialValues.testDate)
+    vehicleId: initialValues?.vehicle_id || "",
+    testDate: initialValues?.test_date
+      ? formatDate(initialValues.test_date)
       : format(new Date(), "yyyy-MM-dd"),
     year: initialValues?.year || scheduleYear || new Date().getFullYear(),
     quarter:
       initialValues?.quarter ||
       scheduleQuarter ||
       Math.ceil((new Date().getMonth() + 1) / 3),
-    result: initialValues?.result ?? false,
+    result: initialValues?.result ?? null,
   };
 
   // Initialize form
@@ -143,12 +142,11 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
         setSelectedVehicle(vehicle);
         form.setValue("vehicleId", vehicle.id);
         setSearchResults([vehicle]);
-      } else {
-        // If exact match not found, filter from available vehicles
+      } else {        // If exact match not found, filter from available vehicles
         const filteredVehicles = vehicles.filter(
           (v) =>
-            v.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            v.driverName.toLowerCase().includes(searchQuery.toLowerCase())
+            v.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            v.driver_name.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setSearchResults(filteredVehicles.slice(0, 10));
       }
@@ -158,11 +156,10 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
       setIsSearching(false);
     }
   };
-
   // Update selected vehicle when changed
   useEffect(() => {
-    if (initialValues?.vehicleId) {
-      const vehicle = vehicles.find((v) => v.id === initialValues.vehicleId);
+    if (initialValues?.vehicle_id) {
+      const vehicle = vehicles.find((v) => v.id === initialValues.vehicle_id);
       if (vehicle) {
         setSelectedVehicle(vehicle);
       }
@@ -194,10 +191,9 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
                       role="combobox"
                       aria-expanded={open}
                       className="w-full justify-between"
-                    >
-                      {field.value && selectedVehicle
-                        ? `${selectedVehicle.plateNumber} - ${selectedVehicle.driverName}`
-                        : "Search for a vehicle..."}
+                    >                      {field.value && selectedVehicle
+                      ? `${selectedVehicle.plate_number} - ${selectedVehicle.driver_name}`
+                      : "Search for a vehicle..."}
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
@@ -239,13 +235,12 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
                                   setOpen(false);
                                 }}
                                 className="cursor-pointer"
-                              >
-                                <div className="flex flex-col">
+                              >                                <div className="flex flex-col">
                                   <span className="font-medium">
-                                    {vehicle.plateNumber}
+                                    {vehicle.plate_number}
                                   </span>
                                   <span className="text-sm text-muted-foreground">
-                                    {vehicle.driverName} - {vehicle.officeName}
+                                    {vehicle.driver_name} - {vehicle.office?.name || "Unknown Office"}
                                   </span>
                                 </div>
                               </CommandItem>
@@ -327,9 +322,7 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
               <FormMessage />
             </FormItem>
           )}
-        />
-
-        {/* Result */}
+        />        {/* Result */}
         <FormField
           control={form.control}
           name="result"
@@ -338,10 +331,26 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
               <FormLabel>Test Result</FormLabel>
               <FormControl>
                 <RadioGroup
-                  onValueChange={(value) => field.onChange(value === "passed")}
-                  defaultValue={field.value ? "passed" : "failed"}
+                  onValueChange={(value) => {
+                    if (value === "passed") field.onChange(true);
+                    else if (value === "failed") field.onChange(false);
+                    else field.onChange(null);
+                  }}
+                  defaultValue={
+                    field.value === true ? "passed" :
+                      field.value === false ? "failed" :
+                        "not-tested"
+                  }
                   className="flex flex-col space-y-1"
                 >
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="not-tested" />
+                    </FormControl>
+                    <FormLabel className="font-normal text-gray-600">
+                      Not Tested
+                    </FormLabel>
+                  </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
                       <RadioGroupItem value="passed" />
@@ -362,8 +371,7 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
               </FormControl>
               <FormMessage />
             </FormItem>
-          )}
-        />
+          )} />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button

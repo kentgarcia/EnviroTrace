@@ -5,9 +5,8 @@ import {
     useQuarterlyTesting,
     EmissionTest,
     TestSchedule,
-    useEmissionTests,
 } from "@/core/hooks/emission/useQuarterlyTesting";
-import { useVehicles } from "@/core/api/emission-service";
+import { useVehicles, TestScheduleInput } from "@/core/api/emission-service";
 
 export const useQuarterlyTestingLogic = () => {
     // State for UI modals and dialogs
@@ -25,9 +24,7 @@ export const useQuarterlyTestingLogic = () => {
     const [search, setSearch] = useState("");
     const [result, setResult] = useState("");
     const [activeTab, setActiveTab] = useState<string>("schedule");
-    const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
-
-    // Get data and actions from our custom hook
+    const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);    // Get data and actions from our custom hook
     const {
         scheduleFilters,
         testFilters,
@@ -38,6 +35,7 @@ export const useQuarterlyTestingLogic = () => {
         handleYearChange,
         handleQuarterChange,
         schedules,
+        emissionTests, // Use the enhanced emission tests from main hook
         refetchSchedules,
         refetchTests,
         addSchedule,
@@ -48,12 +46,6 @@ export const useQuarterlyTestingLogic = () => {
         removeTest,
         getVehicleByPlateOrId,
     } = useQuarterlyTesting();
-
-    // Get emission test data
-    const { data: testsData } = useEmissionTests(
-        selectedScheduleId ? { vehicleId: selectedScheduleId } : {}
-    );
-    const emissionTests = testsData || [];
 
     // Get vehicles data for test forms
     const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles();
@@ -68,13 +60,12 @@ export const useQuarterlyTestingLogic = () => {
         // Search by plate, driver, or office
         const searchMatch = t.vehicle?.plate_number?.toLowerCase().includes(search.toLowerCase()) ||
             t.vehicle?.driver_name?.toLowerCase().includes(search.toLowerCase()) ||
-            t.vehicle?.office_name?.toLowerCase().includes(search.toLowerCase());
-
-        // Result filter
+            t.vehicle?.office_name?.toLowerCase().includes(search.toLowerCase());        // Result filter
         let resultMatch = true;
         if (result === "passed") resultMatch = t.result === true;
         else if (result === "failed") resultMatch = t.result === false;
         else if (result === "untested") resultMatch = t.result == null;
+        else if (result === "all" || result === "") resultMatch = true;
 
         return searchMatch && resultMatch;
     });
@@ -83,12 +74,19 @@ export const useQuarterlyTestingLogic = () => {
     const handleViewTests = (schedule: TestSchedule) => {
         selectSchedule(schedule.id);
         setActiveTab("tests");
-    };
-
-    const handleAddSchedule = async (scheduleData: any) => {
+    }; const handleAddSchedule = async (scheduleData: any) => {
         setIsSubmitting(true);
         try {
-            await addSchedule(scheduleData);
+            // Convert camelCase form data to snake_case for backend
+            const backendData: TestScheduleInput = {
+                year: scheduleData.year,
+                quarter: scheduleData.quarter,
+                assigned_personnel: scheduleData.assignedPersonnel,
+                conducted_on: scheduleData.conductedOn,
+                location: scheduleData.location,
+            };
+
+            await addSchedule(backendData);
             setIsAddScheduleOpen(false);
             toast.success(
                 `Test schedule for Q${scheduleData.quarter}, ${scheduleData.year} has been created.`
@@ -99,14 +97,21 @@ export const useQuarterlyTestingLogic = () => {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleEditSchedule = async (scheduleData: any) => {
+    }; const handleEditSchedule = async (scheduleData: any) => {
         if (!scheduleToEdit) return;
         setIsSubmitting(true);
 
         try {
-            await editSchedule(scheduleToEdit.id, scheduleData);
+            // Convert camelCase form data to snake_case for backend
+            const backendData: Partial<TestScheduleInput> = {
+                year: scheduleData.year,
+                quarter: scheduleData.quarter,
+                assigned_personnel: scheduleData.assignedPersonnel,
+                conducted_on: scheduleData.conductedOn,
+                location: scheduleData.location,
+            };
+
+            await editSchedule(scheduleToEdit.id, backendData);
             setIsEditScheduleOpen(false);
             setScheduleToEdit(null);
             toast.success(
@@ -142,13 +147,20 @@ export const useQuarterlyTestingLogic = () => {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    // Test Management
+    };    // Test Management
     const handleAddTest = async (testData: any) => {
         setIsSubmitting(true);
         try {
-            await addTest(testData);
+            // Transform camelCase form data to snake_case for backend (simplified schema)
+            const backendData = {
+                vehicle_id: testData.vehicleId,
+                test_date: testData.testDate,
+                year: testData.year,
+                quarter: testData.quarter,
+                result: testData.result,
+            };
+
+            await addTest(backendData);
             setIsAddTestOpen(false);
             toast.success("Vehicle emission test has been added successfully.");
         } catch (error) {
@@ -157,14 +169,21 @@ export const useQuarterlyTestingLogic = () => {
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const handleEditTest = async (testData: any) => {
+    }; const handleEditTest = async (testData: any) => {
         if (!testToEdit) return;
         setIsSubmitting(true);
 
         try {
-            await editTest(testToEdit.id, testData);
+            // Transform camelCase form data to snake_case for backend (simplified schema)
+            const backendData = {
+                vehicle_id: testData.vehicleId,
+                test_date: testData.testDate,
+                year: testData.year,
+                quarter: testData.quarter,
+                result: testData.result,
+            };
+
+            await editTest(testToEdit.id, backendData);
             setIsEditTestOpen(false);
             setTestToEdit(null);
             toast.success("Vehicle emission test has been updated successfully.");
@@ -266,9 +285,7 @@ export const useQuarterlyTestingLogic = () => {
         activeTab,
         setActiveTab,
         selectedScheduleId,
-        setSelectedScheduleId,
-
-        // Data
+        setSelectedScheduleId,        // Data
         schedules,
         emissionTests,
         filteredTests,
@@ -277,6 +294,12 @@ export const useQuarterlyTestingLogic = () => {
         selectedSchedule,
         isLoading,
         error,
+
+        // Year/Quarter filtering
+        scheduleFilters,
+        availableYears,
+        handleYearChange,
+        handleQuarterChange,
 
         // Handlers
         handleViewTests,

@@ -60,6 +60,12 @@ export default function QuarterlyTesting() {
     isLoading,
     error,
 
+    // Year/Quarter filtering
+    scheduleFilters,
+    availableYears,
+    handleYearChange,
+    handleQuarterChange,
+
     // Handlers
     handleAddSchedule,
     handleEditSchedule,
@@ -84,13 +90,23 @@ export default function QuarterlyTesting() {
           />
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-            {/* Controls Row: Search left, Filters right */}
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">            {/* Controls Row: Search left, Filters right */}
             <QuarterlyTestingFilters
               search={search}
               onSearchChange={setSearch}
               result={result}
               onResultChange={setResult}
+              selectedYear={scheduleFilters.year}
+              selectedQuarter={scheduleFilters.quarter}
+              availableYears={availableYears} onYearChange={(year) => handleYearChange(parseInt(year, 10))}
+              onQuarterChange={(quarter) => {
+                if (quarter === "all") {
+                  // Use the current quarter from scheduleFilters as fallback
+                  handleQuarterChange(scheduleFilters.quarter);
+                } else {
+                  handleQuarterChange(parseInt(quarter, 10));
+                }
+              }}
             />
 
             {/* Error Notice */}
@@ -107,30 +123,30 @@ export default function QuarterlyTesting() {
 
             {/* Main Content Card (Schedule Table) */}
             <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
-              <div className="p-6">
-                <ScheduleTable
-                  schedules={schedules}
-                  isLoading={isLoading}
-                  emissionTests={emissionTests}
-                  selectedScheduleId={selectedScheduleId}
-                  setSelectedScheduleId={setSelectedScheduleId}
-                  onEditTest={(test) => {
-                    setTestToEdit(test);
-                    setIsEditTestOpen(true);
-                  }}
-                  onDeleteTest={(test) => {
-                    setTestToDelete(test);
-                    setIsDeleteTestOpen(true);
-                  }}
-                  onEditSchedule={(schedule) => {
-                    setScheduleToEdit(schedule);
-                    setIsEditScheduleOpen(true);
-                  }}
-                  onDeleteSchedule={(schedule) => {
-                    setScheduleToDelete(schedule);
-                    setIsDeleteScheduleOpen(true);
-                  }}
-                />
+              <div className="p-6">                <ScheduleTable
+                schedules={schedules}
+                isLoading={isLoading}
+                emissionTests={emissionTests}
+                selectedScheduleId={selectedScheduleId}
+                setSelectedScheduleId={setSelectedScheduleId}
+                onEditTest={(test) => {
+                  setTestToEdit(test);
+                  setIsEditTestOpen(true);
+                }}
+                onDeleteTest={(test) => {
+                  setTestToDelete(test);
+                  setIsDeleteTestOpen(true);
+                }}
+                onAddTest={() => setIsAddTestOpen(true)}
+                onEditSchedule={(schedule) => {
+                  setScheduleToEdit(schedule);
+                  setIsEditScheduleOpen(true);
+                }}
+                onDeleteSchedule={(schedule) => {
+                  setScheduleToDelete(schedule);
+                  setIsDeleteScheduleOpen(true);
+                }}
+              />
               </div>
             </Card>
 

@@ -58,7 +58,7 @@ def get_current_user(
 
     token_data = TokenPayload(sub=user_id) # Pydantic validation
     
-    user_obj = crud_user.get(db, id=token_data.sub) # Use 'sub' as user_id
+    user_obj = crud_user.get_sync(db, id=token_data.sub) # Use sync version for sync database session
     if not user_obj:
         raise credentials_exception
     # if not user_obj.is_active: # Add is_active to User model if you have it

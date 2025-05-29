@@ -84,7 +84,7 @@ const API_ENDPOINTS = {
   VEHICLES: "/emission/vehicles",
   FILTER_OPTIONS: "/emission/vehicles/filters/options",
   TESTS: "/emission/tests",
-  SCHEDULES: "/emission/schedules",
+  SCHEDULES: "/emission/test-schedules",
   DRIVER_HISTORY: "/emission/vehicles/driver-history",
   OFFICE_COMPLIANCE: "/emission/offices/compliance",
 };
@@ -104,6 +104,9 @@ export function useOffices(search?: string, skip = 0, limit = 100) {
       );
       return data;
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes - offices don't change frequently
+    gcTime: 20 * 60 * 1000, // 20 minutes cache time
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -185,6 +188,11 @@ export function useVehicles(filters?: VehicleFilters, skip = 0, limit = 100) {
       );
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh for 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes - cache time (formerly cacheTime)
+    placeholderData: (previousData) => previousData, // Keep previous data while loading new data
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    retry: 2, // Retry failed requests 2 times
   });
 }
 
@@ -210,6 +218,9 @@ export function useFilterOptions() {
       );
       return data;
     },
+    staleTime: 15 * 60 * 1000, // 15 minutes - filter options don't change often
+    gcTime: 30 * 60 * 1000, // 30 minutes cache time
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -268,20 +279,15 @@ export function useDeleteVehicle() {
   });
 }
 
-// Emission Test Types
+// Emission Test Types - Aligned with database schema
 export interface EmissionTest {
   id: string;
   vehicle_id: string;
   test_date: string;
   quarter: number;
   year: number;
-  result: boolean;
-  co_level: number;
-  hc_level: number;
-  smoke_opacity?: number;
-  remarks?: string;
-  technician_name: string;
-  testing_center: string;
+  result: boolean | null;
+  created_by: string;
   created_at: string;
   updated_at: string;
 }
@@ -291,13 +297,7 @@ export interface EmissionTestInput {
   test_date: string;
   quarter: number;
   year: number;
-  result: boolean;
-  co_level: number;
-  hc_level: number;
-  smoke_opacity?: number;
-  remarks?: string;
-  technician_name: string;
-  testing_center: string;
+  result: boolean | null;
 }
 
 export interface TestSchedule {
@@ -307,7 +307,7 @@ export interface TestSchedule {
   assigned_personnel: string;
   conducted_on: string;
   location: string;
-  status: "pending" | "completed" | "cancelled";
+  status?: "pending" | "completed" | "cancelled";
   created_at: string;
   updated_at: string;
 }
@@ -402,9 +402,10 @@ export function useTestSchedules() {
   return useQuery<TestSchedule[]>({
     queryKey: ["test-schedules"],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ schedules: TestSchedule[] }>(
-        API_ENDPOINTS.SCHEDULES
-      );
+      const { data } = await apiClient.get<{
+        schedules: TestSchedule[];
+        total: number;
+      }>(API_ENDPOINTS.SCHEDULES);
       return data.schedules;
     },
   });

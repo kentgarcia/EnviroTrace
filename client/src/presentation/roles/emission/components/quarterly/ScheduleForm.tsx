@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/presentation/components/shared/ui/dialog";
-import { TestSchedule } from "@/core/hooks/quarterly/useQuarterlyTesting";
+import { TestSchedule } from "@/core/hooks/emission/useQuarterlyTesting";
 import {
   Popover,
   PopoverContent,
@@ -105,15 +105,14 @@ export const ScheduleForm: React.FC<ScheduleFormProps> = ({
       return "";
     }
   };
-
-  // Set default values
+  // Set default values - convert snake_case backend data to camelCase for form
   const defaultValues: ScheduleFormValues = {
     year: initialValues?.year || currentYear,
     quarter: initialValues?.quarter || 1,
-    assignedPersonnel: initialValues?.assignedPersonnel || "",
+    assignedPersonnel: initialValues?.assigned_personnel || "",
     location: initialValues?.location || "",
-    conductedOn: initialValues?.conductedOn
-      ? formatDate(initialValues.conductedOn)
+    conductedOn: initialValues?.conducted_on
+      ? formatDate(initialValues.conducted_on)
       : format(new Date(), "yyyy-MM-dd"),
   };
 

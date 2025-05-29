@@ -2,16 +2,21 @@
 from typing import Any, Dict, Optional, Union, List
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from sqlalchemy import update, delete
+from sqlalchemy import delete
 from sqlalchemy.orm import selectinload
 
 from app.crud.base_crud import CRUDBase
 from app.models.auth_models import User, UserRoleMapping, UserRoleEnum
 from app.schemas.user_schemas import UserCreate, UserUpdate
-from app.core.security import get_password_hash # We'll create this in security.py
+from app.core.security import get_password_hash, verify_password
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
+    def get_sync(self, db: Session, *, id: Any) -> Optional[User]:
+        """Synchronous version of get for use with sync sessions"""
+        return db.query(self.model).filter(self.model.id == id).first()
+
     async def get_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
         result = await db.execute(select(self.model).filter(User.email == email))
         return result.scalars().first()

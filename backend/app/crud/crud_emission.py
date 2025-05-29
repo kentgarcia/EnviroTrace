@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import desc, or_
 from uuid import UUID
+import traceback
 from app.crud.base_crud import CRUDBase
 from app.models.emission_models import Office, Vehicle, Test, TestSchedule, VehicleDriverHistory
 from app.schemas.emission_schemas import OfficeCreate, OfficeUpdate, VehicleCreate, VehicleUpdate, TestCreate, TestUpdate, TestScheduleCreate, TestScheduleUpdate, VehicleDriverHistoryCreate, OfficeComplianceData, OfficeComplianceSummary
@@ -66,15 +67,18 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Vehicle]:
         """Synchronous version of get for use with sync sessions"""
         return db.query(self.model).filter(self.model.id == id).first()
-    
     def create_sync(self, db: Session, *, obj_in: VehicleCreate) -> Vehicle:
         """Synchronous version of create for use with sync sessions"""
-        obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        try:
+            obj_in_data = obj_in.model_dump()
+            db_obj = self.model(**obj_in_data)
+            db.add(db_obj)
+            db.commit()
+            db.refresh(db_obj)
+            return db_obj
+        except Exception as e:
+            db.rollback()
+            raise RuntimeError(f"Error creating vehicle: {str(e)}")
     
     def update_sync(self, db: Session, *, db_obj: Vehicle, obj_in: VehicleUpdate) -> Vehicle:
         """Synchronous version of update for use with sync sessions"""
@@ -134,26 +138,43 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
                 setattr(vehicle, "latest_test_date", None)
         
         return {"vehicles": vehicles, "total": total}
-    
     def get_with_test_info(self, db: Session, *, id: UUID):
         """Get a specific vehicle with its latest test information"""
-        vehicle = db.query(Vehicle).filter(Vehicle.id == id).first()
-        if not vehicle:
-            return None
+        print("DEBUG: Getting vehicle with ID:", id)
+        
+        try:
+            vehicle = db.query(Vehicle).filter(Vehicle.id == id).first()
+            print("DEBUG: Vehicle query result:", vehicle)
             
-        latest_test = db.query(Test)\
-            .filter(Test.vehicle_id == vehicle.id)\
-            .order_by(desc(Test.test_date))\
-            .first()
+            if not vehicle:
+                print("DEBUG: Vehicle not found")
+                return None
+                
+            print("DEBUG: Getting latest test for vehicle")
+            latest_test = db.query(Test)\
+                .filter(Test.vehicle_id == vehicle.id)\
+                .order_by(desc(Test.test_date))\
+                .first()
+                
+            print("DEBUG: Latest test:", latest_test)
+                
+            if latest_test:
+                print("DEBUG: Setting test result and date attributes")
+                setattr(vehicle, "latest_test_result", latest_test.result)
+                setattr(vehicle, "latest_test_date", latest_test.test_date)
+            else:
+                print("DEBUG: No test found, setting null attributes")
+                setattr(vehicle, "latest_test_result", None)
+                setattr(vehicle, "latest_test_date", None)
+                
+            print("DEBUG: Returning vehicle")
+            return vehicle
             
-        if latest_test:
-            setattr(vehicle, "latest_test_result", latest_test.result)
-            setattr(vehicle, "latest_test_date", latest_test.test_date)
-        else:
-            setattr(vehicle, "latest_test_result", None)
-            setattr(vehicle, "latest_test_date", None)
-            
-        return vehicle
+        except Exception as e:
+            print("DEBUG ERROR in get_with_test_info:", str(e))
+            import traceback
+            traceback.print_exc()
+            raise
     
     def get_unique_values(self, db: Session):
         """Get unique values for filter dropdowns"""
@@ -206,6 +227,25 @@ class CRUDTest(CRUDBase[Test, TestCreate, TestUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Test]:
         """Synchronous version of get for use with sync sessions"""
         return db.query(self.model).filter(self.model.id == id).first()
+    def create_sync(self, db: Session, *, obj_in: TestCreate) -> Test:
+        """Synchronous version of create for use with sync sessions"""
+        obj_in_data = obj_in.model_dump()
+        db_obj = self.model(**obj_in_data)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+        
+    def get_multi_sync(self, db: Session, *, skip: int = 0, limit: int = 100):
+        """Synchronous version of get_multi for use with sync sessions"""
+        query = db.query(self.model)
+        total = query.count()
+        tests = query.order_by(desc(Test.test_date)).offset(skip).limit(limit).all()
+        return {"tests": tests, "total": total}
+    
+    def count_sync(self, db: Session) -> int:
+        """Synchronous version of count for use with sync sessions"""
+        return db.query(self.model).count()
     
     def update_sync(self, db: Session, *, db_obj: Test, obj_in: TestUpdate) -> Test:
         """Synchronous version of update for use with sync sessions"""
@@ -239,7 +279,22 @@ class CRUDTest(CRUDBase[Test, TestCreate, TestUpdate]):
 class CRUDTestSchedule(CRUDBase[TestSchedule, TestScheduleCreate, TestScheduleUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[TestSchedule]:
         """Synchronous version of get for use with sync sessions"""
-        return db.query(self.model).filter(self.model.id == id).first()
+        return db.query(self.model).filter(self.model.id == id).first()    
+    def create_sync(self, db: Session, *, obj_in: TestScheduleCreate) -> TestSchedule:
+        """Synchronous version of create for use with sync sessions"""
+        obj_in_data = obj_in.model_dump()
+        db_obj = self.model(**obj_in_data)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    def get_multi_sync(self, db: Session, *, skip: int = 0, limit: int = 100):
+        """Synchronous version of get_multi for use with sync sessions"""
+        return db.query(self.model).offset(skip).limit(limit).all()
+    
+    def count_sync(self, db: Session) -> int:
+        """Synchronous count method for TestSchedule model"""
+        return db.query(self.model).count()
     
     def update_sync(self, db: Session, *, db_obj: TestSchedule, obj_in: TestScheduleUpdate) -> TestSchedule:
         """Synchronous version of update for use with sync sessions"""

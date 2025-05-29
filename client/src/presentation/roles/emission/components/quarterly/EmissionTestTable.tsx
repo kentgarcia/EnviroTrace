@@ -15,6 +15,8 @@ import {
   Trash,
   CheckCircle,
   XCircle,
+  Plus,
+  Clock,
 } from "lucide-react";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import EmissionTestFilterBar from "./EmissionTestFilterBar";
@@ -27,6 +29,7 @@ interface EmissionTestTableProps {
   isLoading: boolean;
   onEditTest: (test: EmissionTest) => void;
   onDeleteTest: (test: EmissionTest) => void;
+  onAddTest?: () => void;
   search: string;
   onSearchChange: (value: string) => void;
   result: string;
@@ -38,6 +41,7 @@ export const EmissionTestTable: React.FC<EmissionTestTableProps> = ({
   isLoading,
   onEditTest,
   onDeleteTest,
+  onAddTest,
   search,
   onSearchChange,
   result,
@@ -53,11 +57,9 @@ export const EmissionTestTable: React.FC<EmissionTestTableProps> = ({
       !search ||
       test.vehicle?.plate_number?.toLowerCase().includes(search.toLowerCase()) ||
       test.vehicle?.driver_name?.toLowerCase().includes(search.toLowerCase()) ||
-      test.vehicle?.office_name?.toLowerCase().includes(search.toLowerCase());
-
-    // Result filter
+      test.vehicle?.office_name?.toLowerCase().includes(search.toLowerCase());    // Result filter
     const resultMatch =
-      !result ||
+      !result || result === "all" ||
       (result === "passed" && test.result === true) ||
       (result === "failed" && test.result === false) ||
       (result === "untested" && test.result == null);
@@ -101,21 +103,25 @@ export const EmissionTestTable: React.FC<EmissionTestTableProps> = ({
         return "Invalid date";
       }
     },
-  },
-  {
+  }, {
     accessorKey: "result",
     header: "Result",
     cell: ({ row }) => (
       <div className="flex items-center">
-        {row.original.result ? (
+        {row.original.result === true ? (
           <>
             <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
             <span className="text-green-600">Passed</span>
           </>
-        ) : (
+        ) : row.original.result === false ? (
           <>
             <XCircle className="h-4 w-4 text-red-600 mr-1" />
             <span className="text-red-600">Failed</span>
+          </>
+        ) : (
+          <>
+            <Clock className="h-4 w-4 text-gray-500 mr-1" />
+            <span className="text-gray-500">Not Tested</span>
           </>
         )}
         {isPendingSync(row.original.id) && (
@@ -159,15 +165,22 @@ export const EmissionTestTable: React.FC<EmissionTestTableProps> = ({
     ),
   },
   ];
-
   return (
     <div>
-      <EmissionTestFilterBar
-        search={search}
-        onSearchChange={onSearchChange}
-        result={result}
-        onResultChange={onResultChange}
-      />
+      <div className="flex items-center justify-between mb-4">
+        <EmissionTestFilterBar
+          search={search}
+          onSearchChange={onSearchChange}
+          result={result}
+          onResultChange={onResultChange}
+        />
+        {onAddTest && (
+          <Button onClick={onAddTest} className="ml-4">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Test
+          </Button>
+        )}
+      </div>
       <DataTable
         columns={columns}
         data={filteredTests}

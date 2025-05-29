@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Button } from "@/presentation/components/shared/ui/button";
@@ -33,6 +33,7 @@ interface ScheduleTableProps {
   setSelectedScheduleId: React.Dispatch<React.SetStateAction<string | null>>;
   onEditTest: (test: EmissionTest) => void;
   onDeleteTest: (test: EmissionTest) => void;
+  onAddTest: () => void;
   onEditSchedule: (schedule: TestSchedule) => void;
   onDeleteSchedule: (schedule: TestSchedule) => void;
 }
@@ -45,12 +46,12 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
   setSelectedScheduleId,
   onEditTest,
   onDeleteTest,
+  onAddTest,
   onEditSchedule,
   onDeleteSchedule,
-}) => {
-  // State for test filtering
+}) => {// State for test filtering
   const [testSearch, setTestSearch] = useState("");
-  const [testResult, setTestResult] = useState("");
+  const [testResult, setTestResult] = useState("all");
   // Helper to detect if a schedule is pending sync
   const isPendingSync = (id: string) => id.startsWith("pending-");
 
@@ -64,17 +65,15 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
       accessorKey: "quarter",
       header: "Quarter",
       cell: ({ row }) => `Q${row.original.quarter}`,
-    },
-    {
-      accessorKey: "assignedPersonnel",
+    }, {
+      accessorKey: "assigned_personnel",
       header: "Personnel",
     },
     {
       accessorKey: "location",
       header: "Location",
-    },
-    {
-      accessorKey: "conductedOn",
+    }, {
+      accessorKey: "conducted_on",
       header: "Date",
       cell: ({ row }) => {
         const value = row.original.conducted_on;
@@ -140,16 +139,24 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
           </DropdownMenu>
         </div>
       ),
-    },
-  ];
+    },];
+
+  // Calculate tests for the selected schedule - moved outside conditional to follow Rules of Hooks
+  const selectedSchedule = selectedScheduleId
+    ? schedules.find((s) => s.id === selectedScheduleId)
+    : null;
+  const scheduleTests = useMemo(() => {
+    if (!selectedSchedule || !emissionTests) return [];
+
+    const filtered = emissionTests.filter(
+      (test) => test.year === selectedSchedule.year && test.quarter === selectedSchedule.quarter
+    );
+
+    return filtered;
+  }, [selectedSchedule, emissionTests]);
 
   // Split view: left = schedule list, right = details
   if (selectedScheduleId) {
-    const selectedSchedule = schedules.find((s) => s.id === selectedScheduleId); const scheduleTests = emissionTests.filter(
-      (t) =>
-        t.year === selectedSchedule?.year &&
-        t.quarter === selectedSchedule?.quarter
-    );
     return (
       <div className="flex gap-4">
         {/* Left: Schedule List */}
@@ -222,6 +229,7 @@ export const ScheduleTable: React.FC<ScheduleTableProps> = ({
             isLoading={isLoading}
             onEditTest={onEditTest}
             onDeleteTest={onDeleteTest}
+            onAddTest={onAddTest}
             search={testSearch}
             onSearchChange={setTestSearch}
             result={testResult}

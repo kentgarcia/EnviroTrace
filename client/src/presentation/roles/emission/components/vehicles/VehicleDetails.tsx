@@ -24,6 +24,7 @@ import {
   useEmissionTests
 } from "@/core/api/emission-service";
 import { useVehicle } from "@/core/api/vehicle-service";
+import { formatTestDate, formatTestDateTime, parseDate } from "@/core/utils/dateUtils";
 
 interface VehicleDetailsProps {
   vehicle: Vehicle | null;
@@ -88,20 +89,9 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   // Extract test history from the query result
   const testHistory = testData || [];
-
   if (!vehicle) return null;
 
   const isPendingVehicle = vehicle.id.startsWith("pending-");
-
-  // Helper to parse Postgres timestamp with timezone
-  function parsePgTimestamp(dateString: string) {
-    if (!dateString) return null;
-    // Replace first space with T
-    let isoString = dateString.replace(" ", "T");
-    // Fix timezone: convert +08 or -08 to +08:00 or -08:00
-    isoString = isoString.replace(/([+-]\d{2})(?!:)/, "$1:00");
-    return new Date(isoString);
-  }
 
   return (
     <div className="max-w-3xl w-full mx-auto">
@@ -307,21 +297,14 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">Wheels</h3>
                 <p>{fullVehicle.wheels}</p>
-              </div>
-              <div className="space-y-2">
+              </div>              <div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Latest Test Date
                 </h3>
                 <p>
-                  {fullVehicle.latest_test_date
-                    ? isNaN(Number(fullVehicle.latest_test_date))
-                      ? "Invalid date"
-                      : new Date(
-                        Number(fullVehicle.latest_test_date)
-                      ).toLocaleDateString()
-                    : "Not tested"}
+                  {formatTestDate(fullVehicle.latest_test_date)}
                 </p>
-              </div>              <div className="space-y-2">
+              </div><div className="space-y-2">
                 <h3 className="text-sm font-medium text-gray-500">
                   Latest Test Result
                 </h3>
@@ -379,43 +362,32 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <TableHead>Result</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
-                  {testHistory.map((test) => (
-                    <TableRow key={test.id}>                      <TableCell>
-                      {test.test_date &&
-                        !isNaN(
-                          parsePgTimestamp(
-                            test.test_date as string
-                          )?.getTime() ?? NaN
-                        )
-                        ? format(
-                          parsePgTimestamp(test.test_date as string)!,
-                          "MMM dd, yyyy"
-                        )
-                        : "Invalid date"}
+                <TableBody>                  {testHistory.map((test) => (
+                  <TableRow key={test.id}>                      <TableCell>
+                    {formatTestDate(test.test_date)}
+                  </TableCell>
+                    <TableCell>
+                      Q{test.quarter}, {test.year}
                     </TableCell>
-                      <TableCell>
-                        Q{test.quarter}, {test.year}
-                      </TableCell>
-                      <TableCell>
-                        {test.result ? (
-                          <Badge
-                            variant="outline"
-                            className="bg-green-100 text-green-800"
-                          >
-                            Passed
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="bg-red-100 text-red-800"
-                          >
-                            Failed
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                    <TableCell>
+                      {test.result ? (
+                        <Badge
+                          variant="outline"
+                          className="bg-green-100 text-green-800"
+                        >
+                          Passed
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="bg-red-100 text-red-800"
+                        >
+                          Failed
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
                 </TableBody>
               </Table>
             </div>
@@ -446,12 +418,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 <TableBody>
                   {driverHistory.map((entry, idx) => (
                     <TableRow key={idx}>
-                      <TableCell>{entry.driverName}</TableCell>
-                      <TableCell>
-                        {format(
-                          new Date(Number(entry.changedAt)),
-                          "MMM dd, yyyy HH:mm"
-                        )}
+                      <TableCell>{entry.driverName}</TableCell>                      <TableCell>
+                        {formatTestDateTime(entry.changedAt)}
                       </TableCell>
                       <TableCell>{entry.changedBy || "—"}</TableCell>
                     </TableRow>

@@ -11,6 +11,7 @@ import {
   RowSelectionState,
 } from "@tanstack/react-table";
 import { NetworkStatus } from "@/presentation/components/shared/layout/NetworkStatus";
+import { formatDate } from "@/core/utils/dateUtils";
 import {
   useVehicles,
   useFilterOptions,
@@ -22,6 +23,7 @@ import {
   VehicleFilters,
   VehicleFormInput,
 } from "@/core/api/emission-service";
+import { useDebounce } from "@/hooks/useDebounce";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   VehicleTable,
@@ -56,6 +58,22 @@ import {
   DropdownMenuItem,
 } from "@/presentation/components/shared/ui/dropdown-menu";
 import { Badge } from "@/presentation/components/shared/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/presentation/components/shared/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/presentation/components/shared/ui/pagination";
 
 export default function Vehicles() {
   // Modal and dialog states
@@ -64,11 +82,10 @@ export default function Vehicles() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-
   // Pagination state
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 25, // Increased from 10 to 25 for better scalability
   });
 
   // Filter states
@@ -78,17 +95,20 @@ export default function Vehicles() {
   const [engineType, setEngineType] = useState("");
   const [status, setStatus] = useState("");
 
-  // Build filters object
+  // Debounce search to prevent excessive API calls
+  const debouncedSearch = useDebounce(search, 300); // 300ms delay
+
+  // Build filters object using debounced search
   const filters: VehicleFilters = useMemo(() => {
     const result: VehicleFilters = {};
 
-    if (search) result.search = search;
+    if (debouncedSearch) result.search = debouncedSearch;
     if (office) result.office_name = office;
     if (vehicleType) result.vehicle_type = vehicleType;
     if (engineType) result.engine_type = engineType;
 
     return result;
-  }, [search, office, vehicleType, engineType]);
+  }, [debouncedSearch, office, vehicleType, engineType]);
 
   // Get vehicles data using the new API service
   const {
@@ -268,26 +288,22 @@ export default function Vehicles() {
 
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent +=
-      "Plate Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact,Latest Test,Test Result\n";
+      "Plate Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact,Latest Test,Test Result\n"; vehicles.forEach((vehicle) => {
+        const testDate = formatDate(vehicle.latest_test_date, "yyyy-MM-dd", "Not Tested");
 
-    vehicles.forEach((vehicle) => {
-      const testDate = vehicle.latest_test_date
-        ? format(new Date(vehicle.latest_test_date), "yyyy-MM-dd")
-        : "Not Tested";
+        const testResult =
+          vehicle.latest_test_result === null
+            ? "Not Tested"
+            : vehicle.latest_test_result
+              ? "Passed"
+              : "Failed";
 
-      const testResult =
-        vehicle.latest_test_result === null
-          ? "Not Tested"
-          : vehicle.latest_test_result
-            ? "Passed"
-            : "Failed";
+        const officeName = vehicle.office?.name || "Unknown Office";
 
-      const officeName = vehicle.office?.name || "Unknown Office";
-
-      csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
-        }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
-        }","${vehicle.contact_number || ""}","${testDate}","${testResult}"\n`;
-    });
+        csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
+          }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
+          }","${vehicle.contact_number || ""}","${testDate}","${testResult}"\n`;
+      });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -362,8 +378,7 @@ export default function Vehicles() {
           {/* Body Section */}
           <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
             {/* Controls Row: Search left, Filters right */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              {/* Search (left) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">              {/* Search (left) */}
               <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
                 <Input
                   placeholder="Search by plate, driver, or office..."
@@ -372,8 +387,20 @@ export default function Vehicles() {
                   className="pl-8 max-w-xs w-[320px] bg-white"
                 />
                 <span className="absolute left-3 text-gray-400">
-                  <Search className="h-4 w-4" />
+                  {search && search !== debouncedSearch ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
                 </span>
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               {/* Filters (right) */}
               <div className="flex flex-wrap gap-2 items-center justify-end">
@@ -677,9 +704,130 @@ export default function Vehicles() {
 
                     toast.success("Vehicle updated successfully");
                   }}
-                />
-                )}
+                />)}
               </div>
+
+              {/* Pagination Controls */}
+              {vehiclesData && vehiclesData.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                  {/* Results info */}
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-gray-500">
+                      Showing {pagination.pageIndex * pagination.pageSize + 1} to{' '}
+                      {Math.min((pagination.pageIndex + 1) * pagination.pageSize, vehiclesData.total)} of{' '}
+                      {vehiclesData.total} vehicles
+                    </div>
+
+                    {/* Page size selector */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">Rows per page:</span>
+                      <Select
+                        value={pagination.pageSize.toString()}
+                        onValueChange={(value) =>
+                          setPagination(prev => ({ ...prev, pageSize: Number(value), pageIndex: 0 }))
+                        }
+                      >
+                        <SelectTrigger className="w-[70px] h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="10">10</SelectItem>
+                          <SelectItem value="25">25</SelectItem>
+                          <SelectItem value="50">50</SelectItem>
+                          <SelectItem value="100">100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Pagination controls */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPagination(prev => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) }))}
+                      disabled={pagination.pageIndex === 0}
+                      className="border border-gray-200 bg-white shadow-none rounded-none"
+                    >
+                      Previous
+                    </Button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">                      {(() => {
+                      const totalPages = Math.ceil(vehiclesData.total / pagination.pageSize);
+                      const currentPage = pagination.pageIndex + 1;
+                      const pages: (React.ReactElement | React.ReactNode)[] = [];
+
+                      // Show first page
+                      if (currentPage > 3) {
+                        pages.push(
+                          <Button
+                            key={1}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPagination(prev => ({ ...prev, pageIndex: 0 }))}
+                            className="w-8 h-8 p-0 border border-gray-200 bg-white shadow-none rounded-none"
+                          >
+                            1
+                          </Button>
+                        );
+                        if (currentPage > 4) {
+                          pages.push(<span key="ellipsis1" className="text-gray-400">...</span>);
+                        }
+                      }
+
+                      // Show current page and surrounding pages
+                      for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                        pages.push(
+                          <Button
+                            key={i}
+                            variant={i === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPagination(prev => ({ ...prev, pageIndex: i - 1 }))}
+                            className={`w-8 h-8 p-0 shadow-none rounded-none ${i === currentPage
+                              ? "bg-primary text-white border-none"
+                              : "border border-gray-200 bg-white"
+                              }`}
+                          >
+                            {i}
+                          </Button>
+                        );
+                      }
+
+                      // Show last page
+                      if (currentPage < totalPages - 2) {
+                        if (currentPage < totalPages - 3) {
+                          pages.push(<span key="ellipsis2" className="text-gray-400">...</span>);
+                        }
+                        pages.push(
+                          <Button
+                            key={totalPages}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPagination(prev => ({ ...prev, pageIndex: totalPages - 1 }))}
+                            className="w-8 h-8 p-0 border border-gray-200 bg-white shadow-none rounded-none"
+                          >
+                            {totalPages}
+                          </Button>
+                        );
+                      }
+
+                      return pages;
+                    })()}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPagination(prev => ({ ...prev, pageIndex: prev.pageIndex + 1 }))}
+                      disabled={(pagination.pageIndex + 1) * pagination.pageSize >= vehiclesData.total}
+                      className="border border-gray-200 bg-white shadow-none rounded-none"
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           </div>
         </div>

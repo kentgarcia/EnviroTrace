@@ -25,6 +25,7 @@ import { Badge } from "@/presentation/components/shared/ui/badge";
 import { VehicleDetails } from "./VehicleDetails";
 import { Vehicle as ApiVehicle } from "@/core/api/emission-service";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
+import { formatTestDate } from "@/core/utils/dateUtils";
 import {
   Table,
   TableBody,
@@ -131,21 +132,8 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
   // Add a ref to hold the refetch function from VehicleDetails
   const detailsRefetchRef = useRef<null | (() => void)>(null);
-
-  // Helper to format date from milliseconds
-  const formatDate = (dateValue?: string | number | null) => {
-    if (!dateValue) return "Not tested";
-    let date: Date;
-    if (typeof dateValue === "number") {
-      date = new Date(dateValue);
-    } else if (!isNaN(Number(dateValue))) {
-      date = new Date(Number(dateValue));
-    } else {
-      date = new Date(dateValue);
-    }
-    if (isNaN(date.getTime())) return "Invalid date";
-    return format(date, "MMM dd, yyyy");
-  };
+  // Helper to format date from milliseconds - now using the utility function
+  // Note: Keeping this for backward compatibility, but the formatTestDate utility is preferred
   // Render test result badge
   const renderTestResultBadge = (vehicle: Vehicle) => {
     // If it's a pending vehicle (not yet synced)
@@ -260,7 +248,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
           <ArrowUpDown className="ml-1 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => formatDate(row.original.latest_test_date),
+      cell: ({ row }) => formatTestDate(row.original.latest_test_date),
     },
     {
       accessorKey: "latest_test_result",

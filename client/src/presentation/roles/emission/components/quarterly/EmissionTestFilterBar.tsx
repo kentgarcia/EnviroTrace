@@ -37,18 +37,17 @@ export const EmissionTestFilterBar: React.FC<EmissionTestFilterBarProps> = ({
                 </span>
             </div>
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center justify-end">
-                <Select value={result} onValueChange={onResultChange}>
-                    <SelectTrigger className="min-w-[120px] justify-between bg-white pr-8">
-                        {result === "passed" ? "Passed" : result === "failed" ? "Failed" : result === "untested" ? "Not Tested" : "All Results"}
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="">All Results</SelectItem>
-                        <SelectItem value="passed">Passed</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                        <SelectItem value="untested">Not Tested</SelectItem>
-                    </SelectContent>
-                </Select>
+            <div className="flex flex-wrap gap-2 items-center justify-end">                <Select value={result || "all"} onValueChange={onResultChange}>
+                <SelectTrigger className="min-w-[120px] justify-between bg-white pr-8">
+                    <SelectValue placeholder="All Results" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Results</SelectItem>
+                    <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="untested">Not Tested</SelectItem>
+                </SelectContent>
+            </Select>
             </div>
         </div>
     );

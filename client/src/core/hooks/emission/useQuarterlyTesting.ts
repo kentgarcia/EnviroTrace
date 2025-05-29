@@ -41,9 +41,9 @@ interface UseQuarterlyTestingOptions {
 export interface TestScheduleInput {
   year: number;
   quarter: number;
-  scheduled_date: string;
-  vehicle_id: string;
-  notes?: string;
+  assigned_personnel: string;
+  conducted_on: string;
+  location: string;
 }
 
 export function useQuarterlyTesting(options: UseQuarterlyTestingOptions = {}) {
@@ -86,44 +86,63 @@ export function useQuarterlyTesting(options: UseQuarterlyTestingOptions = {}) {
         schedule.year === scheduleFilters.year &&
         schedule.quarter === scheduleFilters.quarter
     );
-  }, [scheduleData, scheduleFilters]);
-
-  // Filtered tests
+  }, [scheduleData, scheduleFilters]); // Filtered tests - synchronized with schedule filters and enhanced with vehicle data
   const emissionTests = useMemo(() => {
     if (!testData) return [];
+
     let filtered = testData;
 
-    if (testFilters.year) {
-      filtered = filtered.filter((test) => test.year === testFilters.year);
-    }
-    if (testFilters.quarter) {
-      filtered = filtered.filter(
-        (test) => test.quarter === testFilters.quarter
+    // Always filter by the same year and quarter as the selected schedules
+    filtered = filtered.filter(
+      (test) =>
+        test.year === scheduleFilters.year &&
+        test.quarter === scheduleFilters.quarter
+    );
+
+    // Transform tests to include vehicle data
+    const testsWithVehicles: EmissionTest[] = filtered.map((test) => {
+      const vehicle = vehicleData?.vehicles?.find(
+        (v) => v.id === test.vehicle_id
       );
-    }
+
+      return {
+        ...test,
+        vehicle: vehicle
+          ? {
+              id: vehicle.id,
+              plate_number: vehicle.plate_number,
+              driver_name: vehicle.driver_name,
+              office_name: vehicle.office?.name || "Unknown Office",
+            }
+          : undefined,
+      };
+    });
+
+    // Apply additional filters from testFilters
+    let finalFiltered = testsWithVehicles;
+
     if (testFilters.vehicleId) {
-      filtered = filtered.filter(
+      finalFiltered = finalFiltered.filter(
         (test) => test.vehicle_id === testFilters.vehicleId
       );
     }
     if (testFilters.result !== undefined) {
-      filtered = filtered.filter((test) => test.result === testFilters.result);
+      finalFiltered = finalFiltered.filter(
+        (test) => test.result === testFilters.result
+      );
     }
     if (testFilters.search) {
       const search = testFilters.search.toLowerCase();
-      filtered = filtered.filter((test) => {
-        const vehicle = vehicleData?.vehicles?.find(
-          (v) => v.id === test.vehicle_id
-        );
+      finalFiltered = finalFiltered.filter((test) => {
         return (
-          vehicle?.plate_number.toLowerCase().includes(search) ||
-          vehicle?.driver_name.toLowerCase().includes(search)
+          test.vehicle?.plate_number.toLowerCase().includes(search) ||
+          test.vehicle?.driver_name.toLowerCase().includes(search)
         );
       });
     }
 
-    return filtered;
-  }, [testData, testFilters, vehicleData]);
+    return finalFiltered;
+  }, [testData, scheduleFilters, testFilters, vehicleData]);
 
   // Vehicle lookup helper
   const getVehicleByPlateOrId = async (searchTerm: string) => {
