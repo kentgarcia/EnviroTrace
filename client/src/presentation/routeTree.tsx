@@ -15,7 +15,8 @@ import { Outlet } from "@tanstack/react-router";
 // import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
 // import { smokeBelchingRoute } from "./roles/belching/belching.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
-// import { urbanGreeningRoute } from "./roles/urban/urban.route";
+import { airQualityRoute } from "./roles/air-quality/air-quality.routes";
+import { urbanGreeningRoute } from "./roles/urban-greening/urban-greening.routes";
 import Unauthorized from "./pages/public/Unauthorized";
 
 // Create a root route
@@ -90,10 +91,11 @@ export const routeTree = rootRoute.addChildren([
   indexRoute,
   dashboardSelectionRoute,
   profileRoute,
+  ...airQualityRoute,
   // ...adminRoutes,
   // ...smokeBelchingRoute,
   ...govEmissionRoute,
-  // ...urbanGreeningRoute,
+  ...urbanGreeningRoute,
   unauthorizedRoute,
   notFoundRoute,
 ]);

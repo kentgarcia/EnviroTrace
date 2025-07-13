@@ -42,7 +42,8 @@ export default function DashboardSelection() {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
     }
-  }; const hasRole = (role: UserRole) => {
+  };
+  const hasRole = (role: UserRole) => {
     // Check both assigned_roles and roles properties of the user object
     const hasDirectRole =
       user?.assigned_roles?.includes(role) ||
@@ -98,8 +99,11 @@ export default function DashboardSelection() {
   console.log("Auth store roles:", storeRoles);
   console.log("Admin role check:", hasRole("admin"));
   console.log("Air quality role check:", hasRole("air_quality"));
-  console.log("Tree management role check:", hasRole("tree_management"));
-  console.log("Government emission role check:", hasRole("government_emission"));
+  console.log("Urban greening role check:", hasRole("urban_greening"));
+  console.log(
+    "Government emission role check:",
+    hasRole("government_emission")
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-b from-ems-green-50 to-ems-blue-50">
@@ -196,17 +200,17 @@ export default function DashboardSelection() {
                 title="Air Quality"
                 description="Monitor air quality metrics, pollution levels, and compliance data"
                 icon="/images/bg_asbu.jpg"
-                onClick={() => handleDashboardSelect("smoke-belching")}
+                onClick={() => handleDashboardSelect("air-quality")}
                 className="border-ems-blue-200 hover:border-ems-blue-400"
               />
             )}
 
-            {hasRole("tree_management") && (
+            {hasRole("urban_greening") && (
               <DashboardCard
-                title="Tree Management"
+                title="Urban Greening"
                 description="Track afforestation efforts, tree health data, and forest coverage"
                 icon="/images/bg_envicompliance.jpg"
-                onClick={() => handleDashboardSelect("tree-management")}
+                onClick={() => handleDashboardSelect("urban-greening")}
                 className="border-ems-green-200 hover:border-ems-green-400"
               />
             )}

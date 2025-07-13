@@ -189,7 +189,7 @@ const GovEmissionOverview: React.FC = () => {
 
   if (error) {
     return (
-      <SidebarProvider>
+      <>
         <div className="flex min-h-screen w-full">
           <div className="flex-1 overflow-auto">
             <TopNavBarContainer dashboardType="government-emission" />
@@ -272,7 +272,7 @@ const GovEmissionOverview: React.FC = () => {
           </div>
         </div>
         <NetworkStatus />
-      </SidebarProvider>
+      </>
     );
   }
 

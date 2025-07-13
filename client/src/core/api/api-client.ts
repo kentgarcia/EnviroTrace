@@ -2,6 +2,21 @@
 import axios, { AxiosError, AxiosInstance } from "axios";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
+// Type definitions
+interface FeeCreate {
+  category: string;
+  rate: number;
+  date_effective: string;
+  offense_level: number;
+}
+
+interface FeeUpdate {
+  category?: string;
+  rate?: number;
+  date_effective?: string;
+  offense_level?: number;
+}
+
 // API base URL - will default to localhost:8000 if env variable is not set
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -50,3 +65,23 @@ apiClient.interceptors.response.use(
 );
 
 export default apiClient;
+
+export const fetchFees = async () => {
+  const res = await apiClient.get("/fees");
+  return res.data;
+};
+
+export const createFee = async (fee: FeeCreate) => {
+  const res = await apiClient.post("/fees", fee);
+  return res.data;
+};
+
+export const updateFee = async (fee_id: number, fee: FeeUpdate) => {
+  const res = await apiClient.put(`/fees/${fee_id}`, fee);
+  return res.data;
+};
+
+export const deleteFee = async (fee_id: number) => {
+  const res = await apiClient.delete(`/fees/${fee_id}`);
+  return res.data;
+};

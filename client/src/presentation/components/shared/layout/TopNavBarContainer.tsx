@@ -14,6 +14,7 @@ import {
   Building,
   ClipboardList,
   FileStack,
+  FileText,
   Cloud,
   Wallet,
   UserCircle,
@@ -27,7 +28,7 @@ import React from "react";
 interface TopNavBarContainerProps {
   dashboardType:
   | "air-quality"
-  | "tree-management"
+  | "urban-greening"
   | "government-emission"
   | "admin"
   | "smoke-belching";
@@ -43,41 +44,44 @@ function getMenuItems(
       {
         label: "Overview",
         icon: <BarChart2 className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/overview`,
+        path: `/air-quality/overview`,
       },
       {
         label: "Smoke Belcher",
         icon: <Cloud className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/smoke-belcher`,
+        path: `/air-quality/smoke-belcher`,
         children: [
           {
             label: "Driver Query",
             icon: <Users className="w-4 h-4 mr-1" />,
-            path: `/smoke-belching/driver-query`,
+            path: `/air-quality/driver-query`,
           },
         ],
       },
       {
-        label: "Order of Payments",
+        label: "Records and File",
         icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/order-of-payments`,
-        children: [
-          {
-            label: "Add Order of Payment",
-            icon: <FileStack className="w-4 h-4 mr-1" />,
-            path: `/smoke-belching/order-of-payment-entry`,
-          },
-        ],
+        path: `/air-quality/records-and-file`,
+      },
+      {
+        label: "Garage Testing",
+        icon: <Car className="w-4 h-4 mr-1" />,
+        path: `/air-quality/garage-testing`,
+      },
+      {
+        label: "Order of Payment",
+        icon: <FileStack className="w-4 h-4 mr-1" />,
+        path: `/air-quality/order-of-payment`,
       },
       {
         label: "Fee Control",
         icon: <Wallet className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/fee-control`,
+        path: `/air-quality/fee-control`,
       },
       {
         label: "Reports",
         icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `/smoke-belching/reports`,
+        path: `/air-quality/reports`,
       },
     ];
   } else if (dashboardType === "admin") {
@@ -141,7 +145,7 @@ function getMenuItems(
         path: `${basePath}/settings`,
       },
     ];
-  } else if (dashboardType === "tree-management") {
+  } else if (dashboardType === "urban-greening") {
     return [
       {
         label: "Dashboard",
@@ -149,9 +153,14 @@ function getMenuItems(
         path: `${basePath}/overview`,
       },
       {
-        label: "Seedling Requests",
+        label: "Monitoring Requests",
+        icon: <FileText className="w-4 h-4 mr-1" />,
+        path: `${basePath}/monitoring-requests`,
+      },
+      {
+        label: "Records",
         icon: <ClipboardList className="w-4 h-4 mr-1" />,
-        path: `${basePath}/seedling-requests`,
+        path: `${basePath}/records`,
       },
     ];
   }
@@ -185,7 +194,7 @@ export default function TopNavBarContainer({
 }: TopNavBarContainerProps) {
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
-  const { signOut, userData } = useAuth();
+  const { signOut, user } = useAuth();
   const clearToken = useAuthStore((state) => state.clearToken);
 
   const handleSignOut = async () => {
@@ -255,11 +264,11 @@ export default function TopNavBarContainer({
     },
   ];
   const userDashboards = dashboardRoleMap.filter((d) =>
-    (userData?.roles as any)?.includes(d.role)
+    (user?.roles as any)?.includes(d.role)
   );
 
   // If user is admin, show all dashboards
-  if (userData?.roles?.includes("admin")) {
+  if (user?.roles?.includes("admin")) {
     userDashboards.splice(0, userDashboards.length, ...dashboardRoleMap);
   }
 
