@@ -195,7 +195,9 @@ export default function TopNavBarContainer({
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const clearToken = useAuthStore((state) => state.clearToken);
+  // Use separate selectors to avoid infinite re-render
+  const clearToken = useAuthStore(state => state.clearToken);
+  const roles = useAuthStore(state => state.roles);
 
   const handleSignOut = async () => {
     await signOut();
@@ -203,6 +205,67 @@ export default function TopNavBarContainer({
     toast.success("Signed out successfully");
     navigate({ to: "/" });
   };
+
+  // --- Dashboard Switch Dropdown Logic ---
+  const dashboardRoleMap = [
+    { role: "admin", label: "Admin Dashboard", path: "/admin/overview" },
+    {
+      role: "air_quality",
+      label: "Air Quality",
+      path: "/air-quality/overview",
+    },
+    {
+      role: "tree_management",
+      label: "Urban Greening",
+      path: "/urban-greening/overview",
+    },
+    {
+      role: "government_emission",
+      label: "Government Emission",
+      path: "/government-emission/overview",
+    },
+    {
+      role: "smoke_belching",
+      label: "Smoke Belching",
+      path: "/smoke-belching/overview",
+    },
+  ];
+
+  // Determine dashboards based on persisted auth store roles
+  // Use persisted auth store roles for switch dashboard
+  // Build switch dashboard dropdown only when user has roles
+  const userRoles: string[] = roles || [];
+  // Remove debug log
+  // console.log("Auth store roles:", userRoles);
+
+  let switchDashboardDropdown: NavItem | null = null;
+
+  if (userRoles.length > 0) {
+    const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
+    // For admin, all dashboards; else only userDashboards
+    const dashboardsToShow = userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
+    // Determine current dashboard
+    const current = dashboardRoleMap.find(d => d.path.includes(`/${dashboardType}`));
+
+    switchDashboardDropdown = {
+      label: (
+        <span className="flex items-center">
+          <Building className="w-4 h-4 mr-1" />
+          Switch Dashboard
+        </span>
+      ),
+      onClick: () => navigate({ to: "/dashboard-selection" }),
+      children: dashboardsToShow.map(d => (
+        <button
+          key={d.role}
+          className="block w-full text-left px-4 py-2 hover:bg-gray-600 uppercase"
+          onClick={() => navigate({ to: d.path })}
+        >
+          {d.label}
+        </button>
+      )),
+    };
+  }
 
   const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute).map(
     (item) => {
@@ -220,7 +283,7 @@ export default function TopNavBarContainer({
           children: item.children.map((child: any) => (
             <button
               key={child.path}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100 uppercase"
+              className="block w-full text-left px-4 py-2 hover:bg-gray-600 uppercase"
               onClick={() => navigate({ to: child.path })}
             >
               <span className="flex items-center">
@@ -244,57 +307,14 @@ export default function TopNavBarContainer({
     }
   );
 
-  // --- Dashboard Switch Dropdown Logic ---
-  const dashboardRoleMap = [
-    { role: "admin", label: "Admin Dashboard", path: "/admin/overview" },
-    {
-      role: "air_quality",
-      label: "Air Quality",
-      path: "/smoke-belching/overview",
-    },
-    {
-      role: "tree_management",
-      label: "Tree Management",
-      path: "/tree-management/overview",
-    },
-    {
-      role: "government_emission",
-      label: "Government Emission",
-      path: "/government-emission/overview",
-    },
-  ];
-  const userDashboards = dashboardRoleMap.filter((d) =>
-    (user?.roles as any)?.includes(d.role)
-  );
+  // Don't add switch dashboard to main menu items
+  const allMenuItems: NavItem[] = menuItems;
 
-  // If user is admin, show all dashboards
-  if (user?.roles?.includes("admin")) {
-    userDashboards.splice(0, userDashboards.length, ...dashboardRoleMap);
-  }
+  // Remove debug logs
+  // console.log("Switch dashboard dropdown:", switchDashboardDropdown);
+  // console.log("All menu items:", allMenuItems);
 
-  // Dropdown for switching dashboards (only if more than one dashboard)
-  let switchDashboardDropdown: NavItem | null = null;
-  if (userDashboards.length > 1) {
-    switchDashboardDropdown = {
-      label: <span className="flex items-center">Switch Dashboard</span>,
-      onClick: () => navigate({ to: "/dashboard-selection" }),
-      children: (
-        <div className="absolute bg-white text-black rounded shadow mt-2 min-w-[180px] z-50">
-          {userDashboards.map((d) => (
-            <button
-              key={d.role}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100 uppercase"
-              onClick={() => navigate({ to: d.path })}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-      ),
-    };
-  }
-
-  // Account actions (right-aligned)
+  // Account actions (right-aligned) - include switch dashboard if available
   const accountItems: NavItem[] = [
     {
       label: (
@@ -305,7 +325,7 @@ export default function TopNavBarContainer({
       ),
       onClick: () => navigate({ to: "/profile" }),
     },
-    // Only show switch dashboard dropdown if more than one dashboard
+    // Add switch dashboard to account items if it exists
     ...(switchDashboardDropdown ? [switchDashboardDropdown] : []),
     {
       label: (
@@ -320,7 +340,7 @@ export default function TopNavBarContainer({
 
   return (
     <div className="flex w-full bg-main">
-      <TopNavBar items={menuItems} className="flex-1" />
+      <TopNavBar items={allMenuItems} className="flex-1" />
       <TopNavBar items={accountItems} className="justify-end flex-1" />
     </div>
   );

@@ -18,6 +18,8 @@ import TopSection from "../components/overview/TopSection";
 import SelectionBar from "../components/overview/SelectionBar";
 import PieChartsRow from "../components/overview/PieChartsRow";
 import BarChartsRow from "../components/overview/BarChartsRow";
+import WheelCountBreakdown from "../components/overview/WheelCountBreakdown";
+import QuarterlyComparisonChart from "../components/overview/QuarterlyComparisonChart";
 import {
   ChatbotProvider,
   useChatbot,
@@ -296,6 +298,8 @@ const GovEmissionOverview: React.FC = () => {
                   data={data}
                   loading={loading}
                   formatNumber={formatNumber}
+                  selectedYear={selectedYear}
+                  selectedQuarter={selectedQuarter}
                 />
                 <ColorDivider />
 
@@ -310,10 +314,14 @@ const GovEmissionOverview: React.FC = () => {
                     isRefreshing={isRefreshing}
                     loading={loading}
                   />
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-6">
                       <PieChartsRow data={data} loading={loading} />
                       <BarChartsRow data={data} loading={loading} />
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <WheelCountBreakdown data={data} loading={loading} />
+                        <QuarterlyComparisonChart selectedYear={selectedYear} />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -341,6 +349,7 @@ const menuOptions = [
   { key: "compliance", label: "Show Compliance Summary" },
   { key: "topOffices", label: "Show Top Offices" },
   { key: "untested", label: "Show Untested Vehicles" },
+  { key: "quarterly", label: "Show Quarterly Trends" },
 ];
 
 function MenuChatbot({
@@ -395,7 +404,7 @@ function MenuChatbot({
           <span className="font-bold text-green-800">
             {formatNumber(loading ? 0 : data.officeDepartments)}
           </span>{" "}
-          departments.
+          departments. The dashboard shows detailed pass/fail breakdowns by vehicle categories.
         </div>
         <ul className="mt-2 text-xs text-green-900">
           {data.officeComplianceData &&
@@ -462,19 +471,42 @@ function MenuChatbot({
         </div>
       );
     }
+    if (option === "quarterly") {
+      return (
+        <div>
+          <div>
+            The dashboard shows detailed quarterly testing results for{" "}
+            <span className="font-bold text-green-800">{selectedYear}</span>
+            {selectedQuarter
+              ? `, Q${selectedQuarter}`
+              : " (all quarters)"
+            }. Each chart breaks down pass/fail statistics by vehicle categories.
+          </div>
+          <div className="mt-2 text-xs text-green-900">
+            📊 <span className="font-bold text-green-600">Green</span> = Passed tests,
+            <span className="font-bold text-red-600"> Red</span> = Failed tests,
+            <span className="font-bold text-yellow-600"> Yellow</span> = Untested vehicles.
+            View breakdowns by vehicle type, engine type (diesel/gas), and wheel count.
+          </div>
+        </div>
+      );
+    }
     return "Sorry, I didn't understand that request.";
   }
 
   // Follow-up menu options based on last menu
   function getFollowUpOptions(last: string | null) {
     if (last === "compliance") {
-      return [menuOptions[1], menuOptions[2]]; // Top Offices, Untested
+      return [menuOptions[1], menuOptions[2], menuOptions[3]]; // Top Offices, Untested, Quarterly
     }
     if (last === "topOffices") {
-      return [menuOptions[0], menuOptions[2]]; // Compliance, Untested
+      return [menuOptions[0], menuOptions[2], menuOptions[3]]; // Compliance, Untested, Quarterly
     }
     if (last === "untested") {
-      return [menuOptions[0], menuOptions[1]]; // Compliance, Top Offices
+      return [menuOptions[0], menuOptions[1], menuOptions[3]]; // Compliance, Top Offices, Quarterly
+    }
+    if (last === "quarterly") {
+      return [menuOptions[0], menuOptions[1], menuOptions[2]]; // Compliance, Top Offices, Untested
     }
     return menuOptions;
   }

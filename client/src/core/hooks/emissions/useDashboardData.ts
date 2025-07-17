@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { useVehicles, useOfficeCompliance } from "@/core/api/emission-service";
+import {
+  useVehicles,
+  useOfficeCompliance,
+  type Vehicle,
+} from "@/core/api/emission-service";
 import { useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
 
 // Dashboard data structure for the overview page
@@ -10,12 +14,33 @@ export interface DashboardData {
   complianceRate: number;
   officeDepartments: number;
 
-  // Chart data for pie charts
-  engineTypeData: Array<{ id: string; label: string; value: number }>;
-  wheelCountData: Array<{ id: string; label: string; value: number }>;
+  // Chart data for pie charts - now showing pass/fail by category
+  engineTypeData: Array<{
+    id: string;
+    label: string;
+    passed: number;
+    failed: number;
+    untested: number;
+    total: number;
+  }>;
+  wheelCountData: Array<{
+    id: string;
+    label: string;
+    passed: number;
+    failed: number;
+    untested: number;
+    total: number;
+  }>;
 
-  // Chart data for bar charts
-  vehicleTypeData: Array<{ id: string; label: string; value: number }>;
+  // Chart data for bar charts - enhanced with pass/fail breakdown
+  vehicleTypeData: Array<{
+    id: string;
+    label: string;
+    passed: number;
+    failed: number;
+    untested: number;
+    total: number;
+  }>;
   officeComplianceData: Array<{
     id: string;
     label: string;
@@ -94,62 +119,96 @@ export function useDashboardData(
     const vehicles = vehiclesData.vehicles || [];
     const offices = officeData.offices || [];
     const summary = officeData.summary;
+    const tests = testsData || [];
+
+    // Filter tests by selected quarter if specified
+    const filteredTests = selectedQuarter
+      ? tests.filter((test) => {
+          return test.quarter === selectedQuarter && test.year === selectedYear;
+        })
+      : tests.filter((test) => {
+          return test.year === selectedYear;
+        });
+
+    // Create vehicle-test lookup
+    const vehicleTestMap = new Map<
+      string,
+      { passed: boolean; tested: boolean }
+    >();
+    filteredTests.forEach((test) => {
+      if (test.result !== null) {
+        vehicleTestMap.set(test.vehicle_id, {
+          passed: test.result,
+          tested: true,
+        });
+      }
+    });
+
+    // Helper function to categorize vehicles by type with pass/fail stats
+    const categorizeVehicles = (
+      categoryKey: keyof Vehicle,
+      formatLabel?: (value: any) => string
+    ) => {
+      const categoryMap = new Map<
+        string,
+        { passed: number; failed: number; untested: number; total: number }
+      >();
+
+      vehicles.forEach((vehicle) => {
+        const categoryValue = vehicle[categoryKey];
+        const label = formatLabel
+          ? formatLabel(categoryValue)
+          : String(categoryValue || "Unknown");
+
+        if (!categoryMap.has(label)) {
+          categoryMap.set(label, {
+            passed: 0,
+            failed: 0,
+            untested: 0,
+            total: 0,
+          });
+        }
+
+        const stats = categoryMap.get(label)!;
+        const testResult = vehicleTestMap.get(vehicle.id);
+
+        if (testResult?.tested) {
+          if (testResult.passed) {
+            stats.passed++;
+          } else {
+            stats.failed++;
+          }
+        } else {
+          stats.untested++;
+        }
+        stats.total++;
+      });
+
+      return Array.from(categoryMap.entries()).map(([label, stats]) => ({
+        id: label,
+        label,
+        ...stats,
+      }));
+    };
 
     // Calculate basic statistics
     const totalVehicles = summary?.total_vehicles || vehicles.length;
-    const testedVehicles = vehicles.filter(
-      (v) => v.latest_test_result !== null
-    ).length;
+    const testedVehicles = filteredTests.length;
     const complianceRate = summary?.overall_compliance_rate || 0;
     const officeDepartments = summary?.total_offices || offices.length;
 
-    // Process engine type data for pie chart
-    const engineTypeMap = new Map<string, number>();
-    vehicles.forEach((vehicle) => {
-      const engineType = vehicle.engine_type || "Unknown";
-      engineTypeMap.set(engineType, (engineTypeMap.get(engineType) || 0) + 1);
-    });
-    const engineTypeData = Array.from(engineTypeMap.entries()).map(
-      ([type, count]) => ({
-        id: type,
-        label: type,
-        value: count,
-      })
+    // Process engine type data with pass/fail breakdown
+    const engineTypeData = categorizeVehicles("engine_type");
+
+    // Process wheel count data with pass/fail breakdown
+    const wheelCountData = categorizeVehicles("wheels", (wheels) =>
+      wheels ? `${wheels} wheels` : "Unknown"
     );
 
-    // Process wheel count data for pie chart
-    const wheelCountMap = new Map<string, number>();
-    vehicles.forEach((vehicle) => {
-      const wheels = vehicle.wheels?.toString() || "Unknown";
-      const label = wheels === "Unknown" ? "Unknown" : `${wheels} wheels`;
-      wheelCountMap.set(label, (wheelCountMap.get(label) || 0) + 1);
-    });
-    const wheelCountData = Array.from(wheelCountMap.entries()).map(
-      ([label, count]) => ({
-        id: label,
-        label,
-        value: count,
-      })
-    );
+    // Process vehicle type data with pass/fail breakdown
+    const vehicleTypeData = categorizeVehicles("vehicle_type");
 
-    // Process vehicle type data for bar chart
-    const vehicleTypeMap = new Map<string, number>();
-    vehicles.forEach((vehicle) => {
-      const vehicleType = vehicle.vehicle_type || "Unknown";
-      vehicleTypeMap.set(
-        vehicleType,
-        (vehicleTypeMap.get(vehicleType) || 0) + 1
-      );
-    });
-    const vehicleTypeData = Array.from(vehicleTypeMap.entries()).map(
-      ([type, count]) => ({
-        id: type,
-        label: type,
-        value: count,
-      })
-    );
-
-    // Process office compliance data for bar chart
+    // Process office compliance data (keep existing format)
     const officeComplianceData = offices.map((office) => ({
       id: office.office_name,
       label: office.office_name,
@@ -164,7 +223,7 @@ export function useDashboardData(
       vehicleType: vehicle.vehicle_type || "Unknown",
       engineType: vehicle.engine_type || "Unknown",
       wheels: vehicle.wheels || 0,
-      officeName: vehicle.office_name || "Unknown",
+      officeName: vehicle.office?.name || "Unknown",
       latestTestResult: vehicle.latest_test_result,
     }));
 
@@ -179,7 +238,7 @@ export function useDashboardData(
       officeComplianceData,
       vehicleSummaries,
     };
-  }, [vehiclesData, officeData, testsData]);
+  }, [vehiclesData, officeData, testsData, selectedYear, selectedQuarter]);
 
   return {
     data,

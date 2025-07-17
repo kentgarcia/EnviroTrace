@@ -68,10 +68,10 @@ export function EChartsBarChart({
           },
         },
         grid: {
-          left: isHorizontal ? "15%" : "3%",
-          right: "4%",
-          bottom: isHorizontal ? "3%" : "15%",
-          top: "8%",
+          left: isHorizontal ? "20%" : "3%",
+          right: isHorizontal ? "15%" : "4%",
+          bottom: isHorizontal ? "3%" : "20%",
+          top: "15%",
           containLabel: true,
         },
         [isHorizontal ? "yAxis" : "xAxis"]: {
@@ -103,16 +103,20 @@ export function EChartsBarChart({
                 typeof color === "string"
                   ? color
                   : (params: any) => {
-                      // Cycle through colors if an array is provided
-                      return color[params.dataIndex % color.length];
-                    },
+                    // Cycle through colors if an array is provided
+                    return color[params.dataIndex % color.length];
+                  },
             },
             label: {
               show: true,
               position: isHorizontal ? "right" : "top",
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#374151",
               formatter: (params: any) => {
                 return valueFormatter(params.value);
               },
+              distance: 5,
             },
           },
         ],

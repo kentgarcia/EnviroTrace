@@ -197,8 +197,8 @@ export default function DashboardSelection() {
 
             {hasRole("air_quality") && (
               <DashboardCard
-                title="Air Quality"
-                description="Monitor air quality metrics, pollution levels, and compliance data"
+                title="Anti-Smoke Belching Testing"
+                description="Monitor and evaluate smoke emissions from vehicles"
                 icon="/images/bg_asbu.jpg"
                 onClick={() => handleDashboardSelect("air-quality")}
                 className="border-ems-blue-200 hover:border-ems-blue-400"
@@ -217,8 +217,8 @@ export default function DashboardSelection() {
 
             {hasRole("government_emission") && (
               <DashboardCard
-                title="Government Emission"
-                description="Analyze emission data from government facilities and public transportation"
+                title="Government Fleet Emmission Testing"
+                description="Evaluate and optimize emissions from government-operated vehicles"
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("government-emission")}
                 className="border-ems-gray-200 hover:border-ems-gray-400"
