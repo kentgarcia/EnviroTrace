@@ -26,3 +26,36 @@ dist-ssr
 *.sw?
 
 node_modules
+
+# Mobile app specific
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/*.tgz
+mobile/*.tar.gz
+mobile/*.log
+mobile/.env.local
+mobile/.env.development.local
+mobile/.env.test.local
+mobile/.env.production.local
+
+# Expo
+.expo
+__generated__
+
+# React Native
+mobile/android/
+mobile/ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# macOS
+mobile/.DS_Store
+
+# Temporary files created by Metro to check the health of the file watcher
+mobile/.metro-health-check*

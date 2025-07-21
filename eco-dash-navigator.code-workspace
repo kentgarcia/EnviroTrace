@@ -5,7 +5,12 @@
     },
     {
       "path": "backend"
+    },
+    {
+      "path": "mobile"
     }
   ],
-  "settings": {}
+  "settings": {
+    "typescript.preferences.includePackageJsonAutoImports": "on"
+  }
 }

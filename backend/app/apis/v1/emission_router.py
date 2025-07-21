@@ -15,6 +15,7 @@ from app.schemas.emission_schemas import (
     Test, TestCreate, TestUpdate, TestListResponse,
     TestSchedule, TestScheduleCreate, TestScheduleUpdate, TestScheduleListResponse,
     VehicleDriverHistoryCreate, VehicleDriverHistoryListResponse,
+    VehicleRemarks, VehicleRemarksCreate, VehicleRemarksUpdate,
     OfficeComplianceResponse
 )
 
@@ -175,11 +176,15 @@ def get_vehicles(
     office_id: Optional[UUID] = None,
     vehicle_type: Optional[str] = None,
     engine_type: Optional[str] = None,
-    wheels: Optional[int] = None,    search: Optional[str] = None,
+    wheels: Optional[int] = None,
+    search: Optional[str] = None,
+    include_test_data: bool = False,  # New parameter to optionally include test data
     current_user: User = Depends(get_current_active_user)
 ):
     """
     Get all vehicles with optional filtering.
+    By default, excludes test data for better performance.
+    Set include_test_data=true to include latest test results.
     """
     if search:
         return crud_emission.vehicle.search(db, search_term=search, skip=skip, limit=limit)
@@ -200,7 +205,11 @@ def get_vehicles(
     if wheels:
         filters["wheels"] = wheels
     
-    return crud_emission.vehicle.get_multi_with_test_info(db, skip=skip, limit=limit, filters=filters)
+    # Choose which method to use based on include_test_data parameter
+    if include_test_data:
+        return crud_emission.vehicle.get_multi_with_test_info(db, skip=skip, limit=limit, filters=filters)
+    else:
+        return crud_emission.vehicle.get_multi_optimized(db, skip=skip, limit=limit, filters=filters)
 
 
 @router.post("/vehicles", response_model=Vehicle, status_code=status.HTTP_201_CREATED)
@@ -610,5 +619,51 @@ def get_driver_history(
     history = crud_emission.vehicle_driver_history.get_multi_sync(db, skip=skip, limit=limit)
     total = crud_emission.vehicle_driver_history.count_sync(db)
     return {"history": history, "total": total}
+
+# Vehicle Remarks endpoints
+@router.get("/vehicles/{vehicle_id}/remarks/{year}", response_model=VehicleRemarks)
+def get_vehicle_remarks(
+    vehicle_id: UUID,
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get remarks for a specific vehicle and year.
+    """
+    remarks = crud_emission.vehicle_remarks.get_by_vehicle_and_year(db, vehicle_id=vehicle_id, year=year)
+    if not remarks:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Remarks not found for this vehicle and year"
+        )
+    return remarks
+
+@router.put("/vehicles/{vehicle_id}/remarks/{year}", response_model=VehicleRemarks)
+def update_vehicle_remarks(
+    vehicle_id: UUID,
+    year: int,
+    remarks_data: VehicleRemarksUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Update or create remarks for a specific vehicle and year.
+    """
+    # Check if vehicle exists
+    vehicle = crud_emission.vehicle.get_sync(db, id=vehicle_id)
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Vehicle not found"
+        )
+    
+    return crud_emission.vehicle_remarks.update_or_create(
+        db,
+        vehicle_id=vehicle_id,
+        year=year,
+        remarks=remarks_data.remarks or "",
+        created_by=current_user.id
+    )
 
 

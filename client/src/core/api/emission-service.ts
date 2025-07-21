@@ -24,8 +24,8 @@ export interface Vehicle {
   wheels: number;
   created_at: string;
   updated_at: string;
-  latest_test_result: boolean | null;
-  latest_test_date: string | null;
+  latest_test_result?: boolean | null; // Made optional since not always fetched
+  latest_test_date?: string | null; // Made optional since not always fetched
   driverHistory?: DriverHistory[];
 }
 
@@ -287,6 +287,7 @@ export interface EmissionTest {
   quarter: number;
   year: number;
   result: boolean | null;
+  remarks?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -298,6 +299,7 @@ export interface EmissionTestInput {
   quarter: number;
   year: number;
   result: boolean | null;
+  remarks?: string;
 }
 
 export interface TestSchedule {

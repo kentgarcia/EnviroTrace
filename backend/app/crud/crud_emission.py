@@ -5,8 +5,8 @@ from sqlalchemy import desc, or_
 from uuid import UUID
 import traceback
 from app.crud.base_crud import CRUDBase
-from app.models.emission_models import Office, Vehicle, Test, TestSchedule, VehicleDriverHistory
-from app.schemas.emission_schemas import OfficeCreate, OfficeUpdate, VehicleCreate, VehicleUpdate, TestCreate, TestUpdate, TestScheduleCreate, TestScheduleUpdate, VehicleDriverHistoryCreate, OfficeComplianceData, OfficeComplianceSummary
+from app.models.emission_models import Office, Vehicle, Test, TestSchedule, VehicleDriverHistory, VehicleRemarks
+from app.schemas.emission_schemas import OfficeCreate, OfficeUpdate, VehicleCreate, VehicleUpdate, TestCreate, TestUpdate, TestScheduleCreate, TestScheduleUpdate, VehicleDriverHistoryCreate, VehicleRemarksCreate, VehicleRemarksUpdate, OfficeComplianceData, OfficeComplianceSummary
 
 class CRUDOffice(CRUDBase[Office, OfficeCreate, OfficeUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Office]:
@@ -138,6 +138,39 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
                 setattr(vehicle, "latest_test_date", None)
         
         return {"vehicles": vehicles, "total": total}
+
+    def get_multi_optimized(
+        self, db: Session, *, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None
+    ):
+        """Get vehicles without test information for faster loading"""
+        query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id)
+        
+        # Apply filters if provided
+        if filters:
+            if filters.get("plate_number"):
+                query = query.filter(Vehicle.plate_number.ilike(f"%{filters['plate_number']}%"))
+            if filters.get("driver_name"):
+                query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
+            if filters.get("office_name"):
+                query = query.filter(Office.name == filters["office_name"])
+            if filters.get("office_id"):
+                query = query.filter(Vehicle.office_id == filters["office_id"])
+            if filters.get("vehicle_type"):
+                query = query.filter(Vehicle.vehicle_type == filters["vehicle_type"])
+            if filters.get("engine_type"):
+                query = query.filter(Vehicle.engine_type == filters["engine_type"])
+            if filters.get("wheels"):
+                query = query.filter(Vehicle.wheels == filters["wheels"])
+                
+        total = query.count()
+        vehicles = query.offset(skip).limit(limit).all()
+        
+        # Set test fields to None to indicate they weren't fetched
+        for vehicle in vehicles:
+            setattr(vehicle, "latest_test_result", None)
+            setattr(vehicle, "latest_test_date", None)
+        
+        return {"vehicles": vehicles, "total": total}
     def get_with_test_info(self, db: Session, *, id: UUID):
         """Get a specific vehicle with its latest test information"""
         print("DEBUG: Getting vehicle with ID:", id)
@@ -203,19 +236,10 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         total = query.count()
         vehicles = query.offset(skip).limit(limit).all()
         
-        # Fetch latest test for each vehicle
+        # Set test fields to None to indicate they weren't fetched (for performance)
         for vehicle in vehicles:
-            latest_test = db.query(Test)\
-                .filter(Test.vehicle_id == vehicle.id)\
-                .order_by(desc(Test.test_date))\
-                .first()
-                
-            if latest_test:
-                setattr(vehicle, "latest_test_result", latest_test.result)
-                setattr(vehicle, "latest_test_date", latest_test.test_date)
-            else:
-                setattr(vehicle, "latest_test_result", None)
-                setattr(vehicle, "latest_test_date", None)
+            setattr(vehicle, "latest_test_result", None)
+            setattr(vehicle, "latest_test_date", None)
         
         return {"vehicles": vehicles, "total": total}
     
@@ -347,6 +371,41 @@ class CRUDVehicleDriverHistory(CRUDBase[VehicleDriverHistory, VehicleDriverHisto
         return {"history": history, "total": total}
 
 
+class CRUDVehicleRemarks(CRUDBase[VehicleRemarks, VehicleRemarksCreate, VehicleRemarksUpdate]):
+    def get_by_vehicle_and_year(self, db: Session, *, vehicle_id: UUID, year: int) -> Optional[VehicleRemarks]:
+        """Get remarks for a specific vehicle and year"""
+        return db.query(VehicleRemarks).filter(
+            VehicleRemarks.vehicle_id == vehicle_id,
+            VehicleRemarks.year == year
+        ).first()
+    
+    def update_or_create(self, db: Session, *, vehicle_id: UUID, year: int, remarks: str, created_by: UUID = None) -> VehicleRemarks:
+        """Update existing remarks or create new ones for a vehicle and year"""
+        existing = self.get_by_vehicle_and_year(db, vehicle_id=vehicle_id, year=year)
+        
+        if existing:
+            # Update existing remarks
+            existing.remarks = remarks
+            existing.created_by_id = created_by
+            db.commit()
+            db.refresh(existing)
+            return existing
+        else:
+            # Create new remarks
+            remarks_data = VehicleRemarksCreate(
+                vehicle_id=vehicle_id,
+                year=year,
+                remarks=remarks
+            )
+            new_remarks = VehicleRemarks(
+                **remarks_data.dict(),
+                created_by_id=created_by
+            )
+            db.add(new_remarks)
+            db.commit()
+            db.refresh(new_remarks)
+            return new_remarks
+
 class CRUDOfficeCompliance:
     def get_office_compliance_data(
         self, 
@@ -468,4 +527,5 @@ vehicle = CRUDVehicle(Vehicle)
 test = CRUDTest(Test)
 test_schedule = CRUDTestSchedule(TestSchedule)
 vehicle_driver_history = CRUDVehicleDriverHistory(VehicleDriverHistory)
+vehicle_remarks = CRUDVehicleRemarks(VehicleRemarks)
 office_compliance = CRUDOfficeCompliance()

@@ -93,7 +93,6 @@ export default function Vehicles() {
   const [office, setOffice] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [engineType, setEngineType] = useState("");
-  const [status, setStatus] = useState("");
 
   // Debounce search to prevent excessive API calls
   const debouncedSearch = useDebounce(search, 300); // 300ms delay
@@ -148,17 +147,6 @@ export default function Vehicles() {
   const vehicles = useMemo(() => {
     return vehiclesData?.vehicles || [];
   }, [vehiclesData]);
-  // Filter vehicles by test status (this is done client-side since we already have the data)
-  const filteredVehicles = useMemo(() => {
-    if (!status) return vehicles;
-
-    return vehicles.filter((v) => {
-      if (status === "passed") return v.latest_test_result === true;
-      if (status === "failed") return v.latest_test_result === false;
-      if (status === "untested") return v.latest_test_result === null;
-      return true;
-    });
-  }, [vehicles, status]);
 
   // Get unique values for filters
   const offices = useMemo(() => filterOptions?.offices || [], [filterOptions]);
@@ -288,22 +276,15 @@ export default function Vehicles() {
 
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent +=
-      "Plate Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact,Latest Test,Test Result\n"; vehicles.forEach((vehicle) => {
-        const testDate = formatDate(vehicle.latest_test_date, "yyyy-MM-dd", "Not Tested");
+      "Plate Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact\n";
 
-        const testResult =
-          vehicle.latest_test_result === null
-            ? "Not Tested"
-            : vehicle.latest_test_result
-              ? "Passed"
-              : "Failed";
+    vehicles.forEach((vehicle) => {
+      const officeName = vehicle.office?.name || "Unknown Office";
 
-        const officeName = vehicle.office?.name || "Unknown Office";
-
-        csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
-          }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
-          }","${vehicle.contact_number || ""}","${testDate}","${testResult}"\n`;
-      });
+      csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
+        }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
+        }","${vehicle.contact_number || ""}"\n`;
+    });
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -319,21 +300,16 @@ export default function Vehicles() {
     toast.success("Vehicle data exported successfully");
   };
 
-  // Stats for the tabs
+  // Stats for the tabs - since test data is not fetched, show simplified stats
   const stats = useMemo(() => {
     const allCount = vehicles.length;
-    const passedCount = vehicles.filter((v) => v.latest_test_result === true)
-      .length;
-    const failedCount = vehicles.filter((v) => v.latest_test_result === false)
-      .length;
-    const untestedCount = vehicles.filter((v) => v.latest_test_result === null)
-      .length;
-
+    // Without test data, we can't calculate passed/failed/untested counts
+    // These would require separate API calls if needed
     return {
       all: allCount,
-      passed: passedCount,
-      failed: failedCount,
-      untested: untestedCount,
+      passed: 0, // Would need separate API call
+      failed: 0, // Would need separate API call
+      untested: 0, // Would need separate API call
     };
   }, [vehicles]);
 
@@ -343,7 +319,6 @@ export default function Vehicles() {
     setOffice("");
     setVehicleType("");
     setEngineType("");
-    setStatus("");
   };
 
   return (
@@ -506,57 +481,6 @@ export default function Vehicles() {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                {/* Status Filter Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
-                    >
-                      {status
-                        ? status === "passed"
-                          ? "Passed"
-                          : status === "failed"
-                            ? "Failed"
-                            : status === "untested"
-                              ? "Not Tested"
-                              : status
-                        : "All Status"}
-                      <span className="ml-2 text-gray-400 flex items-center">
-                        <Filter className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="bg-white border border-gray-200 shadow-none rounded-none"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => setStatus("")}
-                      className="rounded-none"
-                    >
-                      All Status
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setStatus("passed")}
-                      className="rounded-none"
-                    >
-                      Passed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setStatus("failed")}
-                      className="rounded-none"
-                    >
-                      Failed
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setStatus("untested")}
-                      className="rounded-none"
-                    >
-                      Not Tested
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </div>
 
@@ -608,72 +532,21 @@ export default function Vehicles() {
             {/* Vehicles Table */}
             <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
               <div className="p-6">
-                {/* Status Tabs */}
+                {/* Status Tabs - Removed since test data is no longer fetched for performance */}
                 <div className="flex gap-2 mb-6">
-                  <button
-                    onClick={() => setStatus("")}
-                    className={`flex items-center px-4 py-2 rounded-none text-sm font-medium transition-colors border border-gray-200 shadow-none
-                      ${!status ? "bg-primary text-white" : "hover:bg-gray-100 text-gray-700"}
-                    `}
-                  >
-                    All
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-none text-xs font-semibold
-                        ${!status ? "bg-primary text-white" : "bg-gray-100 text-gray-700 border-gray-200"}
-                      `}
-                    >
+                  <div className="flex items-center px-4 py-2 rounded-none text-sm font-medium bg-primary text-white border border-gray-200 shadow-none">
+                    All Vehicles
+                    <span className="ml-2 px-2 py-0.5 rounded-none text-xs font-semibold bg-primary text-white">
                       {stats.all}
                     </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus("passed")}
-                    className={`flex items-center px-4 py-2 rounded-none text-sm font-medium transition-colors border border-gray-200 shadow-none
-                      ${status === "passed" ? "bg-primary text-white" : "hover:bg-gray-100 text-gray-700"}
-                    `}
-                  >
-                    Passed
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-none text-xs font-semibold
-                        ${status === "passed" ? "bg-primary text-white" : "bg-gray-100 text-gray-700 border-gray-200"}
-                      `}
-                    >
-                      {stats.passed}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus("failed")}
-                    className={`flex items-center px-4 py-2 rounded-none text-sm font-medium transition-colors border border-gray-200 shadow-none
-                      ${status === "failed" ? "bg-primary text-white" : "hover:bg-gray-100 text-gray-700"}
-                    `}
-                  >
-                    Failed
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-none text-xs font-semibold
-                        ${status === "failed" ? "bg-primary text-white" : "bg-gray-100 text-gray-700 border-gray-200"}
-                      `}
-                    >
-                      {stats.failed}
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setStatus("untested")}
-                    className={`flex items-center px-4 py-2 rounded-none text-sm font-medium transition-colors border border-gray-200 shadow-none
-                      ${status === "untested" ? "bg-primary text-white" : "hover:bg-gray-100 text-gray-700"}
-                    `}
-                  >
-                    Not Tested
-                    <span
-                      className={`ml-2 px-2 py-0.5 rounded-none text-xs font-semibold
-                        ${status === "untested" ? "bg-primary text-white" : "bg-gray-100 text-gray-700 border-gray-200"}
-                      `}
-                    >
-                      {stats.untested}
-                    </span>
-                  </button>
+                  </div>
+                  <div className="text-sm text-gray-500 px-4 py-2">
+                    Test status filtering is available in the Quarterly Testing section
+                  </div>
                 </div>                {isLoading ? (
                   <VehicleTableSkeleton />
                 ) : (<VehicleTable
-                  vehicles={filteredVehicles}
+                  vehicles={vehicles}
                   isLoading={isLoading}
                   onView={handleViewVehicle}
                   onEdit={handleEditVehicle}

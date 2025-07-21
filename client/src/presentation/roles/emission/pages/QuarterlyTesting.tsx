@@ -1,81 +1,62 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { AlertTriangle } from "lucide-react";
-import {
-  ScheduleTable,
-  QuarterlyTestingHeader,
-  QuarterlyTestingFilters,
-  QuarterlyTestingStats,
-  QuarterlyTestingDialogs,
-  useQuarterlyTestingLogic,
-} from "@/presentation/roles/emission/components/quarterly";
+import React, { useState } from "react";
+import { FileDown, BarChart3, Settings, Table } from "lucide-react";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { Card } from "@/presentation/components/shared/ui/card";
+import { Button } from "@/presentation/components/shared/ui/button";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/presentation/components/shared/ui/alert";
-import { NetworkStatus } from "@/presentation/components/shared/ui/network-status";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/presentation/components/shared/ui/tabs";
+import { QuarterlyTestingFilters } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingFilters";
+import OfficeVehicleTable from "@/presentation/roles/emission/components/quarterly/OfficeVehicleTable";
+import { QuickTestForm } from "@/presentation/roles/emission/components/quarterly/QuickTestForm";
+import { QuarterlyTestingSummary } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingSummary";
+import { QuarterlyOverview } from "@/presentation/roles/emission/components/quarterly/QuarterlyOverview";
+import { QuarterInfoEditor } from "@/presentation/roles/emission/components/quarterly/QuarterInfoEditor";
+import { useRevampedQuarterlyTesting } from "@/presentation/roles/emission/components/quarterly/useRevampedQuarterlyTesting";
 
 // Main Component
 export default function QuarterlyTesting() {
+  const [activeTab, setActiveTab] = useState("overview");
+
   const {
     // State
-    isAddScheduleOpen,
-    setIsAddScheduleOpen,
-    isEditScheduleOpen,
-    setIsEditScheduleOpen,
-    isAddTestOpen,
-    setIsAddTestOpen,
-    isEditTestOpen,
-    setIsEditTestOpen,
-    isDeleteScheduleOpen,
-    setIsDeleteScheduleOpen,
-    isDeleteTestOpen,
-    setIsDeleteTestOpen,
-    scheduleToEdit,
-    setScheduleToEdit,
-    testToEdit,
-    setTestToEdit,
-    testToDelete,
-    setTestToDelete,
-    scheduleToDelete,
-    setScheduleToDelete,
-    isSubmitting,
+    selectedYear,
+    selectedOffices,
     search,
-    setSearch,
-    result,
-    setResult,
-    activeTab,
-    selectedScheduleId,
-    setSelectedScheduleId,
+    isQuickTestOpen,
+    selectedVehicle,
+    selectedQuarter,
+    testToEdit,
+    isSubmitting,
 
     // Data
-    schedules,
-    emissionTests,
-    vehicles,
-    isLoadingVehicles,
-    selectedSchedule,
-    isLoading,
-    error,
-
-    // Year/Quarter filtering
-    scheduleFilters,
+    officeGroups,
+    offices,
     availableYears,
-    handleYearChange,
-    handleQuarterChange,
+    summaryStats,
+
+    // Loading states
+    isLoading,
 
     // Handlers
-    handleAddSchedule,
-    handleEditSchedule,
-    handleDeleteSchedule,
+    handleYearChange,
+    handleOfficeChange,
+    setSearch,
     handleAddTest,
     handleEditTest,
-    handleDeleteTest,
-    handleExportTestResults,
-    getVehicleByPlateOrId,
-  } = useQuarterlyTestingLogic();
+    handleAddRemarks,
+    handleSubmitTest,
+    handleUpdateTest,
+    handleBatchAddTests,
+    handleBatchUpdateTests,
+    handleExportData,
+    setIsQuickTestOpen,
+  } = useRevampedQuarterlyTesting();
+
   return (
     <>
       <div className="flex min-h-screen w-full">
@@ -83,123 +64,132 @@ export default function QuarterlyTesting() {
           <TopNavBarContainer dashboardType="government-emission" />
 
           {/* Header Section */}
-          <QuarterlyTestingHeader
-            onNewSchedule={() => setIsAddScheduleOpen(true)}
-            onExportResults={handleExportTestResults}
-            canExport={!!(selectedSchedule && emissionTests.length > 0)}
-          />
+          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Quarterly Testing
+            </h1>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleExportData}
+                variant="outline"
+                size="sm"
+                disabled={officeGroups.length === 0}
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Export Data
+              </Button>
+            </div>
+          </div>
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">            {/* Controls Row: Search left, Filters right */}
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+            {/* Filters */}
             <QuarterlyTestingFilters
               search={search}
               onSearchChange={setSearch}
-              result={result}
-              onResultChange={setResult}
-              selectedYear={scheduleFilters.year}
-              selectedQuarter={scheduleFilters.quarter}
-              availableYears={availableYears} onYearChange={(year) => handleYearChange(parseInt(year, 10))}
-              onQuarterChange={(quarter) => {
-                if (quarter === "all") {
-                  // Use the current quarter from scheduleFilters as fallback
-                  handleQuarterChange(scheduleFilters.quarter);
-                } else {
-                  handleQuarterChange(parseInt(quarter, 10));
-                }
-              }}
+              selectedYear={selectedYear}
+              availableYears={availableYears}
+              onYearChange={handleYearChange}
+              selectedOffices={selectedOffices}
+              offices={offices}
+              onOfficeChange={handleOfficeChange}
             />
 
-            {/* Error Notice */}
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  There was a problem loading the quarterly testing data. Please
-                  try again later.
-                </AlertDescription>
-              </Alert>
+            {/* Show message if no year selected */}
+            {!selectedYear && (
+              <Card className="border border-gray-200 shadow-none rounded-none bg-white">
+                <div className="p-8 text-center">
+                  <div className="text-gray-500 text-lg">
+                    Please select a year to view quarterly testing data
+                  </div>
+                  <div className="text-gray-400 text-sm mt-2">
+                    Use the filters above to get started
+                  </div>
+                </div>
+              </Card>
             )}
 
-            {/* Main Content Card (Schedule Table) */}
-            <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
-              <div className="p-6">                <ScheduleTable
-                schedules={schedules}
-                isLoading={isLoading}
-                emissionTests={emissionTests}
-                selectedScheduleId={selectedScheduleId}
-                setSelectedScheduleId={setSelectedScheduleId}
-                onEditTest={(test) => {
-                  setTestToEdit(test);
-                  setIsEditTestOpen(true);
-                }}
-                onDeleteTest={(test) => {
-                  setTestToDelete(test);
-                  setIsDeleteTestOpen(true);
-                }}
-                onAddTest={() => setIsAddTestOpen(true)}
-                onEditSchedule={(schedule) => {
-                  setScheduleToEdit(schedule);
-                  setIsEditScheduleOpen(true);
-                }}
-                onDeleteSchedule={(schedule) => {
-                  setScheduleToDelete(schedule);
-                  setIsDeleteScheduleOpen(true);
-                }}
-              />
-              </div>
-            </Card>
+            {/* Tabs Content - Show when year is selected */}
+            {selectedYear && (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
+                  <TabsTrigger value="overview" className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="quarters" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Manage Quarters
+                  </TabsTrigger>
+                  <TabsTrigger value="testing" className="flex items-center gap-2" disabled={selectedOffices.length === 0}>
+                    <Table className="h-4 w-4" />
+                    Vehicle Testing
+                  </TabsTrigger>
+                </TabsList>
 
-            {/* Statistics Card */}
-            <QuarterlyTestingStats
-              emissionTests={emissionTests}
-              isVisible={activeTab === "tests" && !!selectedSchedule}
-            />
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                  <QuarterlyOverview
+                    stats={summaryStats}
+                    selectedYear={selectedYear}
+                    officeGroups={officeGroups}
+                    selectedOffices={selectedOffices}
+                  />
+                </TabsContent>
+
+                {/* Manage Quarters Tab */}
+                <TabsContent value="quarters">
+                  <QuarterInfoEditor selectedYear={selectedYear} />
+                </TabsContent>
+
+                {/* Vehicle Testing Tab */}
+                <TabsContent value="testing">
+                  {selectedOffices.length === 0 ? (
+                    <Card className="border border-gray-200 shadow-none rounded-none bg-white">
+                      <div className="p-8 text-center">
+                        <div className="text-gray-500 text-lg">
+                          Please select one or more offices to view vehicle testing data
+                        </div>
+                        <div className="text-gray-400 text-sm mt-2">
+                          Use the office filter above to continue
+                        </div>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="border border-gray-200 shadow-none rounded-none bg-white">
+                      <div className="p-6">
+                        <OfficeVehicleTable
+                          officeGroups={officeGroups}
+                          selectedYear={selectedYear}
+                          isLoading={isLoading}
+                          onAddTest={handleAddTest}
+                          onEditTest={handleEditTest}
+                          onAddRemarks={handleAddRemarks}
+                          onBatchAddTests={handleBatchAddTests}
+                          onUpdateTest={handleUpdateTest}
+                          onBatchUpdateTests={handleBatchUpdateTests}
+                        />
+                      </div>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </div>
       </div>
 
-      {/* All Dialogs */}
-      <QuarterlyTestingDialogs
-        // Schedule dialogs
-        isAddScheduleOpen={isAddScheduleOpen}
-        setIsAddScheduleOpen={setIsAddScheduleOpen}
-        isEditScheduleOpen={isEditScheduleOpen}
-        setIsEditScheduleOpen={setIsEditScheduleOpen}
-        isDeleteScheduleOpen={isDeleteScheduleOpen}
-        setIsDeleteScheduleOpen={setIsDeleteScheduleOpen}
-        scheduleToEdit={scheduleToEdit}
-        setScheduleToEdit={setScheduleToEdit}
-        scheduleToDelete={scheduleToDelete}
-
-        // Test dialogs
-        isAddTestOpen={isAddTestOpen}
-        setIsAddTestOpen={setIsAddTestOpen}
-        isEditTestOpen={isEditTestOpen}
-        setIsEditTestOpen={setIsEditTestOpen}
-        isDeleteTestOpen={isDeleteTestOpen}
-        setIsDeleteTestOpen={setIsDeleteTestOpen}
+      {/* Quick Test Form Dialog */}
+      <QuickTestForm
+        isOpen={isQuickTestOpen}
+        onClose={() => setIsQuickTestOpen(false)}
+        vehicle={selectedVehicle}
+        quarter={selectedQuarter}
+        year={selectedYear}
         testToEdit={testToEdit}
-        setTestToEdit={setTestToEdit}
-        testToDelete={testToDelete}
-
-        // Form data
-        vehicles={vehicles}
-        isLoadingVehicles={isLoadingVehicles}
-        selectedSchedule={selectedSchedule}
+        onSubmit={handleSubmitTest}
         isSubmitting={isSubmitting}
-
-        // Handlers
-        onAddSchedule={handleAddSchedule}
-        onEditSchedule={handleEditSchedule}
-        onDeleteSchedule={handleDeleteSchedule}
-        onAddTest={handleAddTest}
-        onEditTest={handleEditTest}
-        onDeleteTest={handleDeleteTest}
-        onSearchVehicle={getVehicleByPlateOrId}
       />
-
-      <NetworkStatus />
     </>
   );
 }

@@ -10,3 +10,9 @@ export { EmissionTestForm } from "./EmissionTestForm";
 export { EmissionTestTable } from "./EmissionTestTable";
 export { EmissionTestFilterBar } from "./EmissionTestFilterBar";
 export { YearSelector } from "./YearSelector";
+
+// New revamped components
+export { OfficeVehicleTable } from "./OfficeVehicleTable";
+export { QuickTestForm } from "./QuickTestForm";
+export { QuarterlyTestingSummary } from "./QuarterlyTestingSummary";
+export { useRevampedQuarterlyTesting } from "./useRevampedQuarterlyTesting";

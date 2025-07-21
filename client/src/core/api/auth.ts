@@ -2,7 +2,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { UserData, UserRole } from "@/integrations/types/userData";
-import { useCurrentUser, useLogin, useRegister, logout } from "./auth-service";
+import {
+  useCurrentUser,
+  useLogin,
+  useRegister,
+  useLogout,
+} from "./auth-service";
 
 /**
  * Sign in with email and password
@@ -72,20 +77,6 @@ export async function signUp(email: string, password: string) {
 }
 
 /**
- * Sign out the current user
- */
-export async function signOut() {
-  try {
-    // Use the logout function from auth-service
-    logout();
-    return true;
-  } catch (error) {
-    console.error("Sign out error:", error);
-    throw error;
-  }
-}
-
-/**
  * Get the current user data from the API
  */
 export async function getCurrentUser(): Promise<UserData> {
@@ -146,6 +137,7 @@ export function useAuth() {
 
   // Use TanStack Query hooks for auth operations
   const currentUserQuery = useCurrentUser();
+  const logoutFn = useLogout();
   const {
     data: user,
     isLoading,
@@ -157,6 +149,17 @@ export function useAuth() {
     isError: false,
     error: null,
   };
+
+  // Custom signOut function that uses the logout hook
+  const signOut = useCallback(async () => {
+    try {
+      logoutFn();
+      return true;
+    } catch (error) {
+      console.error("Sign out error:", error);
+      throw error;
+    }
+  }, [logoutFn]);
 
   // Effect to handle auth errors
   useEffect(() => {

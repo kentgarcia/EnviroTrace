@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
+import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -12,7 +13,7 @@ import {
   CardTitle,
 } from "@/presentation/components/shared/ui/card";
 import { toast } from "sonner";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useLogin } from "@/core/api/auth-service";
 import { useForm } from "react-hook-form";
 import {
@@ -23,21 +24,47 @@ import {
 interface SignInFormData {
   email: string;
   password: string;
+  rememberEmail: boolean;
 }
 
 export function SignInForm() {
   const [authError, setAuthError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const loginMutation = useLogin();
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
-  } = useForm<SignInFormData>();
+  } = useForm<SignInFormData>({
+    defaultValues: {
+      rememberEmail: true,
+    },
+  });
+
+  const rememberEmail = watch("rememberEmail");
+
+  // Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem("rememberedEmail");
+    if (rememberedEmail) {
+      setValue("email", rememberedEmail);
+      setValue("rememberEmail", true);
+    }
+  }, [setValue]);
   const onSignIn = async (data: SignInFormData) => {
     // Clear any previous errors
     setAuthError(null);
+
+    // Handle email remembering
+    if (data.rememberEmail) {
+      localStorage.setItem("rememberedEmail", data.email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
 
     try {
       const result = await loginMutation.mutateAsync({
@@ -129,18 +156,53 @@ export function SignInForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password" placeholder="Password"
-              autoComplete="current-password"
-              disabled={loginMutation.isPending}
-              {...register("password", { required: "Password is required" })}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                autoComplete="current-password"
+                disabled={loginMutation.isPending}
+                className="pr-10"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="password"
+                {...register("password", { required: "Password is required" })}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loginMutation.isPending}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {showPassword ? "Hide password" : "Show password"}
+                </span>
+              </Button>
+            </div>
             {errors.password && (
               <p className="text-sm text-destructive">
                 {errors.password.message}
               </p>
             )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="rememberEmail"
+              checked={rememberEmail}
+              onCheckedChange={(checked) => setValue("rememberEmail", !!checked)}
+              disabled={loginMutation.isPending}
+            />
+            <Label htmlFor="rememberEmail" className="text-sm font-normal cursor-pointer">
+              Remember my email
+            </Label>
           </div>
           <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
             {loginMutation.isPending ? (

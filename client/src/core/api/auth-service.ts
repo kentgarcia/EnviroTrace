@@ -1,6 +1,6 @@
 // Auth service for FastAPI backend
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import apiClient from "./api-client";
 import { UserData, UserRole } from "@/integrations/types/userData";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -146,10 +146,19 @@ export function useCurrentUser() {
   return query;
 }
 
-// Function for logging out
-export function logout() {
+// Hook for logging out
+export function useLogout() {
   const queryClient = useQueryClient();
+
+  return useCallback(() => {
+    useAuthStore.getState().resetStore();
+    queryClient.clear(); // Clear all queries
+    return true;
+  }, [queryClient]);
+}
+
+// Function for logging out (without using hooks - for compatibility)
+export function logout() {
   useAuthStore.getState().resetStore();
-  queryClient.clear(); // Clear all queries
   return true;
 }

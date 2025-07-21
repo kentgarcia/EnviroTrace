@@ -75,6 +75,7 @@ class TestBase(BaseModel):
     quarter: int
     year: int
     result: bool
+    remarks: Optional[str] = None
 
 class TestCreate(TestBase):
     pass
@@ -84,6 +85,7 @@ class TestUpdate(BaseModel):
     quarter: Optional[int] = None
     year: Optional[int] = None
     result: Optional[bool] = None
+    remarks: Optional[str] = None
 
 class TestInDB(TestBase):
     id: UUID4
@@ -95,6 +97,30 @@ class TestInDB(TestBase):
         from_attributes = True
 
 class Test(TestInDB):
+    pass
+
+# Vehicle Remarks schemas
+class VehicleRemarksBase(BaseModel):
+    vehicle_id: UUID4
+    year: int
+    remarks: Optional[str] = None
+
+class VehicleRemarksCreate(VehicleRemarksBase):
+    pass
+
+class VehicleRemarksUpdate(BaseModel):
+    remarks: Optional[str] = None
+
+class VehicleRemarksInDB(VehicleRemarksBase):
+    id: UUID4
+    created_at: datetime
+    updated_at: datetime
+    created_by: Optional[UUID4] = None
+
+    class Config:
+        from_attributes = True
+
+class VehicleRemarks(VehicleRemarksInDB):
     pass
 
 # Vehicle Driver History schemas

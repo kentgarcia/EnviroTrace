@@ -68,8 +68,6 @@ export const VehicleTableSkeleton: React.FC = () => {
             <TableHead>Office</TableHead>
             <TableHead>Driver</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead>Latest Test</TableHead>
-            <TableHead>Result</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -90,12 +88,6 @@ export const VehicleTableSkeleton: React.FC = () => {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-20" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-24" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-16" />
               </TableCell>
               <TableCell className="text-right">
                 <Skeleton className="h-8 w-20 ml-auto" />
@@ -127,49 +119,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onColumnVisibilityChange,
   rowSelection = {},
   onRowSelectionChange,
-}) => {  // Add: row-to-details functionality
+}) => {
+  // Add: row-to-details functionality
   const [detailsVehicle, setDetailsVehicle] = useState<Vehicle | null>(null);
 
   // Add a ref to hold the refetch function from VehicleDetails
   const detailsRefetchRef = useRef<null | (() => void)>(null);
-  // Helper to format date from milliseconds - now using the utility function
-  // Note: Keeping this for backward compatibility, but the formatTestDate utility is preferred
-  // Render test result badge
-  const renderTestResultBadge = (vehicle: Vehicle) => {
-    // If it's a pending vehicle (not yet synced)
-    if (vehicle.id.toString().startsWith("pending-")) {
-      return (
-        <div className="flex gap-2 items-center">
-          <Badge variant="outline" className="text-yellow-600 bg-yellow-50">
-            Pending Sync
-          </Badge>
-        </div>
-      );
-    }
 
-    // If there's no test result
-    if (
-      vehicle.latest_test_result === undefined ||
-      vehicle.latest_test_result === null
-    ) {
-      return (
-        <Badge variant="outline" className="bg-gray-100 text-gray-800">
-          Not tested
-        </Badge>
-      );
-    }
-
-    // Pass/Fail status
-    return vehicle.latest_test_result ? (
-      <Badge variant="outline" className="bg-green-100 text-green-800">
-        Passed
-      </Badge>
-    ) : (
-      <Badge variant="outline" className="bg-red-100 text-red-800">
-        Failed
-      </Badge>
-    );
-  };
   // Define columns
   const columns: ColumnDef<Vehicle>[] = [
     {
@@ -235,34 +191,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
           {row.original.vehicle_type}
         </span>
       ),
-    },
-    {
-      accessorKey: "latest_test_date",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
-        >
-          Latest Test
-          <ArrowUpDown className="ml-1 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => formatTestDate(row.original.latest_test_date),
-    },
-    {
-      accessorKey: "latest_test_result",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
-        >
-          Result
-          <ArrowUpDown className="ml-1 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => renderTestResultBadge(row.original),
     },
     {
       id: "actions",

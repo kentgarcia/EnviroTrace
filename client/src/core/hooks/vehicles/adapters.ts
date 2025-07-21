@@ -29,8 +29,8 @@ export function adaptVehicleFromApi(apiVehicle: ApiVehicle): UiVehicle {
     wheels: apiVehicle.wheels,
     createdAt: apiVehicle.created_at,
     updatedAt: apiVehicle.updated_at,
-    latestTestResult: apiVehicle.latest_test_result,
-    latestTestDate: apiVehicle.latest_test_date,
+    latestTestResult: apiVehicle.latest_test_result ?? undefined,
+    latestTestDate: apiVehicle.latest_test_date ?? undefined,
     driverHistory: [], // Will be populated separately if needed
   };
 }

@@ -39,6 +39,7 @@ class Vehicle(Base):
     office = relationship("Office", back_populates="vehicles")
     tests = relationship("Test", back_populates="vehicle", cascade="all, delete-orphan")
     driver_history = relationship("VehicleDriverHistory", back_populates="vehicle", cascade="all, delete-orphan")
+    remarks = relationship("VehicleRemarks", back_populates="vehicle", cascade="all, delete-orphan")
 
 class VehicleDriverHistory(Base):
     __tablename__ = "vehicle_driver_history"
@@ -56,6 +57,22 @@ class VehicleDriverHistory(Base):
     vehicle = relationship("Vehicle", back_populates="driver_history")
     changed_by_user = relationship("User", back_populates="changed_driver_histories", foreign_keys=[changed_by_id])
 
+class VehicleRemarks(Base):
+    __tablename__ = "vehicle_remarks"
+    __table_args__ = (
+        Index("idx_vehicle_remarks_vehicle_year", "vehicle_id", "year"),
+        {"schema": "emission"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    vehicle_id = Column(UUID(as_uuid=True), ForeignKey("emission.vehicles.id", ondelete="CASCADE"), nullable=False)
+    year = Column(Integer, nullable=False)
+    remarks = Column(String(1000), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True)
+
+    vehicle = relationship("Vehicle", back_populates="remarks")
 
 class TestSchedule(Base):
     __tablename__ = "test_schedules"
@@ -73,7 +90,6 @@ class TestSchedule(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-
 class Test(Base):
     __tablename__ = "tests"
     __table_args__ = (
@@ -87,8 +103,9 @@ class Test(Base):
     test_date = Column(DateTime(timezone=True), nullable=False)
     quarter = Column(Integer, nullable=False)
     year = Column(Integer, nullable=False)
-    result = Column(Boolean, nullable=False)
-    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True) # Mapped from createdBy
+    result = Column(Boolean, nullable=False)  # Simple pass/fail
+    remarks = Column(String(500), nullable=True)  # Optional remarks
+    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
