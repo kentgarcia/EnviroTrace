@@ -7,7 +7,7 @@ import {
 } from "@/presentation/components/shared/ui/card";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import { useFeeData, Fee } from "../logic/useFeeData";
+import { useFeeData, Fee } from "../logic/useFeeData.tsx";
 import { createFeeColumns } from "../logic/feeColumns";
 import { FeeFormModal } from "./FeeFormModal";
 import FeeDetailsPanel from "./FeeDetailsPanel";
