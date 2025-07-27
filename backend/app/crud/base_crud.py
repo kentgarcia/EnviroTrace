@@ -22,7 +22,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         result = await db.execute(select(self.model).offset(skip).limit(limit))
-        return result.scalars().all() # type: ignore
+        return list(result.scalars().all())
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = obj_in.model_dump()
@@ -87,5 +87,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         
     async def count(self, db: AsyncSession) -> int:
         """Count all records of the model"""
-        result = await db.execute(select(func.count()).select_from(self.model))
-        return result.scalar_one()
+        result = await db.execute(select(func.count(self.model.id)))
+        count_value = result.scalar()
+        return count_value if count_value is not None else 0

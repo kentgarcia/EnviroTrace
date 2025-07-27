@@ -3,6 +3,58 @@ from datetime import datetime, date
 from typing import Optional, List
 from pydantic import BaseModel, UUID4
 
+# Monitoring Request schemas (based on InspectionReport but simplified for frontend)
+class MonitoringRequestBase(BaseModel):
+    title: str
+    description: str
+    requester_name: str
+    date: date
+    address: str
+    status: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    sapling_count: Optional[int] = None
+    notes: Optional[str] = None
+
+class MonitoringRequestCreate(BaseModel):
+    title: str
+    description: str
+    requester_name: str
+    date: date
+    address: str
+    status: str = "pending"  # Default status
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    sapling_count: Optional[int] = None
+    notes: Optional[str] = None
+
+class MonitoringRequestUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    requester_name: Optional[str] = None
+    date: Optional[date] = None
+    address: Optional[str] = None
+    status: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    sapling_count: Optional[int] = None
+    notes: Optional[str] = None
+
+class MonitoringRequestInDB(MonitoringRequestBase):
+    id: UUID4
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class MonitoringRequest(MonitoringRequestInDB):
+    pass
+
+class MonitoringRequestListResponse(BaseModel):
+    reports: List[MonitoringRequest]
+    total: int
+
 # InspectionReport schemas
 class InspectionReportBase(BaseModel):
     report_number: str

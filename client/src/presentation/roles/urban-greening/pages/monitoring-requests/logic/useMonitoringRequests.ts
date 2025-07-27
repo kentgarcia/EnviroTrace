@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import * as monitoringRequestService from "@/core/api/monitoring-request-service";
 
 // Types for the monitoring requests
 export type Coordinates = {
@@ -30,52 +31,47 @@ export type MonitoringRequestSubmission = {
   notes?: string;
 };
 
-const initialMonitoringRequests: MonitoringRequest[] = [
-  {
-    id: "REQ-001",
-    title: "Tree Planting Request - Central Park",
-    description: "Request for monitoring tree planting activities in Central Park area",
-    requesterName: "John Doe",
-    date: "2024-01-15",
-    status: "approved",
-    location: { lat: 14.5995, lng: 120.9842 },
-    address: "Central Park, Manila",
-    saplingCount: 50,
-    notes: "Focus on native tree species",
-  },
-  {
-    id: "REQ-002",
-    title: "Urban Forest Maintenance",
-    description: "Regular maintenance and health check of existing urban forest",
-    requesterName: "Jane Smith",
-    date: "2024-01-20",
-    status: "in-progress",
-    location: { lat: 14.6091, lng: 121.0223 },
-    address: "Quezon City Memorial Circle",
-    saplingCount: 200,
-    notes: "Check for pest infestation",
-  },
-  {
-    id: "REQ-003",
-    title: "New Green Space Development",
-    description: "Monitoring request for new green space development project",
-    requesterName: "Mike Johnson",
-    date: "2024-01-25",
-    status: "pending",
-    address: "Makati Business District",
-    saplingCount: 30,
-  },
-];
-
 export function useMonitoringRequests() {
-  const [requests, setRequests] = useState<MonitoringRequest[]>(initialMonitoringRequests);
+  const [requests, setRequests] = useState<MonitoringRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
-    initialMonitoringRequests.length > 0 ? initialMonitoringRequests[0].id : null
+    null
   );
   const [mode, setMode] = useState<"viewing" | "adding" | "editing">("viewing");
   const [currentView, setCurrentView] = useState<"table" | "map">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Load monitoring requests from API
+  const loadRequests = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await monitoringRequestService.fetchMonitoringRequests({
+        limit: 100, // Get a reasonable amount
+        ...(statusFilter !== "all" && { status: statusFilter }),
+        ...(searchTerm && { search: searchTerm }),
+      });
+      setRequests(response.reports);
+
+      // Set first request as selected if none selected
+      if (!selectedRequestId && response.reports.length > 0) {
+        setSelectedRequestId(response.reports[0].id);
+      }
+    } catch (err) {
+      console.error("Failed to load monitoring requests:", err);
+      setError("Failed to load monitoring requests");
+      toast.error("Failed to load monitoring requests");
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, searchTerm, selectedRequestId]);
+
+  // Load requests on mount and when filters change
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const selectedRequest = useMemo(
     () => requests.find((r) => r.id === selectedRequestId) || null,
@@ -118,52 +114,66 @@ export function useMonitoringRequests() {
   }, [selectedRequest]);
 
   const handleDelete = useCallback(
-    (id: string) => {
-      setRequests((prev) => {
-        const newRequests = prev.filter((r) => r.id !== id);
-        if (selectedRequestId === id) {
-          setSelectedRequestId(newRequests.length > 0 ? newRequests[0].id : null);
-        }
-        return newRequests;
-      });
-      setMode("viewing");
-      toast.success("Request has been deleted.");
+    async (id: string) => {
+      try {
+        await monitoringRequestService.deleteMonitoringRequest(id);
+
+        setRequests((prev) => {
+          const newRequests = prev.filter((r) => r.id !== id);
+          if (selectedRequestId === id) {
+            setSelectedRequestId(
+              newRequests.length > 0 ? newRequests[0].id : null
+            );
+          }
+          return newRequests;
+        });
+        setMode("viewing");
+        toast.success("Request has been deleted.");
+      } catch (err) {
+        console.error("Failed to delete request:", err);
+        toast.error("Failed to delete request");
+      }
     },
     [selectedRequestId]
   );
 
   const handleSaveRequest = useCallback(
-    (data: MonitoringRequestSubmission, location: Coordinates | null) => {
-      if (mode === "editing" && selectedRequest) {
-        const updatedRequest: MonitoringRequest = {
-          ...selectedRequest,
+    async (data: MonitoringRequestSubmission, location: Coordinates | null) => {
+      try {
+        const requestData:
+          | monitoringRequestService.MonitoringRequestCreate
+          | monitoringRequestService.MonitoringRequestUpdate = {
           ...data,
           date: data.date.toISOString().split("T")[0],
-        };
-        if (location) {
-          updatedRequest.location = location;
-        } else {
-          delete updatedRequest.location;
-        }
-        setRequests((prev) =>
-          prev.map((r) => (r.id === selectedRequest.id ? updatedRequest : r))
-        );
-        toast.success(`Request ${selectedRequest.id} has been updated.`);
-      } else if (mode === "adding") {
-        const newRequest: MonitoringRequest = {
-          id: `REQ-${String(requests.length + 1).padStart(3, "0")}`,
-          ...data,
-          date: data.date.toISOString().split("T")[0],
-          status: "pending",
           ...(location && { location }),
         };
-        setRequests((prev) => [...prev, newRequest]);
-        setSelectedRequestId(newRequest.id);
-        toast.success(`New request ${newRequest.id} has been added.`);
+
+        if (mode === "editing" && selectedRequest) {
+          const updatedRequest =
+            await monitoringRequestService.updateMonitoringRequest(
+              selectedRequest.id,
+              requestData
+            );
+          setRequests((prev) =>
+            prev.map((r) => (r.id === selectedRequest.id ? updatedRequest : r))
+          );
+          toast.success(`Request ${selectedRequest.id} has been updated.`);
+        } else if (mode === "adding") {
+          const newRequest =
+            await monitoringRequestService.createMonitoringRequest(
+              requestData as monitoringRequestService.MonitoringRequestCreate
+            );
+          setRequests((prev) => [...prev, newRequest]);
+          setSelectedRequestId(newRequest.id);
+          toast.success(`New request ${newRequest.id} has been added.`);
+        }
+        setMode("viewing");
+      } catch (err) {
+        console.error("Failed to save request:", err);
+        toast.error("Failed to save request");
       }
-      setMode("viewing");
     },
-    [mode, requests.length, selectedRequest]
+    [mode, selectedRequest]
   );
 
   const getStatusColor = (status: string) => {
@@ -185,6 +195,8 @@ export function useMonitoringRequests() {
 
   return {
     requests,
+    loading,
+    error,
     selectedRequestId,
     mode,
     currentView,
@@ -203,5 +215,6 @@ export function useMonitoringRequests() {
     handleDelete,
     handleSaveRequest,
     getStatusColor,
+    refetchRequests: loadRequests,
   };
 }

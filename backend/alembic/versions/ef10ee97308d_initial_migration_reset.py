@@ -1,8 +1,8 @@
-"""Merge heads before adding vehicle remarks
+"""initial_migration_reset
 
-Revision ID: d1ea7c078f89
-Revises: 479375b85f03, enhanced_quarterly_testing
-Create Date: 2025-07-18 01:32:52.932164
+Revision ID: ef10ee97308d
+Revises: 
+Create Date: 2025-07-28 03:18:22.932905
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd1ea7c078f89'
-down_revision: Union[str, None] = ('479375b85f03', 'enhanced_quarterly_testing')
+revision: str = 'ef10ee97308d'
+down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

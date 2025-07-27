@@ -1,11 +1,11 @@
 # app/crud/crud_urban_greening.py
-from typing import Optional, Dict, Any, List
-from sqlalchemy.orm import Session
+from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import desc, or_, and_
 from sqlalchemy.future import select
 from app.crud.base_crud import CRUDBase
 from app.models.urban_greening_models import (
+    MonitoringRequest,
     InspectionReport,
     FeeRecord,
     TreeRecord,
@@ -13,6 +13,8 @@ from app.models.urban_greening_models import (
     UrbanGreeningProject
 )
 from app.schemas.urban_greening_schemas import (
+    MonitoringRequestCreate,
+    MonitoringRequestUpdate,
     InspectionReportCreate,
     InspectionReportUpdate,
     FeeRecordCreate,
@@ -24,6 +26,55 @@ from app.schemas.urban_greening_schemas import (
     UrbanGreeningProjectCreate,
     UrbanGreeningProjectUpdate
 )
+
+class CRUDMonitoringRequest(CRUDBase[MonitoringRequest, MonitoringRequestCreate, MonitoringRequestUpdate]):
+    async def get_by_status(self, db: AsyncSession, *, status: str, skip: int = 0, limit: int = 100) -> List[MonitoringRequest]:
+        result = await db.execute(
+            select(self.model)
+            .filter(self.model.status == status)
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(self.model.date))
+        )
+        return result.scalars().all()
+
+    async def get_by_requester(self, db: AsyncSession, *, requester_name: str, skip: int = 0, limit: int = 100) -> List[MonitoringRequest]:
+        result = await db.execute(
+            select(self.model)
+            .filter(self.model.requester_name.ilike(f"%{requester_name}%"))
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(self.model.date))
+        )
+        return result.scalars().all()
+
+    async def get_by_type(self, db: AsyncSession, *, type: str, skip: int = 0, limit: int = 100) -> List[MonitoringRequest]:
+        """For monitoring requests, type filtering can be based on status or other criteria"""
+        result = await db.execute(
+            select(self.model)
+            .filter(self.model.status == type)  # Using status as type filter
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(self.model.date))
+        )
+        return result.scalars().all()
+
+    async def search(self, db: AsyncSession, *, query: str, skip: int = 0, limit: int = 100) -> List[MonitoringRequest]:
+        result = await db.execute(
+            select(self.model)
+            .filter(
+                or_(
+                    self.model.title.ilike(f"%{query}%"),
+                    self.model.description.ilike(f"%{query}%"),
+                    self.model.requester_name.ilike(f"%{query}%"),
+                    self.model.address.ilike(f"%{query}%")
+                )
+            )
+            .offset(skip)
+            .limit(limit)
+            .order_by(desc(self.model.date))
+        )
+        return result.scalars().all()
 
 class CRUDInspectionReport(CRUDBase[InspectionReport, InspectionReportCreate, InspectionReportUpdate]):
     async def get_by_report_number(self, db: AsyncSession, *, report_number: str) -> Optional[InspectionReport]:
@@ -192,6 +243,7 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
         return result.scalars().all()
 
 # Create CRUD objects
+monitoring_request = CRUDMonitoringRequest(MonitoringRequest)
 inspection_report = CRUDInspectionReport(InspectionReport)
 fee_record = CRUDFeeRecord(FeeRecord)
 tree_record = CRUDTreeRecord(TreeRecord)
