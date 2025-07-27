@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column('category', sa.String(), nullable=False),
         sa.Column('rate', sa.Integer(), nullable=False),
         sa.Column('date_effective', sa.Date(), nullable=False),
-        sa.Column('offense_level', sa.Integer(), nullable=False),
+        sa.Column('level', sa.Integer(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint('fee_id'),
@@ -35,14 +35,14 @@ def upgrade() -> None:
     )
     sa.Index('ix_emission_air_quality_fees_new_fee_id', 'fee_id')
     
-    # Copy data from old table to new table, converting offense_level to int
+    # Copy data from old table to new table, converting level to int
     op.execute("""
-        INSERT INTO emission.air_quality_fees_new (category, rate, date_effective, offense_level, created_at, updated_at)
+        INSERT INTO emission.air_quality_fees_new (category, rate, date_effective, level, created_at, updated_at)
         SELECT category, rate, date_effective, 
                CASE 
-                   WHEN offense_level ~ '^[0-9]+$' THEN offense_level::integer
+                   WHEN level ~ '^[0-9]+$' THEN level::integer
                    ELSE 1
-               END as offense_level,
+               END as level,
                created_at, updated_at
         FROM emission.air_quality_fees
     """)
@@ -67,7 +67,6 @@ def downgrade() -> None:
         sa.Column('level', sa.String(), nullable=False),
         sa.Column('rate', sa.Integer(), nullable=False),
         sa.Column('date_effective', sa.Date(), nullable=False),
-        sa.Column('offense_level', sa.String(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint('fee_id'),
@@ -75,11 +74,11 @@ def downgrade() -> None:
     )
     sa.Index('ix_emission_air_quality_fees_old_fee_id', 'fee_id')
     
-    # Copy data back, converting offense_level to string and generating string IDs
+    # Copy data back, converting level to string and generating string IDs
     op.execute("""
-        INSERT INTO emission.air_quality_fees_old (fee_id, category, level, rate, date_effective, offense_level, created_at, updated_at)
+        INSERT INTO emission.air_quality_fees_old (fee_id, category, level, rate, date_effective, level, created_at, updated_at)
         SELECT 'FEE-' || fee_id::text as fee_id, category, category as level, rate, date_effective, 
-               offense_level::text as offense_level,
+               level::text as level,
                created_at, updated_at
         FROM emission.air_quality_fees
     """)

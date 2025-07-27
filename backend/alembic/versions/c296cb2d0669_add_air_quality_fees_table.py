@@ -27,7 +27,6 @@ def upgrade() -> None:
         sa.Column('level', sa.String(), nullable=False),
         sa.Column('rate', sa.Integer(), nullable=False),
         sa.Column('date_effective', sa.Date(), nullable=False),
-        sa.Column('offense_level', sa.String(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint('fee_id'),

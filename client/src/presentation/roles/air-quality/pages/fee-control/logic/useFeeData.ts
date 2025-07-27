@@ -1,31 +1,26 @@
+import { fetchFees, createFee, updateFee, deleteFee } from "@/core/api/fee-api";
 import { useState, useCallback, useEffect } from "react";
-import {
-  fetchFees,
-  createFee,
-  updateFee,
-  deleteFee,
-} from "@/core/api/api-client";
 
 export interface Fee {
-  fee_id: number;
+  fee_id: string;
   category: string;
   rate: number; // This will be in cents (integer) from backend, displayed as decimal
   date_effective: string;
-  offense_level: number;
+  level: number;
 }
 
 export interface FeeCreate {
   category: string;
   rate: number; // This will be converted to cents before sending to backend
   date_effective: string;
-  offense_level: number;
+  level: number;
 }
 
 export interface FeeUpdate {
   category?: string;
   rate?: number;
   date_effective?: string;
-  offense_level?: number;
+  level?: number;
 }
 
 // Helper functions to convert between frontend decimal and backend integer
@@ -96,7 +91,7 @@ export const useFeeData = () => {
   }, []);
 
   const updateExistingFee = useCallback(
-    async (feeId: number, feeData: FeeUpdate) => {
+    async (feeId: string, feeData: FeeUpdate) => {
       setLoading(true);
       setError(null);
       try {
@@ -120,7 +115,7 @@ export const useFeeData = () => {
     []
   );
 
-  const removeExistingFee = useCallback(async (feeId: number) => {
+  const removeExistingFee = useCallback(async (feeId: string) => {
     setLoading(true);
     setError(null);
     try {

@@ -249,7 +249,6 @@ def downgrade() -> None:
     sa.Column('level', sa.VARCHAR(), autoincrement=False, nullable=False),
     sa.Column('rate', sa.INTEGER(), autoincrement=False, nullable=False),
     sa.Column('date_effective', sa.DATE(), autoincrement=False, nullable=False),
-    sa.Column('offense_level', sa.VARCHAR(), autoincrement=False, nullable=False),
     sa.Column('created_at', postgresql.TIMESTAMP(timezone=True), server_default=sa.text('now()'), autoincrement=False, nullable=True),
     sa.Column('updated_at', postgresql.TIMESTAMP(timezone=True), autoincrement=False, nullable=True),
     sa.PrimaryKeyConstraint('fee_id', name=op.f('air_quality_fees_pkey')),

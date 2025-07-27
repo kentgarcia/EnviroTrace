@@ -2,7 +2,7 @@ import { createRoute, RouteComponent } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 
 import UrbanGreeningOverview from "./pages/Overview";
-import MonitoringRequests from "./pages/MonitoringRequests";
+import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import UrbanGreeningRecords from "./pages/Records";
 import DataGridTestingPage from "./pages/DataGridTesting";
 

@@ -2,7 +2,7 @@ import React from "react";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Button } from "@/presentation/components/shared/ui/button";
-import LocationMap from "../pages/LocationMap";
+import LocationMap from "@/presentation/roles/urban-greening/components/LocationMap";
 import { Edit, Trash } from "lucide-react";
 
 interface Coordinates {

@@ -12,7 +12,8 @@ import { Fee } from '../logic/useFeeData';
 
 interface FeeDetailsPanelProps {
     selectedFee: Fee | null;
-    onUpdateFee: (feeId: number, updateData: Partial<Fee>) => void;
+    onUpdateFee: (feeId: string, updateData: Partial<Fee>) => void;
+    onDeleteFee: (feeId: string) => void;
     loading?: boolean;
     error?: string | null;
 }
@@ -20,6 +21,7 @@ interface FeeDetailsPanelProps {
 const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
     selectedFee,
     onUpdateFee,
+    onDeleteFee,
     loading = false,
     error = null,
 }) => {
@@ -33,7 +35,7 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                 category: selectedFee.category,
                 rate: selectedFee.rate,
                 date_effective: selectedFee.date_effective,
-                offense_level: selectedFee.offense_level,
+                level: selectedFee.level,
             });
         } else {
             setEditForm({});
@@ -52,9 +54,15 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
 
         setIsUpdating(true);
         try {
-            await onUpdateFee(selectedFee.fee_id, editForm);
+            // Always send fee_id as a number and rate as integer cents
+            const updateData = {
+                ...editForm,
+                rate: editForm.rate !== undefined ? Math.round(Number(editForm.rate) * 100) : undefined,
+            };
+            await onUpdateFee(selectedFee.fee_id, updateData);
         } catch (err) {
             console.error('Failed to update fee:', err);
+            console.log('fee_id type:', typeof selectedFee.fee_id, selectedFee.fee_id);
         } finally {
             setIsUpdating(false);
         }
@@ -64,7 +72,7 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
         editForm.category !== selectedFee.category ||
         editForm.rate !== selectedFee.rate ||
         editForm.date_effective !== selectedFee.date_effective ||
-        editForm.offense_level !== selectedFee.offense_level
+        editForm.level !== selectedFee.level
     );
 
     return (
@@ -132,8 +140,8 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                                 id="editOffenseLevel"
                                 type="number"
                                 min="1"
-                                value={editForm.offense_level || ''}
-                                onChange={(e) => handleFieldChange('offense_level', Number(e.target.value))}
+                                value={editForm.level || ''}
+                                onChange={(e) => handleFieldChange('level', Number(e.target.value))}
                                 placeholder="Enter offense level"
                                 disabled={isUpdating}
                             />
@@ -146,6 +154,14 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                                 className="w-full"
                             >
                                 {isUpdating ? 'Updating...' : 'Update Fee'}
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => selectedFee && onDeleteFee(selectedFee.fee_id)}
+                                disabled={isUpdating}
+                                className="w-full"
+                            >
+                                Delete Fee
                             </Button>
                         </div>
                     </div>

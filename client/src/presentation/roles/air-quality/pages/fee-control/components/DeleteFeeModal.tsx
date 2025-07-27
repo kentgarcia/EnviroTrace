@@ -16,7 +16,7 @@ import { Fee } from '../logic/useFeeData';
 
 interface DeleteFeeModalProps {
     fee: Fee;
-    onDelete: (feeId: number) => void;
+    onDelete: (feeId: string) => void;
     isDeleting?: boolean;
 }
 
@@ -50,7 +50,7 @@ export const DeleteFeeModal: React.FC<DeleteFeeModalProps> = ({
                             <div className="text-sm">
                                 <div><strong>Category:</strong> {fee.category}</div>
                                 <div><strong>Rate:</strong> ₱{fee.rate.toFixed(2)}</div>
-                                <div><strong>Offense Level:</strong> {fee.offense_level}</div>
+                                <div><strong>Offense Level:</strong> {fee.level}</div>
                             </div>
                         </div>
                         <div className="mt-2 text-red-600">

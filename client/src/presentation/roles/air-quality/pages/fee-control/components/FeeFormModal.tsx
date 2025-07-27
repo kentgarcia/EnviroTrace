@@ -18,7 +18,7 @@ interface FeeFormModalProps {
         category: string;
         rate: number;
         date_effective: string;
-        offense_level: number;
+        level: number;
     }) => void;
 }
 
@@ -28,7 +28,7 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee }) => {
         category: '',
         rate: 0,
         date_effective: '',
-        offense_level: 1,
+        level: 1,
     });
 
     const handleFieldChange = (field: string, value: string | number) => {
@@ -43,7 +43,7 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee }) => {
             formData.category.trim() !== '' &&
             formData.rate > 0 &&
             formData.date_effective !== '' &&
-            formData.offense_level > 0
+            formData.level > 0
         );
     };
 
@@ -52,7 +52,7 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee }) => {
             category: '',
             rate: 0,
             date_effective: '',
-            offense_level: 1,
+            level: 1,
         });
     };
 
@@ -124,13 +124,13 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee }) => {
                             />
                         </div>
                         <div>
-                            <Label htmlFor="offense_level">Offense Level</Label>
+                            <Label htmlFor="level">Offense Level</Label>
                             <Input
-                                id="offense_level"
+                                id="level"
                                 type="number"
                                 min="1"
-                                value={formData.offense_level}
-                                onChange={(e) => handleFieldChange('offense_level', parseInt(e.target.value) || 1)}
+                                value={formData.level}
+                                onChange={(e) => handleFieldChange('level', parseInt(e.target.value) || 1)}
                                 placeholder="Offense Level"
                                 required
                             />

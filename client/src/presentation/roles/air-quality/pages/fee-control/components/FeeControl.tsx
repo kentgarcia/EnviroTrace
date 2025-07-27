@@ -7,73 +7,68 @@ import {
 } from "@/presentation/components/shared/ui/card";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import { useFeeData, Fee } from "../logic/useFeeData.tsx";
+// Update Fee type to ensure fee_id is string
+import { Fee } from "../logic/useFeeData";
+import { useFeeQuery, useCreateFee, useUpdateFee, useDeleteFee } from "../logic/useFeeQuery";
 import { createFeeColumns } from "../logic/feeColumns";
 import { FeeFormModal } from "./FeeFormModal";
 import FeeDetailsPanel from "./FeeDetailsPanel";
 
 const FeeControl: React.FC = () => {
   const [selectedFee, setSelectedFee] = useState<Fee | null>(null);
-  const [deletingFeeId, setDeletingFeeId] = useState<number | undefined>();
+  const [deletingFeeId, setDeletingFeeId] = useState<string | undefined>();
 
-  // Custom hooks for data management
-  const {
-    fees,
-    loading,
-    error,
-    createFee: createNewFee,
-    updateFee: updateExistingFee,
-    deleteFee: removeExistingFee,
-  } = useFeeData();
+  // TanStack Query hooks for data and mutations
+  const { data: fees = [], isLoading: loading, error } = useFeeQuery();
+  const createFeeMutation = useCreateFee();
+  const updateFeeMutation = useUpdateFee();
+  const deleteFeeMutation = useDeleteFee();
 
   // Handle adding new fee
-  const handleAddFee = async (feeData: {
-    category: string;
-    rate: number;
-    date_effective: string;
-    offense_level: number;
-  }) => {
-    try {
-      await createNewFee(feeData);
-    } catch (err) {
-      console.error('Failed to create fee:', err);
-    }
+  // Helper to generate a short unique fee_id (e.g., FEE-xxxxxx)
+  function generateShortFeeId() {
+    const random = Math.floor(100000 + Math.random() * 900000); // 6 digits
+    return `FEE-${random}`;
+  }
+
+  const handleAddFee = async (feeData: Omit<Fee, "fee_id" | "created_at" | "updated_at">) => {
+    const feeWithId = { ...feeData, fee_id: generateShortFeeId() };
+    createFeeMutation.mutate(feeWithId);
   };
 
   // Handle fee update
-  const handleUpdateFee = async (feeId: number, updateData: Partial<Fee>) => {
-    try {
-      await updateExistingFee(feeId, updateData);
-      // Update selected fee if it's the one being updated
-      if (selectedFee && selectedFee.fee_id === feeId) {
-        setSelectedFee({ ...selectedFee, ...updateData } as Fee);
-      }
-    } catch (err) {
-      console.error('Failed to update fee:', err);
+  const handleUpdateFee = async (feeId: string, updateData: Partial<Omit<Fee, "fee_id" | "created_at" | "updated_at">>) => {
+    updateFeeMutation.mutate({ fee_id: feeId, data: updateData });
+    // Optionally update selectedFee locally if needed
+    if (selectedFee && String(selectedFee.fee_id) === feeId) {
+      setSelectedFee({ ...selectedFee, ...updateData } as Fee);
     }
   };
 
   // Handle fee deletion
-  const handleDeleteFee = async (feeId: number) => {
+  const handleDeleteFee = async (feeId: string) => {
     setDeletingFeeId(feeId);
-    try {
-      await removeExistingFee(feeId);
-      // Clear selected fee if it was deleted
-      if (selectedFee && selectedFee.fee_id === feeId) {
-        setSelectedFee(null);
+    deleteFeeMutation.mutate(feeId, {
+      onSuccess: () => {
+        if (selectedFee && selectedFee.fee_id === feeId) {
+          setSelectedFee(null);
+        }
+        setDeletingFeeId(undefined);
+      },
+      onError: () => {
+        setDeletingFeeId(undefined);
       }
-    } catch (err) {
-      console.error('Failed to delete fee:', err);
-    } finally {
-      setDeletingFeeId(undefined);
-    }
+    });
   };
 
   // Column configuration for data table
-  const columns = createFeeColumns(handleDeleteFee, deletingFeeId);
+  const columns = createFeeColumns(
+    handleDeleteFee as (feeId: any) => void,
+    deletingFeeId !== undefined ? Number(deletingFeeId) : undefined
+  );
 
   // Handle row click in data table
-  const handleRowClick = (row: any) => {
+  const handleRowClick = (row: { original: Fee }) => {
     setSelectedFee(row.original);
   };
 
@@ -117,7 +112,9 @@ const FeeControl: React.FC = () => {
                     />
                     {error && (
                       <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                        <p className="text-sm text-red-600">{error}</p>
+                        <p className="text-sm text-red-600">
+                          {typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : String(error)}
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -127,9 +124,16 @@ const FeeControl: React.FC = () => {
                 <div className="lg:col-span-1">
                   <FeeDetailsPanel
                     selectedFee={selectedFee}
-                    onUpdateFee={handleUpdateFee}
+                    onUpdateFee={handleUpdateFee as (feeId: any, updateData: any) => void}
+                    onDeleteFee={handleDeleteFee as (feeId: any) => void}
                     loading={loading}
-                    error={error}
+                    error={
+                      error
+                        ? typeof error === "object" && error !== null && "message" in error
+                          ? (error as Error).message
+                          : String(error)
+                        : null
+                    }
                   />
                 </div>
               </div>

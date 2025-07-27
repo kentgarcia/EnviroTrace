@@ -3,7 +3,7 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Button } from "@/presentation/components/shared/ui/button";
-import LocationPickerMap from "../pages/LocationPickerMap";
+import LocationPickerMap from "../../LocationPickerMap";
 import { toast } from "sonner";
 
 interface Coordinates {

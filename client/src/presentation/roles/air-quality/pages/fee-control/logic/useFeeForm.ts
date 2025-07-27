@@ -10,7 +10,7 @@ export const useFeeForm = () => {
     category: "",
     rate: 0,
     date_effective: "",
-    offense_level: 0,
+    level: 0,
   });
 
   const handleFeeSelect = useCallback((fee: Fee) => {
@@ -19,7 +19,7 @@ export const useFeeForm = () => {
       category: fee.category,
       rate: fee.rate,
       date_effective: fee.date_effective,
-      offense_level: fee.offense_level,
+      level: fee.level,
     });
   }, []);
 
@@ -28,7 +28,7 @@ export const useFeeForm = () => {
       category: "",
       rate: 0,
       date_effective: "",
-      offense_level: 0,
+      level: 0,
     });
     setShowAddForm(false);
   }, []);
@@ -67,7 +67,7 @@ export const useFeeForm = () => {
       addForm.category.trim() !== "" &&
       addForm.rate > 0 &&
       addForm.date_effective !== "" &&
-      addForm.offense_level > 0
+      addForm.level > 0
     );
   }, [addForm]);
 
@@ -77,8 +77,8 @@ export const useFeeForm = () => {
       editForm.rate !== undefined &&
       editForm.rate > 0 &&
       editForm.date_effective !== "" &&
-      editForm.offense_level !== undefined &&
-      editForm.offense_level > 0
+      editForm.level !== undefined &&
+      editForm.level > 0
     );
   }, [editForm]);
 
