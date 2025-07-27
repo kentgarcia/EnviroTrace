@@ -15,7 +15,7 @@ import { Edit, Trash } from "lucide-react";
 interface MonitoringRequest {
   id: string;
   title: string;
-  requesterName: string;
+  requester_name: string;
   date: string;
   status: string;
 }
@@ -92,14 +92,13 @@ const MonitoringRequestsTable: React.FC<MonitoringRequestsTableProps> = ({
             requests.map((request) => (
               <TableRow
                 key={request.id}
-                className={`cursor-pointer ${
-                  selectedRequestId === request.id ? "bg-blue-50" : ""
-                }`}
+                className={`cursor-pointer ${selectedRequestId === request.id ? "bg-blue-50" : ""
+                  }`}
                 onClick={() => onSelectRequest(request.id)}
               >
                 <TableCell className="font-medium">{request.id}</TableCell>
                 <TableCell>{request.title}</TableCell>
-                <TableCell>{request.requesterName}</TableCell>
+                <TableCell>{request.requester_name}</TableCell>
                 <TableCell>{request.date}</TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(request.status)}>

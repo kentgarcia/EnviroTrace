@@ -14,12 +14,12 @@ export interface MonitoringRequest {
   id: string;
   title: string;
   description: string;
-  requesterName: string;
+  requester_name: string;
   date: string;
   status: "pending" | "approved" | "rejected" | "in-progress" | "completed";
   location?: Coordinates;
   address: string;
-  saplingCount?: number;
+  sapling_count?: number;
   notes?: string;
 }
 
@@ -53,7 +53,7 @@ const MonitoringRequestDetails: React.FC<MonitoringRequestDetailsProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label className="text-sm font-medium">Requester</Label>
-          <p className="text-sm">{request.requesterName}</p>
+          <p className="text-sm">{request.requester_name}</p>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -74,10 +74,10 @@ const MonitoringRequestDetails: React.FC<MonitoringRequestDetailsProps> = ({
           </Badge>
         </div>
       </div>
-      {request.saplingCount && (
+      {request.sapling_count && (
         <div>
           <Label className="text-sm font-medium">Sapling Count</Label>
-          <p className="text-sm">{request.saplingCount}</p>
+          <p className="text-sm">{request.sapling_count}</p>
         </div>
       )}
       {request.notes && (

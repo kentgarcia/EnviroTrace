@@ -22,7 +22,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
     ) -> List[ModelType]:
         result = await db.execute(select(self.model).offset(skip).limit(limit))
-        return list(result.scalars().all())
+        return result.scalars().all()
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         obj_in_data = obj_in.model_dump()

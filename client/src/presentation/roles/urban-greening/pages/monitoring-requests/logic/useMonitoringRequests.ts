@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as monitoringRequestService from "@/core/api/monitoring-request-service";
 
 // Types for the monitoring requests
@@ -12,29 +13,30 @@ export type MonitoringRequest = {
   id: string;
   title: string;
   description: string;
-  requesterName: string;
+  requester_name: string;
   date: string;
   status: "pending" | "approved" | "rejected" | "in-progress" | "completed";
-  location?: Coordinates;
+  latitude?: number;
+  longitude?: number;
   address: string;
-  saplingCount?: number;
+  sapling_count?: number;
   notes?: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type MonitoringRequestSubmission = {
   title: string;
   description: string;
-  requesterName: string;
+  requester_name: string;
   date: Date;
   address: string;
-  saplingCount?: number;
+  sapling_count?: number;
   notes?: string;
 };
 
 export function useMonitoringRequests() {
-  const [requests, setRequests] = useState<MonitoringRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
     null
   );
@@ -43,52 +45,102 @@ export function useMonitoringRequests() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Load monitoring requests from API
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await monitoringRequestService.fetchMonitoringRequests({
-        limit: 100, // Get a reasonable amount
+  // Fetch monitoring requests using TanStack Query
+  const {
+    data: requestsResponse,
+    isLoading: loading,
+    error,
+    refetch: refetchRequests,
+  } = useQuery({
+    queryKey: ["monitoring-requests", { statusFilter, searchTerm }],
+    queryFn: () =>
+      monitoringRequestService.fetchMonitoringRequests({
+        limit: 100,
         ...(statusFilter !== "all" && { status: statusFilter }),
         ...(searchTerm && { search: searchTerm }),
-      });
-      setRequests(response.reports);
+      }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-      // Set first request as selected if none selected
-      if (!selectedRequestId && response.reports.length > 0) {
-        setSelectedRequestId(response.reports[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to load monitoring requests:", err);
-      setError("Failed to load monitoring requests");
-      toast.error("Failed to load monitoring requests");
-    } finally {
-      setLoading(false);
+  const requests = requestsResponse?.reports || [];
+
+  // Set first request as selected if none selected and we have requests
+  useMemo(() => {
+    if (!selectedRequestId && requests.length > 0) {
+      setSelectedRequestId(requests[0].id);
     }
-  }, [statusFilter, searchTerm, selectedRequestId]);
-
-  // Load requests on mount and when filters change
-  useEffect(() => {
-    loadRequests();
-  }, [loadRequests]);
+  }, [selectedRequestId, requests]);
 
   const selectedRequest = useMemo(
     () => requests.find((r) => r.id === selectedRequestId) || null,
     [requests, selectedRequestId]
   );
 
-  const [formLocation, setFormLocation] = useState<Coordinates>(
-    selectedRequest?.location || { lat: 14.5995, lng: 120.9842 }
-  );
+  const [formLocation, setFormLocation] = useState<Coordinates>({
+    lat: selectedRequest?.latitude || 14.5995,
+    lng: selectedRequest?.longitude || 120.9842,
+  });
 
-  useEffect(() => {
+  // Update form location when mode or selected request changes
+  useMemo(() => {
     if (mode === "adding") {
       setFormLocation({ lat: 14.5995, lng: 120.9842 });
-    } else if (mode === "editing" && selectedRequest?.location) {
-      setFormLocation(selectedRequest.location);
+    } else if (mode === "editing" && selectedRequest) {
+      setFormLocation({
+        lat: selectedRequest.latitude || 14.5995,
+        lng: selectedRequest.longitude || 120.9842,
+      });
     }
   }, [mode, selectedRequest]);
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: monitoringRequestService.deleteMonitoringRequest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-requests"] });
+      toast.success("Request has been deleted.");
+      setMode("viewing");
+    },
+    onError: (err) => {
+      console.error("Failed to delete request:", err);
+      toast.error("Failed to delete request");
+    },
+  });
+
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: monitoringRequestService.createMonitoringRequest,
+    onSuccess: (newRequest) => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-requests"] });
+      setSelectedRequestId(newRequest.id);
+      toast.success(`New request ${newRequest.id} has been added.`);
+      setMode("viewing");
+    },
+    onError: (err) => {
+      console.error("Failed to create request:", err);
+      toast.error("Failed to create request");
+    },
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: monitoringRequestService.MonitoringRequestUpdate;
+    }) => monitoringRequestService.updateMonitoringRequest(id, data),
+    onSuccess: (updatedRequest) => {
+      queryClient.invalidateQueries({ queryKey: ["monitoring-requests"] });
+      toast.success(`Request ${updatedRequest.id} has been updated.`);
+      setMode("viewing");
+    },
+    onError: (err) => {
+      console.error("Failed to update request:", err);
+      toast.error("Failed to update request");
+    },
+  });
 
   const handleSelectRequest = useCallback((id: string | null) => {
     setSelectedRequestId(id);
@@ -116,64 +168,52 @@ export function useMonitoringRequests() {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await monitoringRequestService.deleteMonitoringRequest(id);
-
-        setRequests((prev) => {
-          const newRequests = prev.filter((r) => r.id !== id);
-          if (selectedRequestId === id) {
-            setSelectedRequestId(
-              newRequests.length > 0 ? newRequests[0].id : null
-            );
-          }
-          return newRequests;
-        });
-        setMode("viewing");
-        toast.success("Request has been deleted.");
+        await deleteMutation.mutateAsync(id);
+        if (selectedRequestId === id) {
+          const remainingRequests = requests.filter((r) => r.id !== id);
+          setSelectedRequestId(
+            remainingRequests.length > 0 ? remainingRequests[0].id : null
+          );
+        }
       } catch (err) {
-        console.error("Failed to delete request:", err);
-        toast.error("Failed to delete request");
+        // Error handling is done in the mutation
       }
     },
-    [selectedRequestId]
+    [deleteMutation, selectedRequestId, requests]
   );
 
   const handleSaveRequest = useCallback(
     async (data: MonitoringRequestSubmission, location: Coordinates | null) => {
       try {
-        const requestData:
-          | monitoringRequestService.MonitoringRequestCreate
-          | monitoringRequestService.MonitoringRequestUpdate = {
+        const baseData = {
           ...data,
           date: data.date.toISOString().split("T")[0],
-          ...(location && { location }),
+          ...(location && {
+            latitude: location.lat,
+            longitude: location.lng,
+          }),
         };
 
         if (mode === "editing" && selectedRequest) {
-          const updatedRequest =
-            await monitoringRequestService.updateMonitoringRequest(
-              selectedRequest.id,
-              requestData
-            );
-          setRequests((prev) =>
-            prev.map((r) => (r.id === selectedRequest.id ? updatedRequest : r))
-          );
-          toast.success(`Request ${selectedRequest.id} has been updated.`);
+          const requestData: monitoringRequestService.MonitoringRequestUpdate =
+            baseData;
+          await updateMutation.mutateAsync({
+            id: selectedRequest.id,
+            data: requestData,
+          });
         } else if (mode === "adding") {
-          const newRequest =
-            await monitoringRequestService.createMonitoringRequest(
-              requestData as monitoringRequestService.MonitoringRequestCreate
-            );
-          setRequests((prev) => [...prev, newRequest]);
-          setSelectedRequestId(newRequest.id);
-          toast.success(`New request ${newRequest.id} has been added.`);
+          const requestData: monitoringRequestService.MonitoringRequestCreate =
+            {
+              ...baseData,
+              status: "pending",
+            };
+          await createMutation.mutateAsync(requestData);
         }
-        setMode("viewing");
       } catch (err) {
-        console.error("Failed to save request:", err);
-        toast.error("Failed to save request");
+        // Error handling is done in the mutations
       }
     },
-    [mode, selectedRequest]
+    [mode, selectedRequest, updateMutation, createMutation]
   );
 
   const getStatusColor = (status: string) => {
@@ -196,7 +236,7 @@ export function useMonitoringRequests() {
   return {
     requests,
     loading,
-    error,
+    error: error?.message || null,
     selectedRequestId,
     mode,
     currentView,
@@ -215,6 +255,6 @@ export function useMonitoringRequests() {
     handleDelete,
     handleSaveRequest,
     getStatusColor,
-    refetchRequests: loadRequests,
+    refetchRequests,
   };
 }

@@ -100,7 +100,7 @@ const MonitoringRequests: React.FC = () => {
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <div className="text-red-500 mb-2">Error loading monitoring requests</div>
                       <div className="text-sm text-gray-500 mb-4">{error}</div>
-                      <Button onClick={refetchRequests} variant="outline" size="sm">
+                      <Button onClick={() => refetchRequests()} variant="outline" size="sm">
                         Try Again
                       </Button>
                     </div>
@@ -109,7 +109,7 @@ const MonitoringRequests: React.FC = () => {
                       requests={requests.filter((request) => {
                         const matchesSearch =
                           request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          request.requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           request.id.toLowerCase().includes(searchTerm.toLowerCase());
                         const matchesStatus = statusFilter === "all" || request.status === statusFilter;
                         return matchesSearch && matchesStatus;

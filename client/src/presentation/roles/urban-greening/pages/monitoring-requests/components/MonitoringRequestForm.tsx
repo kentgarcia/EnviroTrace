@@ -5,28 +5,19 @@ import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Button } from "@/presentation/components/shared/ui/button";
 import LocationPickerMap from "../../LocationPickerMap";
 import { toast } from "sonner";
+import { MonitoringRequestSubmission } from "../logic/useMonitoringRequests";
 
 interface Coordinates {
   lat: number;
   lng: number;
 }
 
-export interface MonitoringRequestFormValues {
-  title: string;
-  description: string;
-  requesterName: string;
-  date: Date;
-  address: string;
-  saplingCount?: number;
-  notes?: string;
-}
-
 interface MonitoringRequestFormProps {
   mode: "adding" | "editing";
-  initialValues?: Partial<MonitoringRequestFormValues>;
+  initialValues?: Partial<MonitoringRequestSubmission>;
   location: Coordinates;
   onLocationChange: (loc: Coordinates) => void;
-  onSave: (data: MonitoringRequestFormValues, location: Coordinates) => void;
+  onSave: (data: MonitoringRequestSubmission, location: Coordinates) => void;
   onCancel: () => void;
 }
 
@@ -38,13 +29,13 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [form, setForm] = React.useState<MonitoringRequestFormValues>({
+  const [form, setForm] = React.useState<MonitoringRequestSubmission>({
     title: initialValues.title || "",
     description: initialValues.description || "",
-    requesterName: initialValues.requesterName || "",
+    requester_name: initialValues.requester_name || "",
     date: initialValues.date || new Date(),
     address: initialValues.address || "",
-    saplingCount: initialValues.saplingCount || undefined,
+    sapling_count: initialValues.sapling_count || undefined,
     notes: initialValues.notes || "",
   });
 
@@ -64,7 +55,7 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.requesterName || !form.date || !form.address) {
+    if (!form.title || !form.requester_name || !form.date || !form.address) {
       toast.error("Please fill in all required fields.");
       return;
     }
@@ -93,11 +84,11 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="requesterName">Requester Name</Label>
+          <Label htmlFor="requester_name">Requester Name</Label>
           <Input
-            id="requesterName"
+            id="requester_name"
             placeholder="Enter name"
-            value={form.requesterName}
+            value={form.requester_name}
             onChange={handleChange}
           />
         </div>
@@ -113,12 +104,12 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="saplingCount">Sapling Count</Label>
+          <Label htmlFor="sapling_count">Sapling Count</Label>
           <Input
-            id="saplingCount"
+            id="sapling_count"
             type="number"
             placeholder="Number of saplings"
-            value={form.saplingCount ?? ""}
+            value={form.sapling_count ?? ""}
             onChange={handleChange}
           />
         </div>
