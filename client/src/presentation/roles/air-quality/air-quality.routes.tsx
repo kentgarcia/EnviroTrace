@@ -2,7 +2,7 @@ import { createRoute, RouteComponent } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 
 import AirQualityOverview from "./pages/Overview";
-import FeeControl from "./pages/FeeControl";
+import FeeControl from "./pages/fee-control/components/FeeControl";
 import SmokeBelcher from "./pages/SmokeBelcher";
 import RecordsAndFile from "./pages/RecordsAndFile";
 import GarageTesting from "./pages/GarageTesting";

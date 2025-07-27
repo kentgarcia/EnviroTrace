@@ -167,8 +167,8 @@ export function DataTable<TData, TValue>({
             density === "compact"
               ? "text-xs"
               : density === "spacious"
-              ? "text-base"
-              : "text-sm"
+                ? "text-base"
+                : "text-sm"
           }
         >
           <TableHeader
@@ -183,11 +183,10 @@ export function DataTable<TData, TValue>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={`px-2 py-1 ${
-                      !disableSorting && header.column.getCanSort()
+                    className={`px-2 py-1 ${!disableSorting && header.column.getCanSort()
                         ? "cursor-pointer select-none"
                         : ""
-                    } bg-primary text-white`}
+                      } bg-primary text-white`}
                     onClick={
                       !disableSorting && header.column.getCanSort()
                         ? header.column.getToggleSortingHandler()
@@ -197,9 +196,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -210,9 +209,8 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow
-                    className={`transition ${densityClasses[density]} ${
-                      onRowClick ? "cursor-pointer" : ""
-                    }`}
+                    className={`transition ${densityClasses[density]} ${onRowClick ? "cursor-pointer" : ""
+                      }`}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     data-state={row.getIsSelected() ? "selected" : undefined}
                   >

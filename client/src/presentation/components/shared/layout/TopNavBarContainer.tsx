@@ -162,6 +162,11 @@ function getMenuItems(
         icon: <ClipboardList className="w-4 h-4 mr-1" />,
         path: `${basePath}/records`,
       },
+      {
+        label: "Data Grid Testing",
+        icon: <Database className="w-4 h-4 mr-1" />,
+        path: `${basePath}/data-grid-testing`,
+      },
     ];
   }
   // Default/common items
