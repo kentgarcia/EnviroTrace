@@ -62,7 +62,9 @@ export function useMonitoringRequests() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const requests = requestsResponse?.reports || [];
+  const requests = Array.isArray(requestsResponse)
+    ? requestsResponse
+    : requestsResponse?.reports || [];
 
   // Set first request as selected if none selected and we have requests
   useMemo(() => {
@@ -196,7 +198,14 @@ export function useMonitoringRequests() {
 
         if (mode === "editing" && selectedRequest) {
           const requestData: monitoringRequestService.MonitoringRequestUpdate =
-            baseData;
+            {
+              ...baseData,
+              status: selectedRequest.status, // Always send status
+              location: {
+                lat: baseData.latitude ?? selectedRequest.location?.lat,
+                lng: baseData.longitude ?? selectedRequest.location?.lng,
+              }, // Always send location
+            };
           await updateMutation.mutateAsync({
             id: selectedRequest.id,
             data: requestData,
@@ -206,6 +215,7 @@ export function useMonitoringRequests() {
             {
               ...baseData,
               status: "pending",
+              location: location || { lat: 0, lng: 0 },
             };
           await createMutation.mutateAsync(requestData);
         }

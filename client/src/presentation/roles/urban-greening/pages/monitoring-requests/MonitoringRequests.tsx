@@ -100,11 +100,19 @@ const MonitoringRequests: React.FC = () => {
                   {currentView === "table" ? (
                     <MonitoringRequestsTable
                       requests={requests.filter((request) => {
-                        const matchesSearch =
-                          request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          request.id.toLowerCase().includes(searchTerm.toLowerCase());
-                        const matchesStatus = statusFilter === "all" || request.status === statusFilter;
+                        // Only filter if searchTerm or statusFilter is set
+                        let matchesSearch = true;
+                        let matchesStatus = true;
+                        if (searchTerm) {
+                          matchesSearch = (
+                            (request.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (request.requester_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (request.id || "").toLowerCase().includes(searchTerm.toLowerCase())
+                          );
+                        }
+                        if (statusFilter && statusFilter !== "all") {
+                          matchesStatus = request.status === statusFilter;
+                        }
                         return matchesSearch && matchesStatus;
                       })}
                       selectedRequestId={selectedRequestId}

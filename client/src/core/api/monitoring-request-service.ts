@@ -28,6 +28,7 @@ export interface MonitoringRequestCreate {
   latitude?: number;
   longitude?: number;
   status?: string;
+  location: { lat: number; lng: number };
 }
 
 export interface MonitoringRequestUpdate {
@@ -41,6 +42,7 @@ export interface MonitoringRequestUpdate {
   notes?: string;
   latitude?: number;
   longitude?: number;
+  location: { lat: number; lng: number };
 }
 
 export interface MonitoringRequestListResponse {
@@ -103,25 +105,32 @@ export const deleteMonitoringRequest = async (
 };
 
 export const approveMonitoringRequest = async (
-  requestId: string
+  requestId: string,
+  location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "approved" });
+  return updateMonitoringRequest(requestId, { status: "approved", location });
 };
 
 export const rejectMonitoringRequest = async (
-  requestId: string
+  requestId: string,
+  location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "rejected" });
+  return updateMonitoringRequest(requestId, { status: "rejected", location });
 };
 
 export const markInProgress = async (
-  requestId: string
+  requestId: string,
+  location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "in-progress" });
+  return updateMonitoringRequest(requestId, {
+    status: "in-progress",
+    location,
+  });
 };
 
 export const markCompleted = async (
-  requestId: string
+  requestId: string,
+  location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "completed" });
+  return updateMonitoringRequest(requestId, { status: "completed", location });
 };
