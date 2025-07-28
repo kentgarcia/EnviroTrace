@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, Integer, Date, DateTime
 from sqlalchemy.sql import func
-from app.db.base_class import Base
+from app.db.database import Base
 
 class AirQualityFee(Base):
     __tablename__ = "air_quality_fees"

@@ -14,6 +14,12 @@ import { toast } from "sonner";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
 import {
+    fetchUrbanGreeningFeeRecords,
+    updateUrbanGreeningFeeRecord,
+    UrbanGreeningFeeRecord,
+    UrbanGreeningFeeRecordUpdate
+} from "@/core/api/fee-api";
+import {
     Plus,
     Edit,
     Trash,
@@ -57,15 +63,17 @@ interface InspectionReport {
 
 interface FeeRecord {
     id: string;
-    referenceNumber: string;
-    type: "inspection" | "cutting_permit" | "pruning_permit" | "violation_fine";
+    reference_number: string;
+    type: "cutting_permit" | "pruning_permit" | "violation_fine";
     amount: number;
-    payerName: string;
+    payer_name: string;
     date: string;
-    dueDate: string;
+    due_date: string;
     status: "paid" | "pending" | "overdue" | "cancelled";
-    orNumber?: string;
-    paymentDate?: string;
+    or_number?: string;
+    payment_date?: string;
+    created_at: string;
+    updated_at?: string;
 }
 
 interface TreeRecord {
@@ -191,8 +199,22 @@ const fetchInspectionReports = async (): Promise<InspectionReport[]> => {
 };
 
 const fetchFeeRecords = async (): Promise<FeeRecord[]> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    return sampleFeeRecords;
+    const records = await fetchUrbanGreeningFeeRecords();
+    // Transform the API response to match the frontend interface
+    return records.map(record => ({
+        id: record.id,
+        reference_number: record.reference_number,
+        type: record.type,
+        amount: record.amount,
+        payer_name: record.payer_name,
+        date: record.date,
+        due_date: record.due_date,
+        status: record.status,
+        or_number: record.or_number,
+        payment_date: record.payment_date,
+        created_at: record.created_at,
+        updated_at: record.updated_at
+    }));
 };
 
 const updateInspectionReport = async (id: string, field: keyof InspectionReport, value: any) => {
@@ -201,8 +223,10 @@ const updateInspectionReport = async (id: string, field: keyof InspectionReport,
 };
 
 const updateFeeRecord = async (id: string, field: keyof FeeRecord, value: any) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log(`Updating fee record ${id}: ${String(field)} = ${value}`);
+    const updateData: UrbanGreeningFeeRecordUpdate = {
+        [field]: value
+    };
+    return await updateUrbanGreeningFeeRecord(id, updateData);
 };
 
 const UrbanGreeningRecords: React.FC = () => {
@@ -391,9 +415,9 @@ const UrbanGreeningRecords: React.FC = () => {
     // Column definitions for fee records
     const feeColumns: DataGridColumn<FeeRecord>[] = useMemo(() => [
         {
-            id: "referenceNumber",
+            id: "reference_number",
             title: "Reference No.",
-            field: "referenceNumber",
+            field: "reference_number",
             sortable: true,
             filterable: true,
             width: 140,
@@ -404,7 +428,6 @@ const UrbanGreeningRecords: React.FC = () => {
             field: "type",
             type: "select",
             selectOptions: [
-                { value: "inspection", label: "Inspection" },
                 { value: "cutting_permit", label: "Cutting Permit" },
                 { value: "pruning_permit", label: "Pruning Permit" },
                 { value: "violation_fine", label: "Violation Fine" },
@@ -416,9 +439,9 @@ const UrbanGreeningRecords: React.FC = () => {
             width: 150,
         },
         {
-            id: "payerName",
+            id: "payer_name",
             title: "Payer",
-            field: "payerName",
+            field: "payer_name",
             sortable: true,
             filterable: true,
             editable: true,
@@ -444,7 +467,7 @@ const UrbanGreeningRecords: React.FC = () => {
         {
             id: "dueDate",
             title: "Due Date",
-            field: "dueDate",
+            field: "due_date",
             type: "date",
             sortable: true,
             editable: true,

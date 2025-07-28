@@ -18,6 +18,7 @@ import {
   Cloud,
   Wallet,
   UserCircle,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -168,9 +169,9 @@ function getMenuItems(
         path: `${basePath}/inspection-reports`,
       },
       {
-        label: "Data Grid Testing",
-        icon: <Database className="w-4 h-4 mr-1" />,
-        path: `${basePath}/data-grid-testing`,
+        label: "Fee Records",
+        icon: <Receipt className="w-4 h-4 mr-1" />,
+        path: `${basePath}/fee-records`,
       },
     ];
   }

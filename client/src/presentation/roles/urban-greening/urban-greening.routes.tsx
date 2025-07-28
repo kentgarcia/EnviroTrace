@@ -5,7 +5,7 @@ import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 import UrbanGreeningOverview from "./pages/Overview";
 import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import UrbanGreeningRecords from "./pages/Records";
-import DataGridTestingPage from "./pages/DataGridTesting";
+import FeeRecords from "./pages/fee-records/FeeRecords";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -26,6 +26,6 @@ export const urbanGreeningRoute = [
     MonitoringRequests
   ),
   createUrbanGreeningRoute("/urban-greening/records", UrbanGreeningRecords),
-  createUrbanGreeningRoute("/urban-greening/data-grid-testing", DataGridTestingPage),
   createUrbanGreeningRoute("/urban-greening/inspection-reports", InspectionReports),
+  createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
 ];

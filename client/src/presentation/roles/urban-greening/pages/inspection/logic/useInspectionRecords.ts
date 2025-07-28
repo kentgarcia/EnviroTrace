@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   inspectionApiService,
   InspectionResponse,
@@ -174,9 +176,12 @@ const convertFrontendToApi = (
 };
 
 export function useInspectionRecords() {
-  const [records, setRecords] = useState<InspectionRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
   const [record, setRecord] = useState<InspectionRecord>({
     reportNo: "",
     inspectors: [],
@@ -193,76 +198,25 @@ export function useInspectionRecords() {
   const [treeQty, setTreeQty] = useState(1);
   const [inspectorInput, setInspectorInput] = useState("");
 
-  // Load records from API on component mount
-  useEffect(() => {
-    loadRecords();
-  }, []);
-
-  const loadRecords = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // Fetch inspection records using TanStack Query
+  const {
+    data: recordsResponse,
+    isLoading: loading,
+    error,
+    refetch: loadRecords,
+  } = useQuery({
+    queryKey: ["inspection-records"],
+    queryFn: async () => {
       const response = await inspectionApiService.getInspectionReports();
       if (response.success) {
-        const frontendRecords = response.data.map(convertFrontendApiToLocal);
-        setRecords(frontendRecords);
+        return response.data.map(convertFrontendApiToLocal);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load records");
-      console.error("Error loading records:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      throw new Error("Failed to load records");
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  const handleAddTree = () => {
-    if (treeName) {
-      setRecord((r) => ({
-        ...r,
-        trees: [...r.trees, { name: treeName, quantity: treeQty }],
-      }));
-      setTreeName("");
-      setTreeQty(1);
-    }
-  };
-
-  const handleAddInspector = () => {
-    if (inspectorInput) {
-      setRecord((r) => ({
-        ...r,
-        inspectors: [...r.inspectors, inspectorInput],
-      }));
-      setInspectorInput("");
-    }
-  };
-
-  const handleRemoveInspector = (index: number) => {
-    setRecord((r) => ({
-      ...r,
-      inspectors: r.inspectors.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleRemoveTree = (index: number) => {
-    setRecord((r) => ({
-      ...r,
-      trees: r.trees.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setRecord((r) => ({ ...r, pictures: Array.from(files) }));
-    } else {
-      setRecord((r) => ({ ...r, pictures: [] }));
-    }
-  };
-
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const records = recordsResponse || [];
 
   // Auto-generate report number using API
   const generateReportNumber = async () => {
@@ -282,48 +236,89 @@ export function useInspectionRecords() {
     }
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (isEditing && record.id) {
-        // Update existing record - convert to backend format for regular endpoint
-        const apiData = convertFrontendToApiBackend(record);
-        const response = await inspectionApiService.updateInspectionReport(
-          record.id,
-          apiData
-        );
-        if (response.success) {
-          const updatedRecord = convertApiToFrontend(response.data);
-          setRecords((prev) =>
-            prev.map((r) => (r.id === record.id ? updatedRecord : r))
-          );
-          setIsEditing(false);
-          setEditingIndex(null);
-        }
-      } else {
-        // Add new record - send frontend format directly to /frontend endpoint
-        const response =
-          await inspectionApiService.createInspectionReportFrontend(record);
-        if (response.success) {
-          const newRecord = convertApiToFrontend(response.data);
-          setRecords((prev) => [...prev, newRecord]);
-          setIsAdding(false);
-        }
+  // Create mutation
+  const createMutation = useMutation({
+    mutationFn: async (newRecord: InspectionRecord) => {
+      const response =
+        await inspectionApiService.createInspectionReportFrontend(newRecord);
+      if (response.success) {
+        return convertApiToFrontend(response.data);
       }
-
-      // Reset form
+      throw new Error("Failed to create record");
+    },
+    onSuccess: (newRecord) => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-records"] });
+      toast.success(
+        `Inspection report ${newRecord.reportNo} has been created.`
+      );
+      setIsAdding(false);
       resetForm();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save record");
-      console.error("Error saving record:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    onError: (err) => {
+      console.error("Failed to create record:", err);
+      toast.error("Failed to create inspection record");
+    },
+  });
 
-  const resetForm = () => {
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({
+      id,
+      updatedRecord,
+    }: {
+      id: string;
+      updatedRecord: InspectionRecord;
+    }) => {
+      const apiData = convertFrontendToApiBackend(updatedRecord);
+      const response = await inspectionApiService.updateInspectionReport(
+        id,
+        apiData
+      );
+      if (response.success) {
+        return convertApiToFrontend(response.data);
+      }
+      throw new Error("Failed to update record");
+    },
+    onSuccess: (updatedRecord) => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-records"] });
+      toast.success(
+        `Inspection report ${updatedRecord.reportNo} has been updated.`
+      );
+      setIsEditing(false);
+      setEditingIndex(null);
+      resetForm();
+    },
+    onError: (err) => {
+      console.error("Failed to update record:", err);
+      toast.error("Failed to update inspection record");
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: inspectionApiService.deleteInspectionReport,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection-records"] });
+      toast.success("Inspection record has been deleted.");
+      setSelectedIdx(null);
+    },
+    onError: (err) => {
+      console.error("Failed to delete record:", err);
+      toast.error("Failed to delete inspection record");
+    },
+  });
+
+  const handleSave = useCallback(async () => {
+    if (isEditing && record.id) {
+      // Update existing record
+      updateMutation.mutate({ id: record.id, updatedRecord: record });
+    } else {
+      // Add new record
+      createMutation.mutate(record);
+    }
+  }, [isEditing, record, updateMutation, createMutation]);
+
+  const resetForm = useCallback(() => {
     setRecord({
       reportNo: "",
       inspectors: [],
@@ -339,65 +334,41 @@ export function useInspectionRecords() {
     setTreeName("");
     setTreeQty(1);
     setInspectorInput("");
-  };
+  }, []);
 
-  const handleEdit = (index: number) => {
-    const recordToEdit = records[index];
-    setRecord(recordToEdit);
-    setIsEditing(true);
-    setIsAdding(false);
-    setEditingIndex(index);
-    setSelectedIdx(null);
-  };
+  const handleEdit = useCallback(
+    (index: number) => {
+      const recordToEdit = records[index];
+      setRecord(recordToEdit);
+      setIsEditing(true);
+      setIsAdding(false);
+      setEditingIndex(index);
+      setSelectedIdx(null);
+    },
+    [records]
+  );
 
-  const handleDelete = async (index: number) => {
-    const recordToDelete = records[index];
-    if (!recordToDelete.id) {
-      console.error("Cannot delete record without ID");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await inspectionApiService.deleteInspectionReport(
-        recordToDelete.id
-      );
-      if (response.success) {
-        setRecords((prev) => prev.filter((_, i) => i !== index));
-        setSelectedIdx(null);
+  const handleDelete = useCallback(
+    async (index: number) => {
+      const recordToDelete = records[index];
+      if (!recordToDelete.id) {
+        console.error("Cannot delete record without ID");
+        toast.error("Cannot delete record without ID");
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete record");
-      console.error("Error deleting record:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      deleteMutation.mutate(recordToDelete.id);
+    },
+    [records, deleteMutation]
+  );
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setIsEditing(false);
     setIsAdding(false);
     setEditingIndex(null);
-    setRecord({
-      reportNo: "",
-      inspectors: [],
-      date: "",
-      location: defaultLocation,
-      type: "",
-      status: "",
-      followUp: "",
-      trees: [],
-      notes: "",
-      pictures: [],
-    });
-    setTreeName("");
-    setTreeQty(1);
-    setInspectorInput("");
-  };
+    resetForm();
+  }, [resetForm]);
 
-  const handleStartAdd = async () => {
+  const handleStartAdd = useCallback(async () => {
     setIsAdding(true);
     setIsEditing(false);
     setSelectedIdx(null);
@@ -422,16 +393,71 @@ export function useInspectionRecords() {
     setTreeName("");
     setTreeQty(1);
     setInspectorInput("");
-  };
+  }, []);
 
   // Clear add/edit mode when selecting a record
-  const handleSelectRecord = (idx: number) => {
-    if (isAdding || isEditing) {
-      // If in add/edit mode, don't allow selection
-      return;
+  const handleSelectRecord = useCallback(
+    (idx: number) => {
+      if (isAdding || isEditing) {
+        // If in add/edit mode, don't allow selection
+        return;
+      }
+      setSelectedIdx(idx);
+    },
+    [isAdding, isEditing]
+  );
+
+  const handleAddTree = useCallback(() => {
+    if (treeName) {
+      setRecord((r) => ({
+        ...r,
+        trees: [...r.trees, { name: treeName, quantity: treeQty }],
+      }));
+      setTreeName("");
+      setTreeQty(1);
     }
-    setSelectedIdx(idx);
-  };
+  }, [treeName, treeQty]);
+
+  const handleAddInspector = useCallback(() => {
+    if (inspectorInput) {
+      setRecord((r) => ({
+        ...r,
+        inspectors: [...r.inspectors, inspectorInput],
+      }));
+      setInspectorInput("");
+    }
+  }, [inspectorInput]);
+
+  const handleRemoveInspector = useCallback((index: number) => {
+    setRecord((r) => ({
+      ...r,
+      inspectors: r.inspectors.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const handleRemoveTree = useCallback((index: number) => {
+    setRecord((r) => ({
+      ...r,
+      trees: r.trees.filter((_, i) => i !== index),
+    }));
+  }, []);
+
+  const handlePictureChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        setRecord((r) => ({ ...r, pictures: Array.from(files) }));
+      } else {
+        setRecord((r) => ({ ...r, pictures: [] }));
+      }
+    },
+    []
+  );
+
+  // Wrapper for loadRecords to handle button click events
+  const handleLoadRecords = useCallback(() => {
+    loadRecords();
+  }, [loadRecords]);
 
   return {
     record,
@@ -443,8 +469,12 @@ export function useInspectionRecords() {
     inspectorInput,
     setInspectorInput,
     records,
-    loading,
-    error,
+    loading:
+      loading ||
+      createMutation.isPending ||
+      updateMutation.isPending ||
+      deleteMutation.isPending,
+    error: error?.message || null,
     handleAddTree,
     handleAddInspector,
     handleRemoveInspector,
@@ -461,6 +491,6 @@ export function useInspectionRecords() {
     isEditing,
     isAdding,
     editingIndex,
-    loadRecords,
+    loadRecords: handleLoadRecords,
   };
 }
