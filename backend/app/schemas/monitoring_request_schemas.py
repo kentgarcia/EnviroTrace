@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import date
 
 class Location(BaseModel):
@@ -23,8 +23,7 @@ class MonitoringRequestUpdate(MonitoringRequestBase):
 
 class MonitoringRequestInDBBase(MonitoringRequestBase):
     id: str
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MonitoringRequest(MonitoringRequestInDBBase):
     pass

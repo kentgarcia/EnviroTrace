@@ -8,15 +8,18 @@ import {
     TableHead,
     TableCell,
 } from "@/presentation/components/shared/ui/table";
+import { Badge } from "@/presentation/components/shared/ui/badge";
+import { getTypeBadgeVariant, getStatusBadgeVariant } from "../utils/badgeUtils";
 
 
 export interface Props {
     records: InspectionRecord[];
     selectedIdx: number | null;
     setSelectedIdx: (idx: number) => void;
+    loading?: boolean;
 }
 
-const InspectionRecordsTable: React.FC<Props> = ({ records, selectedIdx, setSelectedIdx }) => {
+const InspectionRecordsTable: React.FC<Props> = ({ records, selectedIdx, setSelectedIdx, loading = false }) => {
     if (records.length === 0) return (
         <div className="mt-8">
             <h3 className="text-lg font-semibold mb-2">Inspection Records</h3>
@@ -37,8 +40,6 @@ const InspectionRecordsTable: React.FC<Props> = ({ records, selectedIdx, setSele
                         <TableHead>Status</TableHead>
                         <TableHead>Follow-up</TableHead>
                         <TableHead>Trees</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead>Pictures</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -51,19 +52,19 @@ const InspectionRecordsTable: React.FC<Props> = ({ records, selectedIdx, setSele
                             <TableCell className="font-medium">{rec.reportNo}</TableCell>
                             <TableCell>{rec.inspectors.join(", ")}</TableCell>
                             <TableCell>{rec.date}</TableCell>
-                            <TableCell>Lat: {rec.location.lat}, Lng: {rec.location.lng}</TableCell>
-                            <TableCell>{rec.type}</TableCell>
-                            <TableCell>{rec.status}</TableCell>
+                            <TableCell>{rec.location}</TableCell>
+                            <TableCell>
+                                <Badge variant={getTypeBadgeVariant(rec.type)}>
+                                    {rec.type}
+                                </Badge>
+                            </TableCell>
+                            <TableCell>
+                                <Badge variant={getStatusBadgeVariant(rec.status)}>
+                                    {rec.status}
+                                </Badge>
+                            </TableCell>
                             <TableCell>{rec.followUp}</TableCell>
                             <TableCell>{rec.trees.map(t => `${t.name} (${t.quantity})`).join(", ")}</TableCell>
-                            <TableCell>{rec.notes}</TableCell>
-                            <TableCell>
-                                <div className="flex gap-1 flex-wrap">
-                                    {rec.pictures.map((file, i) => (
-                                        <img key={i} src={URL.createObjectURL(file)} alt="preview" className="h-8 w-8 object-cover rounded border" />
-                                    ))}
-                                </div>
-                            </TableCell>
                         </TableRow>
                     ))}
                 </TableBody>

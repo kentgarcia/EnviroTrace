@@ -1,32 +1,8 @@
 # app/models/urban_greening_models.py
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, ForeignKey, Numeric, Text, Index, Float
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Text, Index, Float
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text
 from app.db.database import Base
-
-class MonitoringRequest(Base):
-    __tablename__ = "monitoring_requests"
-    __table_args__ = (
-        Index("idx_urban_greening_monitoring_date", "date"),
-        Index("idx_urban_greening_monitoring_status", "status"),
-        Index("idx_urban_greening_monitoring_requester", "requester_name"),
-        {"schema": "urban_greening"}
-    )
-
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=False)
-    requester_name = Column(String(255), nullable=False)
-    date = Column(Date, nullable=False)
-    address = Column(String(500), nullable=False)
-    status = Column(String(50), nullable=False)  # pending, approved, rejected, in-progress, completed
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    sapling_count = Column(Integer, nullable=True)
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class InspectionReport(Base):
     __tablename__ = "inspection_reports"
@@ -34,19 +10,20 @@ class InspectionReport(Base):
         Index("idx_urban_greening_inspection_date", "date"),
         Index("idx_urban_greening_inspection_status", "status"),
         Index("idx_urban_greening_inspection_type", "type"),
+        Index("idx_urban_greening_inspection_report_number", "report_number"),
         {"schema": "urban_greening"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     report_number = Column(String(50), unique=True, nullable=False)
-    inspector_name = Column(String(255), nullable=False)
     date = Column(Date, nullable=False)
     location = Column(String(500), nullable=False)
-    type = Column(String(50), nullable=False)  # pruning, cutting, violation, maintenance
-    status = Column(String(50), nullable=False)  # pending, in-progress, completed, rejected
-    findings = Column(Text, nullable=True)
-    recommendations = Column(Text, nullable=True)
-    follow_up_required = Column(Boolean, default=False)
+    type = Column(String(50), nullable=False)  # Pruning, Cutting, Ballout, Violation/Complaint
+    status = Column(String(50), nullable=False)  # Pending, In Progress, Completed, Rejected
+    inspectors = Column(Text, nullable=True)  # JSON array of inspector names
+    trees = Column(Text, nullable=True)  # JSON array of tree information
+    notes = Column(Text, nullable=True)
+    pictures = Column(Text, nullable=True)  # JSON array of picture file paths
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
