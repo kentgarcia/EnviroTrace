@@ -67,9 +67,7 @@ export const fetchMonitoringRequests = async (params?: {
   if (params?.search) searchParams.append("search", params.search);
 
   const queryString = searchParams.toString();
-  const url = `/urban-greening/monitoring-requests${
-    queryString ? `?${queryString}` : ""
-  }`;
+  const url = `/monitoring-requests${queryString ? `?${queryString}` : ""}`;
 
   const res = await apiClient.get(url);
   return res.data;
@@ -78,19 +76,14 @@ export const fetchMonitoringRequests = async (params?: {
 export const fetchMonitoringRequest = async (
   requestId: string
 ): Promise<MonitoringRequest> => {
-  const res = await apiClient.get(
-    `/urban-greening/monitoring-requests/${requestId}`
-  );
+  const res = await apiClient.get(`/monitoring-requests/${requestId}`);
   return res.data;
 };
 
 export const createMonitoringRequest = async (
   request: MonitoringRequestCreate
 ): Promise<MonitoringRequest> => {
-  const res = await apiClient.post(
-    "/urban-greening/monitoring-requests",
-    request
-  );
+  const res = await apiClient.post("/monitoring-requests", request);
   return res.data;
 };
 
@@ -98,19 +91,14 @@ export const updateMonitoringRequest = async (
   requestId: string,
   request: MonitoringRequestUpdate
 ): Promise<MonitoringRequest> => {
-  const res = await apiClient.put(
-    `/urban-greening/monitoring-requests/${requestId}`,
-    request
-  );
+  const res = await apiClient.put(`/monitoring-requests/${requestId}`, request);
   return res.data;
 };
 
 export const deleteMonitoringRequest = async (
   requestId: string
 ): Promise<{ message: string }> => {
-  const res = await apiClient.delete(
-    `/urban-greening/monitoring-requests/${requestId}`
-  );
+  const res = await apiClient.delete(`/monitoring-requests/${requestId}`);
   return res.data;
 };
 

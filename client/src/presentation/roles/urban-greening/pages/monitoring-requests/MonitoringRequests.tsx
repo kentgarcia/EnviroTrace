@@ -11,6 +11,11 @@ import MonitoringRequestForm from "./components/MonitoringRequestForm";
 import MonitoringRequestDetails from "./components/MonitoringRequestDetails";
 import MonitoringRequestsTable from "./components/MonitoringRequestsTable";
 
+import { useState } from "react";
+
+
+
+
 const MonitoringRequests: React.FC = () => {
   const {
     requests,
@@ -92,19 +97,7 @@ const MonitoringRequests: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="text-gray-500">Loading monitoring requests...</div>
-                    </div>
-                  ) : error ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <div className="text-red-500 mb-2">Error loading monitoring requests</div>
-                      <div className="text-sm text-gray-500 mb-4">{error}</div>
-                      <Button onClick={() => refetchRequests()} variant="outline" size="sm">
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : currentView === "table" ? (
+                  {currentView === "table" ? (
                     <MonitoringRequestsTable
                       requests={requests.filter((request) => {
                         const matchesSearch =
@@ -154,7 +147,7 @@ const MonitoringRequests: React.FC = () => {
                           ? { ...selectedRequest, date: new Date(selectedRequest.date) }
                           : {}
                       }
-                      location={formLocation}
+                      location={formLocation || { lat: 0, lng: 0 }}
                       onLocationChange={setFormLocation}
                       onSave={handleSaveRequest}
                       onCancel={handleCancel}

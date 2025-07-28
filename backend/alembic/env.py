@@ -8,6 +8,7 @@ from sqlalchemy import engine_from_config, pool, text # Added text
 from alembic import context
 
 from app.db.base_class import Base
+from app.models import monitoring_request_models
 from app.core.config import settings as app_settings # <--- YOUR APP SETTINGS
 
 # This is the Alembic Config object...
