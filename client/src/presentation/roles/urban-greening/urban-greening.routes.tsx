@@ -1,3 +1,4 @@
+import InspectionReports from "./pages/inspection/InspectionReports";
 import { createRoute, RouteComponent } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 
@@ -26,4 +27,5 @@ export const urbanGreeningRoute = [
   ),
   createUrbanGreeningRoute("/urban-greening/records", UrbanGreeningRecords),
   createUrbanGreeningRoute("/urban-greening/data-grid-testing", DataGridTestingPage),
+  createUrbanGreeningRoute("/urban-greening/inspection-reports", InspectionReports),
 ];

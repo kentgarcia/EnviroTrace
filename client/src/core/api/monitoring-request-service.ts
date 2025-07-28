@@ -1,3 +1,9 @@
+export const markUntracked = async (
+  requestId: string,
+  location: { lat: number; lng: number }
+): Promise<MonitoringRequest> => {
+  return updateMonitoringRequest(requestId, { status: "Untracked", location });
+};
 import apiClient from "./api-client";
 
 // Types for monitoring requests - matching the backend structure
@@ -36,7 +42,7 @@ export interface MonitoringRequestUpdate {
   description?: string;
   requester_name?: string;
   date?: string;
-  status?: "pending" | "approved" | "rejected" | "in-progress" | "completed";
+  status?: "Living" | "Dead" | "Replaced" | "Untracked";
   address?: string;
   sapling_count?: number;
   notes?: string;
@@ -85,7 +91,12 @@ export const fetchMonitoringRequest = async (
 export const createMonitoringRequest = async (
   request: MonitoringRequestCreate
 ): Promise<MonitoringRequest> => {
-  const res = await apiClient.post("/monitoring-requests", request);
+  // Set default status to 'Untracked' if not provided
+  const reqWithDefault = {
+    ...request,
+    status: request.status ?? "Untracked",
+  };
+  const res = await apiClient.post("/monitoring-requests", reqWithDefault);
   return res.data;
 };
 
@@ -104,33 +115,23 @@ export const deleteMonitoringRequest = async (
   return res.data;
 };
 
-export const approveMonitoringRequest = async (
+export const markLiving = async (
   requestId: string,
   location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "approved", location });
+  return updateMonitoringRequest(requestId, { status: "Living", location });
 };
 
-export const rejectMonitoringRequest = async (
+export const markDead = async (
   requestId: string,
   location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "rejected", location });
+  return updateMonitoringRequest(requestId, { status: "Dead", location });
 };
 
-export const markInProgress = async (
+export const markReplaced = async (
   requestId: string,
   location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, {
-    status: "in-progress",
-    location,
-  });
-};
-
-export const markCompleted = async (
-  requestId: string,
-  location: { lat: number; lng: number }
-): Promise<MonitoringRequest> => {
-  return updateMonitoringRequest(requestId, { status: "completed", location });
+  return updateMonitoringRequest(requestId, { status: "Replaced", location });
 };

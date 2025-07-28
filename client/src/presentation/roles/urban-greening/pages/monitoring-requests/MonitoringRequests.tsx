@@ -87,11 +87,9 @@ const MonitoringRequests: React.FC = () => {
                         className="border rounded px-3 py-2"
                       >
                         <option value="all">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="completed">Completed</option>
+                        <option value="Living">Living</option>
+                        <option value="Dead">Dead</option>
+                        <option value="Replaced">Replaced</option>
                       </select>
                     </div>
                   </CardTitle>

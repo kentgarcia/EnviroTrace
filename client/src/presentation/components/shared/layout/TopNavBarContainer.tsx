@@ -163,6 +163,11 @@ function getMenuItems(
         path: `${basePath}/records`,
       },
       {
+        label: "Inspection Reports",
+        icon: <FileStack className="w-4 h-4 mr-1" />,
+        path: `${basePath}/inspection-reports`,
+      },
+      {
         label: "Data Grid Testing",
         icon: <Database className="w-4 h-4 mr-1" />,
         path: `${basePath}/data-grid-testing`,

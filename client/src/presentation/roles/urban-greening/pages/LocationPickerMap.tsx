@@ -9,6 +9,40 @@ import L, { LatLngExpression } from "leaflet";
 import ReactDOMServer from "react-dom/server";
 import { MapPin } from "lucide-react";
 import React from "react";
+import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
+import "leaflet-geosearch/dist/geosearch.css";
+
+// GeoSearchControl component for react-leaflet
+function GeoSearch({ onLocationChange }: { onLocationChange: (loc: Coordinates) => void }) {
+  const map = useMap();
+  React.useEffect(() => {
+    const provider = new OpenStreetMapProvider();
+    // Use new GeoSearchControl (class) as per leaflet-geosearch docs
+    // @ts-ignore
+    const searchControl = new GeoSearchControl({
+      provider,
+      style: "bar",
+      showMarker: false,
+      showPopup: false,
+      autoClose: true,
+      retainZoomLevel: false,
+      animateZoom: true,
+      keepResult: true,
+    });
+    map.addControl(searchControl);
+    const handler = (e: any) => {
+      if (e && e.location) {
+        onLocationChange({ lat: e.location.y, lng: e.location.x });
+      }
+    };
+    map.on('geosearch/showlocation', handler);
+    return () => {
+      map.removeControl(searchControl);
+      map.off('geosearch/showlocation', handler);
+    };
+  }, [map, onLocationChange]);
+  return null;
+}
 
 interface Coordinates {
   lat: number;
@@ -77,6 +111,7 @@ export default function LocationPickerMap({
         <Marker position={mapCenter} icon={defaultIcon} />
         <MapEvents onLocationChange={onLocationChange} />
         <RecenterMap location={location} />
+        <GeoSearch onLocationChange={onLocationChange} />
       </MapContainer>
     </div>
   );
