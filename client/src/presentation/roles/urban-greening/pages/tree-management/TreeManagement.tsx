@@ -263,13 +263,7 @@ const TreeManagement: React.FC = () => {
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavBarContainer dashboardType="urban-greening" />
-                <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-semibold text-gray-900">Tree Management Requests</h1>
-                </div>
                 <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-                    <div className="px-6">
-                        <ColorDivider />
-                    </div>
 
                     {error && (
                         <div className="mt-6">
