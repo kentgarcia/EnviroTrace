@@ -117,3 +117,109 @@ class UrbanGreeningProject(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class TreeManagementRequest(Base):
+    __tablename__ = "tree_management_requests"
+    __table_args__ = (
+        Index("idx_urban_greening_tree_request_number", "request_number"),
+        Index("idx_urban_greening_tree_request_type", "request_type"),
+        Index("idx_urban_greening_tree_request_status", "status"),
+        Index("idx_urban_greening_tree_request_date", "request_date"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    request_number = Column(String(50), unique=True, nullable=False)
+    request_type = Column(String(50), nullable=False)  # pruning, cutting, violation_complaint
+    requester_name = Column(String(255), nullable=False)
+    contact_number = Column(String(50), nullable=True)
+    email = Column(String(255), nullable=True)
+    property_address = Column(Text, nullable=False)
+    tree_species = Column(String(100), nullable=False)
+    tree_count = Column(Integer, nullable=False, default=1)
+    tree_location = Column(Text, nullable=False)
+    reason_for_request = Column(Text, nullable=False)
+    urgency_level = Column(String(20), nullable=False, default='normal')  # low, normal, high, emergency
+    status = Column(String(50), nullable=False, default='filed')  # filed, under_review, approved, rejected, in_progress, completed, payment_pending, for_signature, on_hold
+    request_date = Column(Date, nullable=False)
+    scheduled_date = Column(Date, nullable=True)
+    completion_date = Column(Date, nullable=True)
+    assigned_inspector = Column(String(255), nullable=True)
+    inspection_notes = Column(Text, nullable=True)
+    fee_amount = Column(Numeric(10, 2), nullable=True)
+    fee_status = Column(String(50), nullable=True)  # pending, paid, waived
+    permit_number = Column(String(50), nullable=True)
+    attachment_files = Column(Text, nullable=True)  # JSON array of file paths
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class UrbanGreeningPlanting(Base):
+    __tablename__ = "urban_greening_plantings"
+    __table_args__ = (
+        Index("idx_urban_greening_planting_type", "planting_type"),
+        Index("idx_urban_greening_planting_status", "status"),
+        Index("idx_urban_greening_planting_date", "planting_date"),
+        Index("idx_urban_greening_planting_location", "location"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    record_number = Column(String(50), unique=True, nullable=False)
+    planting_type = Column(String(50), nullable=False)  # ornamental_plants, trees, seeds, seeds_private
+    species_name = Column(String(255), nullable=False)
+    quantity_planted = Column(Integer, nullable=False)
+    planting_date = Column(Date, nullable=False)
+    location = Column(String(500), nullable=False)
+    barangay = Column(String(100), nullable=True)
+    coordinates = Column(String(100), nullable=True)  # GPS coordinates
+    planting_method = Column(String(100), nullable=True)  # direct_seeding, transplanting, etc.
+    status = Column(String(50), nullable=False, default='planted')  # planted, growing, mature, died, removed
+    survival_rate = Column(Float, nullable=True)  # percentage
+    responsible_person = Column(String(255), nullable=False)
+    contact_number = Column(String(50), nullable=True)
+    organization = Column(String(255), nullable=True)
+    project_name = Column(String(255), nullable=True)
+    funding_source = Column(String(255), nullable=True)  # government, private, donation
+    maintenance_schedule = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    photos = Column(Text, nullable=True)  # JSON array of photo paths
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SaplingCollection(Base):
+    __tablename__ = "sapling_collections"
+    __table_args__ = (
+        Index("idx_urban_greening_sapling_species", "species_name"),
+        Index("idx_urban_greening_sapling_status", "status"),
+        Index("idx_urban_greening_sapling_collection_date", "collection_date"),
+        Index("idx_urban_greening_sapling_purpose", "purpose"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    collection_number = Column(String(50), unique=True, nullable=False)
+    species_name = Column(String(255), nullable=False)
+    quantity_collected = Column(Integer, nullable=False)
+    collection_date = Column(Date, nullable=False)
+    collection_location = Column(String(500), nullable=False)
+    collector_name = Column(String(255), nullable=False)
+    collector_contact = Column(String(50), nullable=True)
+    purpose = Column(String(100), nullable=False)  # replacement, reforestation, distribution, nursery
+    target_planting_date = Column(Date, nullable=True)
+    target_location = Column(String(500), nullable=True)
+    nursery_location = Column(String(500), nullable=True)
+    status = Column(String(50), nullable=False, default='collected')  # collected, nursery, ready_for_planting, planted, distributed
+    health_condition = Column(String(50), nullable=True)  # excellent, good, fair, poor
+    size_category = Column(String(50), nullable=True)  # seedling, sapling, juvenile, mature
+    survival_rate = Column(Float, nullable=True)  # percentage in nursery
+    distribution_date = Column(Date, nullable=True)
+    recipient_name = Column(String(255), nullable=True)
+    recipient_contact = Column(String(50), nullable=True)
+    recipient_address = Column(String(500), nullable=True)
+    care_instructions = Column(Text, nullable=True)
+    notes = Column(Text, nullable=True)
+    photos = Column(Text, nullable=True)  # JSON array of photo paths
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

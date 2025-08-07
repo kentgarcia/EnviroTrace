@@ -6,6 +6,8 @@ import UrbanGreeningOverview from "./pages/Overview";
 import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import UrbanGreeningRecords from "./pages/Records";
 import FeeRecords from "./pages/fee-records/FeeRecords";
+import TreeManagement from "./pages/tree-management/TreeManagement";
+import PlantingRecords from "./pages/planting-records/PlantingRecords";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -28,4 +30,6 @@ export const urbanGreeningRoute = [
   createUrbanGreeningRoute("/urban-greening/records", UrbanGreeningRecords),
   createUrbanGreeningRoute("/urban-greening/inspection-reports", InspectionReports),
   createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
+  createUrbanGreeningRoute("/urban-greening/tree-management", TreeManagement),
+  createUrbanGreeningRoute("/urban-greening/planting-records", PlantingRecords),
 ];

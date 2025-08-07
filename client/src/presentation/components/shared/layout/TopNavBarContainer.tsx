@@ -19,6 +19,7 @@ import {
   Wallet,
   UserCircle,
   Receipt,
+  TreePine,
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -157,6 +158,16 @@ function getMenuItems(
         label: "Monitoring Requests",
         icon: <FileText className="w-4 h-4 mr-1" />,
         path: `${basePath}/monitoring-requests`,
+      },
+      {
+        label: "Tree Management",
+        icon: <TreePine className="w-4 h-4 mr-1" />,
+        path: `${basePath}/tree-management`,
+      },
+      {
+        label: "Planting Records",
+        icon: <TreePine className="w-4 h-4 mr-1" />,
+        path: `${basePath}/planting-records`,
       },
       {
         label: "Records",
