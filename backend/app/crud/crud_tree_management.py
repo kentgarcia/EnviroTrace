@@ -23,28 +23,10 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
     def get_by_requester(self, db: Session, *, requester_name: str) -> List[TreeManagementRequest]:
         return db.query(TreeManagementRequest).filter(TreeManagementRequest.requester_name.ilike(f"%{requester_name}%")).all()
 
-    def get_by_urgency_level(self, db: Session, *, urgency_level: str) -> List[TreeManagementRequest]:
-        return db.query(TreeManagementRequest).filter(TreeManagementRequest.urgency_level == urgency_level).all()
-
     def get_pending_requests(self, db: Session) -> List[TreeManagementRequest]:
         return db.query(TreeManagementRequest).filter(
-            TreeManagementRequest.status.in_(["filed", "under_review", "approved", "payment_pending"])
+            TreeManagementRequest.status.in_(["filed", "on_hold", "for_signature", "payment_pending"])
         ).all()
-
-    def get_overdue_requests(self, db: Session) -> List[TreeManagementRequest]:
-        today = date.today()
-        return db.query(TreeManagementRequest).filter(
-            and_(
-                TreeManagementRequest.scheduled_date < today,
-                TreeManagementRequest.status.in_(["approved", "in_progress"])
-            )
-        ).all()
-
-    def get_by_tree_species(self, db: Session, *, tree_species: str) -> List[TreeManagementRequest]:
-        return db.query(TreeManagementRequest).filter(TreeManagementRequest.tree_species.ilike(f"%{tree_species}%")).all()
-
-    def get_by_assigned_inspector(self, db: Session, *, inspector: str) -> List[TreeManagementRequest]:
-        return db.query(TreeManagementRequest).filter(TreeManagementRequest.assigned_inspector.ilike(f"%{inspector}%")).all()
 
     def get_by_date_range(self, db: Session, *, start_date: date, end_date: date) -> List[TreeManagementRequest]:
         return db.query(TreeManagementRequest).filter(

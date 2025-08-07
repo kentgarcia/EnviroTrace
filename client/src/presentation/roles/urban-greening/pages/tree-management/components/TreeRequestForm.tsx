@@ -24,25 +24,14 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
         request_number: "",
         request_type: "pruning",
         requester_name: "",
-        contact_number: "",
-        email: "",
         property_address: "",
-        tree_species: "",
-        tree_count: 1,
-        tree_location: "",
-        tree_coordinates: "",
-        reason_for_request: "",
-        urgency_level: "normal",
-        request_date: new Date().toISOString().split('T')[0],
-        scheduled_date: "",
         status: "filed",
-        inspection_notes: "",
-        fee_amount: 0,
-        assigned_inspector: "",
-        completion_date: "",
-        fee_status: "pending",
-        permit_number: "",
-        attachment_files: "",
+        request_date: new Date().toISOString().split('T')[0],
+        fee_record_id: null as string | null,
+        notes: "",
+        inspectors: [] as string[],
+        trees_and_quantities: [] as string[],
+        picture_links: [] as string[],
     });
 
     useEffect(() => {
@@ -51,25 +40,14 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                 request_number: initialData.request_number || "",
                 request_type: initialData.request_type || "pruning",
                 requester_name: initialData.requester_name || "",
-                contact_number: initialData.contact_number || "",
-                email: initialData.email || "",
                 property_address: initialData.property_address || "",
-                tree_species: initialData.tree_species || "",
-                tree_count: initialData.tree_count || 1,
-                tree_location: initialData.tree_location || "",
-                tree_coordinates: "", // Not in API model
-                reason_for_request: initialData.reason_for_request || "",
-                urgency_level: initialData.urgency_level || "normal",
-                request_date: initialData.request_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-                scheduled_date: initialData.scheduled_date?.split('T')[0] || "",
                 status: initialData.status || "filed",
-                inspection_notes: initialData.inspection_notes || "",
-                fee_amount: initialData.fee_amount || 0,
-                assigned_inspector: initialData.assigned_inspector || "",
-                completion_date: initialData.completion_date?.split('T')[0] || "",
-                fee_status: initialData.fee_status || "pending",
-                permit_number: initialData.permit_number || "",
-                attachment_files: initialData.attachment_files || "",
+                request_date: initialData.request_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+                fee_record_id: initialData.fee_record_id || null,
+                notes: initialData.notes || "",
+                inspectors: initialData.inspectors || [],
+                trees_and_quantities: initialData.trees_and_quantities || [],
+                picture_links: initialData.picture_links || [],
             });
         }
     }, [initialData]);
@@ -91,7 +69,22 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData);
+
+        // For add mode, don't include processing fields
+        const submitData = mode === "add" ? {
+            request_number: formData.request_number,
+            request_type: formData.request_type,
+            requester_name: formData.requester_name,
+            property_address: formData.property_address,
+            status: formData.status,
+            request_date: formData.request_date,
+            notes: formData.notes,
+        } : {
+            ...formData,
+            fee_record_id: formData.fee_record_id === "" ? null : formData.fee_record_id,
+        };
+
+        onSave(submitData);
     };
 
     const isReadOnly = mode === "view";
@@ -99,14 +92,9 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
     const getStatusColor = (status: string) => {
         switch (status) {
             case "filed": return "bg-blue-100 text-blue-800";
-            case "under_review": return "bg-yellow-100 text-yellow-800";
-            case "approved": return "bg-green-100 text-green-800";
-            case "rejected": return "bg-red-100 text-red-800";
-            case "in_progress": return "bg-purple-100 text-purple-800";
-            case "completed": return "bg-emerald-100 text-emerald-800";
-            case "payment_pending": return "bg-orange-100 text-orange-800";
-            case "for_signature": return "bg-indigo-100 text-indigo-800";
             case "on_hold": return "bg-gray-100 text-gray-800";
+            case "for_signature": return "bg-indigo-100 text-indigo-800";
+            case "payment_pending": return "bg-orange-100 text-orange-800";
             default: return "bg-gray-100 text-gray-800";
         }
     };
@@ -149,41 +137,12 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                             </div>
 
                             <div>
-                                <Label htmlFor="urgency_level">Urgency Level</Label>
-                                <select
-                                    id="urgency_level"
-                                    name="urgency_level"
-                                    value={formData.urgency_level}
-                                    onChange={handleInputChange}
-                                    disabled={isReadOnly}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="low">Low</option>
-                                    <option value="normal">Normal</option>
-                                    <option value="high">High</option>
-                                    <option value="emergency">Emergency</option>
-                                </select>
-                            </div>
-
-                            <div>
                                 <Label htmlFor="request_date">Request Date</Label>
                                 <Input
                                     id="request_date"
                                     name="request_date"
                                     type="date"
                                     value={formData.request_date}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="scheduled_date">Expected Completion Date</Label>
-                                <Input
-                                    id="scheduled_date"
-                                    name="scheduled_date"
-                                    type="date"
-                                    value={formData.scheduled_date}
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
                                 />
@@ -202,14 +161,9 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="filed">Filed</option>
-                                            <option value="under_review">Under Review</option>
-                                            <option value="approved">Approved</option>
-                                            <option value="rejected">Rejected</option>
-                                            <option value="in_progress">In Progress</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="payment_pending">Payment Pending</option>
-                                            <option value="for_signature">For Signature</option>
                                             <option value="on_hold">On Hold</option>
+                                            <option value="for_signature">For Signature</option>
+                                            <option value="payment_pending">Payment Pending</option>
                                         </select>
                                         <Badge className={getStatusColor(formData.status)}>
                                             {formData.status.replace("_", " ").toUpperCase()}
@@ -239,30 +193,6 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                             </div>
 
                             <div>
-                                <Label htmlFor="contact_number">Contact Number *</Label>
-                                <Input
-                                    id="contact_number"
-                                    name="contact_number"
-                                    value={formData.contact_number}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                />
-                            </div>
-
-                            <div>
                                 <Label htmlFor="property_address">Address *</Label>
                                 <Textarea
                                     id="property_address"
@@ -278,106 +208,175 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                     </CardContent>
                 </Card>
 
-                {/* Tree Information */}
-                <Card>
-                    <CardContent className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Tree Information</h3>
-                        <div className="space-y-4">
-                            <div>
-                                <Label htmlFor="tree_species">Tree Species *</Label>
-                                <Input
-                                    id="tree_species"
-                                    name="tree_species"
-                                    value={formData.tree_species}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="tree_count">Number of Trees *</Label>
-                                <Input
-                                    id="tree_count"
-                                    name="tree_count"
-                                    type="number"
-                                    min="1"
-                                    value={formData.tree_count}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="tree_location">Tree Location *</Label>
-                                <Textarea
-                                    id="tree_location"
-                                    name="tree_location"
-                                    value={formData.tree_location}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    required
-                                    rows={3}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="tree_coordinates">GPS Coordinates</Label>
-                                <Input
-                                    id="tree_coordinates"
-                                    name="tree_coordinates"
-                                    value={formData.tree_coordinates}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    placeholder="e.g. 14.5995, 120.9842"
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
                 {/* Request Details */}
                 <Card>
                     <CardContent className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Request Details</h3>
                         <div className="space-y-4">
                             <div>
-                                <Label htmlFor="reason_for_request">Reason for Request *</Label>
+                                <Label htmlFor="notes">Additional Notes</Label>
                                 <Textarea
-                                    id="reason_for_request"
-                                    name="reason_for_request"
-                                    value={formData.reason_for_request}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                    required
-                                    rows={4}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="inspection_notes">Additional Notes</Label>
-                                <Textarea
-                                    id="inspection_notes"
-                                    name="inspection_notes"
-                                    value={formData.inspection_notes}
+                                    id="notes"
+                                    name="notes"
+                                    value={formData.notes}
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
                                     rows={3}
                                 />
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <Label htmlFor="attachment_files">Attachment Files</Label>
-                                    <Input
-                                        id="attachment_files"
-                                        name="attachment_files"
-                                        value={formData.attachment_files}
-                                        onChange={handleInputChange}
-                                        readOnly={isReadOnly}
-                                        placeholder="File paths or references"
-                                    />
+                {/* Inspection Information */}
+                <Card>
+                    <CardContent className="p-6">
+                        <h3 className="text-lg font-semibold mb-4">Inspection Information</h3>
+                        <div className="space-y-6">
+                            <div>
+                                <Label htmlFor="inspectors">Inspectors</Label>
+                                <div className="space-y-2">
+                                    {formData.inspectors.map((inspector, index) => (
+                                        <div key={index} className="flex items-center space-x-2">
+                                            <Input
+                                                value={inspector}
+                                                onChange={(e) => {
+                                                    const newInspectors = [...formData.inspectors];
+                                                    newInspectors[index] = e.target.value;
+                                                    setFormData(prev => ({ ...prev, inspectors: newInspectors }));
+                                                }}
+                                                readOnly={isReadOnly}
+                                                placeholder="Inspector name"
+                                                className="flex-1"
+                                            />
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const newInspectors = formData.inspectors.filter((_, i) => i !== index);
+                                                        setFormData(prev => ({ ...prev, inspectors: newInspectors }));
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {!isReadOnly && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    inspectors: [...prev.inspectors, '']
+                                                }));
+                                            }}
+                                        >
+                                            Add Inspector
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="trees_and_quantities">Trees & Quantities</Label>
+                                <div className="space-y-2">
+                                    {formData.trees_and_quantities.map((tree, index) => (
+                                        <div key={index} className="flex items-center space-x-2">
+                                            <Input
+                                                value={tree}
+                                                onChange={(e) => {
+                                                    const newTrees = [...formData.trees_and_quantities];
+                                                    newTrees[index] = e.target.value;
+                                                    setFormData(prev => ({ ...prev, trees_and_quantities: newTrees }));
+                                                }}
+                                                readOnly={isReadOnly}
+                                                placeholder="e.g., Narra: 5 trees"
+                                                className="flex-1"
+                                            />
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const newTrees = formData.trees_and_quantities.filter((_, i) => i !== index);
+                                                        setFormData(prev => ({ ...prev, trees_and_quantities: newTrees }));
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {!isReadOnly && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    trees_and_quantities: [...prev.trees_and_quantities, '']
+                                                }));
+                                            }}
+                                        >
+                                            Add Tree Entry
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="picture_links">Picture Links</Label>
+                                <div className="space-y-2">
+                                    {formData.picture_links.map((link, index) => (
+                                        <div key={index} className="flex items-center space-x-2">
+                                            <Input
+                                                value={link}
+                                                onChange={(e) => {
+                                                    const newLinks = [...formData.picture_links];
+                                                    newLinks[index] = e.target.value;
+                                                    setFormData(prev => ({ ...prev, picture_links: newLinks }));
+                                                }}
+                                                readOnly={isReadOnly}
+                                                placeholder="Picture URL (future bucket integration)"
+                                                className="flex-1"
+                                            />
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const newLinks = formData.picture_links.filter((_, i) => i !== index);
+                                                        setFormData(prev => ({ ...prev, picture_links: newLinks }));
+                                                    }}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {!isReadOnly && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    picture_links: [...prev.picture_links, '']
+                                                }));
+                                            }}
+                                        >
+                                            Add Picture Link
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -392,65 +391,27 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                         <h3 className="text-lg font-semibold mb-4">Processing Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <Label htmlFor="fee_amount">Fee Amount (PHP)</Label>
+                                <Label htmlFor="fee_record_id">Fee Record ID</Label>
                                 <Input
-                                    id="fee_amount"
-                                    name="fee_amount"
-                                    type="number"
-                                    step="0.01"
-                                    value={formData.fee_amount}
+                                    id="fee_record_id"
+                                    name="fee_record_id"
+                                    value={formData.fee_record_id || ""}
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
+                                    placeholder="Will be linked to Fee Records"
                                 />
                             </div>
 
-                            <div>
-                                <Label htmlFor="fee_status">Fee Status</Label>
-                                <select
-                                    id="fee_status"
-                                    name="fee_status"
-                                    value={formData.fee_status}
-                                    onChange={handleInputChange}
-                                    disabled={isReadOnly}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="pending">Pending</option>
-                                    <option value="paid">Paid</option>
-                                    <option value="waived">Waived</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="permit_number">Permit Number</Label>
-                                <Input
-                                    id="permit_number"
-                                    name="permit_number"
-                                    value={formData.permit_number}
+                            <div className="md:col-span-2">
+                                <Label htmlFor="notes">Processing Notes</Label>
+                                <Textarea
+                                    id="notes"
+                                    name="notes"
+                                    value={formData.notes}
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="assigned_inspector">Assigned Inspector</Label>
-                                <Input
-                                    id="assigned_inspector"
-                                    name="assigned_inspector"
-                                    value={formData.assigned_inspector}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="completion_date">Completion Date</Label>
-                                <Input
-                                    id="completion_date"
-                                    name="completion_date"
-                                    type="date"
-                                    value={formData.completion_date}
-                                    onChange={handleInputChange}
-                                    readOnly={isReadOnly}
+                                    rows={3}
+                                    placeholder="Additional processing notes"
                                 />
                             </div>
                         </div>

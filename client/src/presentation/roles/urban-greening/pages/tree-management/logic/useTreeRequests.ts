@@ -14,34 +14,26 @@ export interface TreeRequest {
   id: string;
   request_number: string;
   request_type: "pruning" | "cutting" | "violation_complaint";
+
+  // Requester Information (simplified)
   requester_name: string;
-  contact_number?: string;
-  email?: string;
   property_address: string;
-  tree_species: string;
-  tree_count: number;
-  tree_location: string;
-  reason_for_request: string;
-  urgency_level: "low" | "normal" | "high" | "emergency";
-  status:
-    | "filed"
-    | "under_review"
-    | "approved"
-    | "rejected"
-    | "in_progress"
-    | "completed"
-    | "payment_pending"
-    | "for_signature"
-    | "on_hold";
+
+  // Status (limited options)
+  status: "filed" | "on_hold" | "for_signature" | "payment_pending";
   request_date: string;
-  scheduled_date?: string;
-  completion_date?: string;
-  assigned_inspector?: string;
-  inspection_notes?: string;
-  fee_amount?: number;
-  fee_status?: "pending" | "paid" | "waived";
-  permit_number?: string;
-  attachment_files?: string;
+
+  // Processing Information (connected to Fee Records)
+  fee_record_id?: string | null;
+
+  // Inspection Information (inline instead of separate reports)
+  inspectors?: string[] | null;
+  trees_and_quantities?: string[] | null;
+  picture_links?: string[] | null;
+
+  // Optional fields
+  notes?: string;
+
   created_at: string;
   updated_at?: string;
 }
@@ -53,24 +45,14 @@ export const transformApiRequest = (
   request_number: request.request_number,
   request_type: request.request_type,
   requester_name: request.requester_name,
-  contact_number: request.contact_number,
-  email: request.email,
   property_address: request.property_address,
-  tree_species: request.tree_species,
-  tree_count: request.tree_count,
-  tree_location: request.tree_location,
-  reason_for_request: request.reason_for_request,
-  urgency_level: request.urgency_level,
   status: request.status,
   request_date: request.request_date,
-  scheduled_date: request.scheduled_date,
-  completion_date: request.completion_date,
-  assigned_inspector: request.assigned_inspector,
-  inspection_notes: request.inspection_notes,
-  fee_amount: request.fee_amount,
-  fee_status: request.fee_status,
-  permit_number: request.permit_number,
-  attachment_files: request.attachment_files,
+  fee_record_id: request.fee_record_id,
+  inspectors: request.inspectors,
+  trees_and_quantities: request.trees_and_quantities,
+  picture_links: request.picture_links,
+  notes: request.notes,
   created_at: request.created_at,
   updated_at: request.updated_at,
 });
@@ -171,20 +153,18 @@ export const getTypeCounts = (requests: TreeRequest[]) => {
 };
 
 export const getUrgencyCounts = (requests: TreeRequest[]) => {
-  return requests.reduce(
-    (acc, request) => {
-      acc[request.urgency_level] = (acc[request.urgency_level] || 0) + 1;
-      return acc;
-    },
-    { low: 0, normal: 0, high: 0, emergency: 0 }
-  );
+  // Urgency level removed - return empty counts
+  return {
+    low: 0,
+    normal: 0,
+    high: 0,
+    emergency: 0,
+  };
 };
 
 export const getTotalFeeAmount = (requests: TreeRequest[]) => {
-  return requests.reduce(
-    (total, request) => total + (request.fee_amount || 0),
-    0
-  );
+  // Fee amount removed - return 0 for now
+  return 0;
 };
 
 export const filterRequests = (
@@ -199,15 +179,14 @@ export const filterRequests = (
       !searchTerm ||
       request.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.requester_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.tree_species.toLowerCase().includes(searchTerm.toLowerCase());
+      request.property_address.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || request.status === statusFilter;
     const matchesType =
       typeFilter === "all" || request.request_type === typeFilter;
-    const matchesUrgency =
-      urgencyFilter === "all" || request.urgency_level === urgencyFilter;
+    // Urgency filter removed
 
-    return matchesSearch && matchesStatus && matchesType && matchesUrgency;
+    return matchesSearch && matchesStatus && matchesType;
   });
 };

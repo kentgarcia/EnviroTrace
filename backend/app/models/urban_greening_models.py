@@ -4,29 +4,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func, text
 from app.db.database import Base
 
-class InspectionReport(Base):
-    __tablename__ = "inspection_reports"
-    __table_args__ = (
-        Index("idx_urban_greening_inspection_date", "date"),
-        Index("idx_urban_greening_inspection_status", "status"),
-        Index("idx_urban_greening_inspection_type", "type"),
-        Index("idx_urban_greening_inspection_report_number", "report_number"),
-        {"schema": "urban_greening"}
-    )
-
-    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    report_number = Column(String(50), unique=True, nullable=False)
-    date = Column(Date, nullable=False)
-    location = Column(String(500), nullable=False)
-    type = Column(String(50), nullable=False)  # Pruning, Cutting, Ballout, Violation/Complaint
-    status = Column(String(50), nullable=False)  # Pending, In Progress, Completed, Rejected
-    inspectors = Column(Text, nullable=True)  # JSON array of inspector names
-    trees = Column(Text, nullable=True)  # JSON array of tree information
-    notes = Column(Text, nullable=True)
-    pictures = Column(Text, nullable=True)  # JSON array of picture file paths
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
 class FeeRecord(Base):
     __tablename__ = "fee_records"
     __table_args__ = (
@@ -131,25 +108,26 @@ class TreeManagementRequest(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     request_number = Column(String(50), unique=True, nullable=False)
     request_type = Column(String(50), nullable=False)  # pruning, cutting, violation_complaint
+    
+    # Requester Information (simplified)
     requester_name = Column(String(255), nullable=False)
-    contact_number = Column(String(50), nullable=True)
-    email = Column(String(255), nullable=True)
     property_address = Column(Text, nullable=False)
-    tree_species = Column(String(100), nullable=False)
-    tree_count = Column(Integer, nullable=False, default=1)
-    tree_location = Column(Text, nullable=False)
-    reason_for_request = Column(Text, nullable=False)
-    urgency_level = Column(String(20), nullable=False, default='normal')  # low, normal, high, emergency
-    status = Column(String(50), nullable=False, default='filed')  # filed, under_review, approved, rejected, in_progress, completed, payment_pending, for_signature, on_hold
+    
+    # Status (limited options)
+    status = Column(String(50), nullable=False, default='filed')  # filed, on_hold, for_signature, payment_pending
     request_date = Column(Date, nullable=False)
-    scheduled_date = Column(Date, nullable=True)
-    completion_date = Column(Date, nullable=True)
-    assigned_inspector = Column(String(255), nullable=True)
-    inspection_notes = Column(Text, nullable=True)
-    fee_amount = Column(Numeric(10, 2), nullable=True)
-    fee_status = Column(String(50), nullable=True)  # pending, paid, waived
-    permit_number = Column(String(50), nullable=True)
-    attachment_files = Column(Text, nullable=True)  # JSON array of file paths
+    
+    # Processing Information (connected to Fee Records)
+    fee_record_id = Column(UUID(as_uuid=True), nullable=True)  # Reference to fee_records table
+    
+    # Inspection Information (inline instead of separate reports)
+    inspectors = Column(Text, nullable=True)  # JSON array of inspector names
+    trees_and_quantities = Column(Text, nullable=True)  # JSON array of "Tree Type: Quantity" entries
+    picture_links = Column(Text, nullable=True)  # JSON array of picture URLs for future bucket integration
+    
+    # Optional fields
+    notes = Column(Text, nullable=True)  # General notes
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

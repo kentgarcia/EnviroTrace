@@ -1,11 +1,19 @@
-"""
+"""Add monitoring requests table
+
 Revision ID: add_monitoring_requests
 Revises: 
 Create Date: 2025-07-28
+
 """
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+# revision identifiers, used by Alembic.
+revision = 'add_monitoring_requests'
+down_revision = None
+branch_labels = None
+depends_on = None
 
 def upgrade():
     op.create_table(

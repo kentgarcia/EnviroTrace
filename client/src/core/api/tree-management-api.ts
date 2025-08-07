@@ -4,34 +4,26 @@ export interface TreeManagementRequest {
   id: string;
   request_number: string;
   request_type: "pruning" | "cutting" | "violation_complaint";
+
+  // Requester Information (simplified)
   requester_name: string;
-  contact_number?: string;
-  email?: string;
   property_address: string;
-  tree_species: string;
-  tree_count: number;
-  tree_location: string;
-  reason_for_request: string;
-  urgency_level: "low" | "normal" | "high" | "emergency";
-  status:
-    | "filed"
-    | "under_review"
-    | "approved"
-    | "rejected"
-    | "in_progress"
-    | "completed"
-    | "payment_pending"
-    | "for_signature"
-    | "on_hold";
+
+  // Status (limited options)
+  status: "filed" | "on_hold" | "for_signature" | "payment_pending";
   request_date: string;
-  scheduled_date?: string;
-  completion_date?: string;
-  assigned_inspector?: string;
-  inspection_notes?: string;
-  fee_amount?: number;
-  fee_status?: "pending" | "paid" | "waived";
-  permit_number?: string;
-  attachment_files?: string;
+
+  // Processing Information (connected to Fee Records)
+  fee_record_id?: string | null;
+
+  // Inspection Information (inline instead of separate reports)
+  inspectors?: string[] | null;
+  trees_and_quantities?: string[] | null;
+  picture_links?: string[] | null;
+
+  // Optional fields
+  notes?: string;
+
   created_at: string;
   updated_at?: string;
 }
@@ -40,66 +32,28 @@ export interface TreeManagementRequestCreate {
   request_number: string;
   request_type: "pruning" | "cutting" | "violation_complaint";
   requester_name: string;
-  contact_number?: string;
-  email?: string;
   property_address: string;
-  tree_species: string;
-  tree_count: number;
-  tree_location: string;
-  reason_for_request: string;
-  urgency_level: "low" | "normal" | "high" | "emergency";
-  status:
-    | "filed"
-    | "under_review"
-    | "approved"
-    | "rejected"
-    | "in_progress"
-    | "completed"
-    | "payment_pending"
-    | "for_signature"
-    | "on_hold";
+  status?: "filed" | "on_hold" | "for_signature" | "payment_pending";
   request_date: string;
-  scheduled_date?: string;
-  completion_date?: string;
-  assigned_inspector?: string;
-  inspection_notes?: string;
-  fee_amount?: number;
-  fee_status?: "pending" | "paid" | "waived";
-  permit_number?: string;
-  attachment_files?: string;
+  fee_record_id?: string | null;
+  inspectors?: string[] | null;
+  trees_and_quantities?: string[] | null;
+  picture_links?: string[] | null;
+  notes?: string;
 }
 
 export interface TreeManagementRequestUpdate {
   request_number?: string;
   request_type?: "pruning" | "cutting" | "violation_complaint";
   requester_name?: string;
-  contact_number?: string;
-  email?: string;
   property_address?: string;
-  tree_species?: string;
-  tree_count?: number;
-  tree_location?: string;
-  reason_for_request?: string;
-  urgency_level?: "low" | "normal" | "high" | "emergency";
-  status?:
-    | "filed"
-    | "under_review"
-    | "approved"
-    | "rejected"
-    | "in_progress"
-    | "completed"
-    | "payment_pending"
-    | "for_signature"
-    | "on_hold";
+  status?: "filed" | "on_hold" | "for_signature" | "payment_pending";
   request_date?: string;
-  scheduled_date?: string;
-  completion_date?: string;
-  assigned_inspector?: string;
-  inspection_notes?: string;
-  fee_amount?: number;
-  fee_status?: "pending" | "paid" | "waived";
-  permit_number?: string;
-  attachment_files?: string;
+  fee_record_id?: string | null;
+  inspectors?: string[] | null;
+  trees_and_quantities?: string[] | null;
+  picture_links?: string[] | null;
+  notes?: string;
 }
 
 // Tree Management Request API functions
@@ -113,7 +67,14 @@ export const fetchTreeManagementRequests = async (): Promise<
 export const createTreeManagementRequest = async (
   request: TreeManagementRequestCreate
 ): Promise<TreeManagementRequest> => {
-  const res = await apiClient.post("/tree-management", request);
+  // Clean up the request data - convert empty UUID strings to null
+  const cleanedRequest = {
+    ...request,
+    fee_record_id:
+      request.fee_record_id?.trim() === "" ? null : request.fee_record_id,
+  };
+
+  const res = await apiClient.post("/tree-management", cleanedRequest);
   return res.data;
 };
 
@@ -121,7 +82,14 @@ export const updateTreeManagementRequest = async (
   id: string,
   request: TreeManagementRequestUpdate
 ): Promise<TreeManagementRequest> => {
-  const res = await apiClient.put(`/tree-management/${id}`, request);
+  // Clean up the request data - convert empty UUID strings to null
+  const cleanedRequest = {
+    ...request,
+    fee_record_id:
+      request.fee_record_id?.trim() === "" ? null : request.fee_record_id,
+  };
+
+  const res = await apiClient.put(`/tree-management/${id}`, cleanedRequest);
   return res.data;
 };
 

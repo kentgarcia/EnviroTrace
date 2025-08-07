@@ -170,11 +170,6 @@ function getMenuItems(
         path: `${basePath}/planting-records`,
       },
       {
-        label: "Inspection Reports",
-        icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `${basePath}/inspection-reports`,
-      },
-      {
         label: "Fee Records",
         icon: <Receipt className="w-4 h-4 mr-1" />,
         path: `${basePath}/fee-records`,

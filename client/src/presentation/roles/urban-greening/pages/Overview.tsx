@@ -21,7 +21,6 @@ import {
 import { TreeDeciduous, FileText, Coins } from "lucide-react";
 
 // Mock data
-const inspectionReportCount = 128;
 const totalFees2025 = 45200;
 const monthlyFees2025 = [
   { month: "Jan", amount: 3200 },
@@ -109,14 +108,8 @@ const UrbanGreeningOverview: React.FC = () => {
             <ColorDivider />
           </div>
 
-          {/* Stat Cards - Compact 4 column layout */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 mb-4">
-            <StatCard
-              title="Inspection Reports"
-              value={inspectionReportCount}
-              icon={<FileText className="w-5 h-5 text-blue-700" />}
-              description="Total filed"
-            />
+          {/* Stat Cards - Compact 3 column layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4 mb-4">
             <StatCard
               title="Fees Collected 2025"
               value={`₱${totalFees2025.toLocaleString()}`}
