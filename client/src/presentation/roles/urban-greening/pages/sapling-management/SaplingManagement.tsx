@@ -1,0 +1,337 @@
+import React, { useMemo, useState } from "react";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
+// ColorDivider not used here, removing import
+import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
+import { Button } from "@/presentation/components/shared/ui/button";
+import { Input } from "@/presentation/components/shared/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { DataTable } from "@/presentation/components/shared/ui/data-table";
+import { Plus, Sprout, TreePine } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
+import {
+    useSaplingRequests,
+    useSaplingRequestMutations,
+    useUrbanGreeningPlantings,
+    useUrbanGreeningStatistics,
+} from "./logic/useSaplingManagement";
+import { SaplingRequest } from "@/core/api/sapling-requests-api";
+import { UrbanGreeningPlanting } from "@/core/api/planting-api";
+import SaplingRequestForm from "./components/SaplingRequestForm";
+import UrbanGreeningPlantingForm from "./components/UrbanGreeningPlantingForm";
+import { fetchMonitoringRequest } from "@/core/api/monitoring-request-service";
+import { useUrbanGreeningPlantingMutations } from "../planting-records/logic/usePlantingRecords";
+
+const SaplingManagement: React.FC = () => {
+    const [activeTab, setActiveTab] = useState<string>("saplings");
+    // Sapling Requests state
+    const [srSearch, setSrSearch] = useState("");
+    const [srOpen, setSrOpen] = useState(false);
+    const [srMode, setSrMode] = useState<"add" | "edit">("add");
+    const [srSelected, setSrSelected] = useState<SaplingRequest | null>(null);
+
+    const { saplingRequests } = useSaplingRequests();
+    const { createSapling, updateSapling, deleteSapling } = useSaplingRequestMutations();
+    const [linkedMonitoring, setLinkedMonitoring] = useState<any | null>(null);
+    const [linkedLoading, setLinkedLoading] = useState(false);
+
+    const srFiltered = useMemo(() => {
+        const q = srSearch.toLowerCase();
+        return saplingRequests.filter((r) =>
+            !srSearch ||
+            r.requester_name.toLowerCase().includes(q) ||
+            r.address.toLowerCase().includes(q)
+        );
+    }, [saplingRequests, srSearch]);
+
+    // Simple client-side statistics for Sapling Requests
+    const srStats = useMemo(() => {
+        const totalRequests = saplingRequests.length;
+        let totalItems = 0;
+        const bySpecies = new Map<string, number>();
+        for (const r of saplingRequests) {
+            let items: any[] = [];
+            try {
+                items = typeof (r as any).saplings === "string" ? JSON.parse((r as any).saplings) : ((r as any).saplings as any[]);
+            } catch { }
+            for (const it of items || []) {
+                const qty = Number(it?.qty) || 0;
+                totalItems += qty;
+                const key = String(it?.name || "Unknown");
+                bySpecies.set(key, (bySpecies.get(key) || 0) + qty);
+            }
+        }
+        const topSpecies = Array.from(bySpecies.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+        return { totalRequests, totalItems, topSpecies };
+    }, [saplingRequests]);
+
+    const srColumns: ColumnDef<SaplingRequest>[] = useMemo(() => [
+        { accessorKey: "date_received", header: "Date Received" },
+        { accessorKey: "requester_name", header: "Requester" },
+        { accessorKey: "address", header: "Address" },
+        {
+            accessorKey: "saplings", header: "Items", cell: ({ row }) => {
+                const v = row.original.saplings as any;
+                let items: any[] = [];
+                try { items = typeof v === "string" ? JSON.parse(v) : (v as any[]); } catch { }
+                return <span className="text-xs text-gray-700">{items.map(i => `${i.name} (${i.qty})`).join(", ")}</span>;
+            }
+        },
+    ], []);
+
+    const handleSrAdd = () => { setSrMode("add"); setSrSelected(null); setSrOpen(true); };
+    const handleSrEdit = (row: SaplingRequest) => { setSrMode("edit"); setSrSelected(row); setSrOpen(true); };
+    const handleSrSave = async (data: any) => {
+        if (srMode === "add") await createSapling.mutateAsync(data);
+        else if (srSelected) await updateSapling.mutateAsync({ id: srSelected.id, data });
+        setSrOpen(false);
+    };
+    const handleSrDelete = async (row: SaplingRequest) => { await deleteSapling.mutateAsync(row.id); };
+
+    // Load linked monitoring request for location/status
+    React.useEffect(() => {
+        const id = srSelected?.monitoring_request_id;
+        if (!id) { setLinkedMonitoring(null); return; }
+        setLinkedLoading(true);
+        fetchMonitoringRequest(id)
+            .then((res) => setLinkedMonitoring(res))
+            .catch(() => setLinkedMonitoring(null))
+            .finally(() => setLinkedLoading(false));
+    }, [srSelected?.monitoring_request_id]);
+
+    // Urban Greening Plantings (reuse existing hooks + UI pattern)
+    const { data: plantings = [] } = useUrbanGreeningPlantings();
+    const [ugSelected, setUgSelected] = useState<UrbanGreeningPlanting | null>(null);
+    const [ugOpen, setUgOpen] = useState(false);
+    const [ugMode, setUgMode] = useState<"add" | "edit" | "view">("add");
+    const { createMutation: createUG, updateMutation: updateUG } = useUrbanGreeningPlantingMutations();
+
+    const ugColumns: ColumnDef<UrbanGreeningPlanting>[] = useMemo(() => [
+        { accessorKey: "record_number", header: "Record No." },
+        {
+            accessorKey: "species_name",
+            header: "Species",
+            cell: ({ row }) => {
+                const item = row.original as any;
+                const plants = Array.isArray(item.plants) ? item.plants : [];
+                if (plants.length > 0) {
+                    return <span className="text-xs text-gray-700">{plants.map((p: any) => `${p.species_name} (${p.quantity})`).join(", ")}</span>;
+                }
+                return <span>{item.species_name}</span>;
+            }
+        },
+        { accessorKey: "quantity_planted", header: "Qty" },
+        { accessorKey: "planting_date", header: "Date" },
+    ], []);
+
+    return (
+        <div className="flex min-h-screen w-full">
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <TopNavBarContainer dashboardType="urban-greening" />
+
+                <div className="p-6 space-y-6">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="saplings" className="text-sm">Sapling Requests</TabsTrigger>
+                            <TabsTrigger value="urban-greening" className="text-sm">Urban Greening</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="saplings" className="mt-4">
+                            {/* Sapling Requests Section */}
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="flex items-center gap-2"><Sprout className="w-5 h-5" /> Sapling Requests</CardTitle>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Search requester or address" value={srSearch} onChange={(e) => setSrSearch(e.target.value)} />
+                                        <Button size="sm" onClick={handleSrAdd}><Plus className="w-4 h-4 mr-1" />Add</Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-2">
+                                            <DataTable data={srFiltered} columns={srColumns} onRowClick={(row) => setSrSelected(row.original as SaplingRequest)} />
+                                        </div>
+                                        <div className="lg:col-span-1">
+                                            <Card>
+                                                <CardHeader><CardTitle className="text-lg">Details</CardTitle></CardHeader>
+                                                <CardContent>
+                                                    {srSelected ? (
+                                                        <div className="space-y-2 text-sm">
+                                                            <div><span className="text-gray-500">Date:</span> {srSelected.date_received}</div>
+                                                            <div><span className="text-gray-500">Requester:</span> {srSelected.requester_name}</div>
+                                                            <div><span className="text-gray-500">Address:</span> {srSelected.address}</div>
+                                                            <div className="text-gray-500">Items:</div>
+                                                            <ul className="list-disc ml-5">
+                                                                {(() => { let items: any[] = []; try { items = typeof srSelected.saplings === "string" ? JSON.parse(srSelected.saplings) : (srSelected.saplings as any[]); } catch { } return items; })().map((i, idx) => (
+                                                                    <li key={idx}>{i.name} - {i.qty}</li>
+                                                                ))}
+                                                            </ul>
+                                                            {srSelected.monitoring_request_id && (
+                                                                <div className="pt-2 space-y-1">
+                                                                    <div className="text-gray-500">Monitoring Link:</div>
+                                                                    {linkedLoading ? (
+                                                                        <div className="text-xs text-gray-500">Loading linked request…</div>
+                                                                    ) : linkedMonitoring ? (
+                                                                        <div className="text-xs">
+                                                                            <div><span className="text-gray-500">Title:</span> {linkedMonitoring.title}</div>
+                                                                            <div><span className="text-gray-500">Status:</span> {linkedMonitoring.status}</div>
+                                                                            <div><span className="text-gray-500">Location:</span> {linkedMonitoring.address}</div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-xs text-gray-500">Not found (ID: {srSelected.monitoring_request_id})</div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            <div className="flex gap-2 pt-2">
+                                                                <Button size="sm" onClick={() => setSrOpen(true)}>Edit</Button>
+                                                                <Button size="sm" variant="destructive" onClick={() => handleSrDelete(srSelected!)}>Delete</Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-3 text-sm">
+                                                            <div className="font-medium">Statistics</div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Total Requests</span><span className="font-semibold">{srStats.totalRequests}</span></div>
+                                                            <div className="flex justify-between"><span className="text-gray-500">Total Items Requested</span><span className="font-semibold">{srStats.totalItems}</span></div>
+                                                            {srStats.topSpecies.length > 0 && (
+                                                                <div>
+                                                                    <div className="text-gray-500 mb-1">Top Species</div>
+                                                                    <ul className="space-y-1">
+                                                                        {srStats.topSpecies.map(([name, qty]) => (
+                                                                            <li key={name} className="flex justify-between"><span>{name}</span><span className="font-medium">{qty}</span></li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            )}
+                                                            <div className="text-xs text-gray-400">Tip: Click a row to view details.</div>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="urban-greening" className="mt-4">
+                            {/* Urban Greening Section */}
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="flex items-center gap-2"><TreePine className="w-5 h-5" /> Urban Greening</CardTitle>
+                                    <Button size="sm" onClick={() => { setUgMode("add"); setUgSelected(null); setUgOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add Planting</Button>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-2">
+                                            <DataTable data={plantings} columns={ugColumns} onRowClick={(row) => { setUgSelected(row.original as UrbanGreeningPlanting); }} />
+                                        </div>
+                                        <div className="lg:col-span-1">
+                                            <Card>
+                                                <CardHeader><CardTitle className="text-lg">{ugSelected ? "Planting Details" : "Statistics"}</CardTitle></CardHeader>
+                                                <CardContent>
+                                                    {ugSelected ? (
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex justify-between"><span className="text-gray-500">Record #</span><span className="font-medium">{(ugSelected as any).record_number || "—"}</span></div>
+                                                            {Array.isArray((ugSelected as any).plants) && (ugSelected as any).plants.length > 0 ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="text-gray-500">Plants</div>
+                                                                    <ul className="list-disc ml-5">
+                                                                        {((ugSelected as any).plants as any[]).map((p, i) => (
+                                                                            <li key={i}>{p.planting_type}: {p.species_name} - {p.quantity}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-medium">{(ugSelected as any).planting_type}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-500">Species</span><span className="font-medium">{(ugSelected as any).species_name}</span></div>
+                                                                    <div className="flex justify-between"><span className="text-gray-500">Qty</span><span className="font-medium">{(ugSelected as any).quantity_planted}</span></div>
+                                                                </>
+                                                            )}
+                                                            <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{(ugSelected as any).planting_date}</span></div>
+                                                            {(ugSelected as any).monitoring_request_id && (
+                                                                <div className="pt-2 space-y-1">
+                                                                    <div className="text-gray-500">Monitoring Link</div>
+                                                                    <div className="text-xs">ID: {(ugSelected as any).monitoring_request_id}</div>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex gap-2 pt-2">
+                                                                <Button size="sm" onClick={() => { setUgMode("edit"); setUgOpen(true); }}>Edit</Button>
+                                                                <Button size="sm" variant="outline" onClick={() => setUgSelected(null)}>Close</Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <UGStatsPanel />
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+                    </Tabs>
+                </div>
+
+                <Dialog open={srOpen} onOpenChange={setSrOpen}>
+                    <DialogContent className="max-w-3xl">
+                        <DialogHeader><DialogTitle>{srMode === "add" ? "Add Sapling Request" : "Edit Sapling Request"}</DialogTitle></DialogHeader>
+                        <SaplingRequestForm
+                            mode={srMode}
+                            initialData={srSelected || undefined}
+                            onSave={handleSrSave}
+                            onCancel={() => setSrOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={ugOpen} onOpenChange={setUgOpen}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                        <DialogHeader><DialogTitle>{ugMode === "add" ? "Add Planting" : ugMode === "edit" ? "Edit Planting" : "View Planting"}</DialogTitle></DialogHeader>
+                        <UrbanGreeningPlantingForm
+                            mode={ugMode}
+                            initialData={ugSelected || undefined}
+                            onSave={async (data) => {
+                                if (ugMode === "add") {
+                                    await createUG.mutateAsync(data);
+                                } else if (ugMode === "edit" && ugSelected) {
+                                    await updateUG.mutateAsync({ id: ugSelected.id, data });
+                                }
+                                setUgOpen(false);
+                            }}
+                            onCancel={() => setUgOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </div>
+    );
+};
+
+export default SaplingManagement;
+
+// Small component to render Urban Greening statistics using existing hook
+const UGStatsPanel: React.FC = () => {
+    const { data: stats, isLoading } = useUrbanGreeningStatistics();
+    if (isLoading) return <div className="text-sm text-gray-500">Loading statistics…</div>;
+    if (!stats) return <div className="text-sm text-gray-500">No statistics available.</div>;
+    const byType = (stats as any)?.by_type as Record<string, any> | undefined;
+    return (
+        <div className="space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-gray-500">Total Records</span><span className="font-semibold">{stats.total_plantings}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Total Quantity</span><span className="font-semibold">{stats.total_quantity}</span></div>
+            {byType && Object.keys(byType).length > 0 && (
+                <div>
+                    <div className="text-gray-500 mb-1">By Type</div>
+                    <ul className="space-y-1">
+                        {Object.entries(byType).slice(0, 5).map(([name, info]: any) => (
+                            <li key={name} className="flex justify-between"><span>{name}</span><span className="font-medium">{info.quantity ?? info.count ?? 0}</span></li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};

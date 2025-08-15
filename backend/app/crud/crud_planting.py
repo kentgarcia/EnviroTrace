@@ -4,11 +4,12 @@ from sqlalchemy import and_, or_, desc, func, extract
 from datetime import date, datetime
 
 from app.crud.base_crud import CRUDBase
-from app.models.urban_greening_models import UrbanGreeningPlanting, SaplingCollection
+from app.models.urban_greening_models import UrbanGreeningPlanting, SaplingCollection, SaplingRequest
 from app.schemas.planting_schemas import (
     UrbanGreeningPlantingCreate, UrbanGreeningPlantingUpdate,
     SaplingCollectionCreate, SaplingCollectionUpdate,
-    PlantingStatistics, SaplingStatistics
+    PlantingStatistics, SaplingStatistics,
+    SaplingRequestCreate, SaplingRequestUpdate
 )
 
 
@@ -28,6 +29,10 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
             obj_in_data = obj_in
         else:
             obj_in_data = obj_in.model_dump() if hasattr(obj_in, 'model_dump') else obj_in
+        # Ensure plants is serialized to text if provided as list
+        if isinstance(obj_in_data.get("plants"), list):
+            import json
+            obj_in_data["plants"] = json.dumps(obj_in_data["plants"]) if obj_in_data["plants"] else None
         db_obj = UrbanGreeningPlanting(**obj_in_data)
         db.add(db_obj)
         db.commit()
@@ -344,3 +349,53 @@ class CRUDSaplingCollection(CRUDBase[SaplingCollection, SaplingCollectionCreate,
 # Create instances
 urban_greening_planting_crud = CRUDUrbanGreeningPlanting(UrbanGreeningPlanting)
 sapling_collection_crud = CRUDSaplingCollection(SaplingCollection)
+
+
+class CRUDSaplingRequest(CRUDBase[SaplingRequest, SaplingRequestCreate, SaplingRequestUpdate]):
+    def get(self, db: Session, id: any) -> Optional[SaplingRequest]:
+        return db.query(SaplingRequest).filter(SaplingRequest.id == id).first()
+
+    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[SaplingRequest]:
+        return db.query(SaplingRequest).order_by(desc(SaplingRequest.date_received)).offset(skip).limit(limit).all()
+
+    def create(self, db: Session, *, obj_in) -> SaplingRequest:
+        data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump()
+        # store saplings as JSON string
+        import json
+        saplings_text = json.dumps([s if isinstance(s, dict) else s.model_dump() for s in data.get("saplings", [])])
+        db_obj = SaplingRequest(
+            date_received=data["date_received"],
+            requester_name=data["requester_name"],
+            address=data["address"],
+            saplings=saplings_text,
+            monitoring_request_id=data.get("monitoring_request_id"),
+        )
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def update(self, db: Session, *, db_obj: SaplingRequest, obj_in: SaplingRequestUpdate) -> SaplingRequest:
+        update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
+        if "saplings" in update_data and update_data["saplings"] is not None:
+            import json
+            update_data["saplings"] = json.dumps([
+                s if isinstance(s, dict) else s.model_dump() for s in update_data["saplings"]
+            ])
+        for field, value in update_data.items():
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, value)
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def remove(self, db: Session, *, id: any) -> SaplingRequest:
+        obj = db.query(SaplingRequest).filter(SaplingRequest.id == id).first()
+        if obj:
+            db.delete(obj)
+            db.commit()
+        return obj
+
+
+sapling_request_crud = CRUDSaplingRequest(SaplingRequest)

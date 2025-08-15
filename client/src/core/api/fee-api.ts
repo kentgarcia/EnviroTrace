@@ -30,7 +30,7 @@ export interface UrbanGreeningFeeRecord {
 }
 
 export interface UrbanGreeningFeeRecordCreate {
-  reference_number: string;
+  reference_number?: string;
   type: "cutting_permit" | "pruning_permit" | "violation_fine";
   amount: number;
   payer_name: string;

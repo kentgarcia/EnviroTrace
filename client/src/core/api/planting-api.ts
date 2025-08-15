@@ -3,15 +3,25 @@ import apiClient from "./api-client";
 export interface UrbanGreeningPlanting {
   id: string;
   record_number: string;
-  planting_type: "ornamental_plants" | "trees" | "seeds" | "seeds_private";
+  planting_type:
+    | "ornamental_plants"
+    | "ornamental_plants_private"
+    | "trees"
+    | "seeds"
+    | "seeds_private";
   species_name: string;
   quantity_planted: number;
   planting_date: string;
-  location: string;
+  location?: string;
   barangay?: string;
   coordinates?: string;
   planting_method?: string;
   status: "planted" | "growing" | "mature" | "died" | "removed";
+  plants?: Array<{
+    planting_type: UrbanGreeningPlanting["planting_type"];
+    species_name: string;
+    quantity: number;
+  }>;
   survival_rate?: number;
   responsible_person: string;
   contact_number?: string;
@@ -21,6 +31,7 @@ export interface UrbanGreeningPlanting {
   maintenance_schedule?: string;
   notes?: string;
   photos?: string;
+  monitoring_request_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -80,13 +91,18 @@ export interface CreateUrbanGreeningPlantingData {
   species_name: string;
   quantity_planted: number;
   planting_date: string;
-  location: string;
+  location?: string;
   barangay?: string;
   coordinates?: string;
   planting_method?: string;
   status?: string;
   survival_rate?: number;
   responsible_person: string;
+  plants?: Array<{
+    planting_type: UrbanGreeningPlanting["planting_type"];
+    species_name: string;
+    quantity: number;
+  }>;
   contact_number?: string;
   organization?: string;
   project_name?: string;
@@ -94,6 +110,7 @@ export interface CreateUrbanGreeningPlantingData {
   maintenance_schedule?: string;
   notes?: string;
   photos?: string;
+  monitoring_request_id?: string | null;
 }
 
 export interface CreateSaplingCollectionData {

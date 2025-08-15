@@ -95,10 +95,29 @@ export const useFeeRecordMutations = () => {
     },
   });
 
+  const fullUpdateMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: UrbanGreeningFeeRecordUpdate;
+    }) => updateUrbanGreeningFeeRecord(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fee-records"] });
+      toast.success("Fee record updated successfully");
+    },
+    onError: (error) => {
+      console.error("Full update error:", error);
+      toast.error("Failed to update fee record");
+    },
+  });
+
   return {
     updateMutation,
     createMutation,
     deleteMutation,
+    fullUpdateMutation,
   };
 };
 

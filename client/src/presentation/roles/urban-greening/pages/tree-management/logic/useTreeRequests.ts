@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   fetchTreeManagementRequests,
+  fetchTreeManagementRequestsByMonth,
   updateTreeManagementRequest,
   createTreeManagementRequest,
   deleteTreeManagementRequest,
@@ -98,6 +99,25 @@ export const useTreeRequestMutations = () => {
     },
   });
 
+  // Full update mutation for editing via inline form (updates multiple fields at once)
+  const fullUpdateMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: TreeManagementRequestUpdate;
+    }) => updateTreeManagementRequest(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
+      toast.success("Tree management request updated successfully");
+    },
+    onError: (error) => {
+      console.error("Full update error:", error);
+      toast.error("Failed to update tree management request");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteTreeManagementRequest(id),
     onSuccess: () => {
@@ -114,11 +134,20 @@ export const useTreeRequestMutations = () => {
     updateMutation,
     createMutation,
     deleteMutation,
+    fullUpdateMutation,
   };
 };
 
-export const fetchTreeRequests = async (): Promise<TreeRequest[]> => {
-  const requests = await fetchTreeManagementRequests();
+export const fetchTreeRequests = async (opts?: {
+  year?: string;
+  month?: string;
+}): Promise<TreeRequest[]> => {
+  let requests;
+  if (opts?.year && opts?.month) {
+    requests = await fetchTreeManagementRequestsByMonth(opts.year, opts.month);
+  } else {
+    requests = await fetchTreeManagementRequests();
+  }
   return requests.map(transformApiRequest);
 };
 
@@ -172,7 +201,8 @@ export const filterRequests = (
   searchTerm: string,
   statusFilter: string,
   typeFilter: string,
-  urgencyFilter: string
+  monthFilter: string, // 'all' or MM
+  yearFilter: string // 'all' or YYYY
 ) => {
   return requests.filter((request) => {
     const matchesSearch =
@@ -185,8 +215,16 @@ export const filterRequests = (
       statusFilter === "all" || request.status === statusFilter;
     const matchesType =
       typeFilter === "all" || request.request_type === typeFilter;
-    // Urgency filter removed
 
-    return matchesSearch && matchesStatus && matchesType;
+    let matchesMonthYear = true;
+    if (monthFilter !== "all" || yearFilter !== "all") {
+      // request_date may include time; take first 10 chars
+      const d = request.request_date.slice(0, 10);
+      const [y, m] = d.split("-");
+      if (yearFilter !== "all" && y !== yearFilter) matchesMonthYear = false;
+      if (monthFilter !== "all" && m !== monthFilter) matchesMonthYear = false;
+    }
+
+    return matchesSearch && matchesStatus && matchesType && matchesMonthYear;
   });
 };

@@ -64,6 +64,36 @@ export const fetchTreeManagementRequests = async (): Promise<
   return res.data;
 };
 
+export const fetchTreeManagementRequestsByMonth = async (
+  year: string,
+  month: string
+): Promise<TreeManagementRequest[]> => {
+  const res = await apiClient.get("/tree-management/by-month", {
+    params: { year, month },
+  });
+  return res.data;
+};
+
+// Urban Greening Fee Record lightweight search (for linking in tree requests)
+export interface UrbanGreeningFeeRecordSearchResult {
+  id: string;
+  reference_number: string;
+  type: string;
+  payer_name: string;
+  status: string;
+  date: string;
+}
+
+export const searchUrbanGreeningFeeRecords = async (
+  query: string
+): Promise<UrbanGreeningFeeRecordSearchResult[]> => {
+  if (!query.trim()) return [];
+  const res = await apiClient.get("/fees/urban-greening/search", {
+    params: { q: query.trim() },
+  });
+  return res.data;
+};
+
 export const createTreeManagementRequest = async (
   request: TreeManagementRequestCreate
 ): Promise<TreeManagementRequest> => {

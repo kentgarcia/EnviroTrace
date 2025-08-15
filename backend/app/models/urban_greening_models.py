@@ -37,7 +37,7 @@ class TreeRecord(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     species = Column(String(100), nullable=False)
-    location = Column(String(500), nullable=False)
+    location = Column(String(500), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     diameter = Column(Integer, nullable=False)  # in cm
@@ -86,7 +86,7 @@ class UrbanGreeningProject(Base):
     quantity = Column(Integer, nullable=False)
     species = Column(String(255), nullable=False)
     planting_date = Column(Date, nullable=False)
-    location = Column(String(500), nullable=False)
+    location = Column(String(500), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     status = Column(String(50), nullable=False)  # planned, planted, maintained, completed
@@ -152,6 +152,8 @@ class UrbanGreeningPlanting(Base):
     barangay = Column(String(100), nullable=True)
     coordinates = Column(String(100), nullable=True)  # GPS coordinates
     planting_method = Column(String(100), nullable=True)  # direct_seeding, transplanting, etc.
+    # List of plants: JSON array string with items { planting_type, species_name, quantity }
+    plants = Column(Text, nullable=True)
     status = Column(String(50), nullable=False, default='planted')  # planted, growing, mature, died, removed
     survival_rate = Column(Float, nullable=True)  # percentage
     responsible_person = Column(String(255), nullable=False)
@@ -162,6 +164,8 @@ class UrbanGreeningPlanting(Base):
     maintenance_schedule = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     photos = Column(Text, nullable=True)  # JSON array of photo paths
+    # Link to Monitoring Request (string id from monitoring module)
+    monitoring_request_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -199,5 +203,24 @@ class SaplingCollection(Base):
     care_instructions = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
     photos = Column(Text, nullable=True)  # JSON array of photo paths
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SaplingRequest(Base):
+    __tablename__ = "sapling_requests"
+    __table_args__ = (
+        Index("idx_urban_greening_sapling_request_date_received", "date_received"),
+        Index("idx_urban_greening_sapling_request_requester", "requester_name"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    date_received = Column(Date, nullable=False)
+    requester_name = Column(String(255), nullable=False)
+    address = Column(String(500), nullable=False)
+    saplings = Column(Text, nullable=False)  # JSON array string: [{ name, qty }]
+    monitoring_request_id = Column(String, nullable=True)  # reference to MonitoringRequest.id (string key)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

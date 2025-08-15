@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.apis.deps import get_db
+import json
 from app.crud.crud_planting import urban_greening_planting_crud, sapling_collection_crud
 from app.schemas.planting_schemas import (
     UrbanGreeningPlantingCreate, UrbanGreeningPlantingUpdate, UrbanGreeningPlantingInDB,
@@ -12,6 +13,16 @@ from app.schemas.planting_schemas import (
 )
 
 router = APIRouter()
+
+def _serialize_plants(entity):
+    try:
+        if getattr(entity, "plants", None):
+            setattr(entity, "plants", json.loads(entity.plants))
+        else:
+            setattr(entity, "plants", None)
+    except Exception:
+        setattr(entity, "plants", None)
+    return entity
 
 # Urban Greening Planting Endpoints
 @router.get("/urban-greening/", response_model=List[UrbanGreeningPlantingInDB])
@@ -25,7 +36,7 @@ def get_urban_greening_plantings(
 ):
     """Get all urban greening planting records with optional filters"""
     if search or planting_type or status:
-        return urban_greening_planting_crud.search(
+        items = urban_greening_planting_crud.search(
             db, 
             search_term=search or "",
             planting_type=planting_type,
@@ -33,7 +44,9 @@ def get_urban_greening_plantings(
             skip=skip, 
             limit=limit
         )
-    return urban_greening_planting_crud.get_multi(db, skip=skip, limit=limit)
+        return [_serialize_plants(it) for it in items]
+    items = urban_greening_planting_crud.get_multi(db, skip=skip, limit=limit)
+    return [_serialize_plants(it) for it in items]
 
 @router.post("/urban-greening/", response_model=UrbanGreeningPlantingInDB)
 def create_urban_greening_planting(
@@ -54,12 +67,25 @@ def create_urban_greening_planting(
     
     # Create the record with generated number
     planting_dict = planting_data.model_dump()
+    # If plants list is provided, mirror first plant to top-level and store plants JSON string
+    plants = planting_dict.get("plants")
+    # Normalize plants if sent as JSON string
+    if isinstance(plants, str):
+        try:
+            plants = json.loads(plants)
+        except Exception:
+            plants = None
+    if plants and isinstance(plants, list) and len(plants) > 0:
+        first = plants[0]
+        planting_dict["planting_type"] = first.get("planting_type", planting_dict.get("planting_type"))
+        planting_dict["species_name"] = first.get("species_name", planting_dict.get("species_name"))
+        planting_dict["quantity_planted"] = first.get("quantity", planting_dict.get("quantity_planted"))
+        planting_dict["plants"] = json.dumps(plants)
     planting_dict["record_number"] = record_number
     
-    # Create a new Pydantic object with the record number
-    create_data = UrbanGreeningPlantingCreate(**planting_dict)
-    
-    return urban_greening_planting_crud.create(db, obj_in=create_data)
+    # Pass raw dict to CRUD so plants remain JSON string and record_number is preserved
+    created = urban_greening_planting_crud.create(db, obj_in=planting_dict)
+    return _serialize_plants(created)
 
 @router.get("/urban-greening/{planting_id}", response_model=UrbanGreeningPlantingInDB)
 def get_urban_greening_planting(
@@ -70,6 +96,12 @@ def get_urban_greening_planting(
     planting = urban_greening_planting_crud.get(db, id=planting_id)
     if not planting:
         raise HTTPException(status_code=404, detail="Urban greening planting record not found")
+    # Deserialize plants field to list if present
+    try:
+        if getattr(planting, "plants", None):
+            setattr(planting, "plants", json.loads(planting.plants))
+    except Exception:
+        setattr(planting, "plants", None)
     return planting
 
 @router.put("/urban-greening/{planting_id}", response_model=UrbanGreeningPlantingInDB)
@@ -83,7 +115,34 @@ def update_urban_greening_planting(
     if not planting:
         raise HTTPException(status_code=404, detail="Urban greening planting record not found")
     
-    return urban_greening_planting_crud.update(db, db_obj=planting, obj_in=planting_data)
+    # Normalize update dict
+    data_dict = planting_data.model_dump(exclude_unset=True)
+    plants = data_dict.get("plants")
+    if plants is not None:
+        # Normalize plants if sent as JSON string
+        if isinstance(plants, str):
+            try:
+                plants = json.loads(plants)
+            except Exception:
+                plants = None
+        # Serialize plants list to JSON string
+        data_dict["plants"] = json.dumps(plants) if plants else None
+        if plants and len(plants) > 0:
+            first = plants[0]
+            data_dict["planting_type"] = first.get("planting_type", data_dict.get("planting_type"))
+            data_dict["species_name"] = first.get("species_name", data_dict.get("species_name"))
+            qty = first.get("quantity")
+            if qty is not None:
+                data_dict["quantity_planted"] = qty
+
+    updated = urban_greening_planting_crud.update(db, db_obj=planting, obj_in=data_dict)
+    # Deserialize plants on response
+    try:
+        if getattr(updated, "plants", None):
+            setattr(updated, "plants", json.loads(updated.plants))
+    except Exception:
+        setattr(updated, "plants", None)
+    return updated
 
 @router.delete("/urban-greening/{planting_id}")
 def delete_urban_greening_planting(

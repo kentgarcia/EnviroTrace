@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.apis.deps import get_db
 from app.crud.crud_fee import air_quality_fee, urban_greening_fee_record
@@ -17,6 +17,23 @@ def read_urban_greening_fee_records(db: Session = Depends(get_db), skip: int = 0
     Retrieve urban greening fee records.
     """
     return urban_greening_fee_record.get_multi_sync(db, skip=skip, limit=limit)
+
+@router.get("/urban-greening/search", response_model=List[UrbanGreeningFeeRecord])
+def search_urban_greening_fee_records(
+    q: str = Query(..., min_length=1, description="Search text for reference number or payer name"),
+    db: Session = Depends(get_db),
+    limit: int = 25,
+):
+    """Lightweight search endpoint for fee record linking.
+    Performs ILIKE search on reference_number and payer_name. Limited result size to keep UI snappy.
+    """
+    q_like = f"%{q}%"
+    # Inline query to avoid adding a special CRUD method yet; can be refactored later.
+    from app.models.urban_greening_models import FeeRecord  # local import to avoid circulars
+    query = db.query(FeeRecord).filter(
+        (FeeRecord.reference_number.ilike(q_like)) | (FeeRecord.payer_name.ilike(q_like))
+    ).order_by(FeeRecord.created_at.desc()).limit(limit)
+    return query.all()
 
 @router.post("/urban-greening", response_model=UrbanGreeningFeeRecord)
 def create_urban_greening_fee_record(record_in: UrbanGreeningFeeRecordCreate, db: Session = Depends(get_db)):

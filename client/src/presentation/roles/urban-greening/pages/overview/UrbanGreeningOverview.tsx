@@ -3,6 +3,7 @@ import { useOverviewData } from "./logic/useOverviewData";
 import { PlantingSummary } from "./components/PlantingSummary";
 import { FeeManagement } from "./components/FeeManagement";
 import { ChartsOverview } from "./components/ChartsOverview";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 export const UrbanGreeningOverview: React.FC = () => {
     const {
@@ -34,38 +35,46 @@ export const UrbanGreeningOverview: React.FC = () => {
     const isChartsLoading = isTreeRequestsLoading || isPlantingLoading || isSaplingRecordsLoading;
 
     return (
-        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">Urban Greening Overview</h2>
-            </div>
+        <div className="flex min-h-screen w-full">
+            <div className="flex-1 flex flex-col overflow-hidden">
+                <TopNavBarContainer dashboardType="urban-greening" />
 
-            {/* Three Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Left Column - Summary Tables */}
-                <div className="space-y-4">
-                    <PlantingSummary
-                        plantingStats={urbanGreeningStatistics}
-                        saplingStats={saplingStatistics}
-                        isLoading={isUrbanGreeningLoading || isSaplingLoading}
-                    />
-
-                    <FeeManagement
-                        totalFees={feeData.totalFees}
-                        monthlyFees={feeData.monthlyFees}
-                        latePayments={feeData.latePayments}
-                        isLoading={isTreeRequestsLoading}
-                    />
+                <div className="flex items-center justify-between bg-white px-6 py-3 border-b border-gray-200">
+                    <h1 className="text-xl font-semibold text-gray-900">
+                        Urban Greening Overview
+                    </h1>
                 </div>
 
-                {/* Charts Overview */}
-                <ChartsOverview
-                    requestStatusData={requestStatusData}
-                    requestTypeData={requestTypeData}
-                    urgencyData={urgencyData}
-                    plantingTypeData={plantingTypeData}
-                    speciesData={speciesData}
-                    isLoading={isChartsLoading}
-                />
+                <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC]">
+                    {/* Three Column Layout */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Left Column - Summary Tables */}
+                        <div className="space-y-4">
+                            <PlantingSummary
+                                plantingStats={urbanGreeningStatistics}
+                                saplingStats={saplingStatistics}
+                                isLoading={isUrbanGreeningLoading || isSaplingLoading}
+                            />
+
+                            <FeeManagement
+                                totalFees={feeData.totalFees}
+                                monthlyFees={feeData.monthlyFees}
+                                latePayments={feeData.latePayments}
+                                isLoading={isTreeRequestsLoading}
+                            />
+                        </div>
+
+                        {/* Charts Overview */}
+                        <ChartsOverview
+                            requestStatusData={requestStatusData}
+                            requestTypeData={requestTypeData}
+                            urgencyData={urgencyData}
+                            plantingTypeData={plantingTypeData}
+                            speciesData={speciesData}
+                            isLoading={isChartsLoading}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     );

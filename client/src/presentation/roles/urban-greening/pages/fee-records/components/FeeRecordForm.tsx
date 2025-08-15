@@ -26,7 +26,6 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
     onCancel,
 }) => {
     const [formData, setFormData] = useState({
-        reference_number: initialData?.reference_number || "",
         type: initialData?.type || "cutting_permit",
         amount: initialData?.amount || 0,
         payer_name: initialData?.payer_name || "",
@@ -40,7 +39,7 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.reference_number || !formData.payer_name || formData.amount <= 0) {
+        if (!formData.payer_name || formData.amount <= 0) {
             toast.error("Please fill in all required fields");
             return;
         }
@@ -61,16 +60,6 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="reference_number">Reference Number *</Label>
-                    <Input
-                        id="reference_number"
-                        value={formData.reference_number}
-                        onChange={(e) => setFormData({ ...formData, reference_number: e.target.value })}
-                        placeholder="UG-CP-2025-001"
-                        disabled={isReadOnly}
-                    />
-                </div>
                 <div>
                     <Label htmlFor="type">Fee Type</Label>
                     <Select

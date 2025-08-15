@@ -1,5 +1,6 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import date
 from sqlalchemy.orm import Session
 from app.apis.deps import get_db
 from app.crud.crud_tree_management import tree_management_request
@@ -15,6 +16,24 @@ def read_tree_management_requests(db: Session = Depends(get_db), skip: int = 0, 
     Retrieve tree management requests.
     """
     return tree_management_request.get_multi_sync(db, skip=skip, limit=limit)
+
+@router.get("/by-month", response_model=List[TreeManagementRequest])
+def read_tree_management_requests_by_month(
+    year: int = Query(..., description="Year, e.g. 2025"),
+    month: int = Query(..., ge=1, le=12, description="Month 1-12"),
+    db: Session = Depends(get_db)
+):
+    """Retrieve tree management requests for a specific month/year."""
+    try:
+        start_date = date(year, month, 1)
+        # naive end date: next month minus one day
+        if month == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month + 1, 1)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid year/month")
+    return tree_management_request.get_by_date_range(db, start_date=start_date, end_date=end_date)
 
 @router.post("/", response_model=TreeManagementRequest)
 def create_tree_management_request(request_in: TreeManagementRequestCreate, db: Session = Depends(get_db)):

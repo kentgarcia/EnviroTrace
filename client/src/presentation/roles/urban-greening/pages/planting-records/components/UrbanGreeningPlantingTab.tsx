@@ -27,7 +27,7 @@ import {
     getPlantingStatusLabel,
 } from "../logic/usePlantingRecords";
 import { UrbanGreeningPlanting } from "@/core/api/planting-api";
-import UrbanGreeningPlantingForm from "./UrbanGreeningPlantingForm";
+import UrbanGreeningPlantingForm from "../../sapling-management/components/UrbanGreeningPlantingForm";
 
 const UrbanGreeningPlantingTab: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");

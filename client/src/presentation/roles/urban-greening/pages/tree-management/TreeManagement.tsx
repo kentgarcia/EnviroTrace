@@ -43,16 +43,24 @@ const TreeManagement: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [formMode, setFormMode] = useState<"add" | "edit" | "view">("add");
-    const [selectedRequest, setSelectedRequest] = useState<TreeRequest | null>(null);
+    const [formMode, setFormMode] = useState<"add">("add"); // Modal now only used for adding
+    const [selectedRequest, setSelectedRequest] = useState<TreeRequest | null>(null); // For add modal initial data (unused but kept for potential future)
     const [selectedRowForDetails, setSelectedRowForDetails] = useState<TreeRequest | null>(null);
+    const [isEditingDetails, setIsEditingDetails] = useState(false); // Inline edit mode
+    const now = new Date();
+    const defaultMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const defaultYear = String(now.getFullYear());
+    const [monthFilter, setMonthFilter] = useState<string>(defaultMonth); // default current month
+    const [yearFilter, setYearFilter] = useState<string>(defaultYear); // default current year
 
-    const { updateMutation, createMutation, deleteMutation } = useTreeRequestMutations();
+    const { updateMutation, createMutation, deleteMutation, fullUpdateMutation } = useTreeRequestMutations();
 
     // Use React Query for data fetching
     const { data: allRequests = [], isLoading, error, refetch } = useQuery({
-        queryKey: ["tree-requests"],
-        queryFn: fetchTreeRequests,
+        queryKey: ["tree-requests", yearFilter, monthFilter],
+        queryFn: () => fetchTreeRequests({ year: yearFilter, month: monthFilter }),
+        staleTime: 60_000, // 1 min
+        gcTime: 5 * 60_000, // 5 min
     });
 
     // Utility functions
@@ -138,7 +146,8 @@ const TreeManagement: React.FC = () => {
             return baseColumns.filter(col =>
                 col.accessorKey === "request_number" ||
                 col.accessorKey === "requester_name" ||
-                col.accessorKey === "status"
+                col.accessorKey === "status" ||
+                col.accessorKey === "request_type"
             );
         }
 
@@ -151,16 +160,11 @@ const TreeManagement: React.FC = () => {
         setIsFormOpen(true);
     };
 
-    const handleEditRequest = (request: TreeRequest) => {
-        setFormMode("edit");
-        setSelectedRequest(request);
-        setIsFormOpen(true);
-    };
-
-    const handleViewRequest = (request: TreeRequest) => {
-        setFormMode("view");
-        setSelectedRequest(request);
-        setIsFormOpen(true);
+    // Edit now happens inline in the details panel
+    const handleStartInlineEdit = () => {
+        if (selectedRowForDetails) {
+            setIsEditingDetails(true);
+        }
     };
 
     const handleDeleteRequest = (request: TreeRequest) => {
@@ -175,20 +179,29 @@ const TreeManagement: React.FC = () => {
 
     const handleCloseDetails = () => {
         setSelectedRowForDetails(null);
+        setIsEditingDetails(false);
     };
 
     const handleFormSave = (data: any) => {
+        // Only used for add via modal now
         if (formMode === "add") {
             createMutation.mutate(data);
             setIsFormOpen(false);
-        } else if (formMode === "edit" && selectedRequest) {
-            updateMutation.mutate({
-                id: selectedRequest.id,
-                field: "status", // This should be replaced with proper field updates
-                value: data
-            });
-            setIsFormOpen(false);
         }
+    };
+
+    const handleInlineEditSave = (data: any) => {
+        if (selectedRowForDetails) {
+            fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data }, {
+                onSuccess: () => {
+                    setIsEditingDetails(false);
+                }
+            });
+        }
+    };
+
+    const handleInlineEditCancel = () => {
+        setIsEditingDetails(false);
     };
 
     const handleFormCancel = () => {
@@ -203,9 +216,10 @@ const TreeManagement: React.FC = () => {
             searchTerm,
             statusFilter,
             typeFilter,
-            "all" // Remove urgency filter
+            monthFilter,
+            yearFilter
         );
-    }, [allRequests, searchTerm, statusFilter, typeFilter]);
+    }, [allRequests, searchTerm, statusFilter, typeFilter, monthFilter, yearFilter]);
 
     // Calculate statistics
     const statusCounts = useMemo(() => getStatusCounts(allRequests), [allRequests]);
@@ -223,7 +237,7 @@ const TreeManagement: React.FC = () => {
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavBarContainer dashboardType="urban-greening" />
-                <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+                <div className="flex-1 p-6 bg-[#F9FBFC] overflow-hidden">
 
                     {error && (
                         <div className="mt-6">
@@ -243,13 +257,11 @@ const TreeManagement: React.FC = () => {
                         </div>
                     )}
 
-                    <div className={`grid gap-6 mt-6 transition-all duration-300 ${selectedRowForDetails
-                            ? 'grid-cols-1 lg:grid-cols-2'
-                            : 'grid-cols-1 lg:grid-cols-3'
-                        }`}>
-                        <div className={selectedRowForDetails ? 'lg:col-span-1' : 'lg:col-span-2'}>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div className={`flex gap-6 mt-6 h-[calc(100vh-140px)] transition-all duration-300`}>
+                        {/* Left Panel */}
+                        <div className={`min-w-0 flex flex-col transition-all duration-300 ${selectedRowForDetails ? 'basis-[55%]' : 'flex-1'}`}>
+                            <Card className="flex-1 flex flex-col min-h-0">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
                                     <CardTitle>Tree Management Requests</CardTitle>
                                     <Button
                                         onClick={handleAddRequest}
@@ -259,9 +271,9 @@ const TreeManagement: React.FC = () => {
                                         Add New Request
                                     </Button>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="flex-1 flex flex-col overflow-hidden">
                                     {/* Filters and Search */}
-                                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                                    <div className="flex flex-col xl:flex-row gap-4 mb-4 shrink-0">
                                         <div className="flex-1">
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -294,30 +306,54 @@ const TreeManagement: React.FC = () => {
                                             <option value="cutting">Tree Cutting</option>
                                             <option value="violation_complaint">Violation/Complaint</option>
                                         </select>
+                                        <select
+                                            value={monthFilter}
+                                            onChange={(e) => setMonthFilter(e.target.value)}
+                                            className="px-3 py-2 border rounded-md"
+                                        >
+                                            {Array.from({ length: 12 }).map((_, i) => {
+                                                const m = String(i + 1).padStart(2, '0');
+                                                const label = new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' });
+                                                return <option key={m} value={m}>{label}</option>;
+                                            })}
+                                        </select>
+                                        <select
+                                            value={yearFilter}
+                                            onChange={(e) => setYearFilter(e.target.value)}
+                                            className="px-3 py-2 border rounded-md"
+                                        >
+                                            {Array.from({ length: 3 }).map((_, i) => {
+                                                const y = String(now.getFullYear() - i);
+                                                return <option key={y} value={y}>{y}</option>;
+                                            })}
+                                        </select>
                                     </div>
 
                                     {isLoading && allRequests.length === 0 ? (
-                                        <div className="flex items-center justify-center h-32">
+                                        <div className="flex items-center justify-center h-32 flex-1">
                                             <div className="text-center">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
                                                 <p className="mt-2 text-sm text-gray-600">Loading requests...</p>
                                             </div>
                                         </div>
                                     ) : (
-                                        <DataTable
-                                            data={filteredData}
-                                            columns={treeColumns}
-                                            onRowClick={handleRowClick}
-                                        />
+                                        <div className="flex-1 overflow-auto rounded border border-gray-100">
+                                            <DataTable
+                                                data={filteredData}
+                                                columns={treeColumns}
+                                                onRowClick={handleRowClick}
+                                            />
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
                         </div>
-                        <div className="lg:col-span-1">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        {/* Right Panel */}
+                        <div className={`flex flex-col min-h-0 transition-all duration-300 ${selectedRowForDetails ? 'basis-[45%]' : 'basis-[35%] max-w-[420px]'} }`}>
+                            <Card className={`flex-1 flex flex-col min-h-0 transition-colors duration-300 ${selectedRowForDetails ? 'bg-gray-50' : 'bg-white'}`}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
                                     <CardTitle className="text-lg">
-                                        {selectedRowForDetails ? 'Request Details' : 'Statistics'}
+                                        {selectedRowForDetails ? (isEditingDetails ? 'Edit Request' : 'Request Details') : 'Statistics'}
                                     </CardTitle>
                                     {selectedRowForDetails && (
                                         <Button
@@ -331,123 +367,136 @@ const TreeManagement: React.FC = () => {
                                         </Button>
                                     )}
                                 </CardHeader>
-                                <CardContent className="space-y-4">
+                                <CardContent className="flex-1 overflow-auto space-y-4">
                                     {selectedRowForDetails ? (
                                         // Show selected row details
                                         <div className="space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Request Number:</span>
-                                                <Badge variant="outline">{selectedRowForDetails.request_number}</Badge>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Type:</span>
-                                                <Badge variant="outline">{getRequestTypeLabel(selectedRowForDetails.request_type)}</Badge>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Status:</span>
-                                                <Badge className={getStatusColor(selectedRowForDetails.status)}>
-                                                    {selectedRowForDetails.status.replace("_", " ").toUpperCase()}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Requester:</span>
-                                                <span className="text-sm font-medium">{selectedRowForDetails.requester_name}</span>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <span className="text-sm text-gray-600">Address:</span>
-                                                <p className="text-sm font-medium">{selectedRowForDetails.property_address}</p>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Date:</span>
-                                                <span className="text-sm font-medium">{selectedRowForDetails.request_date}</span>
-                                            </div>
-                                            {selectedRowForDetails.notes && (
-                                                <div className="space-y-2">
-                                                    <span className="text-sm text-gray-600">Notes:</span>
-                                                    <p className="text-sm">{selectedRowForDetails.notes}</p>
-                                                </div>
-                                            )}
-
-                                            {/* Inspection Information */}
-                                            <div className="pt-2 border-t">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Inspection Information</h4>
-
-                                                {selectedRowForDetails.inspectors && selectedRowForDetails.inspectors.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <span className="text-sm text-gray-600">Inspectors:</span>
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {selectedRowForDetails.inspectors.map((inspector, index) => (
-                                                                <Badge key={index} variant="secondary" className="text-xs">
-                                                                    {inspector}
-                                                                </Badge>
-                                                            ))}
-                                                        </div>
+                                            {isEditingDetails ? (
+                                                <TreeRequestForm
+                                                    mode="edit"
+                                                    initialData={selectedRowForDetails}
+                                                    onSave={handleInlineEditSave}
+                                                    onCancel={handleInlineEditCancel}
+                                                    variant="inline"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Request Number:</span>
+                                                        <Badge variant="outline">{selectedRowForDetails.request_number}</Badge>
                                                     </div>
-                                                )}
-
-                                                {selectedRowForDetails.trees_and_quantities && selectedRowForDetails.trees_and_quantities.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <span className="text-sm text-gray-600">Trees & Quantities:</span>
-                                                        <div className="space-y-1">
-                                                            {selectedRowForDetails.trees_and_quantities.map((tree, index) => (
-                                                                <div key={index} className="text-sm bg-gray-50 p-2 rounded">
-                                                                    {tree}
-                                                                </div>
-                                                            ))}
-                                                        </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Type:</span>
+                                                        <Badge variant="outline">{getRequestTypeLabel(selectedRowForDetails.request_type)}</Badge>
                                                     </div>
-                                                )}
-
-                                                {selectedRowForDetails.picture_links && selectedRowForDetails.picture_links.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <span className="text-sm text-gray-600">Pictures:</span>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {selectedRowForDetails.picture_links.map((link, index) => (
-                                                                <a
-                                                                    key={index}
-                                                                    href={link}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-xs text-blue-600 hover:text-blue-800 underline truncate"
-                                                                >
-                                                                    Picture {index + 1}
-                                                                </a>
-                                                            ))}
-                                                        </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Status:</span>
+                                                        <Badge className={getStatusColor(selectedRowForDetails.status)}>
+                                                            {selectedRowForDetails.status.replace("_", " ").toUpperCase()}
+                                                        </Badge>
                                                     </div>
-                                                )}
-
-                                                {(!selectedRowForDetails.inspectors || selectedRowForDetails.inspectors.length === 0) &&
-                                                    (!selectedRowForDetails.trees_and_quantities || selectedRowForDetails.trees_and_quantities.length === 0) &&
-                                                    (!selectedRowForDetails.picture_links || selectedRowForDetails.picture_links.length === 0) && (
-                                                        <p className="text-sm text-gray-500 italic">No inspection information available</p>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Requester:</span>
+                                                        <span className="text-sm font-medium">{selectedRowForDetails.requester_name}</span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <span className="text-sm text-gray-600">Address:</span>
+                                                        <p className="text-sm font-medium">{selectedRowForDetails.property_address}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-sm text-gray-600">Date:</span>
+                                                        <span className="text-sm font-medium">{selectedRowForDetails.request_date}</span>
+                                                    </div>
+                                                    {selectedRowForDetails.notes && (
+                                                        <div className="space-y-2">
+                                                            <span className="text-sm text-gray-600">Notes:</span>
+                                                            <p className="text-sm">{selectedRowForDetails.notes}</p>
+                                                        </div>
                                                     )}
-                                            </div>
 
-                                            {/* Action Buttons */}
-                                            <div className="pt-4 border-t space-y-2">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Actions</h4>
-                                                <div className="space-y-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full justify-start"
-                                                        onClick={() => handleEditRequest(selectedRowForDetails)}
-                                                    >
-                                                        <Edit className="w-4 h-4 mr-2" />
-                                                        Edit Request
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full justify-start text-red-600 hover:text-red-700"
-                                                        onClick={() => handleDeleteRequest(selectedRowForDetails)}
-                                                    >
-                                                        <Trash className="w-4 h-4 mr-2" />
-                                                        Delete Request
-                                                    </Button>
-                                                </div>
-                                            </div>
+                                                    {/* Inspection Information */}
+                                                    <div className="pt-2 border-t">
+                                                        <h4 className="text-sm font-medium text-gray-700 mb-2">Inspection Information</h4>
+
+                                                        {selectedRowForDetails.inspectors && selectedRowForDetails.inspectors.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <span className="text-sm text-gray-600">Inspectors:</span>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {selectedRowForDetails.inspectors.map((inspector, index) => (
+                                                                        <Badge key={index} variant="secondary" className="text-xs">
+                                                                            {inspector}
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {selectedRowForDetails.trees_and_quantities && selectedRowForDetails.trees_and_quantities.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <span className="text-sm text-gray-600">Trees & Quantities:</span>
+                                                                <div className="space-y-1">
+                                                                    {selectedRowForDetails.trees_and_quantities.map((tree, index) => (
+                                                                        <div key={index} className="text-sm bg-gray-50 p-2 rounded">
+                                                                            {tree}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {selectedRowForDetails.picture_links && selectedRowForDetails.picture_links.length > 0 && (
+                                                            <div className="space-y-2">
+                                                                <span className="text-sm text-gray-600">Pictures:</span>
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    {selectedRowForDetails.picture_links.map((link, index) => (
+                                                                        <a
+                                                                            key={index}
+                                                                            href={link}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="text-xs text-blue-600 hover:text-blue-800 underline truncate"
+                                                                        >
+                                                                            Picture {index + 1}
+                                                                        </a>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {(!selectedRowForDetails.inspectors || selectedRowForDetails.inspectors.length === 0) &&
+                                                            (!selectedRowForDetails.trees_and_quantities || selectedRowForDetails.trees_and_quantities.length === 0) &&
+                                                            (!selectedRowForDetails.picture_links || selectedRowForDetails.picture_links.length === 0) && (
+                                                                <p className="text-sm text-gray-500 italic">No inspection information available</p>
+                                                            )}
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="pt-4 border-t space-y-2">
+                                                        <h4 className="text-sm font-medium text-gray-700 mb-2">Actions</h4>
+                                                        <div className="space-y-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="w-full justify-start"
+                                                                onClick={handleStartInlineEdit}
+                                                                disabled={isEditingDetails}
+                                                            >
+                                                                <Edit className="w-4 h-4 mr-2" />
+                                                                Edit Request
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="w-full justify-start text-red-600 hover:text-red-700"
+                                                                onClick={() => handleDeleteRequest(selectedRowForDetails)}
+                                                                disabled={isEditingDetails}
+                                                            >
+                                                                <Trash className="w-4 h-4 mr-2" />
+                                                                Delete Request
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </>)}
                                         </div>
                                     ) : (
                                         // Show statistics
@@ -527,14 +576,12 @@ const TreeManagement: React.FC = () => {
                 </div>
             </div>
 
-            {/* Form Dialog */}
+            {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
                             {formMode === "add" && "Add Tree Management Request"}
-                            {formMode === "edit" && "Edit Tree Management Request"}
-                            {formMode === "view" && "View Tree Management Request"}
                         </DialogTitle>
                     </DialogHeader>
                     <TreeRequestForm

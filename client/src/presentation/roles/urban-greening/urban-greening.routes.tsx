@@ -1,12 +1,11 @@
 import { createRoute, RouteComponent } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 
-import UrbanGreeningOverview from "./pages/Overview";
-//import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
+import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
 import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import FeeRecords from "./pages/fee-records/FeeRecords";
 import TreeManagement from "./pages/tree-management/TreeManagement";
-import PlantingRecords from "./pages/planting-records/PlantingRecords";
+import SaplingManagement from "./pages/sapling-management/SaplingManagement";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -28,5 +27,5 @@ export const urbanGreeningRoute = [
   ),
   createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
   createUrbanGreeningRoute("/urban-greening/tree-management", TreeManagement),
-  createUrbanGreeningRoute("/urban-greening/planting-records", PlantingRecords),
+  createUrbanGreeningRoute("/urban-greening/planting-records", SaplingManagement),
 ];

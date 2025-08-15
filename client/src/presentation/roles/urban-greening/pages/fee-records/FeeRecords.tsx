@@ -9,17 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
-import {
-    Plus,
-    Edit,
-    Trash,
-    Eye,
-    Search,
-    CheckCircle,
-    Clock,
-    XCircle,
-    AlertTriangle
-} from "lucide-react";
+import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
 import FeeRecordForm from "./components/FeeRecordForm";
 
 import {
@@ -47,10 +37,12 @@ const FeeRecords: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [formMode, setFormMode] = useState<"add" | "edit" | "view">("add");
+    const [formMode, setFormMode] = useState<"add">("add");
     const [selectedRecord, setSelectedRecord] = useState<FeeRecord | null>(null);
+    const [selectedRowForDetails, setSelectedRowForDetails] = useState<FeeRecord | null>(null);
+    const [isEditingDetails, setIsEditingDetails] = useState(false);
 
-    const { updateMutation, createMutation, deleteMutation } = useFeeRecordMutations();
+    const { updateMutation, createMutation, deleteMutation, fullUpdateMutation } = useFeeRecordMutations();
 
     // Use React Query for data fetching
     const { data: allRecords = [], isLoading, error, refetch } = useQuery({
@@ -59,95 +51,54 @@ const FeeRecords: React.FC = () => {
     });
 
     // Column definitions for fee records
-    const feeColumns: ColumnDef<FeeRecord>[] = useMemo(() => [
-        {
-            accessorKey: "reference_number",
-            header: "Reference No.",
-        },
-        {
-            accessorKey: "type",
-            header: "Type",
-            cell: ({ getValue }) => (
-                <Badge variant="outline">
-                    {getTypeLabel(getValue() as string)}
-                </Badge>
-            ),
-        },
-        {
-            accessorKey: "payer_name",
-            header: "Payer",
-        },
-        {
-            accessorKey: "amount",
-            header: "Amount",
-            cell: ({ getValue }) => formatCurrency(Number(getValue())),
-        },
-        {
-            accessorKey: "date",
-            header: "Date",
-        },
-        {
-            accessorKey: "due_date",
-            header: "Due Date",
-        },
-        {
-            accessorKey: "status",
-            header: "Status",
-            cell: ({ getValue }) => {
-                const status = getValue() as string;
-                const getStatusIcon = (status: string) => {
-                    switch (status) {
-                        case "paid":
-                            return <CheckCircle className="w-4 h-4" />;
-                        case "pending":
-                            return <Clock className="w-4 h-4" />;
-                        case "overdue":
-                            return <AlertTriangle className="w-4 h-4" />;
-                        case "cancelled":
-                            return <XCircle className="w-4 h-4" />;
-                        default:
-                            return <Clock className="w-4 h-4" />;
-                    }
-                };
-
-                return (
-                    <Badge className={getStatusColor(status)}>
-                        {getStatusIcon(status)}
-                        <span className="ml-1">{status.toUpperCase()}</span>
-                    </Badge>
-                );
+    const feeColumns: ColumnDef<FeeRecord>[] = useMemo(() => {
+        const base = [
+            { accessorKey: "reference_number", header: "Reference No." },
+            {
+                accessorKey: "type",
+                header: "Type",
+                cell: ({ getValue }: any) => (
+                    <Badge variant="outline">{getTypeLabel(getValue() as string)}</Badge>
+                ),
             },
-        },
-        {
-            id: "actions",
-            header: "Actions",
-            cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleViewRecord(row.original)}
-                    >
-                        <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditRecord(row.original)}
-                    >
-                        <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRecord(row.original)}
-                    >
-                        <Trash className="w-4 h-4" />
-                    </Button>
-                </div>
-            ),
-        },
-    ], []);
+            { accessorKey: "payer_name", header: "Payer" },
+            {
+                accessorKey: "amount",
+                header: "Amount",
+                cell: ({ getValue }: any) => formatCurrency(Number(getValue())),
+            },
+            { accessorKey: "date", header: "Date" },
+            { accessorKey: "due_date", header: "Due Date" },
+            {
+                accessorKey: "status",
+                header: "Status",
+                cell: ({ getValue }: any) => {
+                    const status = getValue() as string;
+                    const getStatusIcon = (status: string) => {
+                        switch (status) {
+                            case "paid":
+                                return <CheckCircle className="w-4 h-4" />;
+                            case "pending":
+                                return <Clock className="w-4 h-4" />;
+                            case "overdue":
+                                return <AlertTriangle className="w-4 h-4" />;
+                            case "cancelled":
+                                return <XCircle className="w-4 h-4" />;
+                            default:
+                                return <Clock className="w-4 h-4" />;
+                        }
+                    };
+                    return (
+                        <Badge className={getStatusColor(status)}>
+                            {getStatusIcon(status)}
+                            <span className="ml-1">{status.toUpperCase()}</span>
+                        </Badge>
+                    );
+                },
+            },
+        ] as ColumnDef<FeeRecord>[];
+        return base;
+    }, []);
 
     const handleRowSelect = useCallback((rows: any[]) => {
         setSelectedRows(rows);
@@ -166,36 +117,28 @@ const FeeRecords: React.FC = () => {
         setIsFormOpen(true);
     };
 
-    const handleEditRecord = (record: FeeRecord) => {
-        setFormMode("edit");
-        setSelectedRecord(record);
-        setIsFormOpen(true);
+    const handleRowClick = (row: any) => {
+        setSelectedRowForDetails(row.original);
+    };
+    const handleCloseDetails = () => {
+        setSelectedRowForDetails(null);
+        setIsEditingDetails(false);
+    };
+    const handleStartInlineEdit = () => {
+        if (selectedRowForDetails) setIsEditingDetails(true);
     };
 
-    const handleViewRecord = (record: FeeRecord) => {
-        setFormMode("view");
-        setSelectedRecord(record);
-        setIsFormOpen(true);
-    };
-
-    const handleDeleteRecord = (record: FeeRecord) => {
-        if (confirm(`Are you sure you want to delete fee record ${record.reference_number}?`)) {
-            deleteMutation.mutate(record.id);
+    const handleDeleteSelected = () => {
+        if (!selectedRowForDetails) return;
+        if (confirm(`Delete fee record?`)) {
+            deleteMutation.mutate(selectedRowForDetails.id);
+            setSelectedRowForDetails(null);
         }
     };
 
     const handleFormSave = (data: any) => {
         if (formMode === "add") {
             createMutation.mutate(data);
-            setIsFormOpen(false);
-        } else if (formMode === "edit" && selectedRecord) {
-            // For edit mode, we'll handle the individual field updates through handleCellEdit
-            // This is a simplified version - in a real app you might want full form updates
-            updateMutation.mutate({
-                id: selectedRecord.id,
-                field: "reference_number", // This should be replaced with proper field updates
-                value: data
-            });
             setIsFormOpen(false);
         }
     };
@@ -224,13 +167,7 @@ const FeeRecords: React.FC = () => {
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavBarContainer dashboardType="urban-greening" />
-                <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-                    <h1 className="text-2xl font-semibold text-gray-900">Fee Records</h1>
-                </div>
                 <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-                    <div className="px-6">
-                        <ColorDivider />
-                    </div>
 
                     {error && (
                         <div className="mt-6">
@@ -251,7 +188,7 @@ const FeeRecords: React.FC = () => {
                     )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-                        <div className="lg:col-span-2">
+                        <div className={`min-w-0 flex flex-col transition-all duration-300 lg:col-span-2`}>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle>Fee Records</CardTitle>
@@ -311,44 +248,86 @@ const FeeRecords: React.FC = () => {
                                         <DataTable
                                             data={filteredData}
                                             columns={feeColumns}
+                                            onRowClick={handleRowClick}
                                         />
                                     )}
                                 </CardContent>
                             </Card>
                         </div>
-                        <div className="lg:col-span-1">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Statistics</CardTitle>
+                        <div className={`flex flex-col min-h-0 transition-all duration-300 lg:col-span-1`}>
+                            <Card className={`flex-1 flex flex-col min-h-0 ${selectedRowForDetails ? 'bg-gray-50' : 'bg-white'}`}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-lg">{selectedRowForDetails ? (isEditingDetails ? 'Edit Record' : 'Record Details') : 'Statistics'}</CardTitle>
+                                    {selectedRowForDetails && (
+                                        <Button variant="ghost" size="sm" onClick={handleCloseDetails}>Close</Button>
+                                    )}
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Total Records:</span>
-                                        <Badge variant="outline">{allRecords.length}</Badge>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Total Amount:</span>
-                                        <span className="font-semibold">{formatCurrency(totalAmount)}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Paid:</span>
-                                        <div className="flex items-center gap-2">
-                                            <Badge className="bg-green-100 text-green-800">{statusCounts.paid}</Badge>
-                                            <span className="text-sm font-medium text-green-600">{formatCurrency(paidAmount)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Pending:</span>
-                                        <Badge className="bg-yellow-100 text-yellow-800">{statusCounts.pending}</Badge>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Overdue:</span>
-                                        <Badge className="bg-red-100 text-red-800">{statusCounts.overdue}</Badge>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-600">Cancelled:</span>
-                                        <Badge className="bg-gray-100 text-gray-800">{statusCounts.cancelled}</Badge>
-                                    </div>
+                                <CardContent className="flex-1 overflow-auto space-y-4">
+                                    {selectedRowForDetails ? (
+                                        isEditingDetails ? (
+                                            <FeeRecordForm
+                                                mode="edit"
+                                                initialData={selectedRowForDetails}
+                                                onSave={(data) => {
+                                                    // Drop id from payload, keep only updatable fields
+                                                    const { id, ...rest } = data || {};
+                                                    fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data: rest });
+                                                    setIsEditingDetails(false);
+                                                }}
+                                                onCancel={() => setIsEditingDetails(false)}
+                                            />
+                                        ) : (
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between"><span className="text-gray-600">Reference #</span><Badge variant="outline">{selectedRowForDetails.reference_number}</Badge></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Type</span><Badge variant="outline">{getTypeLabel(selectedRowForDetails.type)}</Badge></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Payer</span><span className="font-medium">{selectedRowForDetails.payer_name}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Amount</span><span className="font-medium">{formatCurrency(selectedRowForDetails.amount)}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Date</span><span className="font-medium">{selectedRowForDetails.date}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Due</span><span className="font-medium">{selectedRowForDetails.due_date}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600">Status</span><Badge className={getStatusColor(selectedRowForDetails.status)}>{selectedRowForDetails.status.toUpperCase()}</Badge></div>
+                                                {selectedRowForDetails.or_number && (
+                                                    <div className="flex justify-between"><span className="text-gray-600">OR #</span><span className="font-medium">{selectedRowForDetails.or_number}</span></div>
+                                                )}
+                                                {selectedRowForDetails.payment_date && (
+                                                    <div className="flex justify-between"><span className="text-gray-600">Payment Date</span><span className="font-medium">{selectedRowForDetails.payment_date}</span></div>
+                                                )}
+                                                <div className="pt-3 border-t space-y-2">
+                                                    <Button variant="outline" size="sm" onClick={handleStartInlineEdit}>Edit</Button>
+                                                    <Button variant="outline" size="sm" className="text-red-600" onClick={handleDeleteSelected}>Delete</Button>
+                                                </div>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Total Records:</span>
+                                                <Badge variant="outline">{allRecords.length}</Badge>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Total Amount:</span>
+                                                <span className="font-semibold">{formatCurrency(totalAmount)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Paid:</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className="bg-green-100 text-green-800">{statusCounts.paid}</Badge>
+                                                    <span className="text-sm font-medium text-green-600">{formatCurrency(paidAmount)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Pending:</span>
+                                                <Badge className="bg-yellow-100 text-yellow-800">{statusCounts.pending}</Badge>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Overdue:</span>
+                                                <Badge className="bg-red-100 text-red-800">{statusCounts.overdue}</Badge>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Cancelled:</span>
+                                                <Badge className="bg-gray-100 text-gray-800">{statusCounts.cancelled}</Badge>
+                                            </div>
+                                        </>
+                                    )}
                                 </CardContent>
                             </Card>
                         </div>
@@ -356,18 +335,14 @@ const FeeRecords: React.FC = () => {
                 </div>
             </div>
 
-            {/* Form Dialog */}
+            {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>
-                            {formMode === "add" && "Add Fee Record"}
-                            {formMode === "edit" && "Edit Fee Record"}
-                            {formMode === "view" && "View Fee Record"}
-                        </DialogTitle>
+                        <DialogTitle>Add Fee Record</DialogTitle>
                     </DialogHeader>
                     <FeeRecordForm
-                        mode={formMode}
+                        mode="add"
                         initialData={selectedRecord}
                         onSave={handleFormSave}
                         onCancel={handleFormCancel}

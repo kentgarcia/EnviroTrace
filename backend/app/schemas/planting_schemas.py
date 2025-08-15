@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List
 from datetime import date, datetime
 from uuid import UUID
 
@@ -9,7 +9,7 @@ class UrbanGreeningPlantingBase(BaseModel):
     species_name: str = Field(..., description="Name of the plant/tree species")
     quantity_planted: int = Field(..., gt=0, description="Number of plants/trees planted")
     planting_date: date = Field(..., description="Date when planting occurred")
-    location: str = Field(..., description="Location where planting took place")
+    location: Optional[str] = Field(None, description="Location where planting took place")
     barangay: Optional[str] = Field(None, description="Barangay where planting occurred")
     coordinates: Optional[str] = Field(None, description="GPS coordinates")
     planting_method: Optional[str] = Field(None, description="Method used for planting")
@@ -23,6 +23,29 @@ class UrbanGreeningPlantingBase(BaseModel):
     maintenance_schedule: Optional[str] = Field(None, description="Maintenance schedule details")
     notes: Optional[str] = Field(None, description="Additional notes")
     photos: Optional[str] = Field(None, description="JSON array of photo paths")
+    monitoring_request_id: Optional[str] = None
+    # Optional structured list of plants; when provided, top-level planting_type/species_name/quantity_planted
+    # should mirror the first item for backward compatibility
+    plants: Optional[List[dict]] = Field(
+        default=None,
+        description="List of plants with fields: planting_type, species_name, quantity",
+    )
+
+    # Accept both list and JSON string for plants and normalize to list
+    @field_validator("plants", mode="before")
+    @classmethod
+    def parse_plants(cls, v):
+        if v is None or isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            import json
+            try:
+                data = json.loads(v)
+                return data if isinstance(data, list) else None
+            except Exception:
+                return None
+        # Any other type -> None
+        return None
 
 class UrbanGreeningPlantingCreate(UrbanGreeningPlantingBase):
     pass
@@ -46,6 +69,23 @@ class UrbanGreeningPlantingUpdate(BaseModel):
     maintenance_schedule: Optional[str] = None
     notes: Optional[str] = None
     photos: Optional[str] = None
+    monitoring_request_id: Optional[str] = None
+    plants: Optional[List[dict]] = None
+
+    # Accept both list and JSON string for plants and normalize to list
+    @field_validator("plants", mode="before")
+    @classmethod
+    def parse_plants(cls, v):
+        if v is None or isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            import json
+            try:
+                data = json.loads(v)
+                return data if isinstance(data, list) else None
+            except Exception:
+                return None
+        return None
 
 class UrbanGreeningPlantingInDB(UrbanGreeningPlantingBase):
     id: UUID
@@ -130,3 +170,33 @@ class SaplingStatistics(BaseModel):
     by_purpose: dict
     by_status: dict
     survival_rate_avg: Optional[float]
+
+# Sapling Request Schemas
+class SaplingItem(BaseModel):
+    name: str
+    qty: int
+
+class SaplingRequestBase(BaseModel):
+    date_received: date
+    requester_name: str
+    address: str
+    saplings: list[SaplingItem]
+    monitoring_request_id: Optional[str] = None
+
+class SaplingRequestCreate(SaplingRequestBase):
+    pass
+
+class SaplingRequestUpdate(BaseModel):
+    date_received: Optional[date] = None
+    requester_name: Optional[str] = None
+    address: Optional[str] = None
+    saplings: Optional[list[SaplingItem]] = None
+    monitoring_request_id: Optional[str] = None
+
+class SaplingRequestInDB(SaplingRequestBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
