@@ -19,11 +19,11 @@ import {
   List,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 
-import { database, LocalVehicle } from "../core/database/database";
-import { useNetworkSync } from "../hooks/useNetworkSync";
+import { database, LocalVehicle } from "../../../core/database/database";
+import { useNetworkSync } from "../../../hooks/useNetworkSync";
 
 export default function VehiclesScreen() {
   const [vehicles, setVehicles] = useState<LocalVehicle[]>([]);

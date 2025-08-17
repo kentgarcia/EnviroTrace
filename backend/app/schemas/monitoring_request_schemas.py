@@ -7,12 +7,14 @@ class Location(BaseModel):
     lng: float
 
 class MonitoringRequestBase(BaseModel):
-    title: str
-    requester_name: str
+    # Keep only the essentials required by your intent
     status: str
-    date: date
     location: Location
-    address: str
+    # Optional metadata fields for compatibility
+    title: Optional[str] = None
+    requester_name: Optional[str] = None
+    date: Optional[date] = None
+    address: Optional[str] = None
     description: Optional[str] = None
 
 class MonitoringRequestCreate(MonitoringRequestBase):

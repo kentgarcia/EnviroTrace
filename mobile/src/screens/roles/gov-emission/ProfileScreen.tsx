@@ -10,10 +10,10 @@ import {
   Avatar,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuthStore } from "../core/stores/authStore";
+import { useAuthStore } from "../../../core/stores/authStore";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setSelectedDashboard } = useAuthStore();
 
   const handleLogout = async () => {
     await logout();
@@ -43,18 +43,25 @@ export default function ProfileScreen() {
           <List.Section>
             <List.Subheader>Settings</List.Subheader>
             <List.Item
+              title="Switch Dashboard"
+              description="Choose a different role dashboard"
+              left={(props) => <List.Icon {...props} icon="view-dashboard" />}
+              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => setSelectedDashboard(null)}
+            />
+            <List.Item
               title="Sync Settings"
               description="Configure data synchronization"
               left={(props) => <List.Icon {...props} icon="sync" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {}}
+              onPress={() => { }}
             />
             <List.Item
               title="Offline Data"
               description="Manage local data storage"
               left={(props) => <List.Icon {...props} icon="storage" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {}}
+              onPress={() => { }}
             />
             <Divider />
             <List.Item
@@ -62,14 +69,14 @@ export default function ProfileScreen() {
               description="App version and information"
               left={(props) => <List.Icon {...props} icon="info" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {}}
+              onPress={() => { }}
             />
             <List.Item
               title="Help & Support"
               description="Get help and support"
               left={(props) => <List.Icon {...props} icon="help" />}
               right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {}}
+              onPress={() => { }}
             />
           </List.Section>
         </Card>

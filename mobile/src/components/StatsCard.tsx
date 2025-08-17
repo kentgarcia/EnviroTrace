@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Card, Title, Paragraph, ActivityIndicator } from "react-native-paper";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "./icons/Icon";
 
 interface StatsCardProps {
   title: string;

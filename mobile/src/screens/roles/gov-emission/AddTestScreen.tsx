@@ -2,19 +2,19 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Title, Paragraph, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "../../../components/icons/Icon";
 
-export default function TestingScreen() {
+export default function AddTestScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Icon name="assignment" size={64} color="#1976D2" />
-        <Title style={styles.title}>Emission Testing</Title>
+        <Icon name="assignment-add" size={64} color="#FF9800" />
+        <Title style={styles.title}>Record Test</Title>
         <Paragraph style={styles.subtitle}>
-          Manage emission test records and quarterly testing schedules
+          Record a new emission test result
         </Paragraph>
         <Button mode="contained" style={styles.button}>
-          Record New Test
+          Save Test
         </Button>
       </View>
     </SafeAreaView>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    color: "#1976D2",
+    color: "#FF9800",
     marginTop: 16,
     marginBottom: 8,
   },

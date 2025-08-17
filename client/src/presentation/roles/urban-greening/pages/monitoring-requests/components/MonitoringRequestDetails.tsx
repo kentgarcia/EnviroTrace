@@ -12,13 +12,13 @@ interface Coordinates {
 
 export interface MonitoringRequest {
   id: string;
-  title: string;
-  description: string;
-  requester_name: string;
-  date: string;
-  status: "pending" | "approved" | "rejected" | "in-progress" | "completed";
+  status: string;
   location?: Coordinates;
-  address: string;
+  title?: string;
+  description?: string;
+  requester_name?: string;
+  date?: string;
+  address?: string;
   sapling_count?: number;
   notes?: string;
 }
@@ -42,29 +42,39 @@ const MonitoringRequestDetails: React.FC<MonitoringRequestDetailsProps> = ({
         <Label className="text-sm font-medium">Request ID</Label>
         <p className="text-sm text-muted-foreground">{request.id}</p>
       </div>
-      <div>
-        <Label className="text-sm font-medium">Title</Label>
-        <p className="text-sm">{request.title}</p>
-      </div>
-      <div>
-        <Label className="text-sm font-medium">Description</Label>
-        <p className="text-sm text-muted-foreground">{request.description}</p>
+      {request.title && (
+        <div>
+          <Label className="text-sm font-medium">Title</Label>
+          <p className="text-sm">{request.title}</p>
+        </div>
+      )}
+      {request.description && (
+        <div>
+          <Label className="text-sm font-medium">Description</Label>
+          <p className="text-sm text-muted-foreground">{request.description}</p>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4">
+        {request.requester_name && (
+          <div>
+            <Label className="text-sm font-medium">Requester</Label>
+            <p className="text-sm">{request.requester_name}</p>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label className="text-sm font-medium">Requester</Label>
-          <p className="text-sm">{request.requester_name}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label className="text-sm font-medium">Date</Label>
-          <p className="text-sm">{request.date}</p>
-        </div>
-        <div>
-          <Label className="text-sm font-medium">Address</Label>
-          <p className="text-sm">{request.address}</p>
-        </div>
+        {request.date && (
+          <div>
+            <Label className="text-sm font-medium">Date</Label>
+            <p className="text-sm">{request.date}</p>
+          </div>
+        )}
+        {request.address && (
+          <div>
+            <Label className="text-sm font-medium">Address</Label>
+            <p className="text-sm">{request.address}</p>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

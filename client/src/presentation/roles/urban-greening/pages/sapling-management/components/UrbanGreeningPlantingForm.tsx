@@ -5,7 +5,9 @@ import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Card, CardContent } from "@/presentation/components/shared/ui/card";
 import { UrbanGreeningPlanting } from "@/core/api/planting-api";
-import { fetchMonitoringRequests, MonitoringRequest } from "@/core/api/monitoring-request-service";
+import LocationPickerMap from "../../LocationPickerMap";
+import { createMonitoringRequest } from "@/core/api/monitoring-request-service";
+import { toast } from "sonner";
 
 interface UrbanGreeningPlantingFormProps {
     mode: "add" | "edit" | "view";
@@ -30,13 +32,15 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
         species_name: "",
         quantity_planted: 1,
         planting_date: new Date().toISOString().split('T')[0],
-        planting_method: "",
         responsible_person: "",
         contact_number: "",
         organization: "",
         notes: "",
         monitoring_request_id: "",
     });
+    // Embedded Monitoring Request fields for ADD mode
+    const [mrStatus, setMrStatus] = useState<string>("Untracked");
+    const [mrLocation, setMrLocation] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
     const [plants, setPlants] = useState<PlantItem[]>([
         { planting_type: "ornamental_plants", species_name: "", quantity: 1 }
     ]);
@@ -65,7 +69,6 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
                     species_name: first.species_name || "",
                     quantity_planted: Number(first.quantity) || 1,
                     planting_date: initialData.planting_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-                    planting_method: initialData.planting_method || "",
                     responsible_person: initialData.responsible_person || "",
                     contact_number: initialData.contact_number || "",
                     organization: initialData.organization || "",
@@ -80,7 +83,6 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
                     species_name: initialData.species_name || "",
                     quantity_planted: initialData.quantity_planted || 1,
                     planting_date: initialData.planting_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-                    planting_method: initialData.planting_method || "",
                     responsible_person: initialData.responsible_person || "",
                     contact_number: initialData.contact_number || "",
                     organization: initialData.organization || "",
@@ -100,17 +102,28 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
         }
     };
 
-    const handleSelectChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const list = plants.filter(p => p.species_name.trim() && p.quantity > 0);
         const first = list[0] || plants[0] || { planting_type: formData.planting_type, species_name: formData.species_name, quantity: formData.quantity_planted };
+
+        let monitoring_request_id = formData.monitoring_request_id || null;
+        try {
+            if (mode === "add") {
+                const created = await createMonitoringRequest({
+                    status: mrStatus,
+                    location: mrLocation,
+                    title: first?.species_name ? `Urban Greening: ${first.species_name}` : "Urban Greening Planting",
+                });
+                monitoring_request_id = created.id;
+            }
+        } catch (err) {
+            toast.error("Failed to create Monitoring Request automatically. The system will create a default one.");
+        }
+
         const payload = {
             ...formData,
+            monitoring_request_id,
             // mirror first item for backend validation while sending full list
             planting_type: first.planting_type,
             species_name: first.species_name,
@@ -214,31 +227,33 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
                     </CardContent>
                 </Card>
 
-                {/* Monitoring Request Link (replaces location info) */}
+                {/* Monitoring Request (embedded on add) */}
                 <Card>
                     <CardContent className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Monitoring Request Link</h3>
-                        <MonitoringRequestPicker
-                            value={formData.monitoring_request_id}
-                            onChange={(id) => setFormData((p) => ({ ...p, monitoring_request_id: id }))}
-                        />
-                        <div className="mt-4">
-                            <Label htmlFor="planting_method">Planting Method</Label>
-                            <select
-                                id="planting_method"
-                                name="planting_method"
-                                value={formData.planting_method}
-                                onChange={handleSelectChange}
-                                disabled={isReadOnly}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Select method</option>
-                                <option value="direct_seeding">Direct Seeding</option>
-                                <option value="transplanting">Transplanting</option>
-                                <option value="grafting">Grafting</option>
-                                <option value="cutting">Cutting</option>
-                            </select>
-                        </div>
+                        <h3 className="text-lg font-semibold mb-4">Monitoring Request</h3>
+                        {mode === "add" ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="text-xs">Status</Label>
+                                    <select
+                                        value={mrStatus}
+                                        onChange={(e) => setMrStatus(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    >
+                                        <option value="Untracked">Untracked</option>
+                                        <option value="Living">Living</option>
+                                        <option value="Dead">Dead</option>
+                                        <option value="Replaced">Replaced</option>
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Label className="text-xs">Location (click map to set)</Label>
+                                    <LocationPickerMap location={mrLocation} onLocationChange={setMrLocation} />
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">Monitoring Request was created during submission.</p>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -316,83 +331,3 @@ const UrbanGreeningPlantingForm: React.FC<UrbanGreeningPlantingFormProps> = ({
 };
 
 export default UrbanGreeningPlantingForm;
-
-// Lightweight search-and-pick component for Monitoring Requests
-const MonitoringRequestPicker: React.FC<{
-    value?: string;
-    onChange: (id: string) => void;
-}> = ({ value, onChange }) => {
-    const [query, setQuery] = useState("");
-    const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<MonitoringRequest[]>([]);
-    const last = React.useRef<{ q: string; t: number } | null>(null);
-
-    useEffect(() => {
-        let active = true;
-        const run = async () => {
-            const stamp = Date.now();
-            last.current = { q: query, t: stamp };
-            if (!query.trim()) { setResults([]); return; }
-            setLoading(true);
-            try {
-                const data = await fetchMonitoringRequests({ search: query.trim(), limit: 10 });
-                if (!active) return;
-                if (last.current?.t === stamp) {
-                    setResults(data.reports || []);
-                }
-            } catch {
-                if (active) setResults([]);
-            } finally {
-                if (active) setLoading(false);
-            }
-        };
-        const h = setTimeout(run, 250);
-        return () => { active = false; clearTimeout(h); };
-    }, [query]);
-
-    return (
-        <div className="space-y-2">
-            <Label>Monitoring Request (optional)</Label>
-            {value ? (
-                <div className="flex items-center gap-2">
-                    <Input readOnly value={value} className="bg-gray-50 text-xs" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => onChange("")}>Unlink</Button>
-                </div>
-            ) : (
-                <div className="relative">
-                    <Input
-                        placeholder="Search monitoring requests (title/address/requester)"
-                        value={query}
-                        onChange={(e) => { setQuery(e.target.value); if (!open) setOpen(true); }}
-                        onFocus={() => setOpen(true)}
-                    />
-                    {open && (
-                        <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-white shadow-sm">
-                            {loading && <div className="p-2 text-sm text-gray-500">Searching…</div>}
-                            {!loading && query.trim() && results.length === 0 && (
-                                <div className="p-2 text-sm text-gray-500">No matches</div>
-                            )}
-                            {results.map((r) => (
-                                <button
-                                    key={r.id}
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                                    onClick={() => { onChange(r.id); setOpen(false); setQuery(""); }}
-                                >
-                                    <div className="text-sm font-medium truncate">{r.title}</div>
-                                    <div className="text-[11px] text-gray-600 truncate">{r.address}</div>
-                                    <div className="text-[11px] text-gray-500">{r.status}</div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    <div className="mt-2">
-                        <Label htmlFor="monitoring_request_id" className="text-xs text-gray-500">Or enter ID</Label>
-                        <Input id="monitoring_request_id" value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Paste Monitoring Request ID" />
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};

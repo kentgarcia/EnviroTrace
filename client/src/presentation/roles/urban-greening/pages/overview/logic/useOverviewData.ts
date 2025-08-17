@@ -6,6 +6,7 @@ import {
   fetchSaplingCollections,
 } from "@/core/api/planting-api";
 import { fetchTreeManagementRequests } from "@/core/api/tree-management-api";
+import { fetchUrbanGreeningDashboard } from "@/core/api/dashboard-api";
 
 // Overview data hooks
 export const useOverviewData = () => {
@@ -83,6 +84,13 @@ export const useOverviewData = () => {
   const saplingCharts = transformSaplingData(saplingStats);
   const feeData = calculateFeeData(treeRequests || []);
 
+  // Fetch aggregated dashboard data (minimal payload for dashboard)
+  const { data: dashboardData } = useQuery({
+    queryKey: ["ug-dashboard-aggregated"],
+    queryFn: fetchUrbanGreeningDashboard,
+    staleTime: 5 * 60 * 1000,
+  });
+
   return {
     // Raw data
     urbanGreeningStatistics: plantingStats,
@@ -107,6 +115,7 @@ export const useOverviewData = () => {
 
     // Fee data
     feeData,
+    dashboardData,
 
     // Legacy properties for backward compatibility
     plantingStats,

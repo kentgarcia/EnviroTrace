@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { PaperProvider } from "react-native-paper";
+import PaperIcon from "./src/components/icons/PaperIcon";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore } from "./src/core/stores/authStore";
@@ -47,7 +48,7 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <PaperProvider theme={theme}>
+      <PaperProvider theme={theme} settings={{ icon: (props) => <PaperIcon {...props} /> }}>
         <NavigationContainer>
           <StatusBar style="auto" />
           <AppNavigator />

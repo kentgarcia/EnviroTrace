@@ -1,36 +1,55 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Image, ImageBackground, StatusBar } from "react-native";
 import { ActivityIndicator, Title, Paragraph } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export function LoadingScreen() {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoPlaceholder}>
-            <Title style={styles.logoText}>EPNRO</Title>
-            <Paragraph style={styles.logoSubtext}>
-              Environmental Protection
-            </Paragraph>
+    <ImageBackground
+      source={require("../../assets/images/bg_login.png")}
+      style={styles.background}
+      imageStyle={styles.backgroundImage}
+    >
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+        <View style={styles.content}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoRow}>
+              <Image
+                source={require("../../assets/images/logo_munti.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityLabel="MUNTI logo"
+              />
+              <Image
+                source={require("../../assets/images/logo_epnro.png")}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityLabel="EPNRO logo"
+              />
+            </View>
           </View>
+
+          <ActivityIndicator size="large" style={styles.loader} />
+
+          <Title style={styles.title}>Government Emission</Title>
+          <Paragraph style={styles.subtitle}>Initializing application...</Paragraph>
         </View>
-
-        <ActivityIndicator size="large" color="#2E7D32" style={styles.loader} />
-
-        <Title style={styles.title}>Government Emission</Title>
-        <Paragraph style={styles.subtitle}>
-          Initializing application...
-        </Paragraph>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "transparent",
+  },
+  background: {
+    flex: 1,
+  },
+  backgroundImage: {
+    resizeMode: "cover",
   },
   content: {
     flex: 1,
@@ -41,37 +60,20 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: 48,
   },
-  logoPlaceholder: {
+  logoRow: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2E7D32",
-    paddingVertical: 24,
-    paddingHorizontal: 48,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    gap: 16,
   },
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  logoSubtext: {
-    color: "#E8F5E8",
-    fontSize: 14,
-    textAlign: "center",
+  logoImage: {
+    width: 72,
+    height: 72,
   },
   loader: {
     marginBottom: 24,
   },
   title: {
-    color: "#2E7D32",
+    color: "#003595",
     fontSize: 20,
     fontWeight: "600",
     marginBottom: 8,

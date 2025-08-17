@@ -10,13 +10,14 @@ import {
   Divider,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 
-import { useDashboardData } from "../hooks/useDashboardData";
-import { useNetworkSync } from "../hooks/useNetworkSync";
-import { useAuthStore } from "../core/stores/authStore";
-import StatsCard from "../components/StatsCard";
+import { useDashboardData } from "../../../hooks/useDashboardData";
+import { useNetworkSync } from "../../../hooks/useNetworkSync";
+import { useAuthStore } from "../../../core/stores/authStore";
+import StatsCard from "../../../components/StatsCard";
+import PageLayout from "../../../components/layout/PageLayout";
 
 export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +50,7 @@ export default function OverviewScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <PageLayout title="Dashboard" subtitle="Government Emission" showBack={false}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -196,7 +197,7 @@ export default function OverviewScreen() {
           </Card>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </PageLayout>
   );
 }
 

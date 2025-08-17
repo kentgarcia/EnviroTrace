@@ -10,6 +10,8 @@ from app.schemas.planting_schemas import (
     SaplingRequestInDB,
 )
 from app.crud.crud_planting import sapling_request_crud
+from app.crud import crud_monitoring_request
+from app.schemas.monitoring_request_schemas import MonitoringRequestCreate
 
 
 router = APIRouter(prefix="/planting/sapling-requests", tags=["Sapling Requests"])
@@ -49,7 +51,25 @@ def get_sapling_request(request_id: str, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=SaplingRequestInDB)
 def create_sapling_request(request: SaplingRequestCreate, db: Session = Depends(get_db)):
-    obj = sapling_request_crud.create(db, obj_in=request)
+    # If no monitoring request is linked, auto-create a default one
+    monitoring_request_id = request.monitoring_request_id
+    if not monitoring_request_id:
+        # Default to Untracked with a sensible center location
+        default_loc = {"lat": 14.5995, "lng": 120.9842}
+        mr = crud_monitoring_request.create_request(
+            db,
+            MonitoringRequestCreate(
+                status="Untracked",
+                location=default_loc,  # type: ignore[arg-type]
+                title=f"Sapling Request: {request.requester_name}",
+                address=request.address,
+            ),
+        )
+        monitoring_request_id = mr.id
+
+    data = request.model_dump()
+    data["monitoring_request_id"] = monitoring_request_id
+    obj = sapling_request_crud.create(db, obj_in=data)
     return _serialize(obj)
 
 

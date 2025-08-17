@@ -17,11 +17,11 @@ def get_request(db: Session, request_id: str) -> Optional[MonitoringRequest]:
 def create_request(db: Session, request: MonitoringRequestCreate) -> MonitoringRequest:
     db_request = MonitoringRequest(
         id=f"REQ-{str(uuid.uuid4())[:8]}",
+        status=request.status,
+        location=request.location.dict(),
         title=request.title,
         requester_name=request.requester_name,
-        status=request.status,
         date=request.date,
-        location=request.location.dict(),
         address=request.address,
         description=request.description,
     )
@@ -34,7 +34,8 @@ def update_request(db: Session, request_id: str, request: MonitoringRequestUpdat
     db_request = get_request(db, request_id)
     if not db_request:
         return None
-    for field, value in request.dict().items():
+    data = request.model_dump(exclude_unset=False)
+    for field, value in data.items():
         setattr(db_request, field, value)
     db.commit()
     db.refresh(db_request)

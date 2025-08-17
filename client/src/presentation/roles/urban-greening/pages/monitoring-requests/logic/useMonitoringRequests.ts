@@ -9,21 +9,7 @@ export type Coordinates = {
   lng: number;
 };
 
-export type MonitoringRequest = {
-  id: string;
-  title: string;
-  description: string;
-  requester_name: string;
-  date: string;
-  status: "pending" | "approved" | "rejected" | "in-progress" | "completed";
-  latitude?: number;
-  longitude?: number;
-  address: string;
-  sapling_count?: number;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-};
+export type MonitoringRequest = monitoringRequestService.MonitoringRequest;
 
 export type MonitoringRequestSubmission = {
   title: string;
@@ -79,8 +65,8 @@ export function useMonitoringRequests() {
   );
 
   const [formLocation, setFormLocation] = useState<Coordinates>({
-    lat: selectedRequest?.latitude || 14.5995,
-    lng: selectedRequest?.longitude || 120.9842,
+    lat: selectedRequest?.location?.lat || 14.5995,
+    lng: selectedRequest?.location?.lng || 120.9842,
   });
 
   // Update form location when mode or selected request changes
@@ -89,8 +75,8 @@ export function useMonitoringRequests() {
       setFormLocation({ lat: 14.5995, lng: 120.9842 });
     } else if (mode === "editing" && selectedRequest) {
       setFormLocation({
-        lat: selectedRequest.latitude || 14.5995,
-        lng: selectedRequest.longitude || 120.9842,
+        lat: selectedRequest.location?.lat || 14.5995,
+        lng: selectedRequest.location?.lng || 120.9842,
       });
     }
   }, [mode, selectedRequest]);
@@ -190,21 +176,22 @@ export function useMonitoringRequests() {
         const baseData = {
           ...data,
           date: data.date.toISOString().split("T")[0],
-          ...(location && {
-            latitude: location.lat,
-            longitude: location.lng,
-          }),
         };
 
         if (mode === "editing" && selectedRequest) {
           const requestData: monitoringRequestService.MonitoringRequestUpdate =
             {
-              ...baseData,
-              status: selectedRequest.status, // Always send status
+              status: selectedRequest.status,
               location: {
-                lat: baseData.latitude ?? selectedRequest.location?.lat,
-                lng: baseData.longitude ?? selectedRequest.location?.lng,
-              }, // Always send location
+                lat: (location?.lat ?? selectedRequest.location?.lat)!,
+                lng: (location?.lng ?? selectedRequest.location?.lng)!,
+              },
+              // Optional metadata passthrough
+              title: baseData.title,
+              requester_name: baseData.requester_name,
+              date: baseData.date,
+              address: baseData.address,
+              description: baseData.description,
             };
           await updateMutation.mutateAsync({
             id: selectedRequest.id,
@@ -213,9 +200,14 @@ export function useMonitoringRequests() {
         } else if (mode === "adding") {
           const requestData: monitoringRequestService.MonitoringRequestCreate =
             {
-              ...baseData,
               status: "pending",
               location: location || { lat: 0, lng: 0 },
+              // Optional metadata
+              title: baseData.title,
+              requester_name: baseData.requester_name,
+              date: baseData.date,
+              address: baseData.address,
+              description: baseData.description,
             };
           await createMutation.mutateAsync(requestData);
         }

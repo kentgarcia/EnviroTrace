@@ -4,7 +4,7 @@ const theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: "#2E7D32", // Green primary color matching government emission theme
+    primary: "#003595", // App primary color (blue)
     primaryContainer: "#A5D6A7",
     secondary: "#4CAF50",
     secondaryContainer: "#C8E6C9",

@@ -29,14 +29,15 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
   onSave,
   onCancel,
 }) => {
+  const [status, setStatus] = React.useState<string>("pending");
   const [form, setForm] = React.useState<MonitoringRequestSubmission>({
-    title: initialValues.title || "",
-    description: initialValues.description || "",
-    requester_name: initialValues.requester_name || "",
-    date: initialValues.date || new Date(),
-    address: initialValues.address || "",
-    sapling_count: initialValues.sapling_count || undefined,
-    notes: initialValues.notes || "",
+    title: "",
+    description: "",
+    requester_name: "",
+    date: new Date(),
+    address: "",
+    sapling_count: undefined,
+    notes: "",
   });
 
   const handleChange = (
@@ -55,73 +56,36 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.requester_name || !form.date || !form.address) {
-      toast.error("Please fill in all required fields.");
+    // Only status and location are required per new spec
+    if (!location) {
+      toast.error("Please set a location on the map.");
       return;
     }
-    onSave(form, location);
+    // Pass through minimal metadata if needed by the hook; status is sent from the hook
+    onSave(
+      {
+        ...form,
+        date: form.date || new Date(),
+      },
+      location
+    );
   };
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div>
-        <Label htmlFor="title">Title</Label>
-        <Input
-          id="title"
-          placeholder="Enter request title"
-          value={form.title}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Enter request description"
-          value={form.description}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="requester_name">Requester Name</Label>
-          <Input
-            id="requester_name"
-            placeholder="Enter name"
-            value={form.requester_name}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-      <div>
-        <Label htmlFor="address">Address</Label>
-        <Input
-          id="address"
-          placeholder="Enter address"
-          value={form.address}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="sapling_count">Sapling Count</Label>
-          <Input
-            id="sapling_count"
-            type="number"
-            placeholder="Number of saplings"
-            value={form.sapling_count ?? ""}
-            onChange={handleChange}
-          />
-        </div>
-      </div>
-      <div>
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          placeholder="Additional notes"
-          value={form.notes}
-          onChange={handleChange}
-        />
+        <Label className="text-sm font-medium">Status</Label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-full border rounded px-3 py-2"
+        >
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="completed">Completed</option>
+        </select>
       </div>
       <div>
         <Label className="text-sm font-medium">

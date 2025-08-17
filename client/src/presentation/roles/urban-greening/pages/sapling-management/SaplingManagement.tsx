@@ -19,7 +19,7 @@ import { SaplingRequest } from "@/core/api/sapling-requests-api";
 import { UrbanGreeningPlanting } from "@/core/api/planting-api";
 import SaplingRequestForm from "./components/SaplingRequestForm";
 import UrbanGreeningPlantingForm from "./components/UrbanGreeningPlantingForm";
-import { fetchMonitoringRequest } from "@/core/api/monitoring-request-service";
+import { fetchMonitoringRequest, updateMonitoringRequest } from "@/core/api/monitoring-request-service";
 import { useUrbanGreeningPlantingMutations } from "../planting-records/logic/usePlantingRecords";
 
 const SaplingManagement: React.FC = () => {
@@ -107,6 +107,8 @@ const SaplingManagement: React.FC = () => {
     const [ugOpen, setUgOpen] = useState(false);
     const [ugMode, setUgMode] = useState<"add" | "edit" | "view">("add");
     const { createMutation: createUG, updateMutation: updateUG } = useUrbanGreeningPlantingMutations();
+    const [ugLinkedMonitoring, setUgLinkedMonitoring] = useState<any | null>(null);
+    const [ugLinkedLoading, setUgLinkedLoading] = useState(false);
 
     const ugColumns: ColumnDef<UrbanGreeningPlanting>[] = useMemo(() => [
         { accessorKey: "record_number", header: "Record No." },
@@ -125,6 +127,17 @@ const SaplingManagement: React.FC = () => {
         { accessorKey: "quantity_planted", header: "Qty" },
         { accessorKey: "planting_date", header: "Date" },
     ], []);
+
+    // Load linked monitoring request for UG selected row
+    React.useEffect(() => {
+        const id = (ugSelected as any)?.monitoring_request_id as string | undefined;
+        if (!id) { setUgLinkedMonitoring(null); return; }
+        setUgLinkedLoading(true);
+        fetchMonitoringRequest(id)
+            .then((res) => setUgLinkedMonitoring(res))
+            .catch(() => setUgLinkedMonitoring(null))
+            .finally(() => setUgLinkedLoading(false));
+    }, [(ugSelected as any)?.monitoring_request_id]);
 
     return (
         <div className="flex min-h-screen w-full">
@@ -177,7 +190,21 @@ const SaplingManagement: React.FC = () => {
                                                                         <div className="text-xs">
                                                                             <div><span className="text-gray-500">Title:</span> {linkedMonitoring.title}</div>
                                                                             <div><span className="text-gray-500">Status:</span> {linkedMonitoring.status}</div>
-                                                                            <div><span className="text-gray-500">Location:</span> {linkedMonitoring.address}</div>
+                                                                            <div>
+                                                                                <span className="text-gray-500">Location:</span>{" "}
+                                                                                {linkedMonitoring.address && linkedMonitoring.address.trim().length > 0
+                                                                                    ? linkedMonitoring.address
+                                                                                    : `(${linkedMonitoring.location?.lat ?? '—'}, ${linkedMonitoring.location?.lng ?? '—'})`}
+                                                                            </div>
+                                                                            <div className="flex gap-2 pt-2">
+                                                                                {(["Living", "Dead", "Replaced", "Untracked"] as const).map(s => (
+                                                                                    <Button key={s} size="sm" variant="outline" onClick={async () => {
+                                                                                        await updateMonitoringRequest(linkedMonitoring.id, { status: s, location: linkedMonitoring.location });
+                                                                                        const updated = await fetchMonitoringRequest(linkedMonitoring.id);
+                                                                                        setLinkedMonitoring(updated);
+                                                                                    }}>{s}</Button>
+                                                                                ))}
+                                                                            </div>
                                                                         </div>
                                                                     ) : (
                                                                         <div className="text-xs text-gray-500">Not found (ID: {srSelected.monitoring_request_id})</div>
@@ -254,7 +281,31 @@ const SaplingManagement: React.FC = () => {
                                                             {(ugSelected as any).monitoring_request_id && (
                                                                 <div className="pt-2 space-y-1">
                                                                     <div className="text-gray-500">Monitoring Link</div>
-                                                                    <div className="text-xs">ID: {(ugSelected as any).monitoring_request_id}</div>
+                                                                    {ugLinkedLoading ? (
+                                                                        <div className="text-xs text-gray-500">Loading linked request…</div>
+                                                                    ) : ugLinkedMonitoring ? (
+                                                                        <div className="text-xs">
+                                                                            <div><span className="text-gray-500">Title:</span> {ugLinkedMonitoring.title}</div>
+                                                                            <div><span className="text-gray-500">Status:</span> {ugLinkedMonitoring.status}</div>
+                                                                            <div>
+                                                                                <span className="text-gray-500">Location:</span>{" "}
+                                                                                {ugLinkedMonitoring.address && ugLinkedMonitoring.address.trim().length > 0
+                                                                                    ? ugLinkedMonitoring.address
+                                                                                    : `(${ugLinkedMonitoring.location?.lat ?? '—'}, ${ugLinkedMonitoring.location?.lng ?? '—'})`}
+                                                                            </div>
+                                                                            <div className="flex gap-2 pt-2">
+                                                                                {(["Living", "Dead", "Replaced", "Untracked"] as const).map(s => (
+                                                                                    <Button key={s} size="sm" variant="outline" onClick={async () => {
+                                                                                        await updateMonitoringRequest(ugLinkedMonitoring.id, { status: s, location: ugLinkedMonitoring.location });
+                                                                                        const updated = await fetchMonitoringRequest(ugLinkedMonitoring.id);
+                                                                                        setUgLinkedMonitoring(updated);
+                                                                                    }}>{s}</Button>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-xs">ID: {(ugSelected as any).monitoring_request_id}</div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                             <div className="flex gap-2 pt-2">

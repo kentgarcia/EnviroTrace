@@ -6,6 +6,8 @@ import {
   Platform,
   ScrollView,
   Image,
+  ImageBackground,
+  StatusBar,
 } from "react-native";
 import {
   Card,
@@ -18,9 +20,10 @@ import {
 } from "react-native-paper";
 import { useAuthStore } from "../../core/stores/authStore";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -33,140 +36,179 @@ export default function LoginScreen() {
     }
   }, [error]);
 
+  // Preload last used email
+  useEffect(() => {
+    (async () => {
+      try {
+        const last = await AsyncStorage.getItem("last_email");
+        if (last) setEmail(last);
+      } catch (e) {
+        // non-fatal
+      }
+    })();
+  }, []);
+
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       return;
     }
 
     clearError();
-    const success = await login(username.trim(), password);
+    const success = await login(email.trim(), password);
 
     if (!success && error) {
       setShowSnackbar(true);
+    } else if (success) {
+      // Remember last used email on successful login
+      try { await AsyncStorage.setItem("last_email", email.trim()); } catch { }
     }
   };
 
-  const isFormValid = username.trim().length > 0 && password.trim().length > 0;
+  const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoid}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+    <ImageBackground
+      source={require("../../../assets/images/bg_login.png")}
+      style={styles.background}
+      imageStyle={styles.backgroundImage}
+    >
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoid}
         >
-          <View style={styles.logoContainer}>
-            <View style={styles.logoPlaceholder}>
-              <Title style={styles.logoText}>EPNRO</Title>
-              <Paragraph style={styles.logoSubtext}>
-                Environmental Protection
-              </Paragraph>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="never"
+          >
+            <View style={styles.logoContainer}>
+              <View style={styles.logoPlaceholder}>
+                <View style={styles.logoRow}>
+                  <Image
+                    source={require("../../../assets/images/logo_munti.png")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                    accessibilityLabel="MUNTI logo"
+                  />
+                  <Image
+                    source={require("../../../assets/images/logo_epnro.png")}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                    accessibilityLabel="EPNRO logo"
+                  />
+                </View>
+              </View>
             </View>
-          </View>
 
-          <Card style={styles.loginCard}>
-            <Card.Content style={styles.cardContent}>
-              <Title style={styles.title}>Government Emission</Title>
-              <Paragraph style={styles.subtitle}>
-                Sign in to access the emission monitoring system
-              </Paragraph>
+            <Card style={styles.loginCard}>
+              <Card.Content style={styles.cardContent}>
+                <Title style={styles.title}>Government Emission</Title>
+                <Paragraph style={styles.subtitle}>
+                  Sign in to access the emission monitoring system
+                </Paragraph>
 
-              <View style={styles.form}>
-                <TextInput
-                  label="Username"
-                  value={username}
-                  onChangeText={setUsername}
-                  mode="outlined"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="username"
-                  textContentType="username"
-                  style={styles.input}
-                  disabled={isLoading}
-                  error={!!error && !username.trim()}
-                />
+                <View style={styles.form}>
+                  <TextInput
+                    label="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    mode="outlined"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    style={styles.input}
+                    disabled={isLoading}
+                    error={!!error && !email.trim()}
+                  />
 
-                <TextInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  mode="outlined"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="password"
-                  textContentType="password"
-                  style={styles.input}
-                  disabled={isLoading}
-                  error={!!error && !password.trim()}
-                  right={
-                    <TextInput.Icon
-                      icon={showPassword ? "eye-off" : "eye"}
-                      onPress={() => setShowPassword(!showPassword)}
-                    />
-                  }
-                />
+                  <TextInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    mode="outlined"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="password"
+                    textContentType="password"
+                    style={styles.input}
+                    disabled={isLoading}
+                    error={!!error && !password.trim()}
+                    right={
+                      <TextInput.Icon
+                        icon={showPassword ? "eye-off" : "eye"}
+                        onPress={() => setShowPassword(!showPassword)}
+                      />
+                    }
+                  />
 
-                {error && (
-                  <HelperText
-                    type="error"
-                    visible={true}
-                    style={styles.errorText}
+                  {error && (
+                    <HelperText
+                      type="error"
+                      visible={true}
+                      style={styles.errorText}
+                    >
+                      {error}
+                    </HelperText>
+                  )}
+
+                  <Button
+                    mode="contained"
+                    onPress={handleLogin}
+                    disabled={!isFormValid || isLoading}
+                    loading={isLoading}
+                    style={styles.loginButton}
+                    contentStyle={styles.loginButtonContent}
                   >
-                    {error}
-                  </HelperText>
-                )}
+                    {isLoading ? "Signing In..." : "Sign In"}
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-                <Button
-                  mode="contained"
-                  onPress={handleLogin}
-                  disabled={!isFormValid || isLoading}
-                  loading={isLoading}
-                  style={styles.loginButton}
-                  contentStyle={styles.loginButtonContent}
-                >
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </View>
-
-              <View style={styles.infoContainer}>
-                <Paragraph style={styles.infoText}>
-                  🔒 Secure access for government emission monitoring
-                </Paragraph>
-                <Paragraph style={styles.infoText}>
-                  📱 Local-first data with offline capabilities
-                </Paragraph>
-              </View>
-            </Card.Content>
-          </Card>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      <Snackbar
-        visible={showSnackbar}
-        onDismiss={() => setShowSnackbar(false)}
-        duration={4000}
-        action={{
-          label: "Dismiss",
-          onPress: () => {
-            setShowSnackbar(false);
-            clearError();
-          },
-        }}
-      >
-        {error || "Login failed"}
-      </Snackbar>
-    </SafeAreaView>
+        <Snackbar
+          visible={showSnackbar}
+          onDismiss={() => setShowSnackbar(false)}
+          duration={4000}
+          action={{
+            label: "Dismiss",
+            onPress: () => {
+              setShowSnackbar(false);
+              clearError();
+            },
+          }}
+        >
+          {error || "Login failed"}
+        </Snackbar>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  background: {
+    flex: 1,
+  },
+  backgroundImage: {
+    resizeMode: "cover",
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: "transparent",
   },
   keyboardAvoid: {
     flex: 1,
@@ -178,11 +220,11 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 32,
+    marginBottom: 4,
   },
   logoPlaceholder: {
     alignItems: "center",
-    backgroundColor: "#2E7D32",
+    backgroundColor: "transparent",
     paddingVertical: 20,
     paddingHorizontal: 40,
     borderRadius: 16,
@@ -194,6 +236,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 8,
+  },
+  logoImage: {
+    width: 72,
+    height: 72,
   },
   logoText: {
     color: "#FFFFFF",

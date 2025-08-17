@@ -6,10 +6,10 @@ class MonitoringRequest(Base):
     __tablename__ = "monitoring_requests"
     __table_args__ = ( {"schema": "urban_greening"}, )
     id = Column(String, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    requester_name = Column(String, nullable=False)
+    title = Column(String, nullable=True)
+    requester_name = Column(String, nullable=True)
     status = Column(String, nullable=False)
-    date = Column(Date, nullable=False)
+    date = Column(Date, nullable=True)
     location = Column(JSONB, nullable=False)  # {lat, lng}
-    address = Column(String, nullable=False)
+    address = Column(String, nullable=True)
     description = Column(Text, nullable=True)

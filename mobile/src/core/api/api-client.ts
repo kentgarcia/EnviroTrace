@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuthStore } from "../stores/authStore";
 
 // API base URL - update this to your backend URL
-const API_BASE_URL = "http://192.168.1.13:8000/api/v1"; // Development - your backend server IP
+const API_BASE_URL = "http://192.168.1.12:8000/api/v1"; // Development - your backend server IP
 
 console.log("Using API URL:", API_BASE_URL);
 
@@ -23,6 +23,13 @@ apiClient.interceptors.request.use(
       const token = await AsyncStorage.getItem("access_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+      // Compatibility rewrite: map any stale /auth/profile calls to /auth/me
+      if (typeof config.url === "string") {
+        const u = config.url;
+        if (u === "/auth/profile" || u.endsWith("/auth/profile")) {
+          config.url = u.replace(/\/auth\/profile$/, "/auth/me");
+        }
       }
     } catch (error) {
       console.error("Error getting token from storage:", error);

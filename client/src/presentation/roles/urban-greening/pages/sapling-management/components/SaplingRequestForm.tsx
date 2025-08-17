@@ -4,7 +4,10 @@ import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { SaplingRequest } from "@/core/api/sapling-requests-api";
-import { fetchMonitoringRequests, MonitoringRequest } from "@/core/api/monitoring-request-service";
+import { fetchMonitoringRequests, MonitoringRequest, createMonitoringRequest } from "@/core/api/monitoring-request-service";
+import LocationPickerMap from "../../LocationPickerMap";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 
 interface Props {
     mode: "add" | "edit";
@@ -21,6 +24,9 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
         saplings: [{ name: "", qty: 1 }],
         monitoring_request_id: "",
     });
+    // Embedded Monitoring Request fields for ADD mode
+    const [mrStatus, setMrStatus] = useState<string>("Untracked");
+    const [mrLocation, setMrLocation] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
 
     useEffect(() => {
         if (initialData) {
@@ -53,14 +59,30 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
     const addItem = () => setForm((p) => ({ ...p, saplings: [...p.saplings, { name: "", qty: 1 }] }));
     const removeItem = (idx: number) => setForm((p) => ({ ...p, saplings: p.saplings.filter((_, i) => i !== idx) }));
 
-    const submit = (e: React.FormEvent) => {
+    const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        let monitoring_request_id = form.monitoring_request_id || null;
+        try {
+            if (mode === "add") {
+                // Create a Monitoring Request with embedded fields
+                const created = await createMonitoringRequest({
+                    status: mrStatus,
+                    location: mrLocation,
+                    title: form.requester_name ? `Sapling Request: ${form.requester_name}` : undefined,
+                    address: form.address || undefined,
+                });
+                monitoring_request_id = created.id;
+            }
+        } catch (err) {
+            // Fall back to backend default auto-create
+            toast.error("Failed to create Monitoring Request automatically. The system will create a default one.");
+        }
         onSave({
             date_received: form.date_received,
             requester_name: form.requester_name,
             address: form.address,
             saplings: form.saplings,
-            monitoring_request_id: form.monitoring_request_id || null,
+            monitoring_request_id,
         });
     };
 
@@ -101,10 +123,35 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
                 ))}
             </div>
 
-            <MonitoringRequestPicker
-                value={form.monitoring_request_id}
-                onChange={(id) => setForm((p) => ({ ...p, monitoring_request_id: id }))}
-            />
+            {mode === "add" ? (
+                <div className="space-y-2">
+                    <Label className="text-sm">Monitoring Request</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label className="text-xs">Status</Label>
+                            <select
+                                value={mrStatus}
+                                onChange={(e) => setMrStatus(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            >
+                                <option value="Untracked">Untracked</option>
+                                <option value="Living">Living</option>
+                                <option value="Dead">Dead</option>
+                                <option value="Replaced">Replaced</option>
+                            </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <Label className="text-xs">Location (click map to set)</Label>
+                            <LocationPickerMap location={mrLocation} onLocationChange={setMrLocation} />
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <MonitoringRequestPicker
+                    value={form.monitoring_request_id}
+                    onChange={(id) => setForm((p) => ({ ...p, monitoring_request_id: id }))}
+                />
+            )}
 
             <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
@@ -127,6 +174,9 @@ const MonitoringRequestPicker: React.FC<{
     const [results, setResults] = useState<MonitoringRequest[]>([]);
     const listRef = React.useRef<HTMLDivElement | null>(null);
     const last = React.useRef<{ q: string; t: number } | null>(null);
+    const [newOpen, setNewOpen] = useState(false);
+    const [newStatus, setNewStatus] = useState<string>("Living");
+    const [newLoc, setNewLoc] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
 
     useEffect(() => {
         let active = true;
@@ -161,13 +211,16 @@ const MonitoringRequestPicker: React.FC<{
                     <Button type="button" variant="outline" size="sm" onClick={() => onChange("")}>Unlink</Button>
                 </div>
             ) : (
-                <div className="relative">
-                    <Input
-                        placeholder="Search monitoring requests (title/address/requester)"
-                        value={query}
-                        onChange={(e) => { setQuery(e.target.value); if (!open) setOpen(true); }}
-                        onFocus={() => setOpen(true)}
-                    />
+                <div className="relative space-y-2">
+                    <div className="flex gap-2">
+                        <Input
+                            placeholder="Search monitoring requests (title/address/requester)"
+                            value={query}
+                            onChange={(e) => { setQuery(e.target.value); if (!open) setOpen(true); }}
+                            onFocus={() => setOpen(true)}
+                        />
+                        <Button type="button" variant="secondary" onClick={() => setNewOpen(true)}>Create</Button>
+                    </div>
                     {open && (
                         <div ref={listRef} className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-white shadow-sm">
                             {loading && <div className="p-2 text-sm text-gray-500">Searching…</div>}
@@ -195,6 +248,46 @@ const MonitoringRequestPicker: React.FC<{
                     </div>
                 </div>
             )}
+
+            {/* Inline create Monitoring Request dialog */}
+            <Dialog open={newOpen} onOpenChange={setNewOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Create Monitoring Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-sm">Status</Label>
+                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="w-full border rounded px-3 py-2">
+                                <option value="Living">Living</option>
+                                <option value="Dead">Dead</option>
+                                <option value="Replaced">Replaced</option>
+                                <option value="Untracked">Untracked</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label className="text-sm">Location</Label>
+                            <LocationPickerMap location={newLoc} onLocationChange={setNewLoc} />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                            <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
+                            <Button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const created = await createMonitoringRequest({ status: newStatus, location: newLoc });
+                                        onChange(created.id);
+                                        setNewOpen(false);
+                                        toast.success("Monitoring Request created and linked.");
+                                    } catch (e) {
+                                        toast.error("Failed to create Monitoring Request");
+                                    }
+                                }}
+                            >Create & Link</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

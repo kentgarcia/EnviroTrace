@@ -6,6 +6,8 @@ from uuid import UUID
 from app.apis.deps import get_db
 import json
 from app.crud.crud_planting import urban_greening_planting_crud, sapling_collection_crud
+from app.crud import crud_monitoring_request
+from app.schemas.monitoring_request_schemas import MonitoringRequestCreate
 from app.schemas.planting_schemas import (
     UrbanGreeningPlantingCreate, UrbanGreeningPlantingUpdate, UrbanGreeningPlantingInDB,
     SaplingCollectionCreate, SaplingCollectionUpdate, SaplingCollectionInDB,
@@ -83,6 +85,20 @@ def create_urban_greening_planting(
         planting_dict["plants"] = json.dumps(plants)
     planting_dict["record_number"] = record_number
     
+    # Ensure a Monitoring Request is present; if not, create a default one
+    monitoring_request_id = planting_dict.get("monitoring_request_id")
+    if not monitoring_request_id:
+        default_loc = {"lat": 14.5995, "lng": 120.9842}
+        mr = crud_monitoring_request.create_request(
+            db,
+            MonitoringRequestCreate(
+                status="Untracked",
+                location=default_loc,  # type: ignore[arg-type]
+                title=f"Urban Greening: {planting_dict.get('species_name') or 'Planting'}",
+            ),
+        )
+        planting_dict["monitoring_request_id"] = mr.id
+
     # Pass raw dict to CRUD so plants remain JSON string and record_number is preserved
     created = urban_greening_planting_crud.create(db, obj_in=planting_dict)
     return _serialize_plants(created)

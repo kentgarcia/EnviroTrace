@@ -1,17 +1,17 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "../components/icons/Icon";
 
 // Screens - will create these next
-import OverviewScreen from "../screens/OverviewScreen";
-import VehiclesScreen from "../screens/VehiclesScreen";
-import TestingScreen from "../screens/TestingScreen";
-import OfficesScreen from "../screens/OfficesScreen";
-import ProfileScreen from "../screens/ProfileScreen";
-import VehicleDetailScreen from "../screens/VehicleDetailScreen";
-import AddVehicleScreen from "../screens/AddVehicleScreen";
-import AddTestScreen from "../screens/AddTestScreen";
+import OverviewScreen from "../screens/roles/gov-emission/OverviewScreen";
+import VehiclesScreen from "../screens/roles/gov-emission/VehiclesScreen";
+import TestingScreen from "../screens/roles/gov-emission/TestingScreen";
+import OfficesScreen from "../screens/roles/gov-emission/OfficesScreen";
+import ProfileScreen from "../screens/roles/gov-emission/ProfileScreen";
+import VehicleDetailScreen from "../screens/roles/gov-emission/VehicleDetailScreen";
+import AddVehicleScreen from "../screens/roles/gov-emission/AddVehicleScreen";
+import AddTestScreen from "../screens/roles/gov-emission/AddTestScreen";
 
 export type MainStackParamList = {
   Overview: undefined;
@@ -129,6 +129,7 @@ export default function MainNavigator() {
         options={{
           title: "Dashboard",
           tabBarLabel: "Overview",
+          headerShown: false,
         }}
       />
       <Tab.Screen

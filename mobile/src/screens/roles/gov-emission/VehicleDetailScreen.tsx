@@ -2,19 +2,19 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Title, Paragraph, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "react-native-vector-icons/MaterialIcons";
+import Icon from "../../../components/icons/Icon";
 
-export default function OfficesScreen() {
+export default function VehicleDetailScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Icon name="business" size={64} color="#9C27B0" />
-        <Title style={styles.title}>Government Offices</Title>
+        <Icon name="directions-car" size={64} color="#2196F3" />
+        <Title style={styles.title}>Vehicle Details</Title>
         <Paragraph style={styles.subtitle}>
-          Manage government offices and their vehicle compliance
+          View detailed vehicle information and test history
         </Paragraph>
         <Button mode="contained" style={styles.button}>
-          View Office List
+          Record Test
         </Button>
       </View>
     </SafeAreaView>
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    color: "#9C27B0",
+    color: "#2196F3",
     marginTop: 16,
     marginBottom: 8,
   },

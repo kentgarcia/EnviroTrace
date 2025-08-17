@@ -9,46 +9,42 @@ import apiClient from "./api-client";
 // Types for monitoring requests - matching the backend structure
 export interface MonitoringRequest {
   id: string;
-  title: string;
-  description: string;
-  requester_name: string;
-  date: string;
-  status: "pending" | "approved" | "rejected" | "in-progress" | "completed";
-  latitude?: number;
-  longitude?: number;
-  address: string;
-  sapling_count?: number;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface MonitoringRequestCreate {
-  title: string;
-  description: string;
-  requester_name: string;
-  date: string;
-  address: string;
-  sapling_count?: number;
-  notes?: string;
-  latitude?: number;
-  longitude?: number;
-  status?: string;
+  status: string;
   location: { lat: number; lng: number };
-}
-
-export interface MonitoringRequestUpdate {
+  // Optional metadata kept for compatibility with existing UI
   title?: string;
   description?: string;
   requester_name?: string;
   date?: string;
-  status?: "Living" | "Dead" | "Replaced" | "Untracked";
   address?: string;
   sapling_count?: number;
   notes?: string;
-  latitude?: number;
-  longitude?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MonitoringRequestCreate {
+  status: string;
   location: { lat: number; lng: number };
+  title?: string;
+  description?: string;
+  requester_name?: string;
+  date?: string;
+  address?: string;
+  sapling_count?: number;
+  notes?: string;
+}
+
+export interface MonitoringRequestUpdate {
+  status: string;
+  location: { lat: number; lng: number };
+  title?: string;
+  description?: string;
+  requester_name?: string;
+  date?: string;
+  address?: string;
+  sapling_count?: number;
+  notes?: string;
 }
 
 export interface MonitoringRequestListResponse {
@@ -91,12 +87,7 @@ export const fetchMonitoringRequest = async (
 export const createMonitoringRequest = async (
   request: MonitoringRequestCreate
 ): Promise<MonitoringRequest> => {
-  // Set default status to 'Untracked' if not provided
-  const reqWithDefault = {
-    ...request,
-    status: request.status ?? "Untracked",
-  };
-  const res = await apiClient.post("/monitoring-requests", reqWithDefault);
+  const res = await apiClient.post("/monitoring-requests", request);
   return res.data;
 };
 

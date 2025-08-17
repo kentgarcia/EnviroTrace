@@ -14,10 +14,10 @@ import { Edit, Trash } from "lucide-react";
 
 interface MonitoringRequest {
   id: string;
-  title: string;
-  requester_name: string;
-  date: string;
   status: string;
+  title?: string;
+  requester_name?: string;
+  date?: string;
 }
 
 interface MonitoringRequestsTableProps {
@@ -97,9 +97,9 @@ const MonitoringRequestsTable: React.FC<MonitoringRequestsTableProps> = ({
                 onClick={() => onSelectRequest(request.id)}
               >
                 <TableCell className="font-medium">{request.id}</TableCell>
-                <TableCell>{request.title}</TableCell>
-                <TableCell>{request.requester_name}</TableCell>
-                <TableCell>{request.date}</TableCell>
+                <TableCell>{request.title || "—"}</TableCell>
+                <TableCell>{request.requester_name || "—"}</TableCell>
+                <TableCell>{request.date || "—"}</TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(request.status)}>
                     {request.status}

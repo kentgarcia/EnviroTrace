@@ -5,11 +5,13 @@ import apiClient from "../api/api-client";
 interface User {
   id: string;
   email: string;
-  username: string;
-  role: string;
-  is_active: boolean;
+  username?: string;
+  role?: string;
+  roles?: string[];
+  assigned_roles?: string[];
+  is_active?: boolean;
   full_name?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 interface AuthState {
@@ -17,6 +19,9 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  selectedDashboard: string | null;
+  setSelectedDashboard: (dashboard: string | null) => Promise<void>;
+  getUserRoles: () => string[];
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -29,6 +34,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  selectedDashboard: null,
+
+  setSelectedDashboard: async (dashboard: string | null) => {
+    try {
+      if (dashboard) {
+        await AsyncStorage.setItem("selected_dashboard", dashboard);
+      } else {
+        await AsyncStorage.removeItem("selected_dashboard");
+      }
+    } catch (e) {
+      console.warn("Failed to persist selected dashboard:", e);
+    }
+    set({ selectedDashboard: dashboard });
+  },
+
+  getUserRoles: () => {
+    const user = get().user as User | null;
+    if (!user) return [];
+    const single = (user as any).role;
+    const many = (user as any).roles;
+    const assigned = (user as any).assigned_roles;
+    if (Array.isArray(many) && many.length) return many as string[];
+    if (Array.isArray(assigned) && assigned.length) return assigned as string[];
+    if (typeof single === "string" && single) return [single];
+    if (typeof many === "string" && many) return [many];
+    return [];
+  },
 
   login: async (username: string, password: string): Promise<boolean> => {
     try {
@@ -61,32 +93,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Now fetch user profile with the token
       console.log("Fetching user profile...");
-      const profileResponse = await apiClient.get("/auth/profile");
+      const profileResponse = await apiClient.get("/auth/me");
       const user = profileResponse.data;
 
       console.log("Profile fetched. User role:", user.role);
-
-      // Check if user has required role for government emission
-      const userRole = user.role || user.roles || "";
-      const hasRequiredRole =
-        userRole === "admin" ||
-        userRole === "government_emission" ||
-        (Array.isArray(userRole) &&
-          (userRole.includes("admin") ||
-            userRole.includes("government_emission")));
-
-      if (!hasRequiredRole) {
-        console.log("Access denied. User role:", userRole);
-        // Clear the token since user doesn't have access
-        await AsyncStorage.removeItem("access_token");
-        set({
-          error: "Access denied. Government emission role required.",
-          isLoading: false,
-          isAuthenticated: false,
-          user: null,
-        });
-        return false;
-      }
 
       set({
         user,
@@ -121,21 +131,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       console.log("Logging out user");
 
-      // Try to call logout endpoint if possible
-      try {
-        await apiClient.post("/auth/logout");
-      } catch (error) {
-        console.log("Logout endpoint call failed (may be expected):", error);
-      }
-
       // Clear stored tokens
-      await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+      await AsyncStorage.multiRemove([
+        "access_token",
+        "refresh_token",
+        "selected_dashboard",
+      ]);
       console.log("Tokens cleared from storage");
 
       set({
         user: null,
         isAuthenticated: false,
         error: null,
+        selectedDashboard: null,
       });
 
       console.log("Logout completed");
@@ -165,25 +173,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       console.log("Token found, verifying with server");
-      const response = await apiClient.get("/auth/profile");
+      const response = await apiClient.get("/auth/me");
       const user = response.data;
 
       console.log("Profile retrieved. User role:", user.role);
-
-      // Check role again on auth check
-      const userRole = user.role || user.roles || "";
-      const hasRequiredRole =
-        userRole === "admin" ||
-        userRole === "government_emission" ||
-        (Array.isArray(userRole) &&
-          (userRole.includes("admin") ||
-            userRole.includes("government_emission")));
-
-      if (!hasRequiredRole) {
-        console.log("Access denied on auth check. User role:", userRole);
-        await get().logout();
-        return;
-      }
 
       set({
         user,
@@ -191,6 +184,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
       });
+
+      // Load previously selected dashboard if available
+      try {
+        const saved = await AsyncStorage.getItem("selected_dashboard");
+        if (saved) set({ selectedDashboard: saved });
+      } catch (e) {
+        console.warn("Failed to load selected dashboard:", e);
+      }
 
       console.log("Auth check completed successfully");
     } catch (error: any) {
@@ -209,7 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       console.log("Refreshing user profile");
-      const response = await apiClient.get("/auth/profile");
+      const response = await apiClient.get("/auth/me");
       const user = response.data;
 
       set({ user });

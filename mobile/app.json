@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.epnro.govemission"
@@ -34,11 +32,11 @@
     },
     "plugins": [
       [
-      "expo-sqlite",
+        "expo-sqlite",
         {
           "enableFTS": true
         }
-    ]
+      ]
     ],
     "scheme": "gov-emission"
   }
