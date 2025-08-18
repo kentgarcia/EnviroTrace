@@ -1,13 +1,13 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { Card, Title, Paragraph, ActivityIndicator } from "react-native-paper";
+import { Card, Title, Paragraph, ActivityIndicator, useTheme } from "react-native-paper";
 import Icon from "./icons/Icon";
 
 interface StatsCardProps {
   title: string;
   value: string | number;
   icon: string;
-  color: string;
+  color?: string; // optional; defaults to theme primary
   loading?: boolean;
   onPress?: () => void;
 }
@@ -20,6 +20,8 @@ export default function StatsCard({
   loading = false,
   onPress,
 }: StatsCardProps) {
+  const { colors } = useTheme();
+  const accent = color ?? colors.primary;
   const formatValue = (val: string | number) => {
     if (typeof val === "number") {
       return val.toLocaleString();
@@ -35,22 +37,35 @@ export default function StatsCard({
       onPress={onPress}
       activeOpacity={onPress ? 0.7 : 1}
     >
-      <Card style={[styles.card, onPress && styles.pressableCard]}>
+      <Card
+        mode="outlined"
+        style={[
+          styles.card,
+          { borderColor: accent + "26" },
+          onPress && styles.pressableCard,
+        ]}
+      >
         <Card.Content style={styles.content}>
           <View style={styles.header}>
             <View
-              style={[styles.iconContainer, { backgroundColor: color + "20" }]}
+              style={[
+                styles.iconContainer,
+                {
+                  backgroundColor: accent + "14",
+                  borderColor: accent + "33",
+                },
+              ]}
             >
-              <Icon name={icon} size={24} color={color} />
+              <Icon name={icon} size={24} color={accent} />
             </View>
-            {onPress && <Icon name="chevron-right" size={20} color="#9E9E9E" />}
+            {onPress && <Icon name="chevron-right" size={20} color={accent + "99"} />}
           </View>
 
           <View style={styles.valueContainer}>
             {loading ? (
-              <ActivityIndicator size="small" color={color} />
+              <ActivityIndicator size="small" color={accent} />
             ) : (
-              <Title style={[styles.value, { color }]}>
+              <Title style={[styles.value, { color: accent }]}>
                 {formatValue(value)}
               </Title>
             )}
@@ -73,18 +88,20 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
+    // Replace shadows with a thin border for a flatter look
+    // Explicitly remove elevation/shadow on Android/iOS
+    borderWidth: 1,
+    borderColor: "transparent",
+    elevation: 0,
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
   },
   pressableCard: {
-    shadowOpacity: 0.15,
-    elevation: 4,
+    // Keep the same flat style when pressable
+    elevation: 0,
+    shadowColor: "transparent",
   },
   content: {
     paddingVertical: 16,
@@ -102,6 +119,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
   },
   valueContainer: {
     marginBottom: 8,

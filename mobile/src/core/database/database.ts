@@ -14,7 +14,7 @@ export interface LocalVehicle {
   wheels: number;
   created_at: string;
   updated_at: string;
-  latest_test_result?: boolean;
+  latest_test_result?: boolean | null;
   latest_test_date?: string;
   sync_status: "synced" | "pending" | "error";
 }
@@ -302,7 +302,7 @@ class DatabaseManager {
           test.year,
           test.result === null ? null : test.result ? 1 : 0,
           test.remarks || null,
-          test.created_by,
+          test.created_by || "local",
           test.created_at,
           test.updated_at,
           test.sync_status,
@@ -410,6 +410,33 @@ class DatabaseManager {
       );
     } catch (error) {
       console.error("Error marking as pending:", error);
+      throw error;
+    }
+  }
+
+  // Lightweight update for latest test info
+  async updateVehicleLatestTestInfo(
+    vehicleId: string,
+    latestResult: boolean | null,
+    latestDate?: string
+  ): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      const now = new Date().toISOString();
+      await this.db.runAsync(
+        `UPDATE vehicles
+         SET latest_test_result = ?, latest_test_date = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          latestResult === null ? null : latestResult ? 1 : 0,
+          latestDate || null,
+          now,
+          vehicleId,
+        ]
+      );
+    } catch (error) {
+      console.error("Error updating vehicle latest test info:", error);
       throw error;
     }
   }

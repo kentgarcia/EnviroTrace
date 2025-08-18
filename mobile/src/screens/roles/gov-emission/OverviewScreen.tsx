@@ -1,14 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl } from "react-native";
-import {
-  Card,
-  Title,
-  Paragraph,
-  Button,
-  Chip,
-  Surface,
-  Divider,
-} from "react-native-paper";
+import React, { useState } from "react";
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
+import { Card, Title, Paragraph, Chip, Divider, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
@@ -17,7 +9,8 @@ import { useDashboardData } from "../../../hooks/useDashboardData";
 import { useNetworkSync } from "../../../hooks/useNetworkSync";
 import { useAuthStore } from "../../../core/stores/authStore";
 import StatsCard from "../../../components/StatsCard";
-import PageLayout from "../../../components/layout/PageLayout";
+import Svg, { Defs, LinearGradient, Stop, Rect, Line } from "react-native-svg";
+import StandardHeader from "../../../components/layout/StandardHeader";
 
 export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -25,6 +18,8 @@ export default function OverviewScreen() {
   const { user } = useAuthStore();
   const { data, loading, refetch } = useDashboardData();
   const { syncData, isSyncing, lastSyncTime } = useNetworkSync();
+  const { colors } = useTheme();
+  const [headerDims, setHeaderDims] = useState({ width: 0, height: 0 });
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -50,7 +45,11 @@ export default function OverviewScreen() {
   };
 
   return (
-    <PageLayout title="Dashboard" subtitle="Government Emission" showBack={false}>
+    <>
+      <StandardHeader
+        title="Dashboard"
+        chip={{ label: "Gov. Emission", iconName: "directions-car" }}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -58,13 +57,56 @@ export default function OverviewScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#2E7D32"]}
-            tintColor="#2E7D32"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
       >
         {/* Header Section */}
-        <Surface style={styles.headerCard} elevation={2}>
+        <View
+          style={styles.headerCard}
+          onLayout={(e) => setHeaderDims({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+        >
+          {/* Gradient background with subtle grid */}
+          <View style={styles.headerBg}>
+            {headerDims.width > 0 && headerDims.height > 0 && (
+              <Svg width={headerDims.width} height={headerDims.height}>
+                <Defs>
+                  <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={colors.primary} stopOpacity={1} />
+                    <Stop offset="1" stopColor={colors.primary} stopOpacity={0.85} />
+                  </LinearGradient>
+                </Defs>
+                <Rect x={0} y={0} width={headerDims.width} height={headerDims.height} fill="url(#grad)" />
+                {/* Grid lines */}
+                {Array.from({ length: Math.ceil(headerDims.width / 20) + 1 }).map((_, i) => (
+                  <Line
+                    key={`v-${i}`}
+                    x1={i * 20}
+                    y1={0}
+                    x2={i * 20}
+                    y2={headerDims.height}
+                    stroke="#FFFFFF"
+                    strokeOpacity={0.08}
+                    strokeWidth={1}
+                  />
+                ))}
+                {Array.from({ length: Math.ceil(headerDims.height / 20) + 1 }).map((_, i) => (
+                  <Line
+                    key={`h-${i}`}
+                    x1={0}
+                    y1={i * 20}
+                    x2={headerDims.width}
+                    y2={i * 20}
+                    stroke="#FFFFFF"
+                    strokeOpacity={0.08}
+                    strokeWidth={1}
+                  />
+                ))}
+              </Svg>
+            )}
+          </View>
+
           <View style={styles.headerContent}>
             <View style={styles.welcomeSection}>
               <Title style={styles.welcomeTitle}>
@@ -77,21 +119,21 @@ export default function OverviewScreen() {
 
             <View style={styles.syncSection}>
               <Chip
-                icon={isSyncing ? "sync" : "cloud-done"}
-                style={[
-                  styles.syncChip,
-                  { backgroundColor: isSyncing ? "#FFF3E0" : "#E8F5E8" },
-                ]}
-                textStyle={[
-                  styles.syncText,
-                  { color: isSyncing ? "#F57C00" : "#2E7D32" },
-                ]}
+                icon={(props) => (
+                  <Icon
+                    name={isSyncing ? "sync" : "cloud-done"}
+                    color="#FFFFFF"
+                    size={props?.size ?? 18}
+                  />
+                )}
+                style={[styles.syncChip, { backgroundColor: colors.primary }]}
+                textStyle={[styles.syncText, { color: "#FFFFFF" }]}
               >
                 {isSyncing ? "Syncing..." : `Last sync: ${formatLastSync()}`}
               </Chip>
             </View>
           </View>
-        </Surface>
+        </View>
 
         {/* Statistics Section */}
         <View style={styles.statsSection}>
@@ -101,7 +143,6 @@ export default function OverviewScreen() {
               title="Total Vehicles"
               value={data?.totalVehicles || 0}
               icon="directions-car"
-              color="#2196F3"
               loading={loading}
               onPress={() => navigation.navigate("Vehicles" as never)}
             />
@@ -109,7 +150,6 @@ export default function OverviewScreen() {
               title="Tested Vehicles"
               value={data?.testedVehicles || 0}
               icon="check-circle"
-              color="#4CAF50"
               loading={loading}
               onPress={() => navigation.navigate("Testing" as never)}
             />
@@ -117,7 +157,6 @@ export default function OverviewScreen() {
               title="Compliance Rate"
               value={`${data?.complianceRate || 0}%`}
               icon="bar-chart"
-              color="#FF9800"
               loading={loading}
               onPress={() => navigation.navigate("Testing" as never)}
             />
@@ -125,7 +164,6 @@ export default function OverviewScreen() {
               title="Departments"
               value={data?.departments || 0}
               icon="business"
-              color="#9C27B0"
               loading={loading}
               onPress={() => navigation.navigate("Offices" as never)}
             />
@@ -137,43 +175,66 @@ export default function OverviewScreen() {
         {/* Quick Actions Section */}
         <View style={styles.quickActionsSection}>
           <Title style={styles.sectionTitle}>Quick Actions</Title>
-          <View style={styles.actionGrid}>
-            <Card
-              style={styles.actionCard}
-              onPress={() => navigation.navigate("AddVehicle" as never)}
-            >
-              <Card.Content style={styles.actionContent}>
-                <Icon name="add-circle" size={32} color="#2E7D32" />
-                <Paragraph style={styles.actionText}>Add Vehicle</Paragraph>
-              </Card.Content>
-            </Card>
+          <View style={styles.actionRow}>
+            <View style={styles.actionItem}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => navigation.navigate("AddVehicle" as never)}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Icon name="add-circle" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <Paragraph style={styles.actionLabel}>Add Vehicle</Paragraph>
+            </View>
 
-            <Card
-              style={styles.actionCard}
-              onPress={() => navigation.navigate("AddTest" as never)}
-            >
-              <Card.Content style={styles.actionContent}>
-                <Icon name="assignment" size={32} color="#1976D2" />
-                <Paragraph style={styles.actionText}>Record Test</Paragraph>
-              </Card.Content>
-            </Card>
+            <View style={styles.actionItem}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => navigation.navigate("AddTest" as never)}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Icon name="assignment" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <Paragraph style={styles.actionLabel}>Record Test</Paragraph>
+            </View>
 
-            <Card style={styles.actionCard} onPress={() => syncData()}>
-              <Card.Content style={styles.actionContent}>
-                <Icon name="sync" size={32} color="#FF9800" />
-                <Paragraph style={styles.actionText}>Sync Data</Paragraph>
-              </Card.Content>
-            </Card>
+            <View style={styles.actionItem}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => syncData()}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Icon name="sync" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <Paragraph style={styles.actionLabel}>Sync Data</Paragraph>
+            </View>
 
-            <Card
-              style={styles.actionCard}
-              onPress={() => navigation.navigate("Offices" as never)}
-            >
-              <Card.Content style={styles.actionContent}>
-                <Icon name="business" size={32} color="#9C27B0" />
-                <Paragraph style={styles.actionText}>View Offices</Paragraph>
-              </Card.Content>
-            </Card>
+            <View style={styles.actionItem}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => navigation.navigate("Offices" as never)}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Icon name="business" size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <Paragraph style={styles.actionLabel}>View Offices</Paragraph>
+            </View>
           </View>
         </View>
 
@@ -197,7 +258,7 @@ export default function OverviewScreen() {
           </Card>
         </View>
       </ScrollView>
-    </PageLayout>
+    </>
   );
 }
 
@@ -215,7 +276,10 @@ const styles = StyleSheet.create({
   headerCard: {
     marginBottom: 16,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
   },
   headerContent: {
     padding: 20,
@@ -226,12 +290,12 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: "#2E7D32",
+    color: "#FFFFFF",
     marginBottom: 4,
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: "#757575",
+    color: "#E5E7EB",
   },
   syncSection: {
     alignItems: "flex-start",
@@ -263,21 +327,25 @@ const styles = StyleSheet.create({
   quickActionsSection: {
     marginBottom: 16,
   },
-  actionGrid: {
+  actionRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
   },
-  actionCard: {
-    width: "48%",
-    marginBottom: 12,
-    borderRadius: 12,
-  },
-  actionContent: {
+  actionItem: {
     alignItems: "center",
-    paddingVertical: 16,
+    justifyContent: "center",
+    flex: 1,
   },
-  actionText: {
+  actionButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  actionLabel: {
     marginTop: 8,
     fontSize: 12,
     fontWeight: "500",

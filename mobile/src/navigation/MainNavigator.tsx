@@ -9,9 +9,12 @@ import VehiclesScreen from "../screens/roles/gov-emission/VehiclesScreen";
 import TestingScreen from "../screens/roles/gov-emission/TestingScreen";
 import OfficesScreen from "../screens/roles/gov-emission/OfficesScreen";
 import ProfileScreen from "../screens/roles/gov-emission/ProfileScreen";
+import OfflineDataScreen from "../screens/roles/gov-emission/OfflineDataScreen";
+import SyncSettingsScreen from "../screens/roles/gov-emission/SyncSettingsScreen";
 import VehicleDetailScreen from "../screens/roles/gov-emission/VehicleDetailScreen";
 import AddVehicleScreen from "../screens/roles/gov-emission/AddVehicleScreen";
 import AddTestScreen from "../screens/roles/gov-emission/AddTestScreen";
+import CustomBottomTabBar from "../components/layout/CustomBottomTabBar";
 
 export type MainStackParamList = {
   Overview: undefined;
@@ -29,7 +32,7 @@ const Stack = createNativeStackNavigator();
 
 function VehiclesStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="VehiclesList"
         component={VehiclesScreen}
@@ -54,7 +57,7 @@ function VehiclesStack() {
 
 function TestingStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="TestingList"
         component={TestingScreen}
@@ -72,9 +75,20 @@ function TestingStack() {
   );
 }
 
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      <Stack.Screen name="OfflineData" component={OfflineDataScreen} />
+      <Stack.Screen name="SyncSettings" component={SyncSettingsScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function MainNavigator() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomBottomTabBar {...props} />}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName = "";
@@ -99,23 +113,18 @@ export default function MainNavigator() {
               iconName = "help";
           }
 
+          // Icon uses given color; our custom bar will pass theme primary for active
           return <Icon name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#2E7D32",
+        tabBarActiveTintColor: "#003595",
         tabBarInactiveTintColor: "#9E9E9E",
-        tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E0E0E0",
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
+        // Style handled by custom bar
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "500",
         },
         headerStyle: {
-          backgroundColor: "#2E7D32",
+          backgroundColor: "#003595",
         },
         headerTintColor: "#FFFFFF",
         headerTitleStyle: {
@@ -156,14 +165,16 @@ export default function MainNavigator() {
         options={{
           title: "Government Offices",
           tabBarLabel: "Offices",
+          headerShown: false,
         }}
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           title: "Profile & Settings",
           tabBarLabel: "Profile",
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

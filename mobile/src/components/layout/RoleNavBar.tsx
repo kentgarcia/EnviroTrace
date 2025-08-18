@@ -4,6 +4,7 @@ import { Appbar, Chip, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../core/stores/authStore";
 import Icon from "../icons/Icon";
+import { StatusBar } from "expo-status-bar";
 
 export interface RoleNavBarProps {
     title?: string;
@@ -33,28 +34,37 @@ export default function RoleNavBar({
     };
 
     return (
-        <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor: colors.primary }]}>
-            <Appbar.Header statusBarHeight={0} style={[styles.header, { backgroundColor: colors.primary }]}>
+        <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor: "#FFFFFF" }]}>
+            <StatusBar style="dark" backgroundColor="#FFFFFF" />
+            <Appbar.Header
+                statusBarHeight={0}
+                style={[
+                    styles.header,
+                    {
+                        backgroundColor: "#FFFFFF",
+                        borderBottomColor: "#E5E7EB",
+                        borderBottomWidth: StyleSheet.hairlineWidth,
+                        paddingLeft: 0,
+                    },
+                ]}
+            >
                 {showBack ? (
-                    <Appbar.BackAction color="#FFFFFF" onPress={onBack} />
-                ) : (
-                    // add a small left spacer so title aligns nicely when no back
-                    <View style={{ width: 4 }} />
-                )}
+                    <Appbar.BackAction color={colors.primary} onPress={onBack} />
+                ) : null}
 
                 <Appbar.Content
                     title={title ?? ""}
-                    titleStyle={styles.title}
+                    titleStyle={[styles.title, { color: colors.primary }]}
                     subtitle={subtitle ?? ""}
-                    subtitleStyle={styles.subtitle}
-                    color="#FFFFFF"
+                    subtitleStyle={[styles.subtitle, { color: "#6B7280" }]}
+                    style={{ marginLeft: 0, alignItems: "flex-start" }}
                 />
 
                 {showRoleChip && selectedDashboard ? (
                     <Chip
                         compact
-                        style={styles.roleChip}
-                        textStyle={styles.roleChipText}
+                        style={[styles.roleChip, { backgroundColor: "rgba(0, 53, 149, 0.10)" }]}
+                        textStyle={[styles.roleChipText, { color: colors.primary }]}
                         icon={() => (
                             <Icon
                                 name={
@@ -67,7 +77,7 @@ export default function RoleNavBar({
                                                 : "shield"
                                 }
                                 size={14}
-                                color="#134E1B"
+                                color={colors.primary}
                             />
                         )}
                     >
@@ -77,17 +87,10 @@ export default function RoleNavBar({
 
                 {rightContent}
 
-                {/* Default actions: profile and switch dashboard */}
+                {/* Change dashboard action */}
                 <Appbar.Action
-                    icon={() => <Icon name="account-circle" color="#FFFFFF" size={22} />}
-                    accessibilityLabel="Profile"
-                    onPress={() => {
-                        // Placeholder for profile action. Can be overridden via rightContent prop in PageLayout.
-                    }}
-                />
-                <Appbar.Action
-                    icon={() => <Icon name="logout" color="#FFFFFF" size={22} />}
-                    accessibilityLabel="Switch dashboard"
+                    icon={() => <Icon name="view-dashboard" color={colors.primary} size={22} />}
+                    accessibilityLabel="Change dashboard"
                     onPress={() => setSelectedDashboard(null)}
                 />
             </Appbar.Header>
@@ -97,9 +100,9 @@ export default function RoleNavBar({
 
 const styles = StyleSheet.create({
     safe: { flex: 0 },
-    header: { elevation: 4 },
-    title: { color: "#FFFFFF", fontWeight: "700" },
-    subtitle: { color: "#E6F4EA" },
+    header: { elevation: 0, shadowOpacity: 0 },
+    title: { fontWeight: "700" },
+    subtitle: {},
     roleChip: {
         backgroundColor: "#D1FAE5",
         marginRight: 8,

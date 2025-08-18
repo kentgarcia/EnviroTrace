@@ -9,6 +9,12 @@ import { database } from "./src/core/database/database";
 import AppNavigator from "./src/navigation/AppNavigator";
 import theme from "./src/core/theme/theme";
 import { LoadingScreen } from "./src/components/LoadingScreen";
+import { useFonts } from "expo-font";
+import {
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+} from "@expo-google-fonts/poppins";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +29,11 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const { checkAuth, isLoading } = useAuthStore();
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+  });
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -42,7 +53,7 @@ export default function App() {
     initializeApp();
   }, [checkAuth]);
 
-  if (isLoading) {
+  if (isLoading || !fontsLoaded) {
     return <LoadingScreen />;
   }
 

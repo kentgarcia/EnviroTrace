@@ -8,92 +8,124 @@ import {
   List,
   Divider,
   Avatar,
+  Chip,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../../core/stores/authStore";
+import StandardHeader from "../../../components/layout/StandardHeader";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "../../../components/icons/Icon";
 
 export default function ProfileScreen() {
   const { user, logout, setSelectedDashboard } = useAuthStore();
+  const { colors } = useTheme();
+  const navigation = useNavigation();
 
   const handleLogout = async () => {
     await logout();
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <Card style={styles.profileCard}>
-          <Card.Content style={styles.profileContent}>
-            <Avatar.Text
-              size={80}
-              label={user?.username?.charAt(0).toUpperCase() || "U"}
-              style={styles.avatar}
-            />
-            <Title style={styles.userName}>
-              {user?.full_name || user?.username || "User"}
-            </Title>
-            <Paragraph style={styles.userRole}>
+    <>
+      <StandardHeader
+        title="Profile & Settings"
+        chip={{ label: "Gov. Emission", iconName: "person" }}
+      />
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 24 }}>
+        {/* Profile Hero */}
+        <Card mode="outlined" style={[styles.card, { margin: 16 }]}
+        >
+          <Card.Content style={[styles.profileContent, { paddingVertical: 20 }]}>
+            <View style={styles.avatarWrap}>
+              <Avatar.Text
+                size={80}
+                label={user?.username?.charAt(0).toUpperCase() || "U"}
+                style={[styles.avatar, { backgroundColor: colors.primary }]}
+              />
+            </View>
+            <Title style={styles.userName}>{user?.full_name || user?.username || "User"}</Title>
+            <Chip
+              compact
+              style={[styles.roleChip, { backgroundColor: "rgba(0, 53, 149, 0.10)" }]}
+              textStyle={[styles.roleChipText, { color: colors.primary }]}
+              icon={() => <Icon name="shield-check" size={14} color={colors.primary} />}
+            >
               {user?.role || "Government Emission"}
-            </Paragraph>
-            <Paragraph style={styles.userEmail}>{user?.email}</Paragraph>
+            </Chip>
+            {user?.email ? <Paragraph style={styles.userEmail}>{user.email}</Paragraph> : null}
+
+            {/* Quick actions */}
+            <View style={styles.quickRow}>
+              <Button
+                mode="outlined"
+                style={styles.quickBtn}
+                textColor={colors.primary}
+                onPress={() => setSelectedDashboard(null)}
+                icon={() => <Icon name="view-dashboard" size={16} color={colors.primary} />}
+              >
+                Switch Dashboard
+              </Button>
+              <Button
+                mode="outlined"
+                style={styles.quickBtn}
+                textColor={colors.primary}
+                onPress={() => (navigation as any).navigate("Profile", { screen: "OfflineData" })}
+                icon={() => <Icon name="storage" size={16} color={colors.primary} />}
+              >
+                Offline Data
+              </Button>
+            </View>
           </Card.Content>
         </Card>
 
-        <Card style={styles.menuCard}>
+        {/* Settings */}
+        <Card mode="outlined" style={[styles.card, { marginHorizontal: 16 }]}
+        >
           <List.Section>
-            <List.Subheader>Settings</List.Subheader>
-            <List.Item
-              title="Switch Dashboard"
-              description="Choose a different role dashboard"
-              left={(props) => <List.Icon {...props} icon="view-dashboard" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => setSelectedDashboard(null)}
-            />
+            <List.Subheader style={styles.sectionHeader}>Settings</List.Subheader>
             <List.Item
               title="Sync Settings"
               description="Configure data synchronization"
-              left={(props) => <List.Icon {...props} icon="sync" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => { }}
-            />
-            <List.Item
-              title="Offline Data"
-              description="Manage local data storage"
-              left={(props) => <List.Icon {...props} icon="storage" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => { }}
+              left={() => <Icon name="sync" size={18} color={colors.primary} />}
+              right={() => <Icon name="chevron-right" size={18} color="#6B7280" />}
+              onPress={() => (navigation as any).navigate("Profile", { screen: "SyncSettings" })}
+              style={styles.listItem}
             />
             <Divider />
             <List.Item
               title="About"
               description="App version and information"
-              left={(props) => <List.Icon {...props} icon="info" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={() => <Icon name="info" size={18} color={colors.primary} />}
+              right={() => <Icon name="chevron-right" size={18} color="#6B7280" />}
               onPress={() => { }}
+              style={styles.listItem}
             />
+            <Divider />
             <List.Item
               title="Help & Support"
               description="Get help and support"
-              left={(props) => <List.Icon {...props} icon="help" />}
-              right={(props) => <List.Icon {...props} icon="chevron-right" />}
+              left={() => <Icon name="help" size={18} color={colors.primary} />}
+              right={() => <Icon name="chevron-right" size={18} color="#6B7280" />}
               onPress={() => { }}
+              style={styles.listItem}
             />
           </List.Section>
         </Card>
 
+        {/* Sign out */}
         <View style={styles.logoutContainer}>
           <Button
             mode="outlined"
             onPress={handleLogout}
             style={styles.logoutButton}
-            buttonColor="#FFEBEE"
             textColor="#D32F2F"
           >
             Sign Out
           </Button>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -105,17 +137,26 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  profileCard: {
-    margin: 16,
+  card: {
     borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   profileContent: {
     alignItems: "center",
     paddingVertical: 24,
   },
+  avatarWrap: {
+    padding: 4,
+    borderRadius: 44,
+    backgroundColor: "#EEF2FF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginBottom: 12,
+  },
   avatar: {
-    backgroundColor: "#2E7D32",
-    marginBottom: 16,
+    marginBottom: 0,
   },
   userName: {
     fontSize: 20,
@@ -123,19 +164,16 @@ const styles = StyleSheet.create({
     color: "#212121",
     marginBottom: 4,
   },
-  userRole: {
-    fontSize: 14,
-    color: "#757575",
-    marginBottom: 2,
-  },
+  roleChip: { marginBottom: 6, height: 28 },
+  roleChipText: { fontSize: 12, fontWeight: "600" },
   userEmail: {
     fontSize: 12,
     color: "#9E9E9E",
   },
-  menuCard: {
-    marginHorizontal: 16,
-    borderRadius: 12,
-  },
+  sectionHeader: { color: "#6B7280" },
+  listItem: { paddingHorizontal: 12 },
+  quickRow: { flexDirection: "row", gap: 8, marginTop: 12 },
+  quickBtn: { flex: 1, borderColor: "#E5E7EB", borderWidth: 1 },
   logoutContainer: {
     padding: 16,
     paddingTop: 24,

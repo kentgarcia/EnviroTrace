@@ -28,6 +28,10 @@ import {
     UserCircle,
     Wind,
     ClipboardPlus,
+    Filter,
+    X,
+    Search,
+    Phone,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -56,6 +60,10 @@ const ICONS = {
     UserCircle,
     Wind,
     ClipboardPlus,
+    Filter,
+    X,
+    Search,
+    Phone,
 } as const;
 
 // Supported icon names mapping from existing MaterialIcons names to Lucide icons
@@ -92,6 +100,12 @@ const nameMap: Record<string, keyof typeof ICONS> = {
     "weather-windy": "Wind",
     // extras used by code
     "assignment-add": "ClipboardPlus",
+    filter: "Filter",
+    "filter-variant": "Filter",
+    search: "Search",
+    magnify: "Search",
+    close: "X",
+    phone: "Phone",
 };
 
 export type IconName = keyof typeof nameMap | keyof typeof ICONS;

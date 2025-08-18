@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuthStore } from "../core/stores/authStore";
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
+import TreeManagementNavigator from "./TreeManagementNavigator";
 import DashboardSelectorScreen from "../screens/main/DashboardSelectorScreen";
 import RoleDashboardPlaceholder from "../screens/roles/gov-emission/RoleDashboardPlaceholder";
 
@@ -38,6 +39,14 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Main"
           component={MainNavigator}
+          options={{
+            gestureEnabled: false, // Prevent going back to selector
+          }}
+        />
+      ) : selectedDashboard === "tree_management" ? (
+        <Stack.Screen
+          name="TreeManagement"
+          component={TreeManagementNavigator}
           options={{
             gestureEnabled: false, // Prevent going back to selector
           }}

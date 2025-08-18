@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as Network from "expo-network";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { database } from "../core/database/database";
+import { useAuthStore } from "../core/stores/authStore";
 import apiClient from "../core/api/api-client";
 
 const LAST_SYNC_KEY = "last_sync_time";
@@ -10,6 +11,7 @@ export function useNetworkSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const { user } = useAuthStore();
 
   // Load last sync time on mount
   useEffect(() => {
@@ -117,10 +119,17 @@ export function useNetworkSync() {
 
       // Fetch offices
       try {
-        const officesResponse = await apiClient.get(
-          "/emission/offices?limit=1000"
-        );
-        const offices = officesResponse.data.offices || [];
+        const offices: any[] = [];
+        let page = 1;
+        while (true) {
+          const res = await apiClient.get(
+            `/emission/offices?limit=100&page=${page}`
+          );
+          const batch = res.data.offices || [];
+          offices.push(...batch);
+          if (batch.length < 100) break;
+          page += 1;
+        }
 
         for (const office of offices) {
           await database.saveOffice({
@@ -135,19 +144,44 @@ export function useNetworkSync() {
 
       // Fetch vehicles
       try {
-        const vehiclesResponse = await apiClient.get(
-          "/emission/vehicles?limit=1000"
-        );
-        const vehicles = vehiclesResponse.data.vehicles || [];
+        const vehicles: any[] = [];
+        let page = 1;
+        while (true) {
+          const res = await apiClient.get(
+            `/emission/vehicles?limit=100&page=${page}`
+          );
+          const batch = res.data.vehicles || [];
+          vehicles.push(...batch);
+          if (batch.length < 100) break;
+          page += 1;
+        }
+
+        // Build a quick map of office name by id from API data if provided
+        // If not provided, fallback to local lookup after saving offices
+        const officeNameMap: Record<string, string | undefined> = {};
+        try {
+          const officeListRes = await apiClient.get(
+            `/emission/offices?limit=1000`
+          );
+          const officeList = officeListRes.data.offices || [];
+          for (const o of officeList) {
+            if (o.id && o.name) officeNameMap[o.id] = o.name;
+          }
+        } catch {}
 
         for (const vehicle of vehicles) {
-          // Get office name for local storage
-          const offices = await database.getOffices();
-          const office = offices.find((o) => o.id === vehicle.office_id);
+          const officeName = officeNameMap[vehicle.office_id];
+          let finalOfficeName = officeName;
+          if (!finalOfficeName) {
+            const localOffices = await database.getOffices();
+            finalOfficeName = localOffices.find(
+              (o) => o.id === vehicle.office_id
+            )?.name;
+          }
 
           await database.saveVehicle({
             ...vehicle,
-            office_name: office?.name,
+            office_name: finalOfficeName,
             sync_status: "synced",
           });
           syncCount++;
@@ -158,15 +192,55 @@ export function useNetworkSync() {
 
       // Fetch tests
       try {
-        const testsResponse = await apiClient.get("/emission/tests?limit=1000");
-        const tests = testsResponse.data.tests || [];
+        const tests: any[] = [];
+        let page = 1;
+        while (true) {
+          const res = await apiClient.get(
+            `/emission/tests?limit=100&page=${page}`
+          );
+          const batch = res.data.tests || [];
+          tests.push(...batch);
+          if (batch.length < 100) break;
+          page += 1;
+        }
 
         for (const test of tests) {
           await database.saveEmissionTest({
             ...test,
+            created_by: test.created_by ?? user?.id ?? "server",
             sync_status: "synced",
           });
           syncCount++;
+        }
+
+        // After saving tests, compute latest per-vehicle and update vehicle records
+        try {
+          const latestByVehicle: Record<
+            string,
+            { date: string; result: boolean | null } | undefined
+          > = {};
+          for (const t of tests) {
+            const key = t.vehicle_id;
+            const date = t.test_date as string;
+            const result = t.result as boolean | null;
+            if (
+              !latestByVehicle[key] ||
+              new Date(date) > new Date(latestByVehicle[key]!.date)
+            ) {
+              latestByVehicle[key] = { date, result };
+            }
+          }
+          const entries = Object.entries(latestByVehicle);
+          for (const [vehicleId, info] of entries) {
+            if (!info) continue;
+            await database.updateVehicleLatestTestInfo(
+              vehicleId,
+              info.result,
+              info.date
+            );
+          }
+        } catch (e) {
+          console.error("Error updating latest test info for vehicles:", e);
         }
       } catch (error) {
         console.error("Error fetching tests:", error);

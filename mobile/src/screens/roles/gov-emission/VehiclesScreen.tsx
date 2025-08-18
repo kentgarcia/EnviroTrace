@@ -17,15 +17,19 @@ import {
   Portal,
   Modal,
   List,
+  IconButton,
+  useTheme,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import StandardHeader from "../../../components/layout/StandardHeader";
 
 import { database, LocalVehicle } from "../../../core/database/database";
 import { useNetworkSync } from "../../../hooks/useNetworkSync";
 
 export default function VehiclesScreen() {
+  const { colors } = useTheme();
   const [vehicles, setVehicles] = useState<LocalVehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<LocalVehicle[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,6 +91,14 @@ export default function VehiclesScreen() {
     loadVehicles();
   }, []);
 
+  // Reload when returning to this screen
+  useFocusEffect(
+    React.useCallback(() => {
+      loadVehicles();
+      return () => { };
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([loadVehicles(), syncData()]);
@@ -103,13 +115,14 @@ export default function VehiclesScreen() {
 
   const renderVehicleCard = ({ item: vehicle }: { item: LocalVehicle }) => (
     <Card
-      style={styles.vehicleCard}
+      mode="outlined"
+      style={[styles.vehicleCard, { borderColor: `${colors.primary}26` }]}
       onPress={() => handleVehiclePress(vehicle)}
     >
       <Card.Content style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <View style={styles.vehicleInfo}>
-            <Title style={styles.plateNumber}>{vehicle.plate_number}</Title>
+            <Title style={[styles.plateNumber, { color: colors.primary }]}>{vehicle.plate_number}</Title>
             <Paragraph style={styles.driverName}>
               {vehicle.driver_name}
             </Paragraph>
@@ -117,6 +130,7 @@ export default function VehiclesScreen() {
           <View style={styles.statusContainer}>
             {vehicle.sync_status === "pending" && (
               <Chip
+                compact
                 icon="sync"
                 style={styles.pendingChip}
                 textStyle={styles.chipText}
@@ -126,6 +140,7 @@ export default function VehiclesScreen() {
             )}
             {vehicle.latest_test_result !== undefined && (
               <Chip
+                compact
                 icon={
                   vehicle.latest_test_result ? "check-circle" : "alert-circle"
                 }
@@ -198,23 +213,39 @@ export default function VehiclesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <>
+      <StandardHeader
+        title="Vehicles"
+        chip={{ label: "Gov. Emission", iconName: "directions-car" }}
+      />
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Search vehicles..."
           onChangeText={setSearchQuery}
           value={searchQuery}
-          style={styles.searchbar}
+          style={[
+            styles.searchbar,
+            {
+              backgroundColor: "transparent",
+              borderWidth: 0,
+              borderRadius: 0,
+              elevation: 0,
+              borderBottomWidth: 1,
+              borderBottomColor: `${colors.primary}33`,
+            },
+          ]}
           inputStyle={styles.searchInput}
+          icon={() => <Icon name="search" size={18} color={colors.primary} />}
+          clearIcon={searchQuery ? (() => <Icon name="close" size={16} color="#9CA3AF" />) : undefined}
+          onClearIconPress={() => setSearchQuery("")}
         />
-        <Button
-          mode="outlined"
+        <IconButton
+          mode="contained-tonal"
+          icon={() => <Icon name="filter-variant" size={18} color={colors.primary} />}
+          containerColor={`${colors.primary}1A`}
+          style={styles.filterIcon}
           onPress={() => setFilterModalVisible(true)}
-          style={styles.filterButton}
-          compact
-        >
-          Filter
-        </Button>
+        />
       </View>
 
       {selectedOffice && (
@@ -238,8 +269,8 @@ export default function VehiclesScreen() {
           <RefreshControl
             refreshing={refreshing || isSyncing}
             onRefresh={onRefresh}
-            colors={["#2E7D32"]}
-            tintColor="#2E7D32"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
         ListEmptyComponent={renderEmptyState}
@@ -281,35 +312,35 @@ export default function VehiclesScreen() {
 
       <FAB
         icon="plus"
-        style={styles.fab}
-        onPress={handleAddVehicle}
         label="Add Vehicle"
+        onPress={handleAddVehicle}
+        mode="flat"
+        color="#FFFFFF"
+        style={[styles.fab, {
+          backgroundColor: colors.primary
+        }]}
       />
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#FAFAFA",
   },
   searchContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
-    paddingVertical: 12,
     gap: 12,
   },
   searchbar: {
     flex: 1,
-    elevation: 2,
+    elevation: 0,
   },
   searchInput: {
     fontSize: 14,
   },
-  filterButton: {
-    alignSelf: "center",
-  },
+  filterIcon: { alignSelf: "center", margin: 0 },
   activeFilters: {
     paddingHorizontal: 16,
     paddingBottom: 8,
@@ -322,30 +353,32 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   vehicleCard: {
-    marginBottom: 12,
-    borderRadius: 12,
-    elevation: 2,
+    marginBottom: 10,
+    borderRadius: 10,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
   },
   cardContent: {
-    padding: 16,
+    padding: 12,
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 8,
   },
   vehicleInfo: {
     flex: 1,
   },
   plateNumber: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
-    color: "#2E7D32",
     marginBottom: 4,
   },
   driverName: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#424242",
   },
   statusContainer: {
@@ -362,7 +395,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   vehicleDetails: {
-    gap: 6,
+    gap: 4,
   },
   detailRow: {
     flexDirection: "row",
@@ -410,6 +443,7 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: "#2E7D32",
+    borderRadius: 28,
+    elevation: 0
   },
 });
