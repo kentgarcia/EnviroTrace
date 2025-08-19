@@ -200,11 +200,10 @@ const RecordsAndFile: React.FC = () => {
                         searchResults.map((row) => (
                           <TableRow
                             key={row.plateNumber}
-                            className={`cursor-pointer ${
-                              selectedRecord?.plateNumber === row.plateNumber
+                            className={`cursor-pointer ${selectedRecord?.plateNumber === row.plateNumber
                                 ? "bg-orange-200"
                                 : ""
-                            }`}
+                              }`}
                             onClick={() => handleSelectRecord(row)}
                           >
                             <TableCell>{row.transportGroup}</TableCell>
@@ -334,9 +333,8 @@ const RecordsAndFile: React.FC = () => {
                       <div className="flex flex-col gap-2 justify-end">
                         <Label>Record Status</Label>
                         <div
-                          className={`rounded-md font-semibold text-center py-2 ${
-                            selectedRecord.statusColor || "bg-muted"
-                          }`}
+                          className={`rounded-md font-semibold text-center py-2 ${selectedRecord.statusColor || "bg-muted"
+                            }`}
                         >
                           {selectedRecord.status || "NEW"}
                         </div>
