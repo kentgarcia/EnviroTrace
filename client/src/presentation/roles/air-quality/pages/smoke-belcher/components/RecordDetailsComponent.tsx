@@ -8,9 +8,256 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/presentation/compone
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/presentation/components/shared/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
-import { Car, User, MapPin, Calendar, Plus, FileText, TestTube, Eye, Edit, ChevronDown, ChevronUp, Trash2, Save, AlertTriangle, Search } from "lucide-react";
-import { Record, Violation, Driver, searchDrivers, getCommonPlacesOfApprehension } from "@/core/api/belching-api";
+import {
+    Car,
+    User,
+    MapPin,
+    Calendar,
+    Plus,
+    FileText,
+    TestTube,
+    Eye,
+    Edit,
+    ChevronDown,
+    ChevronUp,
+    Trash2,
+    Save,
+    AlertTriangle,
+    Search,
+    UserPlus,
+    X
+} from "lucide-react";
+import { Record, Violation, Driver, searchDrivers, getCommonPlacesOfApprehension, createDriver, updateDriver, fetchDriverById } from "@/core/api/belching-api";
 import { toast } from "sonner";
+
+// Driver form component for adding new drivers
+const AddDriverForm: React.FC<{
+    onSuccess: (driver: Driver) => void;
+    onCancel: () => void;
+}> = ({ onSuccess, onCancel }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        first_name: "",
+        middle_name: "",
+        last_name: "",
+        address: "",
+        license_number: "",
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.address.trim() || !formData.license_number.trim()) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const newDriver = await createDriver({
+                first_name: formData.first_name.trim(),
+                middle_name: formData.middle_name.trim() || undefined,
+                last_name: formData.last_name.trim(),
+                address: formData.address.trim(),
+                license_number: formData.license_number.trim(),
+            });
+            onSuccess(newDriver);
+        } catch (error) {
+            toast.error("Failed to create driver");
+            console.error("Error creating driver:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Driver Information</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="add-firstName">First Name *</Label>
+                        <Input
+                            id="add-firstName"
+                            value={formData.first_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                            placeholder="Enter first name"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="add-middleName">Middle Name</Label>
+                        <Input
+                            id="add-middleName"
+                            value={formData.middle_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, middle_name: e.target.value }))}
+                            placeholder="Enter middle name (optional)"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="add-lastName">Last Name *</Label>
+                        <Input
+                            id="add-lastName"
+                            value={formData.last_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                            placeholder="Enter last name"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="add-licenseNumber">License Number *</Label>
+                        <Input
+                            id="add-licenseNumber"
+                            value={formData.license_number}
+                            onChange={(e) => setFormData(prev => ({ ...prev, license_number: e.target.value }))}
+                            placeholder="e.g., N01-12-123456"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="add-address">Address *</Label>
+                    <Input
+                        id="add-address"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Enter complete address"
+                        required
+                    />
+                </div>
+            </div>
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Creating..." : "Create Driver"}
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+};
+
+// Driver form component for editing existing drivers
+const EditDriverForm: React.FC<{
+    driver: Driver;
+    onSuccess: (driver: Driver) => void;
+    onCancel: () => void;
+}> = ({ driver, onSuccess, onCancel }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        first_name: driver.first_name,
+        middle_name: driver.middle_name || "",
+        last_name: driver.last_name,
+        address: driver.address,
+        license_number: driver.license_number,
+    });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.address.trim() || !formData.license_number.trim()) {
+            toast.error("Please fill in all required fields");
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const updatedDriver = await updateDriver(driver.id, {
+                first_name: formData.first_name.trim(),
+                middle_name: formData.middle_name.trim() || undefined,
+                last_name: formData.last_name.trim(),
+                address: formData.address.trim(),
+                license_number: formData.license_number.trim(),
+            });
+            onSuccess(updatedDriver);
+        } catch (error) {
+            toast.error("Failed to update driver");
+            console.error("Error updating driver:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">Edit Driver Information</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-firstName">First Name *</Label>
+                        <Input
+                            id="edit-firstName"
+                            value={formData.first_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                            placeholder="Enter first name"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-middleName">Middle Name</Label>
+                        <Input
+                            id="edit-middleName"
+                            value={formData.middle_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, middle_name: e.target.value }))}
+                            placeholder="Enter middle name (optional)"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-lastName">Last Name *</Label>
+                        <Input
+                            id="edit-lastName"
+                            value={formData.last_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                            placeholder="Enter last name"
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-licenseNumber">License Number *</Label>
+                        <Input
+                            id="edit-licenseNumber"
+                            value={formData.license_number}
+                            onChange={(e) => setFormData(prev => ({ ...prev, license_number: e.target.value }))}
+                            placeholder="e.g., N01-12-123456"
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="edit-address">Address *</Label>
+                    <Input
+                        id="edit-address"
+                        value={formData.address}
+                        onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Enter complete address"
+                        required
+                    />
+                </div>
+            </div>
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading ? "Updating..." : "Update Driver"}
+                </Button>
+            </DialogFooter>
+        </form>
+    );
+};
 
 interface RecordDetailsComponentProps {
     selectedRecord: Record | null;
@@ -46,7 +293,18 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
     const [showViolationModal, setShowViolationModal] = useState(false);
+    const [isEditingViolation, setIsEditingViolation] = useState(false);
+    const [showDeleteViolationDialog, setShowDeleteViolationDialog] = useState(false);
+    const [violationFormData, setViolationFormData] = useState({
+        ordinance_infraction_report_no: "",
+        smoke_density_test_result_no: "",
+        place_of_apprehension: "",
+        date_of_apprehension: "",
+    });
     const [showAddViolationModal, setShowAddViolationModal] = useState(false);
+    const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
+    const [showEditDriverDialog, setShowEditDriverDialog] = useState(false);
+    const [driverToEdit, setDriverToEdit] = useState<Driver | null>(null);
 
     // Add violation form state
     const [violationForm, setViolationForm] = useState({
@@ -58,20 +316,30 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     });
     const [driverSearch, setDriverSearch] = useState("");
     const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
+    const [selectedDriverForViolation, setSelectedDriverForViolation] = useState<Driver | null>(null);
     const [commonPlaces, setCommonPlaces] = useState<string[]>([]);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
+    const [driverDetails, setDriverDetails] = useState<{ [key: string]: Driver }>({});
 
     // Fetch drivers when driver search changes
     useEffect(() => {
         if (driverSearch.trim()) {
             setIsLoadingDrivers(true);
             searchDrivers({ search: driverSearch, limit: 5 })
-                .then(setAvailableDrivers)
+                .then((drivers) => {
+                    // Include the selected driver in the list if it's not already there
+                    const driversToShow = [...drivers];
+                    if (selectedDriverForViolation && !drivers.find(d => d.id === selectedDriverForViolation.id)) {
+                        driversToShow.unshift(selectedDriverForViolation);
+                    }
+                    setAvailableDrivers(driversToShow);
+                })
                 .finally(() => setIsLoadingDrivers(false));
         } else {
-            setAvailableDrivers([]);
+            // When search is empty, show only the selected driver if any
+            setAvailableDrivers(selectedDriverForViolation ? [selectedDriverForViolation] : []);
         }
-    }, [driverSearch]);
+    }, [driverSearch, selectedDriverForViolation]);
 
     // Fetch common places on component mount
     useEffect(() => {
@@ -193,6 +461,86 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
             toast.success("Record deleted successfully!");
         }
     };
+
+    const handleEditViolation = () => {
+        if (!selectedViolation) return;
+
+        setViolationFormData({
+            ordinance_infraction_report_no: selectedViolation.ordinance_infraction_report_no || "",
+            smoke_density_test_result_no: selectedViolation.smoke_density_test_result_no || "",
+            place_of_apprehension: selectedViolation.place_of_apprehension,
+            date_of_apprehension: selectedViolation.date_of_apprehension,
+        });
+        setIsEditingViolation(true);
+    };
+
+    const handleCancelViolationEdit = () => {
+        setIsEditingViolation(false);
+        setViolationFormData({
+            ordinance_infraction_report_no: "",
+            smoke_density_test_result_no: "",
+            place_of_apprehension: "",
+            date_of_apprehension: "",
+        });
+    };
+
+    const handleSaveViolationEdit = () => {
+        if (!selectedViolation) return;
+
+        // TODO: Implement actual save logic here
+        toast.success("Violation updated successfully");
+        setIsEditingViolation(false);
+        setShowViolationModal(false);
+    };
+
+    const handleDeleteViolation = () => {
+        setShowDeleteViolationDialog(true);
+    };
+
+    const handleConfirmDeleteViolation = () => {
+        if (!selectedViolation) return;
+
+        // TODO: Implement actual delete logic here
+        toast.success("Violation deleted successfully");
+        setShowDeleteViolationDialog(false);
+        setShowViolationModal(false);
+        setSelectedViolation(null);
+    };
+
+    const handleViolationFormChange = (field: string, value: string) => {
+        setViolationFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    // Fetch driver details by ID
+    const fetchDriverDetails = async (driverId: string) => {
+        if (driverDetails[driverId]) return; // Already fetched
+
+        try {
+            const driver = await fetchDriverById(driverId);
+            if (driver) {
+                setDriverDetails(prev => ({
+                    ...prev,
+                    [driverId]: driver
+                }));
+            }
+        } catch (error) {
+            console.error("Error fetching driver details:", error);
+        }
+    };
+
+    // Effect to fetch driver details for violations
+    useEffect(() => {
+        if (recordViolations) {
+            recordViolations.forEach(violation => {
+                if (violation.driver_id && !driverDetails[violation.driver_id]) {
+                    fetchDriverDetails(violation.driver_id);
+                }
+            });
+        }
+    }, [recordViolations]);
 
     return (
         <Card className="h-full flex flex-col">
@@ -650,9 +998,15 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                                         {violation.place_of_apprehension}
                                                     </TableCell>
                                                     <TableCell className="text-sm">
-                                                        {violation.driver?.first_name ?
-                                                            `${violation.driver.first_name} ${violation.driver.last_name}` :
-                                                            "—"}
+                                                        {(() => {
+                                                            if (violation.driver_id && driverDetails[violation.driver_id]) {
+                                                                const driver = driverDetails[violation.driver_id];
+                                                                return `${driver.first_name} ${driver.middle_name || ''} ${driver.last_name}`.trim();
+                                                            } else if (violation.driver?.first_name) {
+                                                                return `${violation.driver.first_name} ${violation.driver.last_name}`;
+                                                            }
+                                                            return "—";
+                                                        })()}
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge variant="outline" className="text-xs">
@@ -691,10 +1045,18 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
             </div>
 
             {/* Violation Modal */}
-            <Dialog open={showViolationModal} onOpenChange={setShowViolationModal}>
+            <Dialog open={showViolationModal} onOpenChange={(open) => {
+                setShowViolationModal(open);
+                if (!open) {
+                    setIsEditingViolation(false);
+                    handleCancelViolationEdit();
+                }
+            }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Violation Details</DialogTitle>
+                        <DialogTitle>
+                            {isEditingViolation ? "Edit Violation" : "Violation Details"}
+                        </DialogTitle>
                     </DialogHeader>
 
                     {selectedViolation && (
@@ -708,26 +1070,62 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                 </div>
                                 <div>
                                     <Label className="font-medium">Date</Label>
-                                    <p className="text-muted-foreground">
-                                        {new Date(selectedViolation.date_of_apprehension).toLocaleDateString()}
-                                    </p>
+                                    {isEditingViolation ? (
+                                        <Input
+                                            type="date"
+                                            value={violationFormData.date_of_apprehension}
+                                            onChange={(e) => handleViolationFormChange("date_of_apprehension", e.target.value)}
+                                            className="mt-1"
+                                        />
+                                    ) : (
+                                        <p className="text-muted-foreground">
+                                            {new Date(selectedViolation.date_of_apprehension).toLocaleDateString()}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="col-span-2">
                                     <Label className="font-medium">Place of Apprehension</Label>
-                                    <p className="text-muted-foreground">{selectedViolation.place_of_apprehension}</p>
+                                    {isEditingViolation ? (
+                                        <Input
+                                            value={violationFormData.place_of_apprehension}
+                                            onChange={(e) => handleViolationFormChange("place_of_apprehension", e.target.value)}
+                                            placeholder="Enter place of apprehension"
+                                            className="mt-1"
+                                        />
+                                    ) : (
+                                        <p className="text-muted-foreground">{selectedViolation.place_of_apprehension}</p>
+                                    )}
                                 </div>
-                                {selectedViolation.ordinance_infraction_report_no && (
-                                    <div className="col-span-2">
-                                        <Label className="font-medium">Report No.</Label>
-                                        <p className="text-muted-foreground">{selectedViolation.ordinance_infraction_report_no}</p>
-                                    </div>
-                                )}
-                                {selectedViolation.smoke_density_test_result_no && (
-                                    <div className="col-span-2">
-                                        <Label className="font-medium">Test Result No.</Label>
-                                        <p className="text-muted-foreground">{selectedViolation.smoke_density_test_result_no}</p>
-                                    </div>
-                                )}
+                                <div className="col-span-2">
+                                    <Label className="font-medium">Report No.</Label>
+                                    {isEditingViolation ? (
+                                        <Input
+                                            value={violationFormData.ordinance_infraction_report_no}
+                                            onChange={(e) => handleViolationFormChange("ordinance_infraction_report_no", e.target.value)}
+                                            placeholder="Enter ordinance infraction report number"
+                                            className="mt-1"
+                                        />
+                                    ) : (
+                                        <p className="text-muted-foreground">
+                                            {selectedViolation.ordinance_infraction_report_no || "N/A"}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="col-span-2">
+                                    <Label className="font-medium">Test Result No.</Label>
+                                    {isEditingViolation ? (
+                                        <Input
+                                            value={violationFormData.smoke_density_test_result_no}
+                                            onChange={(e) => handleViolationFormChange("smoke_density_test_result_no", e.target.value)}
+                                            placeholder="Enter smoke density test result number"
+                                            className="mt-1"
+                                        />
+                                    ) : (
+                                        <p className="text-muted-foreground">
+                                            {selectedViolation.smoke_density_test_result_no || "N/A"}
+                                        </p>
+                                    )}
+                                </div>
                                 <div>
                                     <Label className="font-medium">Driver Payment</Label>
                                     <p className="text-muted-foreground">
@@ -749,42 +1147,44 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                     )}
 
                     <DialogFooter className="gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                // Add Order of Payment functionality
-                                toast.success("Order of Payment added successfully");
-                                setShowViolationModal(false);
-                            }}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Order of Payment
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                                // Edit functionality
-                                toast.info("Edit violation functionality");
-                                setShowViolationModal(false);
-                            }}
-                        >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                                // Delete functionality
-                                toast.success("Violation deleted successfully");
-                                setShowViolationModal(false);
-                            }}
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                        </Button>
+                        {isEditingViolation ? (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleCancelViolationEdit}
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancel
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={handleSaveViolationEdit}
+                                >
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Changes
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleEditViolation}
+                                >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={handleDeleteViolation}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                </Button>
+                            </>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -921,15 +1321,26 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             <div className="space-y-4">
                                 <div>
                                     <Label htmlFor="driver-search">Search Driver</Label>
-                                    <div className="relative">
-                                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            id="driver-search"
-                                            placeholder="Search by name or license number..."
-                                            value={driverSearch}
-                                            onChange={(e) => setDriverSearch(e.target.value)}
-                                            className="pl-8"
-                                        />
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                id="driver-search"
+                                                placeholder="Search by name or license number..."
+                                                value={driverSearch}
+                                                onChange={(e) => setDriverSearch(e.target.value)}
+                                                className="pl-8"
+                                            />
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setShowAddDriverDialog(true)}
+                                            className="px-3"
+                                        >
+                                            <UserPlus className="h-4 w-4 mr-2" />
+                                            Add Driver
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -950,17 +1361,23 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                             </TableHeader>
                                             <TableBody>
                                                 {availableDrivers.map((driver) => (
-                                                    <TableRow key={driver.id}>
+                                                    <TableRow
+                                                        key={driver.id}
+                                                        className={selectedDriverForViolation?.id === driver.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
+                                                    >
                                                         <TableCell>
                                                             <Button
-                                                                variant={violationForm.driver_id === driver.id ? "default" : "outline"}
+                                                                variant={selectedDriverForViolation?.id === driver.id ? "default" : "outline"}
                                                                 size="sm"
-                                                                onClick={() => setViolationForm(prev => ({
-                                                                    ...prev,
-                                                                    driver_id: driver.id
-                                                                }))}
+                                                                onClick={() => {
+                                                                    setSelectedDriverForViolation(driver);
+                                                                    setViolationForm(prev => ({
+                                                                        ...prev,
+                                                                        driver_id: driver.id
+                                                                    }));
+                                                                }}
                                                             >
-                                                                {violationForm.driver_id === driver.id ? "Selected" : "Select"}
+                                                                {selectedDriverForViolation?.id === driver.id ? "Selected" : "Select"}
                                                             </Button>
                                                         </TableCell>
                                                         <TableCell>
@@ -980,6 +1397,69 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                 {driverSearch && !isLoadingDrivers && availableDrivers.length === 0 && (
                                     <p className="text-sm text-muted-foreground">No drivers found. Try a different search term.</p>
                                 )}
+
+                                {/* Selected Driver Details */}
+                                {selectedDriverForViolation && (
+                                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                            <User className="h-4 w-4" />
+                                            Selected Driver Details
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setDriverToEdit(selectedDriverForViolation);
+                                                    setShowEditDriverDialog(true);
+                                                }}
+                                                className="ml-auto text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                                            >
+                                                <Edit className="h-4 w-4 mr-1" />
+                                                Edit Driver
+                                            </Button>
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                            <div>
+                                                <Label className="text-blue-700 font-medium">Full Name</Label>
+                                                <p className="text-blue-800">
+                                                    {`${selectedDriverForViolation.first_name} ${selectedDriverForViolation.middle_name || ''} ${selectedDriverForViolation.last_name}`.trim()}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-blue-700 font-medium">License Number</Label>
+                                                <p className="text-blue-800">{selectedDriverForViolation.license_number}</p>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <Label className="text-blue-700 font-medium">Address</Label>
+                                                <p className="text-blue-800">{selectedDriverForViolation.address}</p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-blue-700 font-medium">Driver ID</Label>
+                                                <p className="text-blue-800 font-mono">{selectedDriverForViolation.id}</p>
+                                            </div>
+                                            <div>
+                                                <Label className="text-blue-700 font-medium">Registration Date</Label>
+                                                <p className="text-blue-800">
+                                                    {new Date(selectedDriverForViolation.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                setSelectedDriverForViolation(null);
+                                                setViolationForm(prev => ({
+                                                    ...prev,
+                                                    driver_id: ""
+                                                }));
+                                            }}
+                                            className="mt-3 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                                        >
+                                            <X className="h-4 w-4 mr-1" />
+                                            Clear Selection
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -997,6 +1477,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                     driver_id: "",
                                 });
                                 setDriverSearch("");
+                                setSelectedDriverForViolation(null);
                                 setAvailableDrivers([]);
                             }}
                         >
@@ -1060,6 +1541,99 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             Delete Record
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Violation Confirmation Dialog */}
+            <Dialog open={showDeleteViolationDialog} onOpenChange={setShowDeleteViolationDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                            Confirm Delete Violation
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete this violation record? This action cannot be undone.
+                            {selectedViolation && (
+                                <div className="mt-2 p-2 bg-muted rounded text-sm">
+                                    <strong>OIR Number:</strong> {selectedViolation.ordinance_infraction_report_no || "N/A"}<br />
+                                    <strong>Place:</strong> {selectedViolation.place_of_apprehension}<br />
+                                    <strong>Date:</strong> {new Date(selectedViolation.date_of_apprehension).toLocaleDateString()}
+                                </div>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteViolationDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleConfirmDeleteViolation}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Violation
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Add Driver Dialog */}
+            <Dialog open={showAddDriverDialog} onOpenChange={setShowAddDriverDialog}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UserPlus className="h-5 w-5" />
+                            Add New Driver
+                        </DialogTitle>
+                    </DialogHeader>
+                    <AddDriverForm
+                        onSuccess={(newDriver) => {
+                            toast.success("Driver added successfully!");
+                            setSelectedDriverForViolation(newDriver);
+                            setViolationForm(prev => ({ ...prev, driver_id: newDriver.id }));
+                            setShowAddDriverDialog(false);
+                            // Refresh driver search if there's a search term
+                            if (driverSearch.trim()) {
+                                searchDrivers({ search: driverSearch, limit: 5 })
+                                    .then((drivers) => {
+                                        const driversToShow = [newDriver, ...drivers.filter(d => d.id !== newDriver.id)];
+                                        setAvailableDrivers(driversToShow);
+                                    });
+                            } else {
+                                setAvailableDrivers([newDriver]);
+                            }
+                        }}
+                        onCancel={() => setShowAddDriverDialog(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Driver Dialog */}
+            <Dialog open={showEditDriverDialog} onOpenChange={setShowEditDriverDialog}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Edit className="h-5 w-5" />
+                            Edit Driver
+                        </DialogTitle>
+                    </DialogHeader>
+                    {driverToEdit && (
+                        <EditDriverForm
+                            driver={driverToEdit}
+                            onSuccess={(updatedDriver) => {
+                                toast.success("Driver updated successfully!");
+                                setSelectedDriverForViolation(updatedDriver);
+                                setDriverToEdit(null);
+                                setShowEditDriverDialog(false);
+                                // Update the driver in available drivers list
+                                setAvailableDrivers(prev =>
+                                    prev.map(driver => driver.id === updatedDriver.id ? updatedDriver : driver)
+                                );
+                            }}
+                            onCancel={() => {
+                                setDriverToEdit(null);
+                                setShowEditDriverDialog(false);
+                            }}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
         </Card>

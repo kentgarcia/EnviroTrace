@@ -905,3 +905,84 @@ export const getCommonPlacesOfApprehension = async (): Promise<string[]> => {
     "Ayala Avenue",
   ];
 };
+
+// Driver CRUD operations
+export const fetchAllDrivers = async (params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<Driver[]> => {
+  // Mock API call - reuse searchDrivers but with no limit by default
+  return searchDrivers({ ...params, limit: params?.limit || 100 });
+};
+
+export const createDriver = async (driverData: {
+  first_name: string;
+  middle_name?: string;
+  last_name: string;
+  address: string;
+  license_number: string;
+}): Promise<Driver> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  return {
+    id: Date.now().toString(),
+    ...driverData,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+};
+
+export const updateDriver = async (
+  driverId: string,
+  driverData: {
+    first_name?: string;
+    middle_name?: string;
+    last_name?: string;
+    address?: string;
+    license_number?: string;
+  }
+): Promise<Driver> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  return {
+    id: driverId,
+    first_name: driverData.first_name || "Updated",
+    middle_name: driverData.middle_name,
+    last_name: driverData.last_name || "Driver",
+    address: driverData.address || "Updated Address",
+    license_number: driverData.license_number || "N00-00-000000",
+    created_at: "2024-01-10T08:00:00Z",
+    updated_at: new Date().toISOString(),
+  };
+};
+
+export const deleteDriver = async (
+  driverId: string
+): Promise<{ success: boolean }> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  return { success: true };
+};
+
+export const fetchDriverById = async (
+  driverId: string
+): Promise<Driver | null> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // Return mock driver data
+  return {
+    id: driverId,
+    first_name: "John",
+    middle_name: "Miguel",
+    last_name: "Doe",
+    address: "123 Test Street, Test City",
+    license_number: "N01-12-123456",
+    created_at: "2024-01-10T08:00:00Z",
+    updated_at: new Date().toISOString(),
+  };
+};
