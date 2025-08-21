@@ -5,16 +5,16 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/presentation/components/shared/ui/table";
 import { Search, X, RefreshCw, Plus } from "lucide-react";
-import { Record } from "@/core/api/belching-api";
+import { AirQualityRecord } from "@/core/api/air-quality-api";
 import { SmokeBelcherSearchParams } from "../logic/useSmokeBelcherData";
 import AddRecordDialog from "./AddRecordDialog";
 
 interface VehicleSearchComponentProps {
-    searchResults: Record[];
-    selectedRecord: Record | null;
+    searchResults: AirQualityRecord[];
+    selectedRecord: AirQualityRecord | null;
     isLoading: boolean;
     onSearch: (params: SmokeBelcherSearchParams) => void;
-    onSelectRecord: (record: Record) => void;
+    onSelectRecord: (record: AirQualityRecord) => void;
     onRefreshData?: () => void;
 }
 

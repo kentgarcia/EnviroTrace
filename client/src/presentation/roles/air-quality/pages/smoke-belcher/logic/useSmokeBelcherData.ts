@@ -1,15 +1,15 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  searchBelchingRecords,
-  fetchViolationsByRecordId,
-  createBelchingViolation,
-  createBelchingRecord,
-  updateViolationPaymentStatus,
-  Record,
-  Violation,
-  Driver,
-} from "@/core/api/belching-api";
+  searchAirQualityRecords,
+  fetchAirQualityViolationsByRecordId,
+  createAirQualityViolation,
+  createAirQualityRecord,
+  updateAirQualityViolationPaymentStatus,
+  AirQualityRecord,
+  AirQualityViolation,
+  AirQualityDriver,
+} from "@/core/api/air-quality-api";
 
 export interface SmokeBelcherSearchParams {
   plateNumber?: string;
@@ -45,7 +45,9 @@ export const useSmokeBelcherData = () => {
   const [searchParams, setSearchParams] = useState<SmokeBelcherSearchParams>(
     {}
   );
-  const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<AirQualityRecord | null>(
+    null
+  );
   const [isViolationModalOpen, setIsViolationModalOpen] = useState(false);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"violations" | "history">(
@@ -61,8 +63,8 @@ export const useSmokeBelcherData = () => {
     error: searchError,
     refetch: refetchSearch,
   } = useQuery({
-    queryKey: ["smoke-belcher-search", searchParams],
-    queryFn: () => searchBelchingRecords(searchParams),
+    queryKey: ["air-quality-smoke-belcher-search", searchParams],
+    queryFn: () => searchAirQualityRecords(searchParams),
     enabled: true, // Always enable the query - API will handle empty params
     staleTime: 5 * 60 * 1000,
   });
@@ -73,8 +75,8 @@ export const useSmokeBelcherData = () => {
     isLoading: isViolationsLoading,
     error: violationsError,
   } = useQuery({
-    queryKey: ["record-violations", selectedRecord?.id],
-    queryFn: () => fetchViolationsByRecordId(selectedRecord!.id),
+    queryKey: ["air-quality-record-violations", selectedRecord?.id],
+    queryFn: () => fetchAirQualityViolationsByRecordId(selectedRecord!.id),
     enabled: !!selectedRecord?.id,
     staleTime: 5 * 60 * 1000,
   });
@@ -86,7 +88,7 @@ export const useSmokeBelcherData = () => {
   }, []);
 
   // Select record
-  const handleSelectRecord = useCallback((record: Record) => {
+  const handleSelectRecord = useCallback((record: AirQualityRecord) => {
     setSelectedRecord(record);
   }, []);
 
@@ -98,18 +100,22 @@ export const useSmokeBelcherData = () => {
 
   // Create violation mutation
   const createViolationMutation = useMutation({
-    mutationFn: createBelchingViolation,
+    mutationFn: createAirQualityViolation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-violations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-record-violations"],
+      });
       setIsViolationModalOpen(false);
     },
   });
 
   // Create record mutation
   const createRecordMutation = useMutation({
-    mutationFn: createBelchingRecord,
+    mutationFn: createAirQualityRecord,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["smoke-belcher-search"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-smoke-belcher-search"],
+      });
       setIsRecordModalOpen(false);
     },
   });
@@ -124,9 +130,16 @@ export const useSmokeBelcherData = () => {
       violationId: number;
       paidDriver: boolean;
       paidOperator: boolean;
-    }) => updateViolationPaymentStatus(violationId, paidDriver, paidOperator),
+    }) =>
+      updateAirQualityViolationPaymentStatus(
+        violationId,
+        paidDriver,
+        paidOperator
+      ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["record-violations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-record-violations"],
+      });
     },
   });
 

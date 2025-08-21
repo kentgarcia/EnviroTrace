@@ -854,76 +854,15 @@ export const searchDrivers = async (params?: {
   limit?: number;
   offset?: number;
 }): Promise<Driver[]> => {
-  // Mock API call
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  const mockDrivers: Driver[] = [
-    {
-      id: "1",
-      first_name: "Juan",
-      middle_name: "Dela",
-      last_name: "Cruz",
-      address: "123 Main St, Quezon City",
-      license_number: "N01-12-123456",
-      created_at: "2024-01-10T08:00:00Z",
-      updated_at: "2024-01-10T08:00:00Z",
-    },
-    {
-      id: "2",
-      first_name: "Maria",
-      middle_name: "Santos",
-      last_name: "Garcia",
-      address: "456 Secondary Ave, Manila",
-      license_number: "N02-12-789012",
-      created_at: "2024-01-11T09:15:00Z",
-      updated_at: "2024-01-11T09:15:00Z",
-    },
-    {
-      id: "3",
-      first_name: "Roberto",
-      middle_name: "Miguel",
-      last_name: "Villanueva",
-      address: "789 Third St, Pasig City",
-      license_number: "N03-12-345678",
-      created_at: "2024-01-12T10:30:00Z",
-      updated_at: "2024-01-12T10:30:00Z",
-    },
-    {
-      id: "4",
-      first_name: "Ana",
-      middle_name: "Rosa",
-      last_name: "Mendoza",
-      address: "321 Fourth Ave, Makati City",
-      license_number: "N04-12-901234",
-      created_at: "2024-01-13T11:45:00Z",
-      updated_at: "2024-01-13T11:45:00Z",
-    },
-    {
-      id: "5",
-      first_name: "Carlos",
-      middle_name: "Antonio",
-      last_name: "Reyes",
-      address: "654 Fifth St, Taguig City",
-      license_number: "N05-12-567890",
-      created_at: "2024-01-14T13:00:00Z",
-      updated_at: "2024-01-14T13:00:00Z",
-    },
-  ];
-
-  let filteredDrivers = mockDrivers;
-
-  if (params?.search) {
-    const searchTerm = params.search.toLowerCase();
-    filteredDrivers = filteredDrivers.filter(
-      (driver) =>
-        `${driver.first_name} ${driver.middle_name || ""} ${driver.last_name}`
-          .toLowerCase()
-          .includes(searchTerm) ||
-        driver.license_number.toLowerCase().includes(searchTerm)
-    );
+  try {
+    const response = await apiClient.get("/belching/drivers/search", {
+      params,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error searching drivers:", error);
+    throw error;
   }
-
-  return filteredDrivers.slice(0, params?.limit || 10);
 };
 
 // Get common places of apprehension for dropdown
@@ -956,8 +895,13 @@ export const fetchAllDrivers = async (params?: {
   limit?: number;
   offset?: number;
 }): Promise<Driver[]> => {
-  // Mock API call - reuse searchDrivers but with no limit by default
-  return searchDrivers({ ...params, limit: params?.limit || 100 });
+  try {
+    const response = await apiClient.get("/belching/drivers", { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching drivers:", error);
+    throw error;
+  }
 };
 
 export const createDriver = async (driverData: {
@@ -967,15 +911,13 @@ export const createDriver = async (driverData: {
   address: string;
   license_number: string;
 }): Promise<Driver> => {
-  // Mock API call
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  return {
-    id: Date.now().toString(),
-    ...driverData,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+  try {
+    const response = await apiClient.post("/belching/drivers", driverData);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating driver:", error);
+    throw error;
+  }
 };
 
 export const updateDriver = async (
@@ -988,47 +930,40 @@ export const updateDriver = async (
     license_number?: string;
   }
 ): Promise<Driver> => {
-  // Mock API call
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
-  return {
-    id: driverId,
-    first_name: driverData.first_name || "Updated",
-    middle_name: driverData.middle_name,
-    last_name: driverData.last_name || "Driver",
-    address: driverData.address || "Updated Address",
-    license_number: driverData.license_number || "N00-00-000000",
-    created_at: "2024-01-10T08:00:00Z",
-    updated_at: new Date().toISOString(),
-  };
+  try {
+    const response = await apiClient.put(
+      `/belching/drivers/${driverId}`,
+      driverData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error updating driver:", error);
+    throw error;
+  }
 };
 
 export const deleteDriver = async (
   driverId: string
 ): Promise<{ success: boolean }> => {
-  // Mock API call
-  await new Promise((resolve) => setTimeout(resolve, 600));
-
-  return { success: true };
+  try {
+    await apiClient.delete(`/belching/drivers/${driverId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting driver:", error);
+    throw error;
+  }
 };
 
 export const fetchDriverById = async (
   driverId: string
 ): Promise<Driver | null> => {
-  // Mock API call
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  // Return mock driver data
-  return {
-    id: driverId,
-    first_name: "John",
-    middle_name: "Miguel",
-    last_name: "Doe",
-    address: "123 Test Street, Test City",
-    license_number: "N01-12-123456",
-    created_at: "2024-01-10T08:00:00Z",
-    updated_at: new Date().toISOString(),
-  };
+  try {
+    const response = await apiClient.get(`/belching/drivers/${driverId}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching driver by ID:", error);
+    throw error;
+  }
 };
 
 // Order of Payment API functions

@@ -27,12 +27,13 @@ import {
     UserPlus,
     X
 } from "lucide-react";
-import { Record, Violation, Driver, OrderOfPayment, searchDrivers, getCommonPlacesOfApprehension, createDriver, updateDriver, fetchDriverById, searchOrdersOfPayment } from "@/core/api/belching-api";
+import { AirQualityRecord, AirQualityViolation, AirQualityDriver, searchAirQualityDrivers, getCommonPlacesOfApprehension, createAirQualityDriver, updateAirQualityDriver, fetchAirQualityDriverById } from "@/core/api/air-quality-api";
+import { OrderOfPayment, searchOrdersOfPayment } from "@/core/api/belching-api";
 import { toast } from "sonner";
 
 // Driver form component for adding new drivers
 const AddDriverForm: React.FC<{
-    onSuccess: (driver: Driver) => void;
+    onSuccess: (driver: AirQualityDriver) => void;
     onCancel: () => void;
 }> = ({ onSuccess, onCancel }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +55,7 @@ const AddDriverForm: React.FC<{
 
         setIsLoading(true);
         try {
-            const newDriver = await createDriver({
+            const newDriver = await createAirQualityDriver({
                 first_name: formData.first_name.trim(),
                 middle_name: formData.middle_name.trim() || undefined,
                 last_name: formData.last_name.trim(),
@@ -169,7 +170,7 @@ const EditDriverForm: React.FC<{
 
         setIsLoading(true);
         try {
-            const updatedDriver = await updateDriver(driver.id, {
+            const updatedDriver = await updateAirQualityDriver(driver.id, {
                 first_name: formData.first_name.trim(),
                 middle_name: formData.middle_name.trim() || undefined,
                 last_name: formData.last_name.trim(),
@@ -260,8 +261,8 @@ const EditDriverForm: React.FC<{
 };
 
 interface RecordDetailsComponentProps {
-    selectedRecord: Record | null;
-    recordViolations: Violation[];
+    selectedRecord: AirQualityRecord | null;
+    recordViolations: AirQualityViolation[];
     violationSummary: any;
     isViolationsLoading: boolean;
     activeTab: "violations" | "history";
@@ -327,7 +328,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     useEffect(() => {
         if (driverSearch.trim()) {
             setIsLoadingDrivers(true);
-            searchDrivers({ search: driverSearch, limit: 5 })
+            searchAirQualityDrivers({ search: driverSearch, limit: 5 })
                 .then((drivers) => {
                     // Include the selected driver in the list if it's not already there
                     const driversToShow = [...drivers];
@@ -452,7 +453,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
         return `${offenseNumber}th`;
     };
 
-    const getDriverOffenseLevel = (violation: Violation) => {
+    const getDriverOffenseLevel = (violation: AirQualityViolation) => {
         // In a real application, this would be calculated based on driver history across all records
         // For now, we'll simulate by using the driver_id to determine offense level
         if (!violation.driver_id) return "1st";
@@ -555,7 +556,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
         if (driverDetails[driverId]) return; // Already fetched
 
         try {
-            const driver = await fetchDriverById(driverId);
+            const driver = await fetchAirQualityDriverById(driverId);
             if (driver) {
                 setDriverDetails(prev => ({
                     ...prev,
@@ -592,7 +593,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                     allOrders.forEach(order => {
                         if (order.selected_violations && order.selected_violations.length > 0) {
                             order.selected_violations.forEach(violationId => {
-                                if (recordViolations.some(v => v.id === violationId)) {
+                                if (recordViolations.some(v => String(v.id) === String(violationId))) {
                                     violationToOrderMap[violationId] = order;
                                 }
                             });
@@ -611,7 +612,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     }, [recordViolations]);
 
     // Function to get violation status
-    const getViolationStatus = (violation: Violation): "APPREHENDED" | "CLEARED" | "NO OFFENSE" => {
+    const getViolationStatus = (violation: AirQualityViolation): "APPREHENDED" | "CLEARED" | "NO OFFENSE" => {
         const order = violationOrderMap[violation.id];
 
         if (!order) {
@@ -1711,7 +1712,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             setShowAddDriverDialog(false);
                             // Refresh driver search if there's a search term
                             if (driverSearch.trim()) {
-                                searchDrivers({ search: driverSearch, limit: 5 })
+                                searchAirQualityDrivers({ search: driverSearch, limit: 5 })
                                     .then((drivers) => {
                                         const driversToShow = [newDriver, ...drivers.filter(d => d.id !== newDriver.id)];
                                         setAvailableDrivers(driversToShow);

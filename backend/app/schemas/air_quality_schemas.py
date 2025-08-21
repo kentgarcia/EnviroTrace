@@ -2,26 +2,31 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
 from uuid import UUID
+from decimal import Decimal
+
 
 # Driver Schemas
-class DriverBase(BaseModel):
+class AirQualityDriverBase(BaseModel):
     first_name: str = Field(..., max_length=100)
     middle_name: Optional[str] = Field(None, max_length=100)
     last_name: str = Field(..., max_length=100)
     address: str
     license_number: str = Field(..., max_length=50)
 
-class DriverCreate(DriverBase):
+
+class AirQualityDriverCreate(AirQualityDriverBase):
     pass
 
-class DriverUpdate(BaseModel):
+
+class AirQualityDriverUpdate(BaseModel):
     first_name: Optional[str] = Field(None, max_length=100)
     middle_name: Optional[str] = Field(None, max_length=100)
     last_name: Optional[str] = Field(None, max_length=100)
     address: Optional[str] = None
     license_number: Optional[str] = Field(None, max_length=50)
 
-class Driver(DriverBase):
+
+class AirQualityDriver(AirQualityDriverBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
@@ -29,19 +34,15 @@ class Driver(DriverBase):
     class Config:
         from_attributes = True
 
-class DriverSearchParams(BaseModel):
+
+class AirQualityDriverSearchParams(BaseModel):
     search: Optional[str] = None
     limit: Optional[int] = Field(50, ge=1, le=200)
     offset: Optional[int] = Field(0, ge=0)
 
-class DriverListResponse(BaseModel):
-    drivers: List[Driver]
-    total: int
-    limit: int
-    offset: int
 
 # Record Schemas
-class RecordBase(BaseModel):
+class AirQualityRecordBase(BaseModel):
     plate_number: str = Field(..., max_length=32)
     vehicle_type: str = Field(..., max_length=64)
     transport_group: Optional[str] = Field(None, max_length=100)
@@ -53,10 +54,12 @@ class RecordBase(BaseModel):
     motor_no: Optional[str] = Field(None, max_length=100)
     motor_vehicle_name: Optional[str] = Field(None, max_length=200)
 
-class RecordCreate(RecordBase):
+
+class AirQualityRecordCreate(AirQualityRecordBase):
     pass
 
-class RecordUpdate(BaseModel):
+
+class AirQualityRecordUpdate(BaseModel):
     plate_number: Optional[str] = Field(None, max_length=32)
     vehicle_type: Optional[str] = Field(None, max_length=64)
     transport_group: Optional[str] = Field(None, max_length=100)
@@ -68,7 +71,8 @@ class RecordUpdate(BaseModel):
     motor_no: Optional[str] = Field(None, max_length=100)
     motor_vehicle_name: Optional[str] = Field(None, max_length=200)
 
-class Record(RecordBase):
+
+class AirQualityRecord(AirQualityRecordBase):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -76,8 +80,17 @@ class Record(RecordBase):
     class Config:
         from_attributes = True
 
+
+class AirQualityRecordSearchParams(BaseModel):
+    plateNumber: Optional[str] = Field(None, alias="plate_number")
+    operatorName: Optional[str] = Field(None, alias="operator_name")
+    vehicleType: Optional[str] = Field(None, alias="vehicle_type")
+    limit: Optional[int] = Field(50, ge=1, le=200)
+    offset: Optional[int] = Field(0, ge=0)
+
+
 # Violation Schemas
-class ViolationBase(BaseModel):
+class AirQualityViolationBase(BaseModel):
     ordinance_infraction_report_no: Optional[str] = Field(None, max_length=100)
     smoke_density_test_result_no: Optional[str] = Field(None, max_length=100)
     place_of_apprehension: str = Field(..., max_length=200)
@@ -86,10 +99,12 @@ class ViolationBase(BaseModel):
     paid_operator: bool = False
     driver_id: Optional[UUID] = None
 
-class ViolationCreate(ViolationBase):
+
+class AirQualityViolationCreate(AirQualityViolationBase):
     record_id: int
 
-class ViolationUpdate(BaseModel):
+
+class AirQualityViolationUpdate(BaseModel):
     ordinance_infraction_report_no: Optional[str] = Field(None, max_length=100)
     smoke_density_test_result_no: Optional[str] = Field(None, max_length=100)
     place_of_apprehension: Optional[str] = Field(None, max_length=200)
@@ -98,36 +113,93 @@ class ViolationUpdate(BaseModel):
     paid_operator: Optional[bool] = None
     driver_id: Optional[UUID] = None
 
-class Violation(ViolationBase):
+
+class AirQualityViolation(AirQualityViolationBase):
     id: int
     record_id: int
     created_at: datetime
     updated_at: datetime
-    driver: Optional[Driver] = None
 
     class Config:
         from_attributes = True
 
+
+class AirQualityViolationPaymentUpdate(BaseModel):
+    paid_driver: bool
+    paid_operator: bool
+
+
 # Fee Schemas
-class FeeBase(BaseModel):
-    amount: float = Field(..., gt=0)
+class AirQualityFeeBase(BaseModel):
+    amount: Decimal = Field(..., ge=0)
     category: str = Field(..., max_length=100)
-    level: int = Field(1, ge=0)
+    level: int = Field(..., ge=1)
     effective_date: date
 
-class FeeCreate(FeeBase):
+
+class AirQualityFeeCreate(AirQualityFeeBase):
     pass
 
-class FeeUpdate(BaseModel):
-    amount: Optional[float] = Field(None, gt=0)
+
+class AirQualityFeeUpdate(BaseModel):
+    amount: Optional[Decimal] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)
-    level: Optional[int] = Field(None, ge=0)
+    level: Optional[int] = Field(None, ge=1)
     effective_date: Optional[date] = None
 
-class Fee(FeeBase):
+
+class AirQualityFee(AirQualityFeeBase):
     id: int
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+# Record History Schemas
+class AirQualityRecordHistoryBase(BaseModel):
+    type: str = Field(..., max_length=64)
+    date: date
+    details: Optional[str] = None
+    or_number: Optional[str] = Field(None, max_length=64)
+    status: str = Field(..., max_length=32)
+
+
+class AirQualityRecordHistoryCreate(AirQualityRecordHistoryBase):
+    record_id: int
+
+
+class AirQualityRecordHistory(AirQualityRecordHistoryBase):
+    id: int
+    record_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Response Models
+class AirQualityRecordListResponse(BaseModel):
+    records: List[AirQualityRecord]
+    total: int
+    limit: int
+    offset: int
+
+
+class AirQualityViolationListResponse(BaseModel):
+    violations: List[AirQualityViolation]
+    total: int
+
+
+class AirQualityDriverListResponse(BaseModel):
+    drivers: List[AirQualityDriver]
+    total: int
+    limit: int
+    offset: int
+
+
+class AirQualityFeeListResponse(BaseModel):
+    fees: List[AirQualityFee]
+    total: int
