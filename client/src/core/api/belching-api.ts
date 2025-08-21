@@ -54,6 +54,50 @@ export interface Fee {
   updated_at: string;
 }
 
+export interface OrderOfPayment {
+  id: string;
+  control_number: string;
+  plate_number: string;
+  operator_name: string;
+  driver_name?: string;
+  admin_created_by: string;
+  status: "draft" | "pending" | "paid" | "cancelled";
+
+  // Request Information
+  oop_control_number: string;
+
+  // Testing Information
+  testing_officer?: string;
+  test_results?: string;
+  date_of_testing?: string;
+
+  // Selected violations
+  selected_violations: string[]; // violation IDs
+
+  // Payment fees
+  apprehension_fee?: number;
+  voluntary_fee?: number;
+  impound_fee?: number;
+  driver_amount?: number;
+  operator_fee?: number;
+
+  // Totals
+  total_undisclosed_amount: number;
+  grand_total_amount: number;
+  date_of_payment?: string;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentChecklist {
+  apprehension_fee: { checked: boolean; amount: number };
+  voluntary_fee: { checked: boolean; amount: number };
+  impound_fee: { checked: boolean; amount: number };
+  driver_amount: { checked: boolean; amount: number };
+  operator_fee: { checked: boolean; amount: number };
+}
+
 export interface BelchingStatistics {
   total_records: number;
   total_violations: number;
@@ -985,4 +1029,233 @@ export const fetchDriverById = async (
     created_at: "2024-01-10T08:00:00Z",
     updated_at: new Date().toISOString(),
   };
+};
+
+// Order of Payment API functions
+export const searchOrdersOfPayment = async (params?: {
+  search?: string;
+  control_number?: string;
+  plate_number?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<OrderOfPayment[]> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  const mockOrders: OrderOfPayment[] = [
+    {
+      id: "1",
+      control_number: "OOP-2024-001",
+      plate_number: "ABC-123",
+      operator_name: "City Bus Lines",
+      driver_name: "Juan Dela Cruz",
+      admin_created_by: "admin@example.com",
+      status: "pending",
+      oop_control_number: "OOP-2024-001",
+      testing_officer: "Officer Rodriguez",
+      test_results: "Failed - Excess Smoke Emission",
+      date_of_testing: "2024-08-15",
+      selected_violations: ["1", "2"],
+      apprehension_fee: 2500,
+      voluntary_fee: 0,
+      impound_fee: 1000,
+      driver_amount: 3000,
+      operator_fee: 5000,
+      total_undisclosed_amount: 11500,
+      grand_total_amount: 11500,
+      created_at: "2024-08-15T10:30:00Z",
+      updated_at: "2024-08-15T10:30:00Z",
+    },
+    {
+      id: "2",
+      control_number: "OOP-2024-002",
+      plate_number: "XYZ-789",
+      operator_name: "Local Transport Coop",
+      driver_name: "Maria Santos Garcia",
+      admin_created_by: "admin@example.com",
+      status: "draft",
+      oop_control_number: "OOP-2024-002",
+      testing_officer: "Officer Martinez",
+      test_results: "Failed - Smoke Density Above Limit",
+      date_of_testing: "2024-08-16",
+      selected_violations: ["3"],
+      apprehension_fee: 2500,
+      voluntary_fee: 1500,
+      impound_fee: 0,
+      driver_amount: 2000,
+      operator_fee: 3000,
+      total_undisclosed_amount: 9000,
+      grand_total_amount: 9000,
+      created_at: "2024-08-16T14:20:00Z",
+      updated_at: "2024-08-16T14:20:00Z",
+    },
+    {
+      id: "3",
+      control_number: "OOP-2024-003",
+      plate_number: "DEF-456",
+      operator_name: "Freight Express Inc",
+      driver_name: "Carlos Antonio Reyes",
+      admin_created_by: "admin@example.com",
+      status: "paid",
+      oop_control_number: "OOP-2024-003",
+      testing_officer: "Officer Santos",
+      test_results: "Failed - Black Smoke Emission",
+      date_of_testing: "2024-08-10",
+      date_of_payment: "2024-08-12",
+      selected_violations: ["4", "5"],
+      apprehension_fee: 2500,
+      voluntary_fee: 0,
+      impound_fee: 2000,
+      driver_amount: 4000,
+      operator_fee: 6000,
+      total_undisclosed_amount: 14500,
+      grand_total_amount: 14500,
+      created_at: "2024-08-10T11:45:00Z",
+      updated_at: "2024-08-12T16:30:00Z",
+    },
+  ];
+
+  let filteredOrders = mockOrders;
+
+  if (params?.search) {
+    const searchTerm = params.search.toLowerCase();
+    filteredOrders = filteredOrders.filter(
+      (order) =>
+        order.control_number.toLowerCase().includes(searchTerm) ||
+        order.plate_number.toLowerCase().includes(searchTerm) ||
+        order.operator_name.toLowerCase().includes(searchTerm) ||
+        (order.driver_name &&
+          order.driver_name.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  if (params?.control_number) {
+    filteredOrders = filteredOrders.filter((order) =>
+      order.control_number
+        .toLowerCase()
+        .includes(params.control_number!.toLowerCase())
+    );
+  }
+
+  if (params?.plate_number) {
+    filteredOrders = filteredOrders.filter((order) =>
+      order.plate_number
+        .toLowerCase()
+        .includes(params.plate_number!.toLowerCase())
+    );
+  }
+
+  if (params?.status) {
+    filteredOrders = filteredOrders.filter(
+      (order) => order.status === params.status
+    );
+  }
+
+  return filteredOrders.slice(0, params?.limit || 20);
+};
+
+export const fetchOrderOfPaymentById = async (
+  id: string
+): Promise<OrderOfPayment | null> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  const mockOrder: OrderOfPayment = {
+    id,
+    control_number: `OOP-2024-${id.padStart(3, "0")}`,
+    plate_number: "ABC-123",
+    operator_name: "Test Company",
+    driver_name: "Test Driver",
+    admin_created_by: "admin@example.com",
+    status: "draft",
+    oop_control_number: `OOP-2024-${id.padStart(3, "0")}`,
+    testing_officer: "Test Officer",
+    test_results: "Failed - Test Results",
+    date_of_testing: "2024-08-15",
+    selected_violations: ["1"],
+    apprehension_fee: 2500,
+    voluntary_fee: 0,
+    impound_fee: 0,
+    driver_amount: 3000,
+    operator_fee: 5000,
+    total_undisclosed_amount: 10500,
+    grand_total_amount: 10500,
+    created_at: "2024-08-15T10:30:00Z",
+    updated_at: "2024-08-15T10:30:00Z",
+  };
+
+  return mockOrder;
+};
+
+export const createOrderOfPayment = async (orderData: {
+  plate_number: string;
+  operator_name: string;
+  driver_name?: string;
+  selected_violations: string[];
+}): Promise<OrderOfPayment> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  const newId = Date.now().toString();
+  return {
+    id: newId,
+    control_number: `OOP-2024-${newId.slice(-3)}`,
+    ...orderData,
+    admin_created_by: "admin@example.com",
+    status: "draft",
+    oop_control_number: `OOP-2024-${newId.slice(-3)}`,
+    apprehension_fee: 0,
+    voluntary_fee: 0,
+    impound_fee: 0,
+    driver_amount: 0,
+    operator_fee: 0,
+    total_undisclosed_amount: 0,
+    grand_total_amount: 0,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+};
+
+export const updateOrderOfPayment = async (
+  id: string,
+  orderData: Partial<OrderOfPayment>
+): Promise<OrderOfPayment> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  return {
+    id,
+    control_number: `OOP-2024-${id.padStart(3, "0")}`,
+    plate_number: orderData.plate_number || "ABC-123",
+    operator_name: orderData.operator_name || "Test Company",
+    driver_name: orderData.driver_name,
+    admin_created_by: "admin@example.com",
+    status: orderData.status || "draft",
+    oop_control_number:
+      orderData.oop_control_number || `OOP-2024-${id.padStart(3, "0")}`,
+    testing_officer: orderData.testing_officer,
+    test_results: orderData.test_results,
+    date_of_testing: orderData.date_of_testing,
+    selected_violations: orderData.selected_violations || [],
+    apprehension_fee: orderData.apprehension_fee || 0,
+    voluntary_fee: orderData.voluntary_fee || 0,
+    impound_fee: orderData.impound_fee || 0,
+    driver_amount: orderData.driver_amount || 0,
+    operator_fee: orderData.operator_fee || 0,
+    total_undisclosed_amount: orderData.total_undisclosed_amount || 0,
+    grand_total_amount: orderData.grand_total_amount || 0,
+    date_of_payment: orderData.date_of_payment,
+    created_at: "2024-08-15T10:30:00Z",
+    updated_at: new Date().toISOString(),
+  };
+};
+
+export const deleteOrderOfPayment = async (
+  id: string
+): Promise<{ success: boolean }> => {
+  // Mock API call
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  return { success: true };
 };

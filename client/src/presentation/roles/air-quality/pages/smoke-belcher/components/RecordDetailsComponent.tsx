@@ -27,7 +27,7 @@ import {
     UserPlus,
     X
 } from "lucide-react";
-import { Record, Violation, Driver, searchDrivers, getCommonPlacesOfApprehension, createDriver, updateDriver, fetchDriverById } from "@/core/api/belching-api";
+import { Record, Violation, Driver, OrderOfPayment, searchDrivers, getCommonPlacesOfApprehension, createDriver, updateDriver, fetchDriverById, searchOrdersOfPayment } from "@/core/api/belching-api";
 import { toast } from "sonner";
 
 // Driver form component for adding new drivers
@@ -320,6 +320,8 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     const [commonPlaces, setCommonPlaces] = useState<string[]>([]);
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
     const [driverDetails, setDriverDetails] = useState<{ [key: string]: Driver }>({});
+    const [orderOfPayments, setOrderOfPayments] = useState<OrderOfPayment[]>([]);
+    const [violationOrderMap, setViolationOrderMap] = useState<{ [violationId: string]: OrderOfPayment }>({});
 
     // Fetch drivers when driver search changes
     useEffect(() => {
@@ -385,16 +387,50 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
 
     const getStatusColor = (record: Record | null) => {
         if (!record) return "bg-gray-100 text-gray-600";
-        if (violationSummary?.pendingViolations > 0) return "bg-red-100 text-red-800";
-        if (violationSummary?.totalViolations > 0) return "bg-yellow-100 text-yellow-800";
-        return "bg-green-100 text-green-800";
+
+        if (!recordViolations || recordViolations.length === 0) {
+            return "bg-green-100 text-green-800";
+        }
+
+        // Check violation statuses to determine overall record status
+        const violationStatuses = recordViolations.map(violation => getViolationStatus(violation));
+
+        // If any violations are still APPREHENDED (no order of payment)
+        if (violationStatuses.some(status => status === "APPREHENDED")) {
+            return "bg-red-100 text-red-800";
+        }
+
+        // If all violations are NO OFFENSE (all orders paid)
+        if (violationStatuses.every(status => status === "NO OFFENSE")) {
+            return "bg-green-100 text-green-800";
+        }
+
+        // If all violations have orders but not all are paid (mix of CLEARED and NO OFFENSE)
+        return "bg-yellow-100 text-yellow-800";
     };
 
     const getStatusText = (record: Record | null) => {
         if (!record) return "NO SELECTION";
-        if (violationSummary?.pendingViolations > 0) return "VIOLATIONS PENDING";
-        if (violationSummary?.totalViolations > 0) return "COMPLIANT";
-        return "NO VIOLATIONS";
+
+        if (!recordViolations || recordViolations.length === 0) {
+            return "NO VIOLATIONS";
+        }
+
+        // Check violation statuses to determine overall record status
+        const violationStatuses = recordViolations.map(violation => getViolationStatus(violation));
+
+        // If any violations are still APPREHENDED (no order of payment)
+        if (violationStatuses.some(status => status === "APPREHENDED")) {
+            return "VIOLATIONS PENDING";
+        }
+
+        // If all violations are NO OFFENSE (all orders paid)
+        if (violationStatuses.every(status => status === "NO OFFENSE")) {
+            return "NO VIOLATIONS";
+        }
+
+        // If all violations have orders but not all are paid (mix of CLEARED and NO OFFENSE)
+        return "COMPLIANT";
     };
 
     const getOperatorOffenseLevel = (violationIndex: number) => {
@@ -541,6 +577,53 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
             });
         }
     }, [recordViolations]);
+
+    // Effect to fetch order of payments for violations
+    useEffect(() => {
+        const fetchOrdersForViolations = async () => {
+            if (recordViolations && recordViolations.length > 0) {
+                try {
+                    // Fetch all orders and filter those that contain violations from this record
+                    const allOrders = await searchOrdersOfPayment({});
+
+                    // Create a map of violation ID to order of payment
+                    const violationToOrderMap: { [violationId: string]: OrderOfPayment } = {};
+
+                    allOrders.forEach(order => {
+                        if (order.selected_violations && order.selected_violations.length > 0) {
+                            order.selected_violations.forEach(violationId => {
+                                if (recordViolations.some(v => v.id === violationId)) {
+                                    violationToOrderMap[violationId] = order;
+                                }
+                            });
+                        }
+                    });
+
+                    setViolationOrderMap(violationToOrderMap);
+                    setOrderOfPayments(allOrders);
+                } catch (error) {
+                    console.error("Error fetching order of payments:", error);
+                }
+            }
+        };
+
+        fetchOrdersForViolations();
+    }, [recordViolations]);
+
+    // Function to get violation status
+    const getViolationStatus = (violation: Violation): "APPREHENDED" | "CLEARED" | "NO OFFENSE" => {
+        const order = violationOrderMap[violation.id];
+
+        if (!order) {
+            return "APPREHENDED"; // Has violations but no order of payment yet
+        }
+
+        if (order.status === "paid") {
+            return "NO OFFENSE"; // Order has been paid and clearance can be printed
+        }
+
+        return "CLEARED"; // Order exists but not yet paid
+    };
 
     return (
         <Card className="h-full flex flex-col">
@@ -974,57 +1057,93 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                                 <TableHead>Place of Apprehension</TableHead>
                                                 <TableHead>Driver Name</TableHead>
                                                 <TableHead>Driver Offense</TableHead>
+                                                <TableHead>Order of Payment</TableHead>
                                                 <TableHead>Paid Driver</TableHead>
                                                 <TableHead>Paid Operator</TableHead>
+                                                <TableHead>Status</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {recordViolations.map((violation, index) => (
-                                                <TableRow
-                                                    key={violation.id}
-                                                    className="cursor-pointer hover:bg-muted/50"
-                                                    onClick={() => {
-                                                        setSelectedViolation(violation);
-                                                        setShowViolationModal(true);
-                                                    }}
-                                                >
-                                                    <TableCell className="font-medium">
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {getOperatorOffenseLevel(index)}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>{new Date(violation.date_of_apprehension).toLocaleDateString()}</TableCell>
-                                                    <TableCell className="max-w-32 truncate" title={violation.place_of_apprehension}>
-                                                        {violation.place_of_apprehension}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm">
-                                                        {(() => {
-                                                            if (violation.driver_id && driverDetails[violation.driver_id]) {
-                                                                const driver = driverDetails[violation.driver_id];
-                                                                return `${driver.first_name} ${driver.middle_name || ''} ${driver.last_name}`.trim();
-                                                            } else if (violation.driver?.first_name) {
-                                                                return `${violation.driver.first_name} ${violation.driver.last_name}`;
-                                                            }
-                                                            return "—";
-                                                        })()}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {getDriverOffenseLevel(violation)}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={violation.paid_driver ? "default" : "destructive"} className="text-xs">
-                                                            {violation.paid_driver ? "PAID" : "UNPAID"}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={violation.paid_operator ? "default" : "destructive"} className="text-xs">
-                                                            {violation.paid_operator ? "PAID" : "UNPAID"}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
+                                            {recordViolations.map((violation, index) => {
+                                                const connectedOrder = violationOrderMap[violation.id];
+                                                const violationStatus = getViolationStatus(violation);
+
+                                                return (
+                                                    <TableRow
+                                                        key={violation.id}
+                                                        className="cursor-pointer hover:bg-muted/50"
+                                                        onClick={() => {
+                                                            setSelectedViolation(violation);
+                                                            setShowViolationModal(true);
+                                                        }}
+                                                    >
+                                                        <TableCell className="font-medium">
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {getOperatorOffenseLevel(index)}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>{new Date(violation.date_of_apprehension).toLocaleDateString()}</TableCell>
+                                                        <TableCell className="max-w-32 truncate" title={violation.place_of_apprehension}>
+                                                            {violation.place_of_apprehension}
+                                                        </TableCell>
+                                                        <TableCell className="text-sm">
+                                                            {(() => {
+                                                                if (violation.driver_id && driverDetails[violation.driver_id]) {
+                                                                    const driver = driverDetails[violation.driver_id];
+                                                                    return `${driver.first_name} ${driver.middle_name || ''} ${driver.last_name}`.trim();
+                                                                } else if (violation.driver?.first_name) {
+                                                                    return `${violation.driver.first_name} ${violation.driver.last_name}`;
+                                                                }
+                                                                return "—";
+                                                            })()}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {getDriverOffenseLevel(violation)}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm">
+                                                            {connectedOrder ? (
+                                                                <div className="space-y-1">
+                                                                    <div className="font-mono text-xs text-blue-600">
+                                                                        {connectedOrder.control_number}
+                                                                    </div>
+                                                                    <Badge
+                                                                        variant={connectedOrder.status === "paid" ? "default" : "secondary"}
+                                                                        className="text-xs"
+                                                                    >
+                                                                        {connectedOrder.status.toUpperCase()}
+                                                                    </Badge>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs">No Order</span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={violation.paid_driver ? "default" : "destructive"} className="text-xs">
+                                                                {violation.paid_driver ? "PAID" : "UNPAID"}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={violation.paid_operator ? "default" : "destructive"} className="text-xs">
+                                                                {violation.paid_operator ? "PAID" : "UNPAID"}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant={
+                                                                    violationStatus === "NO OFFENSE" ? "default" :
+                                                                        violationStatus === "CLEARED" ? "secondary" :
+                                                                            "destructive"
+                                                                }
+                                                                className="text-xs"
+                                                            >
+                                                                {violationStatus}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
                                         </TableBody>
                                     </Table>
                                 </div>

@@ -83,7 +83,10 @@ const FeeControl: React.FC = () => {
             <h1 className="text-2xl font-semibold text-gray-900">
               Fee Control
             </h1>
-            <FeeFormModal onAddFee={handleAddFee} />
+            <FeeFormModal
+              onAddFee={handleAddFee}
+              existingFees={fees.map(fee => ({ category: fee.category, level: fee.level }))}
+            />
           </div>
 
           {/* Body Section */}

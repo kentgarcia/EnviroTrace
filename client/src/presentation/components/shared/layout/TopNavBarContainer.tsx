@@ -61,16 +61,6 @@ function getMenuItems(
         ],
       },
       {
-        label: "Records and File",
-        icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `/air-quality/records-and-file`,
-      },
-      {
-        label: "Garage Testing",
-        icon: <Car className="w-4 h-4 mr-1" />,
-        path: `/air-quality/garage-testing`,
-      },
-      {
         label: "Order of Payment",
         icon: <FileStack className="w-4 h-4 mr-1" />,
         path: `/air-quality/order-of-payment`,
@@ -79,11 +69,6 @@ function getMenuItems(
         label: "Fee Control",
         icon: <Wallet className="w-4 h-4 mr-1" />,
         path: `/air-quality/fee-control`,
-      },
-      {
-        label: "Reports",
-        icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `/air-quality/reports`,
       },
     ];
   } else if (dashboardType === "admin") {
