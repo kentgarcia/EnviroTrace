@@ -31,11 +31,11 @@ export const createFeeColumns = (
     isDeleting?: number
 ): ColumnDef<Fee>[] => [
         {
-            accessorKey: 'fee_id',
-            header: 'Fee ID',
+            accessorKey: 'id',
+            header: 'ID',
             cell: ({ row }) => (
                 <div className="font-medium">
-                    {row.getValue('fee_id')}
+                    {row.getValue('id')}
                 </div>
             ),
         },
@@ -57,23 +57,23 @@ export const createFeeColumns = (
             },
         },
         {
-            accessorKey: 'rate',
-            header: 'Rate',
+            accessorKey: 'amount',
+            header: 'Amount',
             cell: ({ row }) => {
-                const rate = parseFloat(row.getValue('rate'));
+                const amount = parseFloat(row.getValue('amount'));
                 const formatted = new Intl.NumberFormat('en-PH', {
                     style: 'currency',
                     currency: 'PHP',
-                }).format(rate);
+                }).format(amount);
 
                 return <div className="font-medium">{formatted}</div>;
             },
         },
         {
-            accessorKey: 'date_effective',
+            accessorKey: 'effective_date',
             header: 'Date Effective',
             cell: ({ row }) => {
-                const date = new Date(row.getValue('date_effective'));
+                const date = new Date(row.getValue('effective_date'));
                 return (
                     <div>
                         {format(date, 'MMM d, yyyy')}

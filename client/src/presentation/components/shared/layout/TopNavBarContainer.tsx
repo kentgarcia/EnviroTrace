@@ -221,11 +221,6 @@ export default function TopNavBarContainer({
       label: "Government Emission",
       path: "/government-emission/overview",
     },
-    {
-      role: "smoke_belching",
-      label: "Smoke Belching",
-      path: "/smoke-belching/overview",
-    },
   ];
 
   // Determine dashboards based on persisted auth store roles

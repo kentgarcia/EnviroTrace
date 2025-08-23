@@ -5,18 +5,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/presentation/components/shared/ui/card";
-import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-// Update Fee type to ensure fee_id is string
+// Update Fee type to ensure id is number
 import { Fee } from "../logic/useFeeData";
 import { useFeeQuery, useCreateFee, useUpdateFee, useDeleteFee } from "../logic/useFeeQuery";
-import { createFeeColumns } from "../logic/feeColumns";
 import { FeeFormModal } from "./FeeFormModal";
 import FeeDetailsPanel from "./FeeDetailsPanel";
+import FeeStructureDisplay from "./FeeStructureDisplay";
+import PenaltyFeeBulkEditModal from "./PenaltyFeeBulkEditModal";
 
 const FeeControl: React.FC = () => {
   const [selectedFee, setSelectedFee] = useState<Fee | null>(null);
-  const [deletingFeeId, setDeletingFeeId] = useState<string | undefined>();
+  const [bulkEditData, setBulkEditData] = useState<{
+    isOpen: boolean;
+    category: string;
+    fees: Fee[];
+  }>({
+    isOpen: false,
+    category: '',
+    fees: [],
+  });
 
   // TanStack Query hooks for data and mutations
   const { data: fees = [], isLoading: loading, error } = useFeeQuery();
@@ -24,52 +32,89 @@ const FeeControl: React.FC = () => {
   const updateFeeMutation = useUpdateFee();
   const deleteFeeMutation = useDeleteFee();
 
-  // Handle adding new fee
-  // Helper to generate a short unique fee_id (e.g., FEE-xxxxxx)
-  function generateShortFeeId() {
-    const random = Math.floor(100000 + Math.random() * 900000); // 6 digits
-    return `FEE-${random}`;
-  }
+  // Handle adding new fee with category and level
+  const handleAddFee = async (category: string, level: number) => {
+    // For now, create a fee with default amount that can be edited later
+    const defaultFee = {
+      category: category.toLowerCase(),
+      level: level,
+      amount: level === 0 ? (category === 'apprehension' ? 150 : category === 'voluntary' ? 100 : category === 'impound' ? 500 : 200) :
+        (category === 'driver' ? (level === 1 ? 500 : level === 2 ? 1000 : 2000) : (level === 1 ? 1000 : level === 2 ? 2000 : 5000)),
+      effective_date: new Date().toISOString().split('T')[0]
+    };
 
-  const handleAddFee = async (feeData: Omit<Fee, "fee_id" | "created_at" | "updated_at">) => {
-    const feeWithId = { ...feeData, fee_id: generateShortFeeId() };
-    createFeeMutation.mutate(feeWithId);
+    await createFeeMutation.mutateAsync(defaultFee);
+  };
+
+  const handleCreateFee = async (feeData: Omit<Fee, "id" | "created_at" | "updated_at">) => {
+    createFeeMutation.mutate(feeData);
   };
 
   // Handle fee update
-  const handleUpdateFee = async (feeId: string, updateData: Partial<Omit<Fee, "fee_id" | "created_at" | "updated_at">>) => {
-    updateFeeMutation.mutate({ fee_id: feeId, data: updateData });
+  const handleUpdateFee = async (feeId: number, updateData: Partial<Omit<Fee, "id" | "created_at" | "updated_at">>) => {
+    updateFeeMutation.mutate({ fee_id: String(feeId), data: updateData });
     // Optionally update selectedFee locally if needed
-    if (selectedFee && String(selectedFee.fee_id) === feeId) {
+    if (selectedFee && selectedFee.id === feeId) {
       setSelectedFee({ ...selectedFee, ...updateData } as Fee);
     }
   };
 
   // Handle fee deletion
-  const handleDeleteFee = async (feeId: string) => {
-    setDeletingFeeId(feeId);
-    deleteFeeMutation.mutate(feeId, {
+  const handleDeleteFee = async (feeId: number) => {
+    deleteFeeMutation.mutate(String(feeId), {
       onSuccess: () => {
-        if (selectedFee && selectedFee.fee_id === feeId) {
+        if (selectedFee && selectedFee.id === feeId) {
           setSelectedFee(null);
         }
-        setDeletingFeeId(undefined);
       },
-      onError: () => {
-        setDeletingFeeId(undefined);
-      }
     });
   };
 
-  // Column configuration for data table
-  const columns = createFeeColumns(
-    handleDeleteFee as (feeId: any) => void,
-    deletingFeeId !== undefined ? Number(deletingFeeId) : undefined
-  );
+  // Handle editing existing fee
+  const handleEditFee = (fee: Fee) => {
+    setSelectedFee(fee);
+  };
 
-  // Handle row click in data table
-  const handleRowClick = (row: { original: Fee }) => {
-    setSelectedFee(row.original);
+  // Handle bulk editing of penalty fees
+  const handleEditPenaltyFees = (category: string, categoryFees: Fee[]) => {
+    setBulkEditData({
+      isOpen: true,
+      category,
+      fees: categoryFees,
+    });
+  };
+
+  // Handle bulk save of penalty fees
+  const handleBulkSavePenaltyFees = async (
+    category: string,
+    feeUpdates: { id: number; level: number; amount: number; effective_date: string }[]
+  ) => {
+    try {
+      // Update existing fees and create new ones
+      for (const update of feeUpdates) {
+        if (update.id && update.id > 0) {
+          // Update existing fee
+          await updateFeeMutation.mutateAsync({
+            fee_id: String(update.id),
+            data: {
+              amount: update.amount,
+              effective_date: update.effective_date,
+            },
+          });
+        } else {
+          // Create new fee
+          await createFeeMutation.mutateAsync({
+            category: category.toLowerCase(),
+            level: update.level,
+            amount: update.amount,
+            effective_date: update.effective_date,
+          });
+        }
+      }
+      setBulkEditData({ isOpen: false, category: '', fees: [] });
+    } catch (error) {
+      console.error('Error updating penalty fees:', error);
+    }
   };
 
   return (
@@ -81,12 +126,8 @@ const FeeControl: React.FC = () => {
           {/* Header Section */}
           <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
             <h1 className="text-2xl font-semibold text-gray-900">
-              Fee Control
+              Air Quality Fee Management
             </h1>
-            <FeeFormModal
-              onAddFee={handleAddFee}
-              existingFees={fees.map(fee => ({ category: fee.category, level: fee.level }))}
-            />
           </div>
 
           {/* Body Section */}
@@ -94,24 +135,18 @@ const FeeControl: React.FC = () => {
             <div className="space-y-6">
               {/* Main Content Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Fees Data Table */}
+                {/* Fee Structure Display */}
                 <Card className="lg:col-span-2">
                   <CardHeader>
-                    <CardTitle>Fee Management</CardTitle>
+                    <CardTitle>Fee Structure</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <DataTable
-                      columns={columns}
-                      data={fees}
+                    <FeeStructureDisplay
+                      fees={fees}
+                      onEditFee={handleEditFee}
+                      onEditPenaltyFees={handleEditPenaltyFees}
+                      onAddFee={handleAddFee}
                       isLoading={loading}
-                      loadingMessage="Loading fees..."
-                      emptyMessage="No fees found."
-                      onRowClick={handleRowClick}
-                      showPagination={true}
-                      showDensityToggle={true}
-                      showColumnVisibility={false}
-                      defaultPageSize={10}
-                      pageSizeOptions={[5, 10, 20, 50]}
                     />
                     {error && (
                       <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -128,7 +163,6 @@ const FeeControl: React.FC = () => {
                   <FeeDetailsPanel
                     selectedFee={selectedFee}
                     onUpdateFee={handleUpdateFee as (feeId: any, updateData: any) => void}
-                    onDeleteFee={handleDeleteFee as (feeId: any) => void}
                     loading={loading}
                     error={
                       error
@@ -144,6 +178,16 @@ const FeeControl: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Penalty Fee Bulk Edit Modal */}
+      <PenaltyFeeBulkEditModal
+        isOpen={bulkEditData.isOpen}
+        onClose={() => setBulkEditData({ isOpen: false, category: '', fees: [] })}
+        category={bulkEditData.category}
+        fees={bulkEditData.fees}
+        onSave={handleBulkSavePenaltyFees}
+        isLoading={createFeeMutation.isPending || updateFeeMutation.isPending}
+      />
     </>
   );
 };

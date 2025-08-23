@@ -5,16 +5,16 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/presentation/components/shared/ui/table";
 import { Search, X, RefreshCw, Plus, UserPlus } from "lucide-react";
-import { Driver } from "@/core/api/belching-api";
+import { AirQualityDriver } from "@/core/api/air-quality-api";
 import { DriverSearchParams } from "../logic/useDriverQueryData";
 import AddDriverDialog from "./AddDriverDialog";
 
 interface DriverSearchComponentProps {
-    searchResults: Driver[];
-    selectedDriver: Driver | null;
+    searchResults: AirQualityDriver[];
+    selectedDriver: AirQualityDriver | null;
     isLoading: boolean;
     onSearch: (params: DriverSearchParams) => void;
-    onSelectDriver: (driver: Driver) => void;
+    onSelectDriver: (driver: AirQualityDriver) => void;
     onRefreshData?: () => void;
 }
 

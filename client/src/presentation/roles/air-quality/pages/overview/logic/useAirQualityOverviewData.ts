@@ -1,92 +1,110 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  fetchBelchingStatistics,
-  fetchBelchingRecords,
-  fetchBelchingViolations,
-  fetchBelchingDashboard,
-  BelchingStatistics,
-  Record,
-  Violation,
-  BelchingDashboardData,
-} from "@/core/api/belching-api";
+  fetchAirQualityDashboard,
+  AirQualityDashboard,
+} from "@/core/api/air-quality-api";
+
+// Interfaces for transformed chart data
+interface ChartDataPoint {
+  id: string;
+  label: string;
+  value: number;
+}
+
+interface MonthlyDataPoint {
+  month: string;
+  amount: number;
+}
+
+interface FeeData {
+  totalFees: number;
+  monthlyFees: MonthlyDataPoint[];
+  pendingPayments: number;
+  recentViolations: number;
+  totalViolations: number;
+  totalRecords: number;
+  totalDrivers: number;
+}
 
 export const useAirQualityOverviewData = () => {
-  // Fetch belching statistics
+  // Fetch dashboard statistics
   const {
-    data: belchingStats,
-    isLoading: belchingStatsLoading,
-    error: belchingStatsError,
-  } = useQuery({
-    queryKey: ["belching-statistics"],
-    queryFn: fetchBelchingStatistics,
+    data: dashboardData,
+    isLoading: isDashboardLoading,
+    error: dashboardError,
+  } = useQuery<AirQualityDashboard>({
+    queryKey: ["air-quality-dashboard"],
+    queryFn: fetchAirQualityDashboard,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Fetch recent records
-  const {
-    data: recentRecords,
-    isLoading: recordsLoading,
-    error: recordsError,
-  } = useQuery({
-    queryKey: ["recent-belching-records"],
-    queryFn: () => fetchBelchingRecords({ limit: 10 }),
-    staleTime: 5 * 60 * 1000,
-  });
+  const isLoading = isDashboardLoading;
+  const hasError = dashboardError;
 
-  // Fetch recent violations
-  const {
-    data: recentViolations,
-    isLoading: violationsLoading,
-    error: violationsError,
-  } = useQuery({
-    queryKey: ["recent-violations"],
-    queryFn: () => fetchBelchingViolations({ limit: 10 }),
-    staleTime: 5 * 60 * 1000,
-  });
+  // Transform dashboard data for charts
+  const violationStatusData: ChartDataPoint[] =
+    dashboardData?.payment_status_distribution?.map((status) => ({
+      id: status.status.toLowerCase().replace(/\s+/g, "_"),
+      label: status.status,
+      value: status.count,
+    })) || [];
 
-  // Fetch dashboard data
-  const {
-    data: dashboardData,
-    isLoading: dashboardLoading,
-    error: dashboardError,
-  } = useQuery({
-    queryKey: ["air-quality-dashboard"],
-    queryFn: fetchBelchingDashboard,
-    staleTime: 5 * 60 * 1000,
-  });
+  const vehicleTypeData: ChartDataPoint[] =
+    dashboardData?.vehicle_types?.map((vt) => ({
+      id: vt.vehicle_type.toLowerCase().replace(/\s+/g, "_"),
+      label: vt.vehicle_type,
+      value: vt.count,
+    })) || [];
 
-  const isLoading =
-    belchingStatsLoading ||
-    recordsLoading ||
-    violationsLoading ||
-    dashboardLoading;
+  const locationData: ChartDataPoint[] =
+    dashboardData?.top_violation_locations?.map((loc) => ({
+      id: loc.location.toLowerCase().replace(/\s+/g, "_"),
+      label: loc.location,
+      value: loc.count,
+    })) || [];
 
-  const hasError =
-    belchingStatsError || recordsError || violationsError || dashboardError;
+  const monthlyViolationsData: MonthlyDataPoint[] =
+    dashboardData?.monthly_violations?.map((mv) => ({
+      month: mv.month.slice(0, 3), // Short month name
+      amount: mv.violation_count,
+    })) || [];
 
-  // Transform data for charts
-  const violationCharts = transformViolationData(recentViolations || []);
-  const statisticsCharts = transformStatisticsData(belchingStats);
-  const feeData = calculateFeeData(belchingStats);
+  // Create fee data from dashboard statistics
+  const feeData: FeeData = {
+    totalFees: 0, // Can be calculated from violations and fee amounts if needed
+    monthlyFees: monthlyViolationsData,
+    pendingPayments: dashboardData
+      ? dashboardData.total_violations - dashboardData.paid_violations_driver
+      : 0,
+    recentViolations: dashboardData?.recent_violations_count || 0,
+    totalViolations: dashboardData?.total_violations || 0,
+    totalRecords: dashboardData?.total_records || 0,
+    totalDrivers: dashboardData?.total_drivers || 0,
+  };
 
   return {
     // Raw data
-    belchingStatistics: belchingStats,
-    recentRecords,
-    recentViolations,
+    belchingStatistics: dashboardData
+      ? {
+          total_records: dashboardData.total_records,
+          total_violations: dashboardData.total_violations,
+        }
+      : undefined,
+    recentRecords: [],
+    recentViolations: [],
     dashboardData,
 
     // Loading states
-    isBelchingLoading: belchingStatsLoading,
-    isRecordsLoading: recordsLoading,
-    isViolationsLoading: violationsLoading,
-    isDashboardLoading: dashboardLoading,
+    isBelchingLoading: isDashboardLoading,
+    isRecordsLoading: false,
+    isViolationsLoading: false,
+    isDashboardLoading,
 
     // Processed data for charts
-    violationStatusData: violationCharts.statusPie,
-    vehicleTypeData: violationCharts.vehicleTypePie,
-    locationData: violationCharts.locationBar,
-    monthlyViolationsData: statisticsCharts.monthlyBar,
+    violationStatusData,
+    vehicleTypeData,
+    locationData,
+    monthlyViolationsData,
 
     // Fee data
     feeData,
@@ -94,102 +112,5 @@ export const useAirQualityOverviewData = () => {
     // Legacy properties for backward compatibility
     isLoading,
     hasError,
-  };
-};
-
-// Transform violation data for charts
-export const transformViolationData = (violations: Violation[]) => {
-  if (!violations || violations.length === 0)
-    return { statusPie: [], vehicleTypePie: [], locationBar: [] };
-
-  // Payment status distribution
-  const statusCounts = violations.reduce((acc, violation) => {
-    const status =
-      violation.paid_driver && violation.paid_operator
-        ? "Fully Paid"
-        : violation.paid_driver || violation.paid_operator
-        ? "Partially Paid"
-        : "Unpaid";
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const statusPie = Object.entries(statusCounts).map(([status, count]) => ({
-    id: status.toLowerCase().replace(/\s+/g, "_"),
-    label: status,
-    value: count,
-  }));
-
-  // Location distribution
-  const locationCounts = violations.reduce((acc, violation) => {
-    const location = violation.place_of_apprehension;
-    acc[location] = (acc[location] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const locationBar = Object.entries(locationCounts).map(
-    ([location, count]) => ({
-      id: location.toLowerCase().replace(/\s+/g, "_"),
-      label: location,
-      value: count,
-    })
-  );
-
-  return { statusPie, vehicleTypePie: [], locationBar };
-};
-
-// Transform statistics data for charts
-export const transformStatisticsData = (
-  stats: BelchingStatistics | undefined
-) => {
-  if (!stats)
-    return { monthlyBar: [], vehicleTypeBreakdown: [], statusBreakdown: [] };
-
-  const monthlyBar =
-    stats.monthly_violations?.map((item) => ({
-      id: item.month.toLowerCase(),
-      label: item.month,
-      value: item.count,
-    })) || [];
-
-  const vehicleTypeBreakdown =
-    stats.vehicle_type_breakdown?.map((item) => ({
-      id: item.vehicle_type.toLowerCase().replace(/\s+/g, "_"),
-      label: item.vehicle_type,
-      value: item.count,
-    })) || [];
-
-  const statusBreakdown =
-    stats.violation_status_breakdown?.map((item) => ({
-      id: item.status.toLowerCase().replace(/\s+/g, "_"),
-      label: item.status,
-      value: item.count,
-    })) || [];
-
-  return { monthlyBar, vehicleTypeBreakdown, statusBreakdown };
-};
-
-// Calculate fee amounts from statistics
-export const calculateFeeData = (stats: BelchingStatistics | undefined) => {
-  if (!stats) return { totalFees: 0, monthlyFees: [], pendingPayments: 0 };
-
-  const totalFees = stats.total_fees_collected || 0;
-  const pendingPayments = stats.pending_payments || 0;
-
-  // Calculate monthly fees based on violations (mock calculation)
-  const monthlyFees =
-    stats.monthly_violations?.map((item) => ({
-      month: item.month,
-      amount: Math.floor(item.count * 500), // Assuming average fee of ₱500 per violation
-    })) || [];
-
-  return {
-    totalFees,
-    monthlyFees,
-    pendingPayments,
-    recentViolations: stats.recent_violations || 0,
-    totalViolations: stats.total_violations || 0,
-    totalRecords: stats.total_records || 0,
-    totalDrivers: stats.total_drivers || 0,
   };
 };

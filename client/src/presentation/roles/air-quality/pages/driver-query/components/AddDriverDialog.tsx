@@ -4,7 +4,7 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { User, Plus } from "lucide-react";
-import { createDriver } from "@/core/api/belching-api";
+import { createAirQualityDriver } from "@/core/api/air-quality-api";
 import { toast } from "sonner";
 
 interface AddDriverDialogProps {
@@ -46,7 +46,7 @@ const AddDriverDialog: React.FC<AddDriverDialogProps> = ({
         setIsLoading(true);
 
         try {
-            await createDriver({
+            await createAirQualityDriver({
                 first_name: formData.first_name.trim(),
                 middle_name: formData.middle_name.trim() || undefined,
                 last_name: formData.last_name.trim(),

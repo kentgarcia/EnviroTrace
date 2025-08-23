@@ -2,7 +2,7 @@
 from fastapi import APIRouter
 from .monitoring_requests import router as monitoring_requests_router
 from .sapling_requests import router as sapling_requests_router
-from . import auth_router, profile_router, emission_router, fee_router, test_schedules, tree_management_router, planting_router, belching_router
+from . import auth_router, profile_router, emission_router, fee_router, test_schedules, tree_management_router, planting_router
 from .dashboard_router import router as dashboard_router
 from .air_quality_router import router as air_quality_router
 
@@ -10,7 +10,6 @@ api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router.router, prefix="/auth", tags=["Authentication"])
 api_v1_router.include_router(profile_router.router, prefix="/profile", tags=["Profile"])
 # api_v1_router.include_router(users_router.router, prefix="/users", tags=["Users"])
-api_v1_router.include_router(belching_router.router, prefix="/belching", tags=["Belching Data"])
 api_v1_router.include_router(air_quality_router, prefix="/air-quality", tags=["Air Quality"])
 api_v1_router.include_router(emission_router.router, prefix="/emission", tags=["Emission Data"])
 api_v1_router.include_router(fee_router.router, prefix="/fees", tags=["Fee Management"])

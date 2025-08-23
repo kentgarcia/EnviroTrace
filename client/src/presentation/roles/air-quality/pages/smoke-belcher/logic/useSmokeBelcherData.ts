@@ -4,6 +4,8 @@ import {
   searchAirQualityRecords,
   fetchAirQualityViolationsByRecordId,
   createAirQualityViolation,
+  updateAirQualityViolation,
+  deleteAirQualityViolation,
   createAirQualityRecord,
   updateAirQualityViolationPaymentStatus,
   AirQualityRecord,
@@ -20,7 +22,7 @@ export interface SmokeBelcherSearchParams {
 }
 
 export interface ViolationFormData {
-  record_id: number;
+  record_id?: number; // Optional for edit mode
   ordinance_infraction_report_no?: string;
   smoke_density_test_result_no?: string;
   place_of_apprehension: string;
@@ -48,6 +50,8 @@ export const useSmokeBelcherData = () => {
   const [selectedRecord, setSelectedRecord] = useState<AirQualityRecord | null>(
     null
   );
+  const [selectedViolation, setSelectedViolation] =
+    useState<AirQualityViolation | null>(null);
   const [isViolationModalOpen, setIsViolationModalOpen] = useState(false);
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"violations" | "history">(
@@ -66,7 +70,7 @@ export const useSmokeBelcherData = () => {
     queryKey: ["air-quality-smoke-belcher-search", searchParams],
     queryFn: () => searchAirQualityRecords(searchParams),
     enabled: true, // Always enable the query - API will handle empty params
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // Reduced to 30 seconds for more immediate updates
   });
 
   // Get violations for selected record
@@ -78,7 +82,7 @@ export const useSmokeBelcherData = () => {
     queryKey: ["air-quality-record-violations", selectedRecord?.id],
     queryFn: () => fetchAirQualityViolationsByRecordId(selectedRecord!.id),
     enabled: !!selectedRecord?.id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // Reduced to 30 seconds for more immediate updates
   });
 
   // Search function
@@ -102,10 +106,80 @@ export const useSmokeBelcherData = () => {
   const createViolationMutation = useMutation({
     mutationFn: createAirQualityViolation,
     onSuccess: () => {
+      // Invalidate both the general violations query and the specific record's violations
       queryClient.invalidateQueries({
         queryKey: ["air-quality-record-violations"],
       });
+      if (selectedRecord?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+        // Also refetch for immediate update
+        queryClient.refetchQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+      }
       setIsViolationModalOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error creating violation:", error);
+      // Optionally show error toast
+    },
+  });
+
+  // Update violation mutation
+  const updateViolationMutation = useMutation({
+    mutationFn: ({
+      violationId,
+      violationData,
+    }: {
+      violationId: number;
+      violationData: Partial<ViolationFormData>;
+    }) => updateAirQualityViolation(violationId, violationData),
+    onSuccess: () => {
+      // Invalidate both the general violations query and the specific record's violations
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-record-violations"],
+      });
+      if (selectedRecord?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+        // Also refetch for immediate update
+        queryClient.refetchQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+      }
+      setIsViolationModalOpen(false);
+      setSelectedViolation(null);
+    },
+    onError: (error) => {
+      console.error("Error updating violation:", error);
+    },
+  });
+
+  // Delete violation mutation
+  const deleteViolationMutation = useMutation({
+    mutationFn: (violationId: number) => deleteAirQualityViolation(violationId),
+    onSuccess: () => {
+      // Invalidate both the general violations query and the specific record's violations
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-record-violations"],
+      });
+      if (selectedRecord?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+        // Also refetch for immediate update
+        queryClient.refetchQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+      }
+      setIsViolationModalOpen(false);
+      setSelectedViolation(null);
+    },
+    onError: (error) => {
+      console.error("Error deleting violation:", error);
     },
   });
 
@@ -113,8 +187,13 @@ export const useSmokeBelcherData = () => {
   const createRecordMutation = useMutation({
     mutationFn: createAirQualityRecord,
     onSuccess: () => {
+      // Invalidate all search queries regardless of search parameters
       queryClient.invalidateQueries({
         queryKey: ["air-quality-smoke-belcher-search"],
+      });
+      // Also refetch the current search to ensure immediate update
+      queryClient.refetchQueries({
+        queryKey: ["air-quality-smoke-belcher-search", searchParams],
       });
       setIsRecordModalOpen(false);
     },
@@ -137,9 +216,19 @@ export const useSmokeBelcherData = () => {
         paidOperator
       ),
     onSuccess: () => {
+      // Invalidate both the general violations query and the specific record's violations
       queryClient.invalidateQueries({
         queryKey: ["air-quality-record-violations"],
       });
+      if (selectedRecord?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+        // Also refetch for immediate update
+        queryClient.refetchQueries({
+          queryKey: ["air-quality-record-violations", selectedRecord.id],
+        });
+      }
     },
   });
 
@@ -180,6 +269,7 @@ export const useSmokeBelcherData = () => {
     // Data
     searchResults,
     selectedRecord,
+    selectedViolation,
     recordViolations,
     violationSummary: getViolationSummary(),
 
@@ -187,6 +277,8 @@ export const useSmokeBelcherData = () => {
     isSearchLoading,
     isViolationsLoading,
     isCreatingViolation: createViolationMutation.isPending,
+    isUpdatingViolation: updateViolationMutation.isPending,
+    isDeletingViolation: deleteViolationMutation.isPending,
     isCreatingRecord: createRecordMutation.isPending,
     isUpdatingPayment: updatePaymentMutation.isPending,
 
@@ -199,6 +291,8 @@ export const useSmokeBelcherData = () => {
     handleSelectRecord,
     handleClearSelection,
     createViolation: createViolationMutation.mutate,
+    updateViolation: updateViolationMutation.mutate,
+    deleteViolation: deleteViolationMutation.mutate,
     createRecord: createRecordMutation.mutate,
     updatePaymentStatus: updatePaymentMutation.mutate,
     refetchSearch,
@@ -210,5 +304,6 @@ export const useSmokeBelcherData = () => {
     setIsViolationModalOpen,
     isRecordModalOpen,
     setIsRecordModalOpen,
+    setSelectedViolation,
   };
 };

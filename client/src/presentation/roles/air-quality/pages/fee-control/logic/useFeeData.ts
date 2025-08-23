@@ -2,48 +2,36 @@ import { fetchFees, createFee, updateFee, deleteFee } from "@/core/api/fee-api";
 import { useState, useCallback, useEffect } from "react";
 
 export interface Fee {
-  fee_id: string;
+  id: number;
   category: string;
-  rate: number; // This will be in cents (integer) from backend, displayed as decimal
-  date_effective: string;
+  amount: number; // This will be in decimal format from backend
+  effective_date: string;
   level: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface FeeCreate {
   category: string;
-  rate: number; // This will be converted to cents before sending to backend
-  date_effective: string;
+  amount: number;
+  effective_date: string;
   level: number;
 }
 
 export interface FeeUpdate {
   category?: string;
-  rate?: number;
-  date_effective?: string;
+  amount?: number;
+  effective_date?: string;
   level?: number;
 }
 
-// Helper functions to convert between frontend decimal and backend integer
-const convertRateToBackend = (frontendRate: number): number => {
-  return Math.round(frontendRate * 100); // Convert to cents
-};
-
-const convertRateFromBackend = (backendRate: number): number => {
-  return backendRate / 100; // Convert from cents to decimal
-};
-
+// Remove the rate conversion functions since we're using amount directly
 const transformFeeForBackend = (fee: FeeCreate | FeeUpdate): any => {
-  return {
-    ...fee,
-    rate: fee.rate !== undefined ? convertRateToBackend(fee.rate) : undefined,
-  };
+  return fee;
 };
 
 const transformFeeFromBackend = (fee: any): Fee => {
-  return {
-    ...fee,
-    rate: convertRateFromBackend(fee.rate),
-  };
+  return fee;
 };
 
 export const useFeeData = () => {
@@ -101,7 +89,7 @@ export const useFeeData = () => {
         // Transform response from backend
         const transformedFee = transformFeeFromBackend(updatedFee);
         setFees((prev) =>
-          prev.map((fee) => (fee.fee_id === feeId ? transformedFee : fee))
+          prev.map((fee) => (fee.id === parseInt(feeId) ? transformedFee : fee))
         );
         return transformedFee;
       } catch (err: any) {
@@ -120,7 +108,7 @@ export const useFeeData = () => {
     setError(null);
     try {
       await deleteFee(feeId);
-      setFees((prev) => prev.filter((fee) => fee.fee_id !== feeId));
+      setFees((prev) => prev.filter((fee) => fee.id !== parseInt(feeId)));
     } catch (err: any) {
       setError("Failed to delete fee");
       console.error("Error deleting fee:", err);

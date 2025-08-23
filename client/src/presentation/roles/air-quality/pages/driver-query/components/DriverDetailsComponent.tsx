@@ -6,12 +6,12 @@ import { Label } from "@/presentation/components/shared/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/presentation/components/shared/ui/dialog";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Edit, Trash2, Save, X, User } from "lucide-react";
-import { Driver } from "@/core/api/belching-api";
+import { AirQualityDriver } from "@/core/api/air-quality-api";
 import { DriverFormData } from "../logic/useDriverQueryData";
 import { toast } from "sonner";
 
 interface DriverDetailsComponentProps {
-    selectedDriver: Driver | null;
+    selectedDriver: AirQualityDriver | null;
     onCreateDriver: (driverData: DriverFormData) => void;
     onUpdateDriver: (driverId: string, driverData: Partial<DriverFormData>) => void;
     onDeleteDriver: (driverId: string) => void;

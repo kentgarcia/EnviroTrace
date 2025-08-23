@@ -2,6 +2,7 @@ import React from "react";
 import { useAirQualityOverviewData } from "./logic/useAirQualityOverviewData";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import AirQualityKeyStatsCards from "./components/AirQualityKeyStatsCards";
+import AirQualityDetailedStats from "./components/AirQualityDetailedStats";
 import AirQualityVisualDashboard from "./components/AirQualityVisualDashboard";
 
 export const AirQualityOverview: React.FC = () => {
@@ -49,18 +50,18 @@ export const AirQualityOverview: React.FC = () => {
                         isLoading={isBelchingLoading}
                     />
 
+                    {/* Detailed Statistics Cards */}
+                    <AirQualityDetailedStats
+                        dashboardData={dashboardData}
+                        isLoading={isDashboardLoading}
+                    />
+
                     {/* Visual Dashboard */}
                     <AirQualityVisualDashboard
-                        monthlyViolations={dashboardData?.violations_monthly?.map(m => ({
-                            month: m.label.slice(0, 3),
-                            amount: m.total
-                        })) || feeData.monthlyFees}
-                        vehicleTypeData={dashboardData?.vehicle_type_data || vehicleTypeData}
-                        paymentStatusData={dashboardData?.payment_status_data || violationStatusData}
-                        locationData={dashboardData?.location_data || locationData}
-                        recentViolations={recentViolations}
-                        recentRecords={recentRecords}
-                        recentLoading={isRecordsLoading || isViolationsLoading}
+                        monthlyViolations={monthlyViolationsData}
+                        vehicleTypeData={vehicleTypeData}
+                        paymentStatusData={violationStatusData}
+                        locationData={locationData}
                     />
                 </div>
             </div>

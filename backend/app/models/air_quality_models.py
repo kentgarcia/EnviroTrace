@@ -107,3 +107,48 @@ class AirQualityRecordHistory(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     record = relationship("AirQualityRecord", back_populates="history_entries")
+
+
+class AirQualityOrderOfPayment(Base):
+    __tablename__ = "order_of_payments"
+    __table_args__ = (
+        Index("idx_air_quality_oop_control_number", "oop_control_number"),
+        Index("idx_air_quality_oop_plate", "plate_number"),
+        Index("idx_air_quality_oop_date", "date_of_payment"),
+        {"schema": "air_quality"}
+    )
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    oop_control_number = Column(String(6), unique=True, nullable=False)  # 6-digit format: 03XXXX
+    plate_number = Column(String(32), nullable=False)
+    operator_name = Column(String(200), nullable=False)
+    driver_name = Column(String(200), nullable=True)
+    
+    # Violation IDs stored as comma-separated string
+    selected_violations = Column(String, nullable=False)
+    
+    # Testing information
+    testing_officer = Column(String(200), nullable=True)
+    test_results = Column(String, nullable=True)
+    date_of_testing = Column(Date, nullable=True)
+    
+    # Payment amounts
+    apprehension_fee = Column(Numeric(10, 2), default=0, server_default='0')
+    voluntary_fee = Column(Numeric(10, 2), default=0, server_default='0')
+    impound_fee = Column(Numeric(10, 2), default=0, server_default='0')
+    driver_amount = Column(Numeric(10, 2), default=0, server_default='0')
+    operator_fee = Column(Numeric(10, 2), default=0, server_default='0')
+    
+    # Totals
+    total_undisclosed_amount = Column(Numeric(10, 2), nullable=False)
+    grand_total_amount = Column(Numeric(10, 2), nullable=False)
+    
+    # Payment details
+    payment_or_number = Column(String(64), nullable=True)
+    date_of_payment = Column(Date, nullable=False)
+    
+    # Status
+    status = Column(String(32), default='pending', server_default="'pending'")  # 'pending', 'paid', 'cancelled'
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

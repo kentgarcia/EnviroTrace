@@ -1,12 +1,117 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  searchOrdersOfPayment,
-  createOrderOfPayment,
-  updateOrderOfPayment,
-  deleteOrderOfPayment,
-  OrderOfPayment,
-} from "@/core/api/belching-api";
+  searchAirQualityOrdersOfPayment,
+  createAirQualityOrderOfPayment,
+  updateAirQualityOrderOfPayment,
+  deleteAirQualityOrderOfPayment,
+  AirQualityOrderOfPayment,
+} from "@/core/api/air-quality-api";
+import { OrderOfPayment } from "./types";
+
+// API functions using air quality endpoints
+const searchOrdersOfPayment = async (
+  params: any
+): Promise<OrderOfPayment[]> => {
+  const results = await searchAirQualityOrdersOfPayment({
+    search: params.search,
+    control_number: params.control_number,
+    plate_number: params.plate_number,
+    status: params.status,
+    created_date: params.created_date,
+    limit: params.limit || 50,
+    offset: params.offset || 0,
+  });
+
+  // Map to match the interface
+  return results.map((order) => ({
+    id: order.id,
+    oop_control_number: order.oop_control_number,
+    control_number: order.oop_control_number, // For backward compatibility
+    plate_number: order.plate_number,
+    operator_name: order.operator_name,
+    driver_name: order.driver_name,
+    status: order.status,
+    selected_violations: order.selected_violations,
+    grand_total_amount: order.grand_total_amount,
+    created_at: order.created_at,
+    updated_at: order.updated_at,
+    testing_officer: order.testing_officer,
+    test_results: order.test_results,
+    date_of_testing: order.date_of_testing,
+    apprehension_fee: order.apprehension_fee,
+    voluntary_fee: order.voluntary_fee,
+    impound_fee: order.impound_fee,
+    driver_amount: order.driver_amount,
+    operator_fee: order.operator_fee,
+    total_undisclosed_amount: order.total_undisclosed_amount,
+    payment_or_number: order.payment_or_number,
+    date_of_payment: order.date_of_payment,
+  }));
+};
+
+const createOrderOfPayment = async (data: any): Promise<OrderOfPayment> => {
+  const result = await createAirQualityOrderOfPayment({
+    plate_number: data.plate_number,
+    operator_name: data.operator_name,
+    driver_name: data.driver_name,
+    selected_violations: Array.isArray(data.selected_violations)
+      ? data.selected_violations.join(",")
+      : data.selected_violations,
+    testing_officer: data.testing_officer,
+    test_results: data.test_results,
+    date_of_testing: data.date_of_testing,
+    apprehension_fee: data.apprehension_fee || 0,
+    voluntary_fee: data.voluntary_fee || 0,
+    impound_fee: data.impound_fee || 0,
+    driver_amount: data.driver_amount || 0,
+    operator_fee: data.operator_fee || 0,
+    total_undisclosed_amount: data.total_undisclosed_amount,
+    grand_total_amount: data.grand_total_amount,
+    payment_or_number: data.payment_or_number,
+    date_of_payment:
+      data.date_of_payment || new Date().toISOString().split("T")[0],
+    status: data.status || "pending",
+  });
+
+  return {
+    id: result.id,
+    oop_control_number: result.oop_control_number,
+    control_number: result.oop_control_number,
+    plate_number: result.plate_number,
+    operator_name: result.operator_name,
+    driver_name: result.driver_name,
+    status: result.status,
+    selected_violations: result.selected_violations,
+    grand_total_amount: result.grand_total_amount,
+    created_at: result.created_at,
+    updated_at: result.updated_at,
+  };
+};
+
+const updateOrderOfPayment = async (
+  id: string,
+  data: any
+): Promise<OrderOfPayment> => {
+  const result = await updateAirQualityOrderOfPayment(id, data);
+  return {
+    id: result.id,
+    oop_control_number: result.oop_control_number,
+    control_number: result.oop_control_number,
+    plate_number: result.plate_number,
+    operator_name: result.operator_name,
+    driver_name: result.driver_name,
+    status: result.status,
+    selected_violations: result.selected_violations,
+    grand_total_amount: result.grand_total_amount,
+    created_at: result.created_at,
+    updated_at: result.updated_at,
+  };
+};
+
+const deleteOrderOfPayment = async (id: string): Promise<void> => {
+  await deleteAirQualityOrderOfPayment(id);
+};
 
 export interface OrderOfPaymentSearchParams {
   search?: string;
@@ -31,6 +136,10 @@ export interface OrderOfPaymentFormData {
   impound_fee?: number;
   driver_amount?: number;
   operator_fee?: number;
+  total_undisclosed_amount?: number;
+  grand_total_amount?: number;
+  payment_or_number?: string;
+  date_of_payment?: string;
 }
 
 export const useOrderOfPaymentData = () => {
@@ -101,12 +210,40 @@ export const useOrderOfPaymentData = () => {
   // Order actions
   const handleCreateOrder = useCallback(
     (orderData: OrderOfPaymentFormData) => {
-      createOrderMutation.mutate({
-        plate_number: orderData.plate_number,
-        operator_name: orderData.operator_name,
-        driver_name: orderData.driver_name,
-        selected_violations: orderData.selected_violations,
-      });
+      const totalAmount =
+        (orderData.apprehension_fee || 0) +
+        (orderData.voluntary_fee || 0) +
+        (orderData.impound_fee || 0) +
+        (orderData.driver_amount || 0) +
+        (orderData.operator_fee || 0);
+
+      createOrderMutation.mutate(
+        {
+          plate_number: orderData.plate_number,
+          operator_name: orderData.operator_name,
+          driver_name: orderData.driver_name,
+          selected_violations: orderData.selected_violations,
+          testing_officer: orderData.testing_officer,
+          test_results: orderData.test_results,
+          date_of_testing: orderData.date_of_testing,
+          apprehension_fee: orderData.apprehension_fee || 0,
+          voluntary_fee: orderData.voluntary_fee || 0,
+          impound_fee: orderData.impound_fee || 0,
+          driver_amount: orderData.driver_amount || 0,
+          operator_fee: orderData.operator_fee || 0,
+          total_undisclosed_amount: totalAmount,
+          grand_total_amount: totalAmount,
+          payment_or_number: orderData.payment_or_number,
+          date_of_payment:
+            orderData.date_of_payment || new Date().toISOString().split("T")[0],
+        },
+        {
+          onSuccess: (createdOrder) => {
+            // Navigate to viewing mode after successful creation
+            window.location.href = `/air-quality/order-of-payment/${createdOrder.id}`;
+          },
+        }
+      );
     },
     [createOrderMutation]
   );

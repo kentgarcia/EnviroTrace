@@ -6,12 +6,14 @@ import RecordDetailsComponent from "./components/RecordDetailsComponent";
 import ViolationFormModal from "./components/ViolationFormModal";
 import RecordFormModal from "./components/RecordFormModal";
 import { useSmokeBelcherData } from "./logic/useSmokeBelcherData";
+import { AirQualityViolation } from "@/core/api/air-quality-api";
 
 export const SmokeBelcherManagement: React.FC = () => {
     const {
         // Data
         searchResults,
         selectedRecord,
+        selectedViolation,
         recordViolations,
         violationSummary,
 
@@ -19,12 +21,16 @@ export const SmokeBelcherManagement: React.FC = () => {
         isSearchLoading,
         isViolationsLoading,
         isCreatingViolation,
+        isUpdatingViolation,
+        isDeletingViolation,
         isCreatingRecord,
 
         // Actions
         handleSearch,
         handleSelectRecord,
         createViolation,
+        updateViolation,
+        deleteViolation,
         createRecord,
 
         // UI state
@@ -34,13 +40,37 @@ export const SmokeBelcherManagement: React.FC = () => {
         setIsViolationModalOpen,
         isRecordModalOpen,
         setIsRecordModalOpen,
+        setSelectedViolation,
         refetchSearch,
     } = useSmokeBelcherData();
 
     const handleAddViolation = () => {
         if (selectedRecord) {
+            setSelectedViolation(null); // Clear any selected violation for create mode
             setIsViolationModalOpen(true);
         }
+    };
+
+    const handleEditViolation = (violation: AirQualityViolation) => {
+        setSelectedViolation(violation);
+        setIsViolationModalOpen(true);
+    };
+
+    const handleViolationSubmit = (data: any) => {
+        if (selectedViolation) {
+            // Edit mode
+            updateViolation({
+                violationId: selectedViolation.id,
+                violationData: data
+            });
+        } else {
+            // Create mode
+            createViolation(data);
+        }
+    };
+
+    const handleDeleteViolation = (violationId: number) => {
+        deleteViolation(violationId);
     };
 
     const handleAddNewRecord = () => {
@@ -105,6 +135,7 @@ export const SmokeBelcherManagement: React.FC = () => {
                                 activeTab={activeTab}
                                 onTabChange={setActiveTab}
                                 onAddViolation={handleAddViolation}
+                                onEditViolation={handleEditViolation}
                                 onViewPayment={handleViewPayment}
                                 onPrintClearance={handlePrintClearance}
                                 onAddToCECQueue={handleAddToCECQueue}
@@ -118,10 +149,16 @@ export const SmokeBelcherManagement: React.FC = () => {
                 {/* Modals */}
                 <ViolationFormModal
                     isOpen={isViolationModalOpen}
-                    onClose={() => setIsViolationModalOpen(false)}
-                    onSubmit={createViolation}
+                    onClose={() => {
+                        setIsViolationModalOpen(false);
+                        setSelectedViolation(null); // Clear selection when closing
+                    }}
+                    onSubmit={handleViolationSubmit}
+                    onDelete={handleDeleteViolation}
                     recordId={selectedRecord?.id || null}
-                    isSubmitting={isCreatingViolation}
+                    isSubmitting={isCreatingViolation || isUpdatingViolation}
+                    isDeleting={isDeletingViolation}
+                    violation={selectedViolation}
                 />
 
                 <RecordFormModal

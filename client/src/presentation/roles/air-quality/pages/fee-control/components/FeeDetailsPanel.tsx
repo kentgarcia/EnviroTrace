@@ -39,7 +39,6 @@ const getLevelBadge = (level: number) => {
 interface FeeDetailsPanelProps {
     selectedFee: Fee | null;
     onUpdateFee: (feeId: string, updateData: Partial<Fee>) => void;
-    onDeleteFee: (feeId: string) => void;
     loading?: boolean;
     error?: string | null;
 }
@@ -47,7 +46,6 @@ interface FeeDetailsPanelProps {
 const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
     selectedFee,
     onUpdateFee,
-    onDeleteFee,
     loading = false,
     error = null,
 }) => {
@@ -59,8 +57,8 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
         if (selectedFee) {
             setEditForm({
                 category: selectedFee.category,
-                rate: selectedFee.rate,
-                date_effective: selectedFee.date_effective,
+                amount: selectedFee.amount,
+                effective_date: selectedFee.effective_date,
                 level: selectedFee.level,
             });
         } else {
@@ -68,7 +66,7 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
         }
     }, [selectedFee]);
 
-    const handleFieldChange = (field: keyof Omit<Fee, 'fee_id'>, value: string | number) => {
+    const handleFieldChange = (field: keyof Omit<Fee, 'id'>, value: string | number) => {
         setEditForm(prev => ({
             ...prev,
             [field]: value
@@ -80,15 +78,15 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
 
         setIsUpdating(true);
         try {
-            // Always send fee_id as a number and rate as integer cents
+            // Always send id as a number and amount as decimal
             const updateData = {
                 ...editForm,
-                rate: editForm.rate !== undefined ? Math.round(Number(editForm.rate) * 100) : undefined,
+                amount: editForm.amount !== undefined ? Number(editForm.amount) : undefined,
             };
-            await onUpdateFee(selectedFee.fee_id, updateData);
+            await onUpdateFee(selectedFee.id.toString(), updateData);
         } catch (err) {
             console.error('Failed to update fee:', err);
-            console.log('fee_id type:', typeof selectedFee.fee_id, selectedFee.fee_id);
+            console.log('id type:', typeof selectedFee.id, selectedFee.id);
         } finally {
             setIsUpdating(false);
         }
@@ -96,8 +94,8 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
 
     const hasChanges = selectedFee && (
         editForm.category !== selectedFee.category ||
-        editForm.rate !== selectedFee.rate ||
-        editForm.date_effective !== selectedFee.date_effective ||
+        editForm.amount !== selectedFee.amount ||
+        editForm.effective_date !== selectedFee.effective_date ||
         editForm.level !== selectedFee.level
     );
 
@@ -127,17 +125,17 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                                 {getLevelBadge(selectedFee.level)}
                             </div>
                             <div className="text-2xl font-bold text-green-600">
-                                ₱{selectedFee.rate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                ₱{selectedFee.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                             </div>
                             <div className="text-sm text-gray-600 mt-1">
-                                Effective: {new Date(selectedFee.date_effective).toLocaleDateString()}
+                                Effective: {new Date(selectedFee.effective_date).toLocaleDateString()}
                             </div>
                         </div>
 
                         <div>
                             <Label>Fee ID</Label>
                             <div className="text-sm font-medium bg-gray-50 p-2 rounded border">
-                                {selectedFee.fee_id}
+                                {selectedFee.id}
                             </div>
                         </div>
 
@@ -156,15 +154,15 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                         </div>
 
                         <div>
-                            <Label htmlFor="editRate">Rate (₱) *</Label>
+                            <Label htmlFor="editAmount">Amount (₱) *</Label>
                             <Input
-                                id="editRate"
+                                id="editAmount"
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={editForm.rate || ''}
-                                onChange={(e) => handleFieldChange('rate', Number(e.target.value))}
-                                placeholder="Enter rate"
+                                value={editForm.amount || ''}
+                                onChange={(e) => handleFieldChange('amount', Number(e.target.value))}
+                                placeholder="Enter amount"
                                 disabled={isUpdating}
                             />
                         </div>
@@ -174,8 +172,8 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                             <Input
                                 id="editDateEffective"
                                 type="date"
-                                value={editForm.date_effective || ''}
-                                onChange={(e) => handleFieldChange('date_effective', e.target.value)}
+                                value={editForm.effective_date || ''}
+                                onChange={(e) => handleFieldChange('effective_date', e.target.value)}
                                 disabled={isUpdating}
                             />
                         </div>
@@ -203,14 +201,6 @@ const FeeDetailsPanel: React.FC<FeeDetailsPanelProps> = ({
                                 className="w-full"
                             >
                                 {isUpdating ? 'Updating...' : 'Update Fee'}
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={() => selectedFee && onDeleteFee(selectedFee.fee_id)}
-                                disabled={isUpdating}
-                                className="w-full"
-                            >
-                                Delete Fee
                             </Button>
                         </div>
                     </div>

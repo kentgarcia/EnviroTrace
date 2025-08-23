@@ -1,12 +1,12 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  fetchAllDrivers,
-  createDriver,
-  updateDriver,
-  deleteDriver,
-  Driver,
-} from "@/core/api/belching-api";
+  searchAirQualityDrivers,
+  createAirQualityDriver,
+  updateAirQualityDriver,
+  deleteAirQualityDriver,
+  AirQualityDriver,
+} from "@/core/api/air-quality-api";
 
 export interface DriverSearchParams {
   search?: string;
@@ -24,7 +24,9 @@ export interface DriverFormData {
 
 export const useDriverQueryData = () => {
   const [searchParams, setSearchParams] = useState<DriverSearchParams>({});
-  const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState<AirQualityDriver | null>(
+    null
+  );
 
   const queryClient = useQueryClient();
 
@@ -35,8 +37,8 @@ export const useDriverQueryData = () => {
     error: searchError,
     refetch: refetchDrivers,
   } = useQuery({
-    queryKey: ["drivers-search", searchParams],
-    queryFn: () => fetchAllDrivers(searchParams),
+    queryKey: ["air-quality-drivers-search", searchParams],
+    queryFn: () => searchAirQualityDrivers(searchParams),
     enabled: true,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
@@ -48,15 +50,17 @@ export const useDriverQueryData = () => {
   }, []);
 
   // Select driver
-  const handleSelectDriver = useCallback((driver: Driver) => {
+  const handleSelectDriver = useCallback((driver: AirQualityDriver) => {
     setSelectedDriver(driver);
   }, []);
 
   // Create driver mutation
   const createDriverMutation = useMutation({
-    mutationFn: createDriver,
+    mutationFn: createAirQualityDriver,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drivers-search"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-drivers-search"],
+      });
     },
   });
 
@@ -68,17 +72,21 @@ export const useDriverQueryData = () => {
     }: {
       driverId: string;
       driverData: Partial<DriverFormData>;
-    }) => updateDriver(driverId, driverData),
+    }) => updateAirQualityDriver(driverId, driverData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drivers-search"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-drivers-search"],
+      });
     },
   });
 
   // Delete driver mutation
   const deleteDriverMutation = useMutation({
-    mutationFn: deleteDriver,
+    mutationFn: deleteAirQualityDriver,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drivers-search"] });
+      queryClient.invalidateQueries({
+        queryKey: ["air-quality-drivers-search"],
+      });
       setSelectedDriver(null);
     },
   });

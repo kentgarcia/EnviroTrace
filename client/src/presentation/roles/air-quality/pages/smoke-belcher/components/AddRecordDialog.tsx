@@ -5,7 +5,7 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
 import { Loader2, Save, X } from "lucide-react";
-import { createBelchingRecord } from "@/core/api/belching-api";
+import { createAirQualityRecord } from "@/core/api/air-quality-api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -55,10 +55,10 @@ const AddRecordDialog: React.FC<AddRecordDialogProps> = ({
     });
 
     const createMutation = useMutation({
-        mutationFn: createBelchingRecord,
+        mutationFn: createAirQualityRecord,
         onSuccess: () => {
             toast.success("Vehicle record created successfully!");
-            queryClient.invalidateQueries({ queryKey: ['belching-records'] });
+            queryClient.invalidateQueries({ queryKey: ['air-quality-smoke-belcher-search'] });
             resetForm();
             onOpenChange(false);
             onRecordCreated?.();

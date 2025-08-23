@@ -32,8 +32,8 @@ const FEE_CATEGORIES = {
 interface FeeFormModalProps {
     onAddFee: (fee: {
         category: string;
-        rate: number;
-        date_effective: string;
+        amount: number;
+        effective_date: string;
         level: number;
     }) => void;
     existingFees?: Array<{ category: string; level: number; }>;
@@ -43,8 +43,8 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee, existingFe
     const [isOpen, setIsOpen] = useState(false);
     const [formData, setFormData] = useState({
         category: '',
-        rate: 0,
-        date_effective: new Date().toISOString().split('T')[0], // Default to today
+        amount: 0,
+        effective_date: new Date().toISOString().split('T')[0], // Default to today
         level: 0,
     });
     const [selectedCategoryType, setSelectedCategoryType] = useState<'LEVEL_0' | 'LEVEL_1_TO_3' | ''>('');
@@ -91,11 +91,11 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee, existingFe
             errors.push("Category is required");
         }
 
-        if (formData.rate <= 0) {
-            errors.push("Rate must be greater than 0");
+        if (formData.amount <= 0) {
+            errors.push("Amount must be greater than 0");
         }
 
-        if (!formData.date_effective) {
+        if (!formData.effective_date) {
             errors.push("Effective date is required");
         }
 
@@ -129,8 +129,8 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee, existingFe
     const resetForm = () => {
         setFormData({
             category: '',
-            rate: 0,
-            date_effective: new Date().toISOString().split('T')[0],
+            amount: 0,
+            effective_date: new Date().toISOString().split('T')[0],
             level: 0,
         });
         setSelectedCategoryType('');
@@ -230,35 +230,35 @@ export const FeeFormModal: React.FC<FeeFormModalProps> = ({ onAddFee, existingFe
                         </div>
                     )}
 
-                    {/* Rate Input */}
+                    {/* Amount Input */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="rate" className="text-right">
-                            Rate (₱) *
+                        <Label htmlFor="amount" className="text-right">
+                            Amount (₱) *
                         </Label>
                         <div className="col-span-3">
                             <Input
-                                id="rate"
+                                id="amount"
                                 type="number"
                                 placeholder="0.00"
                                 step="0.01"
                                 min="0"
-                                value={formData.rate || ''}
-                                onChange={(e) => handleFieldChange('rate', parseFloat(e.target.value) || 0)}
+                                value={formData.amount || ''}
+                                onChange={(e) => handleFieldChange('amount', parseFloat(e.target.value) || 0)}
                             />
                         </div>
                     </div>
 
                     {/* Effective Date */}
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="date_effective" className="text-right">
+                        <Label htmlFor="effective_date" className="text-right">
                             Effective Date *
                         </Label>
                         <div className="col-span-3">
                             <Input
-                                id="date_effective"
+                                id="effective_date"
                                 type="date"
-                                value={formData.date_effective}
-                                onChange={(e) => handleFieldChange('date_effective', e.target.value)}
+                                value={formData.effective_date}
+                                onChange={(e) => handleFieldChange('effective_date', e.target.value)}
                             />
                         </div>
                     </div>

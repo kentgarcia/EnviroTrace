@@ -34,8 +34,10 @@ const OrderOfPaymentList: React.FC = () => {
         setIsVehicleDialogOpen(true);
     };
 
-    const handleVehicleSelected = (vehicle: any, violations: any[]) => {
+    const handleVehicleSelected = (vehicleWithViolations: any) => {
         setIsVehicleDialogOpen(false);
+        // Extract violations from the vehicle object and create proper structure
+        const { violations, ...vehicle } = vehicleWithViolations;
         setNewOrderData({ vehicle, violations });
         setCurrentView('details');
     };
@@ -97,7 +99,7 @@ const OrderOfPaymentList: React.FC = () => {
                                         <div>
                                             <h1 className="text-xl font-bold text-gray-900">
                                                 {selectedOrder
-                                                    ? `Order Details - ${selectedOrder.oop_control_number}`
+                                                    ? `Order Details - ${selectedOrder.oop_control_number || selectedOrder.control_number}`
                                                     : 'New Order of Payment'
                                                 }
                                             </h1>

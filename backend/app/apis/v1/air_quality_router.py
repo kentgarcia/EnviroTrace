@@ -8,7 +8,8 @@ from app.crud.crud_air_quality import (
     air_quality_record, 
     air_quality_violation,
     air_quality_fee,
-    air_quality_record_history
+    air_quality_record_history,
+    air_quality_order_of_payment
 )
 from app.schemas.air_quality_schemas import (
     AirQualityDriver,
@@ -30,7 +31,13 @@ from app.schemas.air_quality_schemas import (
     AirQualityFeeCreate,
     AirQualityFeeUpdate,
     AirQualityRecordHistory,
-    AirQualityRecordHistoryCreate
+    AirQualityRecordHistoryCreate,
+    AirQualityOrderOfPayment,
+    AirQualityOrderOfPaymentCreate,
+    AirQualityOrderOfPaymentUpdate,
+    AirQualityOrderOfPaymentSearchParams,
+    AirQualityOrderOfPaymentListResponse,
+    AirQualityDashboardResponse
 )
 
 router = APIRouter()
@@ -181,18 +188,22 @@ def get_records(
 
 @router.get("/records/search", response_model=AirQualityRecordListResponse)
 def search_records(
-    plateNumber: str = None,
-    operatorName: str = None,
-    vehicleType: str = None,
+    q: str = None,  # General search term
+    plateNumber: str = None,  # Specific plate number search
+    operatorName: str = None,  # Specific operator name search
+    vehicleType: str = None,  # Specific vehicle type search
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """Search air quality records"""
+    # If general search term is provided, use it as plate_number for OR logic
+    search_plate = q or plateNumber
+    
     records = air_quality_record.search_sync(
         db=db,
-        plate_number=plateNumber,
+        plate_number=search_plate,
         operator_name=operatorName,
         vehicle_type=vehicleType,
         skip=skip,
@@ -200,7 +211,7 @@ def search_records(
     )
     total = air_quality_record.count_search_results_sync(
         db=db,
-        plate_number=plateNumber,
+        plate_number=search_plate,
         operator_name=operatorName,
         vehicle_type=vehicleType
     )
@@ -343,6 +354,36 @@ def create_violation(
     return violation
 
 
+@router.put("/violations/{violation_id}", response_model=AirQualityViolation)
+def update_violation(
+    *,
+    violation_id: int,
+    violation_in: AirQualityViolationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Update air quality violation"""
+    violation = air_quality_violation.get_sync(db=db, id=violation_id)
+    if not violation:
+        raise HTTPException(
+            status_code=404,
+            detail="Violation not found"
+        )
+    
+    updated_violation = air_quality_violation.update_sync(db=db, db_obj=violation, obj_in=violation_in)
+    
+    # Add history entry
+    air_quality_record_history.add_history_entry_sync(
+        db=db,
+        record_id=updated_violation.record_id,
+        entry_type="violation_updated",
+        details="Violation details updated",
+        status="completed"
+    )
+    
+    return updated_violation
+
+
 @router.put("/violations/{violation_id}/payment", response_model=AirQualityViolation)
 def update_violation_payment(
     *,
@@ -378,6 +419,55 @@ def update_violation_payment(
     return violation
 
 
+@router.delete("/violations/{violation_id}")
+def delete_violation(
+    violation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Delete air quality violation"""
+    violation = air_quality_violation.get_sync(db=db, id=violation_id)
+    if not violation:
+        raise HTTPException(
+            status_code=404,
+            detail="Violation not found"
+        )
+    
+    # Store record_id for history entry
+    record_id = violation.record_id
+    
+    # Delete violation
+    air_quality_violation.remove_sync(db=db, id=violation_id)
+    
+    # Add history entry
+    air_quality_record_history.add_history_entry_sync(
+        db=db,
+        record_id=record_id,
+        entry_type="violation_deleted",
+        details="Violation deleted",
+        status="completed"
+    )
+    
+    return {"message": "Violation deleted successfully"}
+
+
+@router.get("/violations", response_model=AirQualityViolationListResponse)
+def get_all_violations(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Get all air quality violations"""
+    violations = air_quality_violation.get_multi_sync(db=db, skip=skip, limit=limit)
+    total_count = air_quality_violation.count_sync(db=db)
+    
+    return AirQualityViolationListResponse(
+        violations=violations,
+        total=total_count
+    )
+
+
 # Fee endpoints
 @router.get("/fees", response_model=List[AirQualityFee])
 def get_fees(
@@ -408,3 +498,133 @@ def get_record_history(
 ) -> Any:
     """Get history for a specific record"""
     return air_quality_record_history.get_by_record_id_sync(db=db, record_id=record_id)
+
+
+# Order of Payment endpoints
+@router.get("/orders-of-payment", response_model=AirQualityOrderOfPaymentListResponse)
+def get_orders_of_payment(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Get all orders of payment"""
+    orders = air_quality_order_of_payment.get_multi_sync(db=db, skip=skip, limit=limit)
+    total = air_quality_order_of_payment.count_sync(db=db)
+    return AirQualityOrderOfPaymentListResponse(
+        orders=orders,
+        total=total,
+        limit=limit,
+        offset=skip
+    )
+
+
+@router.get("/orders-of-payment/search", response_model=AirQualityOrderOfPaymentListResponse)
+def search_orders_of_payment(
+    search: str = None,
+    control_number: str = None,
+    plate_number: str = None,
+    status: str = None,
+    created_date: str = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Search orders of payment"""
+    orders = air_quality_order_of_payment.search_sync(
+        db=db,
+        search=search,
+        control_number=control_number,
+        plate_number=plate_number,
+        status=status,
+        created_date=created_date,
+        skip=skip,
+        limit=limit
+    )
+    # For simplicity, return the count of results found
+    total = len(orders) if any([search, control_number, plate_number, status, created_date]) else air_quality_order_of_payment.count_sync(db=db)
+    return AirQualityOrderOfPaymentListResponse(
+        orders=orders,
+        total=total,
+        limit=limit,
+        offset=skip
+    )
+
+
+@router.post("/orders-of-payment", response_model=AirQualityOrderOfPayment)
+def create_order_of_payment(
+    *,
+    order_in: AirQualityOrderOfPaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Create new order of payment"""
+    order = air_quality_order_of_payment.create_sync(db=db, obj_in=order_in)
+    return order
+
+
+@router.get("/orders-of-payment/{order_id}", response_model=AirQualityOrderOfPayment)
+def get_order_of_payment(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Get order of payment by ID"""
+    order = air_quality_order_of_payment.get_sync(db=db, id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order of payment not found"
+        )
+    return order
+
+
+@router.put("/orders-of-payment/{order_id}", response_model=AirQualityOrderOfPayment)
+def update_order_of_payment(
+    *,
+    order_id: str,
+    order_in: AirQualityOrderOfPaymentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Update order of payment"""
+    order = air_quality_order_of_payment.get_sync(db=db, id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order of payment not found"
+        )
+    order = air_quality_order_of_payment.update_sync(db=db, db_obj=order, obj_in=order_in)
+    return order
+
+
+@router.delete("/orders-of-payment/{order_id}")
+def delete_order_of_payment(
+    order_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Delete order of payment"""
+    order = air_quality_order_of_payment.get_sync(db=db, id=order_id)
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order of payment not found"
+        )
+    air_quality_order_of_payment.delete_sync(db=db, id=order_id)
+    return {"message": "Order of payment deleted successfully"}
+
+
+# Dashboard Statistics Endpoint
+@router.get("/dashboard", response_model=AirQualityDashboardResponse)
+def get_dashboard_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Get comprehensive air quality dashboard statistics"""
+    
+    # Get dashboard statistics using CRUD methods
+    dashboard_data = air_quality_record.get_dashboard_statistics_sync(db=db)
+    
+    return AirQualityDashboardResponse(**dashboard_data)

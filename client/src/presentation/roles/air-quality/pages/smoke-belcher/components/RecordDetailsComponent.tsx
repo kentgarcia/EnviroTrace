@@ -27,9 +27,19 @@ import {
     UserPlus,
     X
 } from "lucide-react";
-import { AirQualityRecord, AirQualityViolation, AirQualityDriver, searchAirQualityDrivers, getCommonPlacesOfApprehension, createAirQualityDriver, updateAirQualityDriver, fetchAirQualityDriverById } from "@/core/api/air-quality-api";
-import { OrderOfPayment, searchOrdersOfPayment } from "@/core/api/belching-api";
+import { AirQualityRecord, AirQualityViolation, AirQualityDriver, searchAirQualityDrivers, getCommonPlacesOfApprehension, createAirQualityDriver, updateAirQualityDriver, fetchAirQualityDriverById, createAirQualityViolation } from "@/core/api/air-quality-api";
+import ViolationFormModal from "./ViolationFormModal";
+import { ViolationFormData } from "../logic/useSmokeBelcherData";
 import { toast } from "sonner";
+
+// Temporary placeholder for OrderOfPayment (to be implemented later)
+interface OrderOfPayment {
+    id: string;
+    control_number: string;
+    plate_number: string;
+    selected_violations: string;
+    status: string;
+}
 
 // Driver form component for adding new drivers
 const AddDriverForm: React.FC<{
@@ -147,8 +157,8 @@ const AddDriverForm: React.FC<{
 
 // Driver form component for editing existing drivers
 const EditDriverForm: React.FC<{
-    driver: Driver;
-    onSuccess: (driver: Driver) => void;
+    driver: AirQualityDriver;
+    onSuccess: (driver: AirQualityDriver) => void;
     onCancel: () => void;
 }> = ({ driver, onSuccess, onCancel }) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -268,6 +278,7 @@ interface RecordDetailsComponentProps {
     activeTab: "violations" | "history";
     onTabChange: (tab: "violations" | "history") => void;
     onAddViolation: () => void;
+    onEditViolation?: (violation: AirQualityViolation) => void;
     onViewPayment: () => void;
     onPrintClearance: () => void;
     onAddToCECQueue: () => void;
@@ -283,6 +294,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     activeTab,
     onTabChange,
     onAddViolation,
+    onEditViolation,
     onViewPayment,
     onPrintClearance,
     onAddToCECQueue,
@@ -292,7 +304,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-    const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
+    const [selectedViolation, setSelectedViolation] = useState<AirQualityViolation | null>(null);
     const [showViolationModal, setShowViolationModal] = useState(false);
     const [isEditingViolation, setIsEditingViolation] = useState(false);
     const [showDeleteViolationDialog, setShowDeleteViolationDialog] = useState(false);
@@ -302,52 +314,41 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
         place_of_apprehension: "",
         date_of_apprehension: "",
     });
-    const [showAddViolationModal, setShowAddViolationModal] = useState(false);
     const [showAddDriverDialog, setShowAddDriverDialog] = useState(false);
     const [showEditDriverDialog, setShowEditDriverDialog] = useState(false);
-    const [driverToEdit, setDriverToEdit] = useState<Driver | null>(null);
+    const [driverToEdit, setDriverToEdit] = useState<AirQualityDriver | null>(null);
 
-    // Add violation form state
-    const [violationForm, setViolationForm] = useState({
-        ordinance_infraction_report_no: "",
-        smoke_density_test_result_no: "",
-        place_of_apprehension: "",
-        date_of_apprehension: "",
-        driver_id: "",
-    });
-    const [driverSearch, setDriverSearch] = useState("");
-    const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
-    const [selectedDriverForViolation, setSelectedDriverForViolation] = useState<Driver | null>(null);
-    const [commonPlaces, setCommonPlaces] = useState<string[]>([]);
-    const [isLoadingDrivers, setIsLoadingDrivers] = useState(false);
-    const [driverDetails, setDriverDetails] = useState<{ [key: string]: Driver }>({});
+    // Additional state
+    const [driverDetails, setDriverDetails] = useState<{ [key: string]: AirQualityDriver }>({});
     const [orderOfPayments, setOrderOfPayments] = useState<OrderOfPayment[]>([]);
     const [violationOrderMap, setViolationOrderMap] = useState<{ [violationId: string]: OrderOfPayment }>({});
+    const [isCreatingViolation, setIsCreatingViolation] = useState(false);
 
-    // Fetch drivers when driver search changes
-    useEffect(() => {
-        if (driverSearch.trim()) {
-            setIsLoadingDrivers(true);
-            searchAirQualityDrivers({ search: driverSearch, limit: 5 })
-                .then((drivers) => {
-                    // Include the selected driver in the list if it's not already there
-                    const driversToShow = [...drivers];
-                    if (selectedDriverForViolation && !drivers.find(d => d.id === selectedDriverForViolation.id)) {
-                        driversToShow.unshift(selectedDriverForViolation);
-                    }
-                    setAvailableDrivers(driversToShow);
-                })
-                .finally(() => setIsLoadingDrivers(false));
-        } else {
-            // When search is empty, show only the selected driver if any
-            setAvailableDrivers(selectedDriverForViolation ? [selectedDriverForViolation] : []);
+    // Create violation handler
+    const handleCreateViolation = async (violationData: ViolationFormData) => {
+        if (!selectedRecord) return;
+
+        try {
+            setIsCreatingViolation(true);
+            // Ensure record_id is set
+            const violationWithRecordId = {
+                ...violationData,
+                record_id: selectedRecord.id
+            };
+            await createAirQualityViolation(violationWithRecordId);
+            toast.success("Violation created successfully");
+            setShowViolationModal(false);
+            // Trigger re-fetch or update
+            if (onUpdateRecord) {
+                onUpdateRecord();
+            }
+        } catch (error) {
+            console.error("Error creating violation:", error);
+            toast.error("Failed to create violation");
+        } finally {
+            setIsCreatingViolation(false);
         }
-    }, [driverSearch, selectedDriverForViolation]);
-
-    // Fetch common places on component mount
-    useEffect(() => {
-        getCommonPlacesOfApprehension().then(setCommonPlaces);
-    }, []);
+    };
 
     // Form state for editing
     const [formData, setFormData] = useState({
@@ -386,7 +387,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
     const vehicleTypes = ["Bus", "Jeepney", "Truck", "Taxi", "Private", "UV Express", "Tricycle", "Motorcycle", "Van", "SUV"];
     const transportGroups = ["Metro Transit", "Quezon Ave TODA", "Freight Alliance", "Manila Taxi Corp", "Commonwealth Express", "Victory Liner", "Barangay Tricycle Operators", "Metro Cargo"];
 
-    const getStatusColor = (record: Record | null) => {
+    const getStatusColor = (record: AirQualityRecord | null) => {
         if (!record) return "bg-gray-100 text-gray-600";
 
         if (!recordViolations || recordViolations.length === 0) {
@@ -410,7 +411,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
         return "bg-yellow-100 text-yellow-800";
     };
 
-    const getStatusText = (record: Record | null) => {
+    const getStatusText = (record: AirQualityRecord | null) => {
         if (!record) return "NO SELECTION";
 
         if (!recordViolations || recordViolations.length === 0) {
@@ -584,26 +585,15 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
         const fetchOrdersForViolations = async () => {
             if (recordViolations && recordViolations.length > 0) {
                 try {
-                    // Fetch all orders and filter those that contain violations from this record
-                    const allOrders = await searchOrdersOfPayment({});
+                    // TODO: Implement air quality order of payment functionality
+                    // For now, this is disabled since we moved from belching to air quality schema
+                    console.log("Order of payment functionality temporarily disabled - needs air quality implementation");
 
-                    // Create a map of violation ID to order of payment
-                    const violationToOrderMap: { [violationId: string]: OrderOfPayment } = {};
-
-                    allOrders.forEach(order => {
-                        if (order.selected_violations && order.selected_violations.length > 0) {
-                            order.selected_violations.forEach(violationId => {
-                                if (recordViolations.some(v => String(v.id) === String(violationId))) {
-                                    violationToOrderMap[violationId] = order;
-                                }
-                            });
-                        }
-                    });
-
-                    setViolationOrderMap(violationToOrderMap);
-                    setOrderOfPayments(allOrders);
+                    // Temporary empty state
+                    setOrderOfPayments([]);
+                    setViolationOrderMap({});
                 } catch (error) {
-                    console.error("Error fetching order of payments:", error);
+                    console.error("Error fetching orders:", error);
                 }
             }
         };
@@ -993,7 +983,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             <h3 className="text-sm font-medium">Violation Records</h3>
                             <Button
                                 variant="secondary"
-                                onClick={() => setShowAddViolationModal(true)}
+                                onClick={() => setShowViolationModal(true)}
                                 size="sm"
                                 disabled={!selectedRecord || isEditing}
                                 className="flex items-center gap-1"
@@ -1074,8 +1064,9 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                                         key={violation.id}
                                                         className="cursor-pointer hover:bg-muted/50"
                                                         onClick={() => {
-                                                            setSelectedViolation(violation);
-                                                            setShowViolationModal(true);
+                                                            if (onEditViolation) {
+                                                                onEditViolation(violation);
+                                                            }
                                                         }}
                                                     >
                                                         <TableCell className="font-medium">
@@ -1092,8 +1083,6 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                                                 if (violation.driver_id && driverDetails[violation.driver_id]) {
                                                                     const driver = driverDetails[violation.driver_id];
                                                                     return `${driver.first_name} ${driver.middle_name || ''} ${driver.last_name}`.trim();
-                                                                } else if (violation.driver?.first_name) {
-                                                                    return `${violation.driver.first_name} ${violation.driver.last_name}`;
                                                                 }
                                                                 return "—";
                                                             })()}
@@ -1309,330 +1298,6 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                 </DialogContent>
             </Dialog>
 
-            {/* Add Violation Modal */}
-            <Dialog open={showAddViolationModal} onOpenChange={setShowAddViolationModal}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add New Violation</DialogTitle>
-                        <DialogDescription>
-                            Create a new violation record for this vehicle
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-6">
-                        {/* 1. Current Vehicle Information */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                                <Car className="h-5 w-5" />
-                                Current Vehicle Information
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                                <div>
-                                    <Label className="text-sm font-medium">Plate Number</Label>
-                                    <p className="text-sm text-muted-foreground">{selectedRecord?.plate_number}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-sm font-medium">Operator/Company Name</Label>
-                                    <p className="text-sm text-muted-foreground">{selectedRecord?.operator_company_name}</p>
-                                </div>
-                                <div>
-                                    <Label className="text-sm font-medium">Current Offense Level</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        {violationSummary ? violationSummary.offenseLevel : "No previous violations"}
-                                    </p>
-                                </div>
-                                <div>
-                                    <Label className="text-sm font-medium">Date Last Apprehended</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        {violationSummary?.lastDateApprehended
-                                            ? new Date(violationSummary.lastDateApprehended).toLocaleDateString()
-                                            : "N/A"
-                                        }
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 2. Violation Information */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Violation Information
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="oir-number">OIR Number</Label>
-                                    <Input
-                                        id="oir-number"
-                                        placeholder="Enter Ordinance Infraction Report Number"
-                                        value={violationForm.ordinance_infraction_report_no}
-                                        onChange={(e) => setViolationForm(prev => ({
-                                            ...prev,
-                                            ordinance_infraction_report_no: e.target.value
-                                        }))}
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor="sdtr-number">SDTR Number</Label>
-                                    <Input
-                                        id="sdtr-number"
-                                        placeholder="Enter Smoke Density Test Result Number"
-                                        value={violationForm.smoke_density_test_result_no}
-                                        onChange={(e) => setViolationForm(prev => ({
-                                            ...prev,
-                                            smoke_density_test_result_no: e.target.value
-                                        }))}
-                                    />
-                                </div>
-                                <div>
-                                    <Label htmlFor="place-apprehension">Place of Apprehension *</Label>
-                                    <div className="flex gap-2">
-                                        <Select
-                                            value={violationForm.place_of_apprehension}
-                                            onValueChange={(value) => setViolationForm(prev => ({
-                                                ...prev,
-                                                place_of_apprehension: value
-                                            }))}
-                                        >
-                                            <SelectTrigger className="flex-1">
-                                                <SelectValue placeholder="Select common place..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {commonPlaces.map((place) => (
-                                                    <SelectItem key={place} value={place}>
-                                                        {place}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <Input
-                                            placeholder="Or type custom location"
-                                            value={violationForm.place_of_apprehension}
-                                            onChange={(e) => setViolationForm(prev => ({
-                                                ...prev,
-                                                place_of_apprehension: e.target.value
-                                            }))}
-                                            className="flex-1"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <Label htmlFor="date-apprehension">Date of Apprehension *</Label>
-                                    <Input
-                                        id="date-apprehension"
-                                        type="date"
-                                        value={violationForm.date_of_apprehension}
-                                        onChange={(e) => setViolationForm(prev => ({
-                                            ...prev,
-                                            date_of_apprehension: e.target.value
-                                        }))}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 3. Driver Selection */}
-                        <div>
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                                <User className="h-5 w-5" />
-                                Select Driver
-                            </h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <Label htmlFor="driver-search">Search Driver</Label>
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                id="driver-search"
-                                                placeholder="Search by name or license number..."
-                                                value={driverSearch}
-                                                onChange={(e) => setDriverSearch(e.target.value)}
-                                                className="pl-8"
-                                            />
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={() => setShowAddDriverDialog(true)}
-                                            className="px-3"
-                                        >
-                                            <UserPlus className="h-4 w-4 mr-2" />
-                                            Add Driver
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {isLoadingDrivers && (
-                                    <p className="text-sm text-muted-foreground">Searching drivers...</p>
-                                )}
-
-                                {availableDrivers.length > 0 && (
-                                    <div className="border rounded-lg">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Select</TableHead>
-                                                    <TableHead>Name</TableHead>
-                                                    <TableHead>License Number</TableHead>
-                                                    <TableHead>Address</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {availableDrivers.map((driver) => (
-                                                    <TableRow
-                                                        key={driver.id}
-                                                        className={selectedDriverForViolation?.id === driver.id ? "bg-blue-50 border-l-4 border-l-blue-500" : ""}
-                                                    >
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={selectedDriverForViolation?.id === driver.id ? "default" : "outline"}
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    setSelectedDriverForViolation(driver);
-                                                                    setViolationForm(prev => ({
-                                                                        ...prev,
-                                                                        driver_id: driver.id
-                                                                    }));
-                                                                }}
-                                                            >
-                                                                {selectedDriverForViolation?.id === driver.id ? "Selected" : "Select"}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            {`${driver.first_name} ${driver.middle_name || ''} ${driver.last_name}`.trim()}
-                                                        </TableCell>
-                                                        <TableCell>{driver.license_number}</TableCell>
-                                                        <TableCell className="truncate max-w-[200px]" title={driver.address}>
-                                                            {driver.address}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-
-                                {driverSearch && !isLoadingDrivers && availableDrivers.length === 0 && (
-                                    <p className="text-sm text-muted-foreground">No drivers found. Try a different search term.</p>
-                                )}
-
-                                {/* Selected Driver Details */}
-                                {selectedDriverForViolation && (
-                                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                        <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                                            <User className="h-4 w-4" />
-                                            Selected Driver Details
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setDriverToEdit(selectedDriverForViolation);
-                                                    setShowEditDriverDialog(true);
-                                                }}
-                                                className="ml-auto text-blue-700 hover:text-blue-900 hover:bg-blue-100"
-                                            >
-                                                <Edit className="h-4 w-4 mr-1" />
-                                                Edit Driver
-                                            </Button>
-                                        </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                            <div>
-                                                <Label className="text-blue-700 font-medium">Full Name</Label>
-                                                <p className="text-blue-800">
-                                                    {`${selectedDriverForViolation.first_name} ${selectedDriverForViolation.middle_name || ''} ${selectedDriverForViolation.last_name}`.trim()}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <Label className="text-blue-700 font-medium">License Number</Label>
-                                                <p className="text-blue-800">{selectedDriverForViolation.license_number}</p>
-                                            </div>
-                                            <div className="md:col-span-2">
-                                                <Label className="text-blue-700 font-medium">Address</Label>
-                                                <p className="text-blue-800">{selectedDriverForViolation.address}</p>
-                                            </div>
-                                            <div>
-                                                <Label className="text-blue-700 font-medium">Driver ID</Label>
-                                                <p className="text-blue-800 font-mono">{selectedDriverForViolation.id}</p>
-                                            </div>
-                                            <div>
-                                                <Label className="text-blue-700 font-medium">Registration Date</Label>
-                                                <p className="text-blue-800">
-                                                    {new Date(selectedDriverForViolation.created_at).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                                setSelectedDriverForViolation(null);
-                                                setViolationForm(prev => ({
-                                                    ...prev,
-                                                    driver_id: ""
-                                                }));
-                                            }}
-                                            className="mt-3 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
-                                        >
-                                            <X className="h-4 w-4 mr-1" />
-                                            Clear Selection
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setShowAddViolationModal(false);
-                                setViolationForm({
-                                    ordinance_infraction_report_no: "",
-                                    smoke_density_test_result_no: "",
-                                    place_of_apprehension: "",
-                                    date_of_apprehension: "",
-                                    driver_id: "",
-                                });
-                                setDriverSearch("");
-                                setSelectedDriverForViolation(null);
-                                setAvailableDrivers([]);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                if (!violationForm.place_of_apprehension || !violationForm.date_of_apprehension) {
-                                    toast.error("Please fill in all required fields");
-                                    return;
-                                }
-
-                                // Call the original onAddViolation with the form data
-                                onAddViolation();
-                                toast.success("Violation added successfully");
-                                setShowAddViolationModal(false);
-                                setViolationForm({
-                                    ordinance_infraction_report_no: "",
-                                    smoke_density_test_result_no: "",
-                                    place_of_apprehension: "",
-                                    date_of_apprehension: "",
-                                    driver_id: "",
-                                });
-                                setDriverSearch("");
-                                setAvailableDrivers([]);
-                            }}
-                            disabled={!violationForm.place_of_apprehension || !violationForm.date_of_apprehension}
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Violation
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
             {/* Delete Confirmation Dialog */}
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <DialogContent>
@@ -1707,19 +1372,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                     <AddDriverForm
                         onSuccess={(newDriver) => {
                             toast.success("Driver added successfully!");
-                            setSelectedDriverForViolation(newDriver);
-                            setViolationForm(prev => ({ ...prev, driver_id: newDriver.id }));
                             setShowAddDriverDialog(false);
-                            // Refresh driver search if there's a search term
-                            if (driverSearch.trim()) {
-                                searchAirQualityDrivers({ search: driverSearch, limit: 5 })
-                                    .then((drivers) => {
-                                        const driversToShow = [newDriver, ...drivers.filter(d => d.id !== newDriver.id)];
-                                        setAvailableDrivers(driversToShow);
-                                    });
-                            } else {
-                                setAvailableDrivers([newDriver]);
-                            }
                         }}
                         onCancel={() => setShowAddDriverDialog(false)}
                     />
@@ -1740,13 +1393,8 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             driver={driverToEdit}
                             onSuccess={(updatedDriver) => {
                                 toast.success("Driver updated successfully!");
-                                setSelectedDriverForViolation(updatedDriver);
                                 setDriverToEdit(null);
                                 setShowEditDriverDialog(false);
-                                // Update the driver in available drivers list
-                                setAvailableDrivers(prev =>
-                                    prev.map(driver => driver.id === updatedDriver.id ? updatedDriver : driver)
-                                );
                             }}
                             onCancel={() => {
                                 setDriverToEdit(null);
@@ -1756,6 +1404,15 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Violation Form Modal */}
+            <ViolationFormModal
+                isOpen={showViolationModal}
+                onClose={() => setShowViolationModal(false)}
+                onSubmit={handleCreateViolation}
+                recordId={selectedRecord?.id || null}
+                isSubmitting={isCreatingViolation}
+            />
         </Card>
     );
 };

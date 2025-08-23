@@ -5,8 +5,8 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/presentation/components/shared/ui/table";
 import { Search, RefreshCw, Plus, Receipt, ChevronLeft, X } from "lucide-react";
-import { OrderOfPayment } from "@/core/api/belching-api";
 import { OrderOfPaymentSearchParams } from "../logic/useOrderOfPaymentData";
+import { OrderOfPayment } from "../logic/types";
 
 interface OrderOfPaymentSearchComponentProps {
     searchResults: OrderOfPayment[];

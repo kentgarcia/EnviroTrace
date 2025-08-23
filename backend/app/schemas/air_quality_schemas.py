@@ -133,7 +133,7 @@ class AirQualityViolationPaymentUpdate(BaseModel):
 class AirQualityFeeBase(BaseModel):
     amount: Decimal = Field(..., ge=0)
     category: str = Field(..., max_length=100)
-    level: int = Field(..., ge=1)
+    level: int = Field(..., ge=0)  # Allow level 0 for base fees
     effective_date: date
 
 
@@ -144,7 +144,7 @@ class AirQualityFeeCreate(AirQualityFeeBase):
 class AirQualityFeeUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, ge=0)
     category: Optional[str] = Field(None, max_length=100)
-    level: Optional[int] = Field(None, ge=1)
+    level: Optional[int] = Field(None, ge=0)  # Allow level 0 for base fees
     effective_date: Optional[date] = None
 
 
@@ -203,3 +203,130 @@ class AirQualityDriverListResponse(BaseModel):
 class AirQualityFeeListResponse(BaseModel):
     fees: List[AirQualityFee]
     total: int
+
+
+# Order of Payment Schemas
+class AirQualityOrderOfPaymentBase(BaseModel):
+    plate_number: str = Field(..., max_length=32)
+    operator_name: str = Field(..., max_length=200)
+    driver_name: Optional[str] = Field(None, max_length=200)
+    selected_violations: str  # Comma-separated violation IDs
+    testing_officer: Optional[str] = Field(None, max_length=200)
+    test_results: Optional[str] = None
+    date_of_testing: Optional[date] = None
+    apprehension_fee: Optional[Decimal] = Field(default=0, ge=0)
+    voluntary_fee: Optional[Decimal] = Field(default=0, ge=0)
+    impound_fee: Optional[Decimal] = Field(default=0, ge=0)
+    driver_amount: Optional[Decimal] = Field(default=0, ge=0)
+    operator_fee: Optional[Decimal] = Field(default=0, ge=0)
+    total_undisclosed_amount: Decimal = Field(..., ge=0)
+    grand_total_amount: Decimal = Field(..., ge=0)
+    payment_or_number: Optional[str] = Field(None, max_length=64)
+    date_of_payment: date
+    status: Optional[str] = Field(default="pending", max_length=32)
+
+
+class AirQualityOrderOfPaymentCreate(AirQualityOrderOfPaymentBase):
+    pass
+
+
+class AirQualityOrderOfPaymentUpdate(BaseModel):
+    plate_number: Optional[str] = Field(None, max_length=32)
+    operator_name: Optional[str] = Field(None, max_length=200)
+    driver_name: Optional[str] = Field(None, max_length=200)
+    selected_violations: Optional[str] = None
+    testing_officer: Optional[str] = Field(None, max_length=200)
+    test_results: Optional[str] = None
+    date_of_testing: Optional[date] = None
+    apprehension_fee: Optional[Decimal] = Field(None, ge=0)
+    voluntary_fee: Optional[Decimal] = Field(None, ge=0)
+    impound_fee: Optional[Decimal] = Field(None, ge=0)
+    driver_amount: Optional[Decimal] = Field(None, ge=0)
+    operator_fee: Optional[Decimal] = Field(None, ge=0)
+    total_undisclosed_amount: Optional[Decimal] = Field(None, ge=0)
+    grand_total_amount: Optional[Decimal] = Field(None, ge=0)
+    payment_or_number: Optional[str] = Field(None, max_length=64)
+    date_of_payment: Optional[date] = None
+    status: Optional[str] = Field(None, max_length=32)
+
+
+class AirQualityOrderOfPayment(AirQualityOrderOfPaymentBase):
+    id: UUID
+    oop_control_number: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AirQualityOrderOfPaymentSearchParams(BaseModel):
+    search: Optional[str] = None
+    control_number: Optional[str] = None
+    plate_number: Optional[str] = None
+    status: Optional[str] = None
+    created_date: Optional[date] = None
+    limit: Optional[int] = Field(50, ge=1, le=200)
+    offset: Optional[int] = Field(0, ge=0)
+
+
+class AirQualityOrderOfPaymentListResponse(BaseModel):
+    orders: List[AirQualityOrderOfPayment]
+    total: int
+    limit: int
+    offset: int
+
+
+# Dashboard Statistics Schemas
+class VehicleTypeStatistic(BaseModel):
+    vehicle_type: str
+    count: int
+
+
+class ViolationTrend(BaseModel):
+    month: str
+    year: int
+    violation_count: int
+    paid_driver_count: int
+    paid_operator_count: int
+
+
+class LocationStatistic(BaseModel):
+    location: str
+    count: int
+
+
+class PaymentStatusStatistic(BaseModel):
+    status: str
+    count: int
+    percentage: float
+
+
+class AirQualityDashboardResponse(BaseModel):
+    # Summary Statistics
+    total_records: int
+    total_violations: int
+    total_drivers: int
+    total_fees_configured: int
+    
+    # Payment Statistics
+    paid_violations_driver: int
+    paid_violations_operator: int
+    paid_driver_percentage: float
+    paid_operator_percentage: float
+    
+    # Vehicle Type Breakdown
+    vehicle_types: List[VehicleTypeStatistic]
+    
+    # Violation Trends
+    monthly_violations: List[ViolationTrend]
+    
+    # Location Statistics
+    top_violation_locations: List[LocationStatistic]
+    
+    # Payment Status Distribution
+    payment_status_distribution: List[PaymentStatusStatistic]
+    
+    # Recent Activity (last 30 days)
+    recent_violations_count: int
+    recent_records_count: int
