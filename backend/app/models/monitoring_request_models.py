@@ -13,3 +13,4 @@ class MonitoringRequest(Base):
     location = Column(JSONB, nullable=False)  # {lat, lng}
     address = Column(String, nullable=True)
     description = Column(Text, nullable=True)
+    source_type = Column(String, nullable=True)  # 'urban_greening' or 'tree_management'

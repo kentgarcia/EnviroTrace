@@ -3,11 +3,130 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Button } from "@/presentation/components/shared/ui/button";
-import { SaplingRequest } from "@/core/api/sapling-requests-api";
-import { fetchMonitoringRequests, MonitoringRequest, createMonitoringRequest } from "@/core/api/monitoring-request-service";
-import LocationPickerMap from "../../LocationPickerMap";
-import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { SaplingRequest } from "@/core/api/sapling-requests-api";
+import { createMonitoringRequest, fetchMonitoringRequests, MonitoringRequest } from "@/core/api/monitoring-request-service";
+import { toast } from "sonner";
+import { Plus, Unlink, MapPin } from "lucide-react";
+import { PLANT_STATUS_OPTIONS, DEFAULT_PLANT_STATUS } from "../../../constants";
+import LocationPickerMap from "../../LocationPickerMap";
+
+// Monitoring Request Search Component for Sapling Requests
+const MonitoringRequestSearch: React.FC<{
+    value: string | null;
+    onChange: (value: string | null) => void;
+    disabled?: boolean;
+    onCreateNew?: () => void;
+}> = ({ value, onChange, disabled, onCreateNew }) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchResults, setSearchResults] = useState<MonitoringRequest[]>([]);
+    const [searching, setSearching] = useState(false);
+
+    // Search monitoring requests with debounce
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        const timeoutId = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const data = await fetchMonitoringRequests({ search: searchQuery.trim(), limit: 10 });
+                setSearchResults(data.reports || []);
+            } catch (error) {
+                setSearchResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    return (
+        <div className="space-y-2">
+            <Label>Monitoring Request (optional)</Label>
+            {value ? (
+                <div className="flex items-center gap-2">
+                    <Input
+                        readOnly
+                        value={value}
+                        className="bg-gray-50 text-xs flex-1"
+                    />
+                    {!disabled && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onChange(null)}
+                        >
+                            <Unlink className="w-4 h-4" />
+                        </Button>
+                    )}
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {!disabled && (
+                        <div className="relative">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Search monitoring requests..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        if (!searchOpen) setSearchOpen(true);
+                                    }}
+                                    onFocus={() => setSearchOpen(true)}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={onCreateNew}
+                                >
+                                    <Plus className="w-4 h-4 mr-1" />
+                                    New
+                                </Button>
+                            </div>
+                            {searchOpen && searchQuery.trim() && (
+                                <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-white shadow-lg">
+                                    {searching && (
+                                        <div className="p-2 text-sm text-gray-500">Searching...</div>
+                                    )}
+                                    {!searching && searchResults.length === 0 && (
+                                        <div className="p-2 text-sm text-gray-500">No matches found</div>
+                                    )}
+                                    {searchResults.map((request) => (
+                                        <button
+                                            key={request.id}
+                                            type="button"
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100"
+                                            onClick={() => {
+                                                onChange(request.id);
+                                                setSearchOpen(false);
+                                                setSearchQuery("");
+                                            }}
+                                        >
+                                            <div className="text-sm font-medium truncate">
+                                                {request.title || `Request ${request.id.slice(0, 8)}`}
+                                            </div>
+                                            <div className="text-xs text-gray-600 truncate">
+                                                {request.address || `(${request.location?.lat}, ${request.location?.lng})`}
+                                            </div>
+                                            <div className="text-xs text-gray-500">{request.status}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 interface Props {
     mode: "add" | "edit";
@@ -24,9 +143,19 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
         saplings: [{ name: "", qty: 1 }],
         monitoring_request_id: "",
     });
-    // Embedded Monitoring Request fields for ADD mode
-    const [mrStatus, setMrStatus] = useState<string>("Untracked");
-    const [mrLocation, setMrLocation] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
+
+    const [monitoringRequestId, setMonitoringRequestId] = useState<string | null>(
+        initialData?.monitoring_request_id || null
+    );
+    const [isCreateMonitoringDialogOpen, setIsCreateMonitoringDialogOpen] = useState(false);
+    const [newMonitoringRequest, setNewMonitoringRequest] = useState({
+        title: "",
+        description: "",
+        location: { lat: 0, lng: 0 },
+        priority: "medium" as const,
+        address: ""
+    });
+    const [isSubmittingMonitoring, setIsSubmittingMonitoring] = useState(false);
 
     useEffect(() => {
         if (initialData) {
@@ -41,8 +170,43 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
                 saplings: items.length ? items : [{ name: "", qty: 1 }],
                 monitoring_request_id: initialData.monitoring_request_id || "",
             });
+            setMonitoringRequestId(initialData.monitoring_request_id || null);
         }
     }, [initialData]);
+
+    const handleCreateMonitoringRequest = async () => {
+        if (!newMonitoringRequest.title || !newMonitoringRequest.description) {
+            toast.error("Title and description are required");
+            return;
+        }
+
+        setIsSubmittingMonitoring(true);
+        try {
+            const monitoringRequestData = {
+                ...newMonitoringRequest,
+                source_type: "urban_greening" as const,
+                status: "pending" as const
+            };
+
+            const response = await createMonitoringRequest(monitoringRequestData);
+            setMonitoringRequestId(response.id);
+            setForm(prev => ({ ...prev, monitoring_request_id: response.id }));
+            setIsCreateMonitoringDialogOpen(false);
+            setNewMonitoringRequest({
+                title: "",
+                description: "",
+                location: { lat: 0, lng: 0 },
+                priority: "medium",
+                address: ""
+            });
+            toast.success("Monitoring request created");
+        } catch (error) {
+            console.error("Error creating monitoring request:", error);
+            toast.error("Failed to create monitoring request");
+        } finally {
+            setIsSubmittingMonitoring(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { id, value } = e.target;
@@ -61,28 +225,12 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
-        let monitoring_request_id = form.monitoring_request_id || null;
-        try {
-            if (mode === "add") {
-                // Create a Monitoring Request with embedded fields
-                const created = await createMonitoringRequest({
-                    status: mrStatus,
-                    location: mrLocation,
-                    title: form.requester_name ? `Sapling Request: ${form.requester_name}` : undefined,
-                    address: form.address || undefined,
-                });
-                monitoring_request_id = created.id;
-            }
-        } catch (err) {
-            // Fall back to backend default auto-create
-            toast.error("Failed to create Monitoring Request automatically. The system will create a default one.");
-        }
         onSave({
             date_received: form.date_received,
             requester_name: form.requester_name,
             address: form.address,
             saplings: form.saplings,
-            monitoring_request_id,
+            monitoring_request_id: monitoringRequestId,
         });
     };
 
@@ -102,6 +250,12 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
                 <Label htmlFor="address">Address</Label>
                 <Textarea id="address" value={form.address} onChange={handleChange} required rows={3} />
             </div>
+
+            <MonitoringRequestSearch
+                value={monitoringRequestId}
+                onChange={setMonitoringRequestId}
+                onCreateNew={() => setIsCreateMonitoringDialogOpen(true)}
+            />
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -123,171 +277,77 @@ const SaplingRequestForm: React.FC<Props> = ({ mode, initialData, onSave, onCanc
                 ))}
             </div>
 
-            {mode === "add" ? (
-                <div className="space-y-2">
-                    <Label className="text-sm">Monitoring Request</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <Label className="text-xs">Status</Label>
-                            <select
-                                value={mrStatus}
-                                onChange={(e) => setMrStatus(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            >
-                                <option value="Untracked">Untracked</option>
-                                <option value="Living">Living</option>
-                                <option value="Dead">Dead</option>
-                                <option value="Replaced">Replaced</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2">
-                            <Label className="text-xs">Location (click map to set)</Label>
-                            <LocationPickerMap location={mrLocation} onLocationChange={setMrLocation} />
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <MonitoringRequestPicker
-                    value={form.monitoring_request_id}
-                    onChange={(id) => setForm((p) => ({ ...p, monitoring_request_id: id }))}
-                />
-            )}
-
             <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
                 <Button type="submit">{mode === "add" ? "Create" : "Save"}</Button>
             </div>
+
+            {/* Create Monitoring Request Dialog */}
+            <Dialog open={isCreateMonitoringDialogOpen} onOpenChange={setIsCreateMonitoringDialogOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Create Monitoring Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label htmlFor="monitoring-title">Title *</Label>
+                            <Input
+                                id="monitoring-title"
+                                value={newMonitoringRequest.title}
+                                onChange={(e) => setNewMonitoringRequest(prev => ({ ...prev, title: e.target.value }))}
+                                placeholder="Enter monitoring request title"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="monitoring-description">Description *</Label>
+                            <Textarea
+                                id="monitoring-description"
+                                value={newMonitoringRequest.description}
+                                onChange={(e) => setNewMonitoringRequest(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Enter monitoring request description"
+                                required
+                                rows={3}
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="monitoring-address">Address</Label>
+                            <Input
+                                id="monitoring-address"
+                                value={newMonitoringRequest.address}
+                                onChange={(e) => setNewMonitoringRequest(prev => ({ ...prev, address: e.target.value }))}
+                                placeholder="Enter address"
+                            />
+                        </div>
+                        <div>
+                            <Label>Location *</Label>
+                            <div className="border rounded-lg overflow-hidden">
+                                <LocationPickerMap
+                                    location={newMonitoringRequest.location}
+                                    onLocationChange={(location) => setNewMonitoringRequest(prev => ({ ...prev, location }))}
+                                />
+                            </div>
+                            <div className="text-sm text-gray-600 mt-1">
+                                Coordinates: {newMonitoringRequest.location.lat.toFixed(6)}, {newMonitoringRequest.location.lng.toFixed(6)}
+                            </div>
+                        </div>
+                        <div className="flex gap-2 justify-end pt-4">
+                            <Button type="button" variant="outline" onClick={() => setIsCreateMonitoringDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={handleCreateMonitoringRequest}
+                                disabled={isSubmittingMonitoring}
+                            >
+                                {isSubmittingMonitoring ? "Creating..." : "Create"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </form>
     );
 };
 
 export default SaplingRequestForm;
-
-// Lightweight search-and-pick component for Monitoring Requests
-const MonitoringRequestPicker: React.FC<{
-    value?: string;
-    onChange: (id: string) => void;
-}> = ({ value, onChange }) => {
-    const [query, setQuery] = useState("");
-    const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [results, setResults] = useState<MonitoringRequest[]>([]);
-    const listRef = React.useRef<HTMLDivElement | null>(null);
-    const last = React.useRef<{ q: string; t: number } | null>(null);
-    const [newOpen, setNewOpen] = useState(false);
-    const [newStatus, setNewStatus] = useState<string>("Living");
-    const [newLoc, setNewLoc] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
-
-    useEffect(() => {
-        let active = true;
-        const run = async () => {
-            const stamp = Date.now();
-            last.current = { q: query, t: stamp };
-            if (!query.trim()) { setResults([]); return; }
-            setLoading(true);
-            try {
-                const data = await fetchMonitoringRequests({ search: query.trim(), limit: 10 });
-                if (!active) return;
-                // Debounce guard: ensure latest
-                if (last.current?.t === stamp) {
-                    setResults(data.reports || []);
-                }
-            } catch {
-                if (active) setResults([]);
-            } finally {
-                if (active) setLoading(false);
-            }
-        };
-        const h = setTimeout(run, 250);
-        return () => { active = false; clearTimeout(h); };
-    }, [query]);
-
-    return (
-        <div className="space-y-2">
-            <Label>Monitoring Request (optional)</Label>
-            {value ? (
-                <div className="flex items-center gap-2">
-                    <Input readOnly value={value} className="bg-gray-50 text-xs" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => onChange("")}>Unlink</Button>
-                </div>
-            ) : (
-                <div className="relative space-y-2">
-                    <div className="flex gap-2">
-                        <Input
-                            placeholder="Search monitoring requests (title/address/requester)"
-                            value={query}
-                            onChange={(e) => { setQuery(e.target.value); if (!open) setOpen(true); }}
-                            onFocus={() => setOpen(true)}
-                        />
-                        <Button type="button" variant="secondary" onClick={() => setNewOpen(true)}>Create</Button>
-                    </div>
-                    {open && (
-                        <div ref={listRef} className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-white shadow-sm">
-                            {loading && <div className="p-2 text-sm text-gray-500">Searching…</div>}
-                            {!loading && query.trim() && results.length === 0 && (
-                                <div className="p-2 text-sm text-gray-500">No matches</div>
-                            )}
-                            {results.map((r) => (
-                                <button
-                                    key={r.id}
-                                    type="button"
-                                    className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                                    onClick={() => { onChange(r.id); setOpen(false); setQuery(""); }}
-                                >
-                                    <div className="text-sm font-medium truncate">{r.title}</div>
-                                    <div className="text-[11px] text-gray-600 truncate">{r.address}</div>
-                                    <div className="text-[11px] text-gray-500">{r.status}</div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                    {/* Manual fallback */}
-                    <div className="mt-2">
-                        <Label htmlFor="monitoring_request_id" className="text-xs text-gray-500">Or enter ID</Label>
-                        <Input id="monitoring_request_id" value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Paste Monitoring Request ID" />
-                    </div>
-                </div>
-            )}
-
-            {/* Inline create Monitoring Request dialog */}
-            <Dialog open={newOpen} onOpenChange={setNewOpen}>
-                <DialogContent className="max-w-xl">
-                    <DialogHeader>
-                        <DialogTitle>Create Monitoring Request</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3">
-                        <div>
-                            <Label className="text-sm">Status</Label>
-                            <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="w-full border rounded px-3 py-2">
-                                <option value="Living">Living</option>
-                                <option value="Dead">Dead</option>
-                                <option value="Replaced">Replaced</option>
-                                <option value="Untracked">Untracked</option>
-                            </select>
-                        </div>
-                        <div>
-                            <Label className="text-sm">Location</Label>
-                            <LocationPickerMap location={newLoc} onLocationChange={setNewLoc} />
-                        </div>
-                        <div className="flex gap-2 justify-end pt-2">
-                            <Button type="button" variant="outline" onClick={() => setNewOpen(false)}>Cancel</Button>
-                            <Button
-                                type="button"
-                                onClick={async () => {
-                                    try {
-                                        const created = await createMonitoringRequest({ status: newStatus, location: newLoc });
-                                        onChange(created.id);
-                                        setNewOpen(false);
-                                        toast.success("Monitoring Request created and linked.");
-                                    } catch (e) {
-                                        toast.error("Failed to create Monitoring Request");
-                                    }
-                                }}
-                            >Create & Link</Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-};

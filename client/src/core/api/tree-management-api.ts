@@ -24,6 +24,9 @@ export interface TreeManagementRequest {
   // Optional fields
   notes?: string;
 
+  // Link to Monitoring Request
+  monitoring_request_id?: string | null;
+
   created_at: string;
   updated_at?: string;
 }
@@ -40,6 +43,7 @@ export interface TreeManagementRequestCreate {
   trees_and_quantities?: string[] | null;
   picture_links?: string[] | null;
   notes?: string;
+  monitoring_request_id?: string | null;
 }
 
 export interface TreeManagementRequestUpdate {
@@ -54,6 +58,7 @@ export interface TreeManagementRequestUpdate {
   trees_and_quantities?: string[] | null;
   picture_links?: string[] | null;
   notes?: string;
+  monitoring_request_id?: string | null;
 }
 
 // Tree Management Request API functions

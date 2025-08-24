@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as monitoringRequestService from "@/core/api/monitoring-request-service";
+import { DEFAULT_MONITORING_REQUEST_STATUS } from "../../../constants";
 
 // Types for the monitoring requests
 export type Coordinates = {
@@ -14,10 +15,7 @@ export type MonitoringRequest = monitoringRequestService.MonitoringRequest;
 export type MonitoringRequestSubmission = {
   title: string;
   description: string;
-  requester_name: string;
   date: Date;
-  address: string;
-  sapling_count?: number;
   notes?: string;
 };
 
@@ -30,6 +28,7 @@ export function useMonitoringRequests() {
   const [currentView, setCurrentView] = useState<"table" | "map">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<string>("all");
 
   // Fetch monitoring requests using TanStack Query
   const {
@@ -38,7 +37,10 @@ export function useMonitoringRequests() {
     error,
     refetch: refetchRequests,
   } = useQuery({
-    queryKey: ["monitoring-requests", { statusFilter, searchTerm }],
+    queryKey: [
+      "monitoring-requests",
+      { statusFilter, searchTerm, sourceTypeFilter },
+    ],
     queryFn: () =>
       monitoringRequestService.fetchMonitoringRequests({
         limit: 100,
@@ -171,7 +173,11 @@ export function useMonitoringRequests() {
   );
 
   const handleSaveRequest = useCallback(
-    async (data: MonitoringRequestSubmission, location: Coordinates | null) => {
+    async (
+      data: MonitoringRequestSubmission,
+      location: Coordinates | null,
+      status: string
+    ) => {
       try {
         const baseData = {
           ...data,
@@ -181,7 +187,7 @@ export function useMonitoringRequests() {
         if (mode === "editing" && selectedRequest) {
           const requestData: monitoringRequestService.MonitoringRequestUpdate =
             {
-              status: selectedRequest.status,
+              status: status, // Use the status from the form
               location: {
                 lat: (location?.lat ?? selectedRequest.location?.lat)!,
                 lng: (location?.lng ?? selectedRequest.location?.lng)!,
@@ -200,7 +206,7 @@ export function useMonitoringRequests() {
         } else if (mode === "adding") {
           const requestData: monitoringRequestService.MonitoringRequestCreate =
             {
-              status: "pending",
+              status: status, // Use the status from the form
               location: location || { lat: 0, lng: 0 },
               // Optional metadata
               title: baseData.title,
@@ -218,8 +224,50 @@ export function useMonitoringRequests() {
     [mode, selectedRequest, updateMutation, createMutation]
   );
 
+  // Handle source type updates
+  const handleUpdateSourceType = useCallback(
+    async (id: string, sourceType: string) => {
+      try {
+        const request = requests.find((r) => r.id === id);
+        if (request) {
+          const requestData: monitoringRequestService.MonitoringRequestUpdate =
+            {
+              source_type: sourceType,
+              // Preserve existing data
+              status: request.status,
+              location: request.location || { lat: 0, lng: 0 },
+              title: request.title,
+              requester_name: request.requester_name,
+              date: request.date,
+              address: request.address,
+              description: request.description,
+            };
+          await updateMutation.mutateAsync({
+            id,
+            data: requestData,
+          });
+        }
+      } catch (err) {
+        // Error handling is done in the mutations
+      }
+    },
+    [requests, updateMutation]
+  );
+
   const getStatusColor = (status: string) => {
-    switch (status) {
+    // Convert to lowercase for case-insensitive comparison
+    const lowerStatus = status?.toLowerCase();
+
+    switch (lowerStatus) {
+      case "untracked":
+        return "bg-gray-100 text-gray-800";
+      case "living":
+        return "bg-green-100 text-green-800";
+      case "dead":
+        return "bg-red-100 text-red-800";
+      case "replaced":
+        return "bg-blue-100 text-blue-800";
+      // Legacy status values (keeping for backward compatibility)
       case "pending":
         return "bg-yellow-100 text-yellow-800";
       case "approved":
@@ -244,18 +292,22 @@ export function useMonitoringRequests() {
     currentView,
     searchTerm,
     statusFilter,
+    sourceTypeFilter,
     selectedRequest,
     formLocation,
     setCurrentView,
     setSearchTerm,
     setStatusFilter,
+    setSourceTypeFilter,
     setFormLocation,
+    setSelectedRequestId,
     handleSelectRequest,
     handleAddRequest,
     handleCancel,
     handleEdit,
     handleDelete,
     handleSaveRequest,
+    handleUpdateSourceType,
     getStatusColor,
     refetchRequests,
   };

@@ -21,6 +21,7 @@ export interface MonitoringRequest {
   notes?: string;
   created_at?: string;
   updated_at?: string;
+  source_type?: string; // 'urban_greening' or 'tree_management'
 }
 
 export interface MonitoringRequestCreate {
@@ -31,6 +32,7 @@ export interface MonitoringRequestCreate {
   requester_name?: string;
   date?: string;
   address?: string;
+  source_type?: string; // 'urban_greening' or 'tree_management'
   sapling_count?: number;
   notes?: string;
 }
@@ -43,6 +45,7 @@ export interface MonitoringRequestUpdate {
   requester_name?: string;
   date?: string;
   address?: string;
+  source_type?: string; // 'urban_greening' or 'tree_management'
   sapling_count?: number;
   notes?: string;
 }

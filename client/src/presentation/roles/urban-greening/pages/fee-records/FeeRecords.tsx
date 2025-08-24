@@ -337,7 +337,7 @@ const FeeRecords: React.FC = () => {
 
             {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Add Fee Record</DialogTitle>
                     </DialogHeader>

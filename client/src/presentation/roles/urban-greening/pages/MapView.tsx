@@ -4,7 +4,7 @@ import L, { divIcon, point, LatLngExpression } from "leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
-import { MapPin, Search, X, Filter, RotateCcw } from "lucide-react";
+import { MapPin, Search, X, Filter, RotateCcw, TreePine, Sprout, Leaf } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/presentation/components/shared/ui/dropdown-menu";
+import { MONITORING_REQUEST_STATUS_OPTIONS } from "../constants";
 
 // Types
 interface Coordinates {
@@ -19,12 +20,7 @@ interface Coordinates {
   lng: number;
 }
 
-type MonitoringStatus =
-  | "pending"
-  | "in-progress"
-  | "completed"
-  | "approved"
-  | "rejected";
+type MonitoringStatus = typeof MONITORING_REQUEST_STATUS_OPTIONS[number];
 
 interface MonitoringRequest {
   id: string;
@@ -35,6 +31,7 @@ interface MonitoringRequest {
   requesterName?: string;
   address?: string;
   date?: string;
+  source_type?: string; // 'urban_greening' or 'tree_management'
 }
 
 interface MapViewProps {
@@ -46,33 +43,69 @@ interface MapViewProps {
 }
 
 const statusColorClass: Record<MonitoringStatus, string> = {
-  completed: "text-green-600",
-  "in-progress": "text-blue-500",
-  pending: "text-yellow-500",
-  approved: "text-green-700",
-  rejected: "text-red-500",
+  untracked: "text-gray-600",
+  living: "text-green-600",
+  dead: "text-red-500",
+  replaced: "text-blue-500",
 };
 
 const statusLabels: Record<MonitoringStatus, string> = {
-  completed: "Completed",
-  "in-progress": "In Progress",
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
+  untracked: "Untracked",
+  living: "Living",
+  dead: "Dead",
+  replaced: "Replaced",
 };
 
-const createIcon = (status: MonitoringStatus) => {
-  const colorClass = statusColorClass[status] || "text-gray-400";
+const createIcon = (status: MonitoringStatus, sourceType?: string) => {
+  // Choose icon based on source type
+  const IconComponent = sourceType === "tree_management" ? TreePine :
+    sourceType === "urban_greening" ? Sprout :
+      MapPin;
+
+  // Status-based colors
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'untracked': return '#9ca3af'; // gray
+      case 'living': return '#10b981'; // green
+      case 'dead': return '#ef4444'; // red
+      case 'replaced': return '#3b82f6'; // blue
+      // Legacy status values (keeping for backward compatibility)
+      case 'pending': return '#f59e0b'; // amber
+      case 'in-progress': return '#3b82f6'; // blue
+      case 'completed': return '#10b981'; // green
+      case 'approved': return '#10b981'; // green
+      case 'rejected': return '#ef4444'; // red
+      default: return '#9ca3af'; // gray
+    }
+  };
+
+  const backgroundColor = getStatusColor(status);
+
   return L.divIcon({
     html: ReactDOMServer.renderToString(
-      <div className="relative">
-        <MapPin
-          className={`h-8 w-8 ${colorClass} fill-current drop-shadow-lg`}
+      <div
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          backgroundColor: backgroundColor,
+          border: '3px solid white',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative'
+        }}
+      >
+        <IconComponent
+          size={18}
+          color="white"
+          strokeWidth={2.5}
         />
       </div>
     ),
     className: "border-0 bg-transparent",
-    iconSize: [32, 40],
+    iconSize: [32, 32],
     iconAnchor: [16, 40],
   });
 };
@@ -102,13 +135,11 @@ const createClusterCustomIcon = (cluster: any) => {
   });
 };
 
-const statusOptions: { value: MonitoringStatus; label: string }[] = [
-  { value: "pending", label: "Pending" },
-  { value: "in-progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-];
+const statusOptions: { value: MonitoringStatus; label: string }[] =
+  MONITORING_REQUEST_STATUS_OPTIONS.map(status => ({
+    value: status,
+    label: status.charAt(0).toUpperCase() + status.slice(1)
+  }));
 
 // Component to handle map center changes and setup
 const MapController: React.FC<{
@@ -156,6 +187,7 @@ function MapControls({
   onReset,
   totalRequests,
   filteredCount,
+  filteredRequests,
 }: {
   selectedStatuses: MonitoringStatus[];
   onFilterChange: (statuses: MonitoringStatus[]) => void;
@@ -164,6 +196,7 @@ function MapControls({
   onReset: () => void;
   totalRequests: number;
   filteredCount: number;
+  filteredRequests: MonitoringRequest[];
 }) {
   const handleToggle = (status: MonitoringStatus) => {
     if (selectedStatuses.includes(status)) {
@@ -201,6 +234,163 @@ function MapControls({
               <X className="h-4 w-4" />
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Icon Legend */}
+      <div className="bg-white rounded-lg shadow-lg p-3">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Marker Icons</h4>
+        <div className="space-y-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: '#10b981',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <TreePine size={12} color="white" strokeWidth={2.5} />
+            </div>
+            <span className="text-gray-600">Tree Management</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: '#3b82f6',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Sprout size={12} color="white" strokeWidth={2.5} />
+            </div>
+            <span className="text-gray-600">Urban Greening</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: '#8b5cf6',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <MapPin size={12} color="white" strokeWidth={2.5} />
+            </div>
+            <span className="text-gray-600">Other/Unknown</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Color Legend */}
+      <div className="bg-white rounded-lg shadow-lg p-3">
+        <h4 className="text-sm font-medium text-gray-700 mb-2">Status Colors & Actions</h4>
+        <div className="space-y-2 text-xs">
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                backgroundColor: '#9ca3af',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }}
+            />
+            <span className="text-gray-600">Untracked</span>
+            <span className="text-yellow-600 text-xs ml-auto">⚠️ Needs Inspection</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                backgroundColor: '#10b981',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }}
+            />
+            <span className="text-gray-600">Living</span>
+            <span className="text-green-600 text-xs ml-auto">✓ Healthy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                backgroundColor: '#ef4444',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }}
+            />
+            <span className="text-gray-600">Dead</span>
+            <span className="text-red-600 text-xs ml-auto">🔄 Needs Replacement</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                backgroundColor: '#3b82f6',
+                border: '2px solid white',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }}
+            />
+            <span className="text-gray-600">Replaced</span>
+            <span className="text-blue-600 text-xs ml-auto">📋 Monitor Progress</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Environmental Impact Summary */}
+      <div className="bg-white rounded-lg shadow-lg p-3">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">Environmental Impact</h4>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-600">Total Monitored:</span>
+            <span className="font-semibold text-blue-600">{filteredRequests.length}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-green-600">Living Plants:</span>
+            <span className="font-semibold text-green-700">
+              {filteredRequests.filter(r => r.status?.toLowerCase() === 'living').length}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-red-600">Needs Action:</span>
+            <span className="font-semibold text-red-700">
+              {filteredRequests.filter(r =>
+                r.status?.toLowerCase() === 'dead' || r.status?.toLowerCase() === 'untracked'
+              ).length}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-600">Success Rate:</span>
+            <span className="font-semibold text-gray-700">
+              {filteredRequests.length > 0
+                ? ((filteredRequests.filter(r => r.status?.toLowerCase() === 'living').length / filteredRequests.length) * 100).toFixed(1)
+                : 0}%
+            </span>
+          </div>
         </div>
       </div>
 
@@ -280,7 +470,9 @@ export default function MapView({
   // Filter requests based on search term and status
   const filteredRequests = React.useMemo(() => {
     let filtered = requests.filter(
-      (req) => req.location && selectedStatuses.includes(req.status)
+      (req) => req.location && selectedStatuses.some(status =>
+        status.toLowerCase() === req.status?.toLowerCase()
+      )
     );
 
     if (searchTerm.trim()) {
@@ -339,7 +531,7 @@ export default function MapView({
             <Marker
               key={request.id}
               position={[request.location!.lat, request.location!.lng]}
-              icon={createIcon(request.status)}
+              icon={createIcon(request.status, request.source_type)}
             >
               <Popup maxWidth={300} className="monitoring-request-popup">
                 <div className="p-2 space-y-3 min-w-[250px]">
@@ -366,12 +558,30 @@ export default function MapView({
                     {request.date && (
                       <p><strong>Date:</strong> {new Date(request.date).toLocaleDateString()}</p>
                     )}
+                    {request.source_type && (
+                      <p><strong>Source:</strong> {
+                        request.source_type === "tree_management" ? "Tree Management" :
+                          request.source_type === "urban_greening" ? "Urban Greening" :
+                            request.source_type
+                      }</p>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t">
-                    <span className={`text-sm font-medium capitalize ${statusColorClass[request.status]}`}>
-                      {statusLabels[request.status]}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium capitalize ${statusColorClass[request.status]}`}>
+                        {statusLabels[request.status]}
+                      </span>
+                      {request.source_type && (
+                        <div className="flex items-center gap-1">
+                          {request.source_type === "tree_management" ? (
+                            <TreePine className="h-3 w-3 text-green-600" />
+                          ) : request.source_type === "urban_greening" ? (
+                            <Leaf className="h-3 w-3 text-blue-600" />
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
                     <Button
                       size="sm"
                       onClick={() => onSelectRequest(request.id)}
@@ -397,6 +607,7 @@ export default function MapView({
           onReset={handleReset}
           totalRequests={requests.length}
           filteredCount={filteredRequests.length}
+          filteredRequests={filteredRequests}
         />
       </div>
 

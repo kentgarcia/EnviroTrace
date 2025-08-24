@@ -12,7 +12,7 @@ import NotFound from "@/presentation/pages/public/NotFound";
 import { UserRole } from "@/integrations/types/userData";
 import { redirect } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
-// import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
+import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
 // import { smokeBelchingRoute } from "./roles/belching/belching.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
 import { airQualityRoute } from "./roles/air-quality/air-quality.routes";
@@ -92,7 +92,7 @@ export const routeTree = rootRoute.addChildren([
   dashboardSelectionRoute,
   profileRoute,
   ...airQualityRoute,
-  // ...adminRoutes,
+  ...adminRoutes,
   // ...smokeBelchingRoute,
   ...govEmissionRoute,
   ...urbanGreeningRoute,

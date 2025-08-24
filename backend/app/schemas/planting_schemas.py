@@ -181,7 +181,6 @@ class SaplingRequestBase(BaseModel):
     requester_name: str
     address: str
     saplings: list[SaplingItem]
-    monitoring_request_id: Optional[str] = None
 
 class SaplingRequestCreate(SaplingRequestBase):
     pass
@@ -191,7 +190,6 @@ class SaplingRequestUpdate(BaseModel):
     requester_name: Optional[str] = None
     address: Optional[str] = None
     saplings: Optional[list[SaplingItem]] = None
-    monitoring_request_id: Optional[str] = None
 
 class SaplingRequestInDB(SaplingRequestBase):
     id: UUID

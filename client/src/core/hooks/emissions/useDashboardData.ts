@@ -10,9 +10,13 @@ import { useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
 export interface DashboardData {
   // Summary statistics
   totalVehicles: number;
+  totalOffices: number;
   testedVehicles: number;
+  passedTests: number;
+  failedTests: number;
+  pendingTests: number;
   complianceRate: number;
-  officeDepartments: number;
+  officeDepartments: number; // Keep for backward compatibility
 
   // Chart data for pie charts - now showing pass/fail by category
   engineTypeData: Array<{
@@ -48,6 +52,13 @@ export interface DashboardData {
     passedCount?: number;
     vehicleCount?: number;
     complianceRate?: number;
+  }>;
+
+  // Vehicle type breakdown for detailed stats
+  vehicleTypeBreakdown: Array<{
+    type: string;
+    count: number;
+    passedCount: number;
   }>;
 
   // Additional data for chatbot
@@ -105,13 +116,18 @@ export function useDashboardData(
     if (!vehiclesData || !officeData) {
       return {
         totalVehicles: 0,
+        totalOffices: 0,
         testedVehicles: 0,
+        passedTests: 0,
+        failedTests: 0,
+        pendingTests: 0,
         complianceRate: 0,
         officeDepartments: 0,
         engineTypeData: [],
         wheelCountData: [],
         vehicleTypeData: [],
         officeComplianceData: [],
+        vehicleTypeBreakdown: [],
         vehicleSummaries: [],
       };
     }
@@ -143,6 +159,15 @@ export function useDashboardData(
         });
       }
     });
+
+    // Calculate test results
+    const passedTests = filteredTests.filter(
+      (test) => test.result === true
+    ).length;
+    const failedTests = filteredTests.filter(
+      (test) => test.result === false
+    ).length;
+    const pendingTests = vehicles.length - passedTests - failedTests;
 
     // Helper function to categorize vehicles by type with pass/fail stats
     const categorizeVehicles = (
@@ -193,6 +218,7 @@ export function useDashboardData(
 
     // Calculate basic statistics
     const totalVehicles = summary?.total_vehicles || vehicles.length;
+    const totalOffices = summary?.total_offices || offices.length;
     const testedVehicles = filteredTests.length;
     const complianceRate = summary?.overall_compliance_rate || 0;
     const officeDepartments = summary?.total_offices || offices.length;
@@ -207,6 +233,13 @@ export function useDashboardData(
 
     // Process vehicle type data with pass/fail breakdown
     const vehicleTypeData = categorizeVehicles("vehicle_type");
+
+    // Create vehicle type breakdown for detailed stats
+    const vehicleTypeBreakdown = vehicleTypeData.map((item) => ({
+      type: item.label,
+      count: item.total,
+      passedCount: item.passed,
+    }));
 
     // Process office compliance data (keep existing format)
     const officeComplianceData = offices.map((office) => ({
@@ -229,13 +262,18 @@ export function useDashboardData(
 
     return {
       totalVehicles,
+      totalOffices,
       testedVehicles,
+      passedTests,
+      failedTests,
+      pendingTests,
       complianceRate,
       officeDepartments,
       engineTypeData,
       wheelCountData,
       vehicleTypeData,
       officeComplianceData,
+      vehicleTypeBreakdown,
       vehicleSummaries,
     };
   }, [vehiclesData, officeData, testsData, selectedYear, selectedQuarter]);

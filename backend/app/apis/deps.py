@@ -1,5 +1,5 @@
 # app/apis/deps.py
-from typing import Optional, Generator
+from typing import Optional, Generator, List, Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ import uuid
 from app.core import security
 from app.core.config import settings
 from app.db.database import get_db_session # Async session
-from app.models.auth_models import User # SQLAlchemy model
+from app.models.auth_models import User, UserRoleEnum # SQLAlchemy model
 from app.schemas.token_schemas import TokenPayload # Pydantic schema for token payload
 from app.crud.crud_user import user as crud_user # CRUD operations for user
 
@@ -145,3 +145,31 @@ async def get_current_active_user_async(
     # if not current_user.is_active:
     #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return current_user
+
+def require_roles(allowed_roles: List[UserRoleEnum]) -> Callable:
+    """
+    Dependency to require specific roles for accessing endpoints
+    """
+    async def role_checker(
+        current_user: User = Depends(get_current_user_async),
+        db: AsyncSession = Depends(get_db_session)
+    ) -> User:
+        # Get user roles from UserRoleMapping
+        from sqlalchemy import select
+        from app.models.auth_models import UserRoleMapping
+        
+        result = await db.execute(
+            select(UserRoleMapping.role).where(UserRoleMapping.user_id == current_user.id)
+        )
+        user_roles = [row[0] for row in result.fetchall()]
+        
+        # Check if user has any of the required roles or is super admin
+        if current_user.is_super_admin or any(role in user_roles for role in allowed_roles):
+            return current_user
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied. Required roles: {[role.value for role in allowed_roles]}"
+        )
+    
+    return role_checker

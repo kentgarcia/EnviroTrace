@@ -35,6 +35,9 @@ export interface TreeRequest {
   // Optional fields
   notes?: string;
 
+  // Link to Monitoring Request
+  monitoring_request_id?: string | null;
+
   created_at: string;
   updated_at?: string;
 }
@@ -54,6 +57,7 @@ export const transformApiRequest = (
   trees_and_quantities: request.trees_and_quantities,
   picture_links: request.picture_links,
   notes: request.notes,
+  monitoring_request_id: request.monitoring_request_id,
   created_at: request.created_at,
   updated_at: request.updated_at,
 });

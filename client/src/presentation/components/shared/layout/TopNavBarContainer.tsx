@@ -126,11 +126,6 @@ function getMenuItems(
         icon: <Building className="w-4 h-4 mr-1" />,
         path: `${basePath}/offices`,
       },
-      {
-        label: "Settings",
-        icon: <Settings className="w-4 h-4 mr-1" />,
-        path: `${basePath}/settings`,
-      },
     ];
   } else if (dashboardType === "urban-greening") {
     return [
@@ -177,11 +172,6 @@ function getMenuItems(
       label: "Reports",
       icon: <FileStack className="w-4 h-4 mr-1" />,
       path: `${basePath}/reports`,
-    },
-    {
-      label: "Settings",
-      icon: <Settings className="w-4 h-4 mr-1" />,
-      path: `${basePath}/settings`,
     },
   ];
 }

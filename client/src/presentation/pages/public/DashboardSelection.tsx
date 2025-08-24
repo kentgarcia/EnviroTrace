@@ -182,16 +182,19 @@ export default function DashboardSelection() {
         </div>
       </div>
 
-      <main className="flex-1 px-6 py-10">
-        <div className="max-w-(--breakpoint-xl) mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <main className="flex-1 px-4 sm:px-6 lg:px-10 py-10">
+        {/* Full-width container (no max width) but with responsive horizontal padding */}
+        <div className="w-full">
+          {/* Single-row, centered dashboard cards. Expands with viewport and keeps consistent padding. */}
+          <div className="flex justify-center items-stretch gap-8 w-full overflow-x-auto py-2">
             {hasRole("admin") && (
               <DashboardCard
                 title="Admin Dashboard"
                 description="Manage system settings and configurations"
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("admin")}
-                className="border-ems-red-200 hover:border-ems-red-400"
+                className="flex-none w-72 md:w-80 border-ems-red-200 hover:border-ems-red-400"
+                contentClassName="h-full"
               />
             )}
 
@@ -201,7 +204,8 @@ export default function DashboardSelection() {
                 description="Monitor and evaluate smoke emissions from vehicles"
                 icon="/images/bg_asbu.jpg"
                 onClick={() => handleDashboardSelect("air-quality")}
-                className="border-ems-blue-200 hover:border-ems-blue-400"
+                className="flex-none w-72 md:w-80 border-ems-blue-200 hover:border-ems-blue-400"
+                contentClassName="h-full"
               />
             )}
 
@@ -211,7 +215,8 @@ export default function DashboardSelection() {
                 description="Track afforestation efforts, tree health data, and forest coverage"
                 icon="/images/bg_envicompliance.jpg"
                 onClick={() => handleDashboardSelect("urban-greening")}
-                className="border-ems-green-200 hover:border-ems-green-400"
+                className="flex-none w-72 md:w-80 border-ems-green-200 hover:border-ems-green-400"
+                contentClassName="h-full"
               />
             )}
 
@@ -221,7 +226,8 @@ export default function DashboardSelection() {
                 description="Evaluate and optimize emissions from government-operated vehicles"
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("government-emission")}
-                className="border-ems-gray-200 hover:border-ems-gray-400"
+                className="flex-none w-72 md:w-80 border-ems-gray-200 hover:border-ems-gray-400"
+                contentClassName="h-full"
               />
             )}
           </div>

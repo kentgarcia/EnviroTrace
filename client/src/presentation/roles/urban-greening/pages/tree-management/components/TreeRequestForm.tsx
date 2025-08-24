@@ -3,14 +3,18 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { Card, CardContent } from "@/presentation/components/shared/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 import { Badge } from "@/presentation/components/shared/ui/badge";
+import { Separator } from "@/presentation/components/shared/ui/separator";
 import { TreeRequest } from "../logic/useTreeRequests";
-import { X, Plus, Unlink } from "lucide-react";
+import { Plus, Unlink, FileText, Users, MapPin, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchUrbanGreeningFeeRecords, UrbanGreeningFeeRecord, createUrbanGreeningFeeRecord, UrbanGreeningFeeRecordCreate } from "@/core/api/fee-api";
 import { searchUrbanGreeningFeeRecords, UrbanGreeningFeeRecordSearchResult, updateTreeManagementRequest } from "@/core/api/tree-management-api";
+import { fetchMonitoringRequests, createMonitoringRequest, MonitoringRequest } from "@/core/api/monitoring-request-service";
+import { PLANT_STATUS_OPTIONS } from "../../../constants";
+import LocationPickerMap from "../../LocationPickerMap";
 import { toast } from "sonner";
 
 interface TreeRequestFormProps {
@@ -89,6 +93,163 @@ const FeeRecordSearch: React.FC<{ onSelect: (id: string) => void; disabled?: boo
     );
 };
 
+// Monitoring Request Field Component
+const MonitoringRequestField: React.FC<{
+    value?: string | null;
+    onChange: (id: string | null) => void;
+    disabled?: boolean;
+    onCreateNew?: () => void;
+}> = ({ value, onChange, disabled, onCreateNew }) => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchResults, setSearchResults] = useState<MonitoringRequest[]>([]);
+    const [searching, setSearching] = useState(false);
+
+    // Search monitoring requests with debounce
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            return;
+        }
+
+        const timeoutId = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const data = await fetchMonitoringRequests({ search: searchQuery.trim(), limit: 10 });
+                setSearchResults(data.reports || []);
+            } catch (error) {
+                setSearchResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
+
+    return (
+        <div className="space-y-2">
+            <Label>Monitoring Request (optional)</Label>
+            {value ? (
+                <div className="flex items-center gap-2">
+                    <Input
+                        readOnly
+                        value={value}
+                        className="bg-gray-50 text-xs flex-1"
+                    />
+                    {!disabled && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onChange(null)}
+                        >
+                            <Unlink className="w-4 h-4" />
+                        </Button>
+                    )}
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {!disabled && (
+                        <div className="relative">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Search monitoring requests..."
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        if (!searchOpen) setSearchOpen(true);
+                                    }}
+                                    onFocus={() => setSearchOpen(true)}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={onCreateNew}
+                                >
+                                    <Plus className="w-4 h-4 mr-1" />
+                                    New
+                                </Button>
+                            </div>
+                            {searchOpen && searchQuery.trim() && (
+                                <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-white shadow-lg">
+                                    {searching && (
+                                        <div className="p-2 text-sm text-gray-500">Searching...</div>
+                                    )}
+                                    {!searching && searchResults.length === 0 && (
+                                        <div className="p-2 text-sm text-gray-500">No matches found</div>
+                                    )}
+                                    {searchResults.map((request) => (
+                                        <button
+                                            key={request.id}
+                                            type="button"
+                                            className="w-full text-left px-3 py-2 hover:bg-gray-100"
+                                            onClick={() => {
+                                                onChange(request.id);
+                                                setSearchOpen(false);
+                                                setSearchQuery("");
+                                            }}
+                                        >
+                                            <div className="text-sm font-medium truncate">
+                                                {request.title || `Request ${request.id.slice(0, 8)}`}
+                                            </div>
+                                            <div className="text-xs text-gray-600 truncate">
+                                                {request.address || `(${request.location?.lat}, ${request.location?.lng})`}
+                                            </div>
+                                            <div className="text-xs text-gray-500">{request.status}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {disabled && (
+                        <div className="text-sm text-gray-500">No monitoring request linked</div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// Move SectionWrapper outside to prevent recreation on each render
+const SectionWrapper: React.FC<{
+    title: string;
+    children: React.ReactNode;
+    className?: string;
+    icon?: React.ReactNode;
+    variant?: "full" | "inline";
+}> = ({ title, children, className, icon, variant = "full" }) => {
+    const inline = variant === "inline";
+
+    if (inline) {
+        return (
+            <div className={"space-y-3 " + (className || "")}>
+                <div className="flex items-center gap-2">
+                    {icon}
+                    <h4 className="text-sm font-medium text-gray-700 tracking-wide uppercase">{title}</h4>
+                </div>
+                <Separator className="my-2" />
+                {children}
+            </div>
+        );
+    }
+    return (
+        <Card className={className}>
+            <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    {icon}
+                    {title}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+                {children}
+            </CardContent>
+        </Card>
+    );
+};
+
 const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
     mode,
     initialData,
@@ -105,6 +266,7 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
         request_date: new Date().toISOString().split('T')[0],
         fee_record_id: null as string | null,
         notes: "",
+        monitoring_request_id: null as string | null,
         inspectors: [] as string[],
         // Stored as strings for backend compatibility; UI edits use treeEntries state
         trees_and_quantities: [] as string[],
@@ -136,6 +298,7 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                 request_date: initialData.request_date?.split('T')[0] || new Date().toISOString().split('T')[0],
                 fee_record_id: initialData.fee_record_id || null,
                 notes: initialData.notes || "",
+                monitoring_request_id: initialData.monitoring_request_id || null,
                 inspectors: initialData.inspectors || [],
                 trees_and_quantities: initialData.trees_and_quantities || [],
                 picture_links: initialData.picture_links || [],
@@ -171,16 +334,17 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
             .map(e => `${e.name.trim()}: ${e.quantity && !isNaN(Number(e.quantity)) ? e.quantity : 0}`);
 
         const base = {
-            request_number: formData.request_number,
+            request_number: mode === "add" ? "" : formData.request_number, // Empty for auto-generation
             request_type: formData.request_type,
             requester_name: formData.requester_name,
             property_address: formData.property_address,
             status: formData.status,
             request_date: formData.request_date,
             notes: formData.notes,
-            inspectors: formData.inspectors,
-            trees_and_quantities: composedTrees,
-            picture_links: formData.picture_links,
+            monitoring_request_id: formData.monitoring_request_id,
+            inspectors: Array.isArray(formData.inspectors) ? formData.inspectors : [],
+            trees_and_quantities: Array.isArray(composedTrees) ? composedTrees : [],
+            picture_links: Array.isArray(formData.picture_links) ? formData.picture_links : [],
         };
 
         const submitData = {
@@ -201,6 +365,11 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
         staleTime: 60_000,
         enabled: !isReadOnly,
     });
+
+    // Monitoring request functionality
+    const [monitoringRequestOpen, setMonitoringRequestOpen] = useState(false);
+    const [newMonitoringStatus, setNewMonitoringStatus] = useState<string>("Living");
+    const [newMonitoringLocation, setNewMonitoringLocation] = useState<{ lat: number; lng: number }>({ lat: 14.5995, lng: 120.9842 });
 
     const handleGoToFeeRecords = () => {
         // Navigate to fee records page - assuming standard routing
@@ -233,39 +402,6 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
             requestAnimationFrame(() => { sc.scrollTop = top; });
         }
     };
-
-    const SectionWrapper: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => {
-        if (inline) {
-            return (
-                <div className={"space-y-3 " + (className || "")}>
-                    <h4 className="text-sm font-medium text-gray-700 tracking-wide uppercase">{title}</h4>
-                    {children}
-                </div>
-            );
-        }
-        return (
-            <Card className={className}>
-                <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">{title}</h3>
-                    {children}
-                </CardContent>
-            </Card>
-        );
-    };
-
-    const listButtonClasses = inline ? "h-8 px-2" : "";
-    const removeButton = (onClick: () => void) => (
-        <Button
-            type="button"
-            variant={inline ? "ghost" : "outline"}
-            size="sm"
-            className={inline ? "p-1 h-8" : undefined}
-            onClick={onClick}
-            aria-label="Remove"
-        >
-            {inline ? <X className="w-4 h-4" /> : "Remove"}
-        </Button>
-    );
 
     // --- Create Fee Record Dialog State & Logic ---
     const [isFeeDialogOpen, setIsFeeDialogOpen] = useState(false);
@@ -374,24 +510,39 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
     return (
         <>
             <form ref={formRef} onSubmit={handleSubmit} className={inline ? "space-y-5" : "space-y-6"}>
-                <div className={inline ? "space-y-5" : "grid grid-cols-1 md:grid-cols-2 gap-6"}>
-                    <SectionWrapper title="Request Information">
+                <div className={inline ? "space-y-5" : "grid grid-cols-1 lg:grid-cols-2 gap-6"}>
+                    <SectionWrapper
+                        title="Request Information"
+                        icon={<FileText className="w-5 h-5 text-blue-600" />}
+                        variant={variant}
+                    >
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {mode !== "add" && (
                                     <div>
-                                        <Label htmlFor="request_number">Request #</Label>
+                                        <Label htmlFor="request_number">Request Number</Label>
                                         <Input
                                             id="request_number"
                                             name="request_number"
                                             value={formData.request_number}
                                             readOnly
-                                            className="bg-gray-50"
+                                            className="bg-gray-50 font-mono"
+                                        />
+                                    </div>
+                                )}
+                                {mode === "add" && (
+                                    <div>
+                                        <Label htmlFor="request_number">Request Number</Label>
+                                        <Input
+                                            id="request_number"
+                                            value="Auto-generated"
+                                            readOnly
+                                            className="bg-gray-50 font-mono"
                                         />
                                     </div>
                                 )}
                                 <div>
-                                    <Label htmlFor="request_type">Type</Label>
+                                    <Label htmlFor="request_type">Request Type *</Label>
                                     <select
                                         id="request_type"
                                         name="request_type"
@@ -399,66 +550,60 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                         onChange={handleInputChange}
                                         disabled={isReadOnly}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        required
                                     >
+                                        <option value="">Select Type</option>
                                         <option value="pruning">Pruning</option>
                                         <option value="cutting">Cutting</option>
-                                        <option value="violation_complaint">Violation</option>
+                                        <option value="violation_complaint">Violation Complaint</option>
                                     </select>
                                 </div>
-                                {mode !== "add" ? (
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <Label htmlFor="request_date">Date</Label>
-                                            <Input
-                                                id="request_date"
-                                                name="request_date"
-                                                type="date"
-                                                value={formData.request_date}
-                                                onChange={handleInputChange}
-                                                readOnly={isReadOnly}
-                                            />
-                                        </div>
-                                        <div>
-                                            <Label htmlFor="status">Status</Label>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    id="status"
-                                                    name="status"
-                                                    value={formData.status}
-                                                    onChange={handleInputChange}
-                                                    disabled={isReadOnly}
-                                                    className="flex-1 px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                >
-                                                    <option value="filed">Filed</option>
-                                                    <option value="on_hold">On Hold</option>
-                                                    <option value="for_signature">For Signature</option>
-                                                    <option value="payment_pending">Payment Pending</option>
-                                                </select>
-                                                <Badge className={getStatusColor(formData.status)}>
-                                                    {formData.status.replace("_", " ").toUpperCase()}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="request_date">Request Date</Label>
+                                    <Input
+                                        id="request_date"
+                                        name="request_date"
+                                        type="date"
+                                        value={formData.request_date}
+                                        onChange={handleInputChange}
+                                        readOnly={isReadOnly}
+                                    />
+                                </div>
+                                {mode !== "add" && (
                                     <div>
-                                        <Label htmlFor="request_date">Date</Label>
-                                        <Input
-                                            id="request_date"
-                                            name="request_date"
-                                            type="date"
-                                            value={formData.request_date}
-                                            onChange={handleInputChange}
-                                            readOnly={isReadOnly}
-                                        />
+                                        <Label htmlFor="status">Status</Label>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                id="status"
+                                                name="status"
+                                                value={formData.status}
+                                                onChange={handleInputChange}
+                                                disabled={isReadOnly}
+                                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="filed">Filed</option>
+                                                <option value="on_hold">On Hold</option>
+                                                <option value="for_signature">For Signature</option>
+                                                <option value="payment_pending">Payment Pending</option>
+                                            </select>
+                                            <Badge className={getStatusColor(formData.status)}>
+                                                {formData.status.replace("_", " ").toUpperCase()}
+                                            </Badge>
+                                        </div>
                                     </div>
                                 )}
-                                {/* Status retained once; duplication removed */}
                             </div>
                         </div>
                     </SectionWrapper>
 
-                    <SectionWrapper title="Requester Information" className={inline ? "" : ""}>
+                    <SectionWrapper
+                        title="Requester Information"
+                        icon={<Users className="w-5 h-5 text-green-600" />}
+                        variant={variant}
+                    >
                         <div className="space-y-4">
                             <div>
                                 <Label htmlFor="requester_name">Full Name *</Label>
@@ -469,10 +614,11 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
                                     required
+                                    placeholder="Enter requester's full name"
                                 />
                             </div>
                             <div>
-                                <Label htmlFor="property_address">Address *</Label>
+                                <Label htmlFor="property_address">Property Address *</Label>
                                 <Textarea
                                     id="property_address"
                                     name="property_address"
@@ -481,13 +627,27 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                     readOnly={isReadOnly}
                                     required
                                     rows={inline ? 2 : 3}
+                                    placeholder="Enter complete property address"
                                 />
                             </div>
                         </div>
                     </SectionWrapper>
+                </div>
 
-                    <SectionWrapper title="Request Details">
+                {/* Second row - full width sections */}
+                <div className="space-y-6">
+                    <SectionWrapper
+                        title="Location & Monitoring"
+                        icon={<MapPin className="w-5 h-5 text-purple-600" />}
+                        variant={variant}
+                    >
                         <div className="space-y-4">
+                            <MonitoringRequestField
+                                value={formData.monitoring_request_id}
+                                onChange={(id) => setFormData(prev => ({ ...prev, monitoring_request_id: id }))}
+                                disabled={isReadOnly}
+                                onCreateNew={() => setMonitoringRequestOpen(true)}
+                            />
                             <div>
                                 <Label htmlFor="notes">Additional Notes</Label>
                                 <Textarea
@@ -497,33 +657,51 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                     onChange={handleInputChange}
                                     readOnly={isReadOnly}
                                     rows={inline ? 2 : 3}
+                                    placeholder="Any additional information or special requirements"
                                 />
                             </div>
                         </div>
                     </SectionWrapper>
 
-                    <SectionWrapper title="Inspection Information">
-                        <div className="space-y-5">
+                    <SectionWrapper
+                        title="Inspection Information"
+                        icon={<Users className="w-5 h-5 text-orange-600" />}
+                        variant={variant}
+                    >
+                        <div className="space-y-6">
                             <div>
-                                <Label htmlFor="inspectors">Inspectors</Label>
-                                <div className="space-y-2">
+                                <Label className="text-base font-medium">Inspectors</Label>
+                                <p className="text-sm text-gray-600 mb-3">Add inspectors responsible for this request</p>
+                                <div className="space-y-3">
                                     {formData.inspectors.map((inspector, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <Input
-                                                value={inspector}
-                                                onChange={(e) => {
-                                                    const newInspectors = [...formData.inspectors];
-                                                    newInspectors[index] = e.target.value;
-                                                    setFormData(prev => ({ ...prev, inspectors: newInspectors }));
-                                                }}
-                                                readOnly={isReadOnly}
-                                                placeholder="Inspector name"
-                                                className="flex-1"
-                                            />
-                                            {!isReadOnly && removeButton(() => {
-                                                const newInspectors = formData.inspectors.filter((_, i) => i !== index);
-                                                setFormData(prev => ({ ...prev, inspectors: newInspectors }));
-                                            })}
+                                        <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex-1">
+                                                <Input
+                                                    value={inspector}
+                                                    onChange={(e) => {
+                                                        const newInspectors = [...formData.inspectors];
+                                                        newInspectors[index] = e.target.value;
+                                                        setFormData(prev => ({ ...prev, inspectors: newInspectors }));
+                                                    }}
+                                                    readOnly={isReadOnly}
+                                                    placeholder="Enter inspector name"
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const newInspectors = formData.inspectors.filter((_, i) => i !== index);
+                                                        setFormData(prev => ({ ...prev, inspectors: newInspectors }));
+                                                    }}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                     {!isReadOnly && (
@@ -531,7 +709,7 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className={listButtonClasses + " flex items-center gap-1"}
+                                            className="w-full border-dashed border-gray-300 text-gray-600 hover:border-gray-400"
                                             onClick={() => {
                                                 setFormData(prev => ({
                                                     ...prev,
@@ -539,42 +717,59 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                                 }));
                                             }}
                                         >
-                                            <Plus className="w-4 h-4" /> Add Inspector
+                                            <Plus className="w-4 h-4 mr-2" /> Add Inspector
                                         </Button>
                                     )}
                                 </div>
                             </div>
+                            <Separator className="my-4" />
+
                             <div>
-                                <Label>Trees & Quantities</Label>
-                                <div className="space-y-2">
+                                <Label className="text-base font-medium">Trees & Quantities</Label>
+                                <p className="text-sm text-gray-600 mb-3">Specify the tree species and quantities for this request</p>
+                                <div className="space-y-3">
                                     {treeEntries.map((entry, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <Input
-                                                value={entry.name}
-                                                onChange={(e) => {
-                                                    const updated = [...treeEntries];
-                                                    updated[index] = { ...updated[index], name: e.target.value };
-                                                    setTreeEntries(updated);
-                                                }}
-                                                readOnly={isReadOnly}
-                                                placeholder="Species (e.g., Narra)"
-                                                className="flex-1"
-                                            />
-                                            <Input
-                                                value={entry.quantity}
-                                                onChange={(e) => {
-                                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                                    const updated = [...treeEntries];
-                                                    updated[index] = { ...updated[index], quantity: val };
-                                                    setTreeEntries(updated);
-                                                }}
-                                                readOnly={isReadOnly}
-                                                placeholder="Qty"
-                                                className="w-20 text-center"
-                                            />
-                                            {!isReadOnly && removeButton(() => {
-                                                setTreeEntries(treeEntries.filter((_, i) => i !== index));
-                                            })}
+                                        <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex-1">
+                                                <Input
+                                                    value={entry.name}
+                                                    onChange={(e) => {
+                                                        const updated = [...treeEntries];
+                                                        updated[index] = { ...updated[index], name: e.target.value };
+                                                        setTreeEntries(updated);
+                                                    }}
+                                                    readOnly={isReadOnly}
+                                                    placeholder="Tree species (e.g., Narra, Mahogany, Mango)"
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                            <div className="w-24">
+                                                <Input
+                                                    value={entry.quantity}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/[^0-9]/g, "");
+                                                        const updated = [...treeEntries];
+                                                        updated[index] = { ...updated[index], quantity: val };
+                                                        setTreeEntries(updated);
+                                                    }}
+                                                    readOnly={isReadOnly}
+                                                    placeholder="Qty"
+                                                    className="text-center bg-white"
+                                                />
+                                            </div>
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setTreeEntries(treeEntries.filter((_, i) => i !== index));
+                                                    }}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                     {!isReadOnly && (
@@ -582,34 +777,49 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className={listButtonClasses + " flex items-center gap-1"}
+                                            className="w-full border-dashed border-gray-300 text-gray-600 hover:border-gray-400"
                                             onClick={() => setTreeEntries([...treeEntries, { name: "", quantity: "" }])}
                                         >
-                                            <Plus className="w-4 h-4" /> Add Tree
+                                            <Plus className="w-4 h-4 mr-2" /> Add Tree Species
                                         </Button>
                                     )}
                                 </div>
                             </div>
+                            <Separator className="my-4" />
+
                             <div>
-                                <Label htmlFor="picture_links">Picture Links</Label>
-                                <div className="space-y-2">
+                                <Label className="text-base font-medium">Picture Links</Label>
+                                <p className="text-sm text-gray-600 mb-3">Add photo URLs for documentation</p>
+                                <div className="space-y-3">
                                     {formData.picture_links.map((link, index) => (
-                                        <div key={index} className="flex items-center space-x-2">
-                                            <Input
-                                                value={link}
-                                                onChange={(e) => {
-                                                    const newLinks = [...formData.picture_links];
-                                                    newLinks[index] = e.target.value;
-                                                    setFormData(prev => ({ ...prev, picture_links: newLinks }));
-                                                }}
-                                                readOnly={isReadOnly}
-                                                placeholder="Picture URL"
-                                                className="flex-1"
-                                            />
-                                            {!isReadOnly && removeButton(() => {
-                                                const newLinks = formData.picture_links.filter((_, i) => i !== index);
-                                                setFormData(prev => ({ ...prev, picture_links: newLinks }));
-                                            })}
+                                        <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex-1">
+                                                <Input
+                                                    value={link}
+                                                    onChange={(e) => {
+                                                        const newLinks = [...formData.picture_links];
+                                                        newLinks[index] = e.target.value;
+                                                        setFormData(prev => ({ ...prev, picture_links: newLinks }));
+                                                    }}
+                                                    readOnly={isReadOnly}
+                                                    placeholder="Enter photo URL (e.g., https://example.com/photo.jpg)"
+                                                    className="bg-white"
+                                                />
+                                            </div>
+                                            {!isReadOnly && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const newLinks = formData.picture_links.filter((_, i) => i !== index);
+                                                        setFormData(prev => ({ ...prev, picture_links: newLinks }));
+                                                    }}
+                                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     ))}
                                     {!isReadOnly && (
@@ -617,7 +827,7 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            className={listButtonClasses + " flex items-center gap-1"}
+                                            className="w-full border-dashed border-gray-300 text-gray-600 hover:border-gray-400"
                                             onClick={() => {
                                                 setFormData(prev => ({
                                                     ...prev,
@@ -625,7 +835,7 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                                                 }));
                                             }}
                                         >
-                                            <Plus className="w-4 h-4" /> Add Link
+                                            <Plus className="w-4 h-4 mr-2" /> Add Picture Link
                                         </Button>
                                     )}
                                 </div>
@@ -634,7 +844,10 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                     </SectionWrapper>
 
                     {mode !== "add" ? (
-                        <SectionWrapper title="Processing Information">
+                        <SectionWrapper
+                            title="Processing Information"
+                            variant={variant}
+                        >
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <Label>Fee Record</Label>
@@ -693,7 +906,10 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                             </div>
                         </SectionWrapper>
                     ) : (
-                        <SectionWrapper title="Processing Information">
+                        <SectionWrapper
+                            title="Processing Information"
+                            variant={variant}
+                        >
                             <div className="space-y-3">
                                 <Label>Fee Record</Label>
                                 {formData.fee_record_id ? (
@@ -732,20 +948,33 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                     )}
                 </div>
 
-                <div className={inline ? "flex gap-2 justify-end pt-2" : "flex justify-end space-x-4"}>
-                    <Button type="button" variant="outline" size={inline ? "sm" : undefined} onClick={onCancel}>
-                        {mode === "view" ? "Close" : "Cancel"}
-                    </Button>
-                    {mode !== "view" && (
-                        <Button type="submit" size={inline ? "sm" : undefined}>
-                            {mode === "add" ? "Create" : "Save Changes"}
+                {/* Form Actions */}
+                <div className="border-t pt-6 mt-8">
+                    <div className={inline ? "flex gap-3 justify-end" : "flex justify-end space-x-4"}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size={inline ? "sm" : "default"}
+                            onClick={onCancel}
+                            className="min-w-[100px]"
+                        >
+                            {mode === "view" ? "Close" : "Cancel"}
                         </Button>
-                    )}
+                        {mode !== "view" && (
+                            <Button
+                                type="submit"
+                                size={inline ? "sm" : "default"}
+                                className="min-w-[120px]"
+                            >
+                                {mode === "add" ? "Create Request" : "Save Changes"}
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </form>
             {/* Create Fee Record Dialog */}
             <Dialog open={isFeeDialogOpen} onOpenChange={setIsFeeDialogOpen}>
-                <DialogContent className="max-w-xl">
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Create Fee Record</DialogTitle>
                     </DialogHeader>
@@ -862,6 +1091,66 @@ const TreeRequestForm: React.FC<TreeRequestFormProps> = ({
                             </Button>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Monitoring Request Creation Dialog */}
+            <Dialog open={monitoringRequestOpen} onOpenChange={setMonitoringRequestOpen}>
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Create Monitoring Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Status</Label>
+                            <select
+                                value={newMonitoringStatus}
+                                onChange={(e) => setNewMonitoringStatus(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                            >
+                                {PLANT_STATUS_OPTIONS.map(status => (
+                                    <option key={status} value={status}>{status}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <Label>Location</Label>
+                            <LocationPickerMap
+                                location={newMonitoringLocation}
+                                onLocationChange={setNewMonitoringLocation}
+                            />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setMonitoringRequestOpen(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                onClick={async () => {
+                                    try {
+                                        const created = await createMonitoringRequest({
+                                            status: newMonitoringStatus,
+                                            location: newMonitoringLocation,
+                                            title: `Tree Management: ${formData.requester_name || 'Request'}`,
+                                            address: formData.property_address,
+                                            source_type: "tree_management",
+                                        });
+                                        setFormData(prev => ({ ...prev, monitoring_request_id: created.id }));
+                                        setMonitoringRequestOpen(false);
+                                        toast.success("Monitoring Request created and linked!");
+                                    } catch (error) {
+                                        toast.error("Failed to create Monitoring Request");
+                                    }
+                                }}
+                            >
+                                Create & Link
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </>

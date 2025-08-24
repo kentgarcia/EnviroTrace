@@ -37,6 +37,8 @@ import {
 } from "./logic/useTreeRequests";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { fetchMonitoringRequest, updateMonitoringRequest } from "@/core/api/monitoring-request-service";
+import { PLANT_STATUS_OPTIONS } from "../../constants";
 
 const TreeManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +49,11 @@ const TreeManagement: React.FC = () => {
     const [selectedRequest, setSelectedRequest] = useState<TreeRequest | null>(null); // For add modal initial data (unused but kept for potential future)
     const [selectedRowForDetails, setSelectedRowForDetails] = useState<TreeRequest | null>(null);
     const [isEditingDetails, setIsEditingDetails] = useState(false); // Inline edit mode
+
+    // Monitoring request state
+    const [linkedMonitoring, setLinkedMonitoring] = useState<any | null>(null);
+    const [linkedLoading, setLinkedLoading] = useState(false);
+
     const now = new Date();
     const defaultMonth = String(now.getMonth() + 1).padStart(2, '0');
     const defaultYear = String(now.getFullYear());
@@ -62,6 +69,20 @@ const TreeManagement: React.FC = () => {
         staleTime: 60_000, // 1 min
         gcTime: 5 * 60_000, // 5 min
     });
+
+    // Load linked monitoring request when tree request is selected
+    React.useEffect(() => {
+        const id = selectedRowForDetails?.monitoring_request_id;
+        if (!id) {
+            setLinkedMonitoring(null);
+            return;
+        }
+        setLinkedLoading(true);
+        fetchMonitoringRequest(id)
+            .then((res) => setLinkedMonitoring(res))
+            .catch(() => setLinkedMonitoring(null))
+            .finally(() => setLinkedLoading(false));
+    }, [selectedRowForDetails?.monitoring_request_id]);
 
     // Utility functions
     const getRequestTypeLabel = (type: string) => {
@@ -190,10 +211,24 @@ const TreeManagement: React.FC = () => {
         }
     };
 
-    const handleInlineEditSave = (data: any) => {
+    const handleInlineEditSave = async (data: any) => {
         if (selectedRowForDetails) {
             fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data }, {
-                onSuccess: () => {
+                onSuccess: async () => {
+                    // Update monitoring request source_type if there's a linked monitoring request
+                    const monitoring_request_id = data.monitoring_request_id || selectedRowForDetails.monitoring_request_id;
+                    if (monitoring_request_id) {
+                        try {
+                            const currentMonitoring = await fetchMonitoringRequest(monitoring_request_id);
+                            await updateMonitoringRequest(monitoring_request_id, {
+                                ...currentMonitoring,
+                                source_type: "tree_management"
+                            });
+                        } catch (error) {
+                            console.error("Failed to update monitoring request source_type:", error);
+                            // Don't show error to user as this is a background update
+                        }
+                    }
                     setIsEditingDetails(false);
                 }
             });
@@ -414,6 +449,65 @@ const TreeManagement: React.FC = () => {
                                                         </div>
                                                     )}
 
+                                                    {/* Monitoring Request Information */}
+                                                    {selectedRowForDetails.monitoring_request_id && (
+                                                        <div className="pt-2 border-t space-y-2">
+                                                            <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
+                                                            {linkedLoading ? (
+                                                                <div className="text-xs text-gray-500">Loading linked request...</div>
+                                                            ) : linkedMonitoring ? (
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-xs text-gray-600">Title:</span>
+                                                                        <span className="text-xs font-medium">{linkedMonitoring.title}</span>
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-xs text-gray-600">Status:</span>
+                                                                        <Badge variant="outline" className="text-xs">{linkedMonitoring.status}</Badge>
+                                                                    </div>
+                                                                    <div className="space-y-1">
+                                                                        <span className="text-xs text-gray-600">Location:</span>
+                                                                        <div className="text-xs">
+                                                                            {linkedMonitoring.address && linkedMonitoring.address.trim().length > 0
+                                                                                ? linkedMonitoring.address
+                                                                                : `(${linkedMonitoring.location?.lat ?? '—'}, ${linkedMonitoring.location?.lng ?? '—'})`}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-1 pt-2">
+                                                                        {PLANT_STATUS_OPTIONS.map(status => (
+                                                                            <Button
+                                                                                key={status}
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                className="text-xs h-6 px-2"
+                                                                                onClick={async () => {
+                                                                                    try {
+                                                                                        await updateMonitoringRequest(linkedMonitoring.id, {
+                                                                                            status: status,
+                                                                                            location: linkedMonitoring.location,
+                                                                                            source_type: "tree_management"
+                                                                                        });
+                                                                                        const updated = await fetchMonitoringRequest(linkedMonitoring.id);
+                                                                                        setLinkedMonitoring(updated);
+                                                                                        toast.success(`Status updated to ${status}`);
+                                                                                    } catch (error) {
+                                                                                        toast.error("Failed to update status");
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                {status}
+                                                                            </Button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-gray-500">
+                                                                    Linked to ID: {selectedRowForDetails.monitoring_request_id}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     {/* Inspection Information */}
                                                     <div className="pt-2 border-t">
                                                         <h4 className="text-sm font-medium text-gray-700 mb-2">Inspection Information</h4>
@@ -578,7 +672,7 @@ const TreeManagement: React.FC = () => {
 
             {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent className="max-w-4xl">
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {formMode === "add" && "Add Tree Management Request"}

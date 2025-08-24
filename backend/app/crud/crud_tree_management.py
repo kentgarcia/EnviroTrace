@@ -36,13 +36,26 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
             )
         ).all()
 
+    def get_sync(self, db: Session, id: str) -> Optional[TreeManagementRequest]:
+        """Synchronous version of get for use with sync sessions"""
+        return db.query(TreeManagementRequest).filter(TreeManagementRequest.id == id).first()
+
     def get_multi_sync(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[TreeManagementRequest]:
         """Synchronous version of get_multi for use with sync sessions"""
         return db.query(TreeManagementRequest).offset(skip).limit(limit).all()
 
     def create_sync(self, db: Session, *, obj_in: TreeManagementRequestCreate) -> TreeManagementRequest:
         """Synchronous version of create for use with sync sessions"""
+        import json
+        
         obj_in_data = obj_in.model_dump()
+        
+        # Convert list fields to JSON strings for database storage
+        # Ensure we have proper lists, not None or other types
+        obj_in_data['inspectors'] = json.dumps(obj_in_data.get('inspectors', []) or [])
+        obj_in_data['trees_and_quantities'] = json.dumps(obj_in_data.get('trees_and_quantities', []) or [])
+        obj_in_data['picture_links'] = json.dumps(obj_in_data.get('picture_links', []) or [])
+            
         db_obj = TreeManagementRequest(**obj_in_data)
         db.add(db_obj)
         db.commit()
@@ -51,7 +64,18 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
 
     def update_sync(self, db: Session, *, db_obj: TreeManagementRequest, obj_in: TreeManagementRequestUpdate) -> TreeManagementRequest:
         """Synchronous version of update for use with sync sessions"""
+        import json
+        
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Convert list fields to JSON strings for database storage
+        if 'inspectors' in update_data:
+            update_data['inspectors'] = json.dumps(update_data['inspectors'] or [])
+        if 'trees_and_quantities' in update_data:
+            update_data['trees_and_quantities'] = json.dumps(update_data['trees_and_quantities'] or [])
+        if 'picture_links' in update_data:
+            update_data['picture_links'] = json.dumps(update_data['picture_links'] or [])
+            
         for field, value in update_data.items():
             setattr(db_obj, field, value)
         db.commit()

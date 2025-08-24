@@ -6,6 +6,7 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import LocationPickerMap from "../../LocationPickerMap";
 import { toast } from "sonner";
 import { MonitoringRequestSubmission } from "../logic/useMonitoringRequests";
+import { MONITORING_REQUEST_STATUS_OPTIONS, DEFAULT_MONITORING_REQUEST_STATUS } from "../../../constants";
 
 interface Coordinates {
   lat: number;
@@ -14,10 +15,10 @@ interface Coordinates {
 
 interface MonitoringRequestFormProps {
   mode: "adding" | "editing";
-  initialValues?: Partial<MonitoringRequestSubmission>;
+  initialValues?: Partial<MonitoringRequestSubmission> & { status?: string };
   location: Coordinates;
   onLocationChange: (loc: Coordinates) => void;
-  onSave: (data: MonitoringRequestSubmission, location: Coordinates) => void;
+  onSave: (data: MonitoringRequestSubmission, location: Coordinates, status: string) => void;
   onCancel: () => void;
 }
 
@@ -29,16 +30,28 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const [status, setStatus] = React.useState<string>("pending");
+  const [status, setStatus] = React.useState<string>(
+    initialValues?.status || DEFAULT_MONITORING_REQUEST_STATUS
+  );
   const [form, setForm] = React.useState<MonitoringRequestSubmission>({
     title: "",
     description: "",
-    requester_name: "",
     date: new Date(),
-    address: "",
-    sapling_count: undefined,
     notes: "",
+    ...initialValues,
   });
+
+  // Update form state when initialValues change (e.g., switching from add to edit mode)
+  React.useEffect(() => {
+    setStatus(initialValues?.status || DEFAULT_MONITORING_REQUEST_STATUS);
+    setForm({
+      title: "",
+      description: "",
+      date: new Date(),
+      notes: "",
+      ...initialValues,
+    });
+  }, [initialValues]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -56,7 +69,13 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Only status and location are required per new spec
+
+    // Validate required fields
+    if (!form.title.trim()) {
+      toast.error("Please enter a title for the monitoring request.");
+      return;
+    }
+
     if (!location) {
       toast.error("Please set a location on the map.");
       return;
@@ -67,7 +86,8 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
         ...form,
         date: form.date || new Date(),
       },
-      location
+      location,
+      status
     );
   };
 
@@ -80,13 +100,48 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
           onChange={(e) => setStatus(e.target.value)}
           className="w-full border rounded px-3 py-2"
         >
-          <option value="pending">Pending</option>
-          <option value="in-progress">In Progress</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="completed">Completed</option>
+          {MONITORING_REQUEST_STATUS_OPTIONS.map(statusOption => (
+            <option key={statusOption} value={statusOption}>
+              {statusOption.charAt(0).toUpperCase() + statusOption.slice(1)}
+            </option>
+          ))}
         </select>
       </div>
+
+      <div>
+        <Label htmlFor="title" className="text-sm font-medium">Title *</Label>
+        <Input
+          id="title"
+          type="text"
+          value={form.title}
+          onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+          placeholder="Enter monitoring request title"
+          required
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+        <Textarea
+          id="description"
+          value={form.description}
+          onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+          placeholder="Enter description of the monitoring request"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+        <Textarea
+          id="notes"
+          value={form.notes}
+          onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Additional notes"
+          rows={2}
+        />
+      </div>
+
       <div>
         <Label className="text-sm font-medium">
           Location (click map to set)

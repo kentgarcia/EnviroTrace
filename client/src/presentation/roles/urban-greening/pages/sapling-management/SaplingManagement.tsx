@@ -4,6 +4,7 @@ import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBa
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
+import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { Plus, Sprout, TreePine } from "lucide-react";
@@ -21,6 +22,8 @@ import SaplingRequestForm from "./components/SaplingRequestForm";
 import UrbanGreeningPlantingForm from "./components/UrbanGreeningPlantingForm";
 import { fetchMonitoringRequest, updateMonitoringRequest } from "@/core/api/monitoring-request-service";
 import { useUrbanGreeningPlantingMutations } from "../planting-records/logic/usePlantingRecords";
+import { PLANT_STATUS_OPTIONS } from "../../constants";
+import { toast } from "sonner";
 
 const SaplingManagement: React.FC = () => {
     const [activeTab, setActiveTab] = useState<string>("saplings");
@@ -30,10 +33,11 @@ const SaplingManagement: React.FC = () => {
     const [srMode, setSrMode] = useState<"add" | "edit">("add");
     const [srSelected, setSrSelected] = useState<SaplingRequest | null>(null);
 
+    // State for monitoring requests for sapling requests
+    const [srLinkedMonitoring, setSrLinkedMonitoring] = useState<any | null>(null);
+
     const { saplingRequests } = useSaplingRequests();
     const { createSapling, updateSapling, deleteSapling } = useSaplingRequestMutations();
-    const [linkedMonitoring, setLinkedMonitoring] = useState<any | null>(null);
-    const [linkedLoading, setLinkedLoading] = useState(false);
 
     const srFiltered = useMemo(() => {
         const q = srSearch.toLowerCase();
@@ -84,22 +88,29 @@ const SaplingManagement: React.FC = () => {
     const handleSrAdd = () => { setSrMode("add"); setSrSelected(null); setSrOpen(true); };
     const handleSrEdit = (row: SaplingRequest) => { setSrMode("edit"); setSrSelected(row); setSrOpen(true); };
     const handleSrSave = async (data: any) => {
-        if (srMode === "add") await createSapling.mutateAsync(data);
-        else if (srSelected) await updateSapling.mutateAsync({ id: srSelected.id, data });
+        if (srMode === "add") {
+            await createSapling.mutateAsync(data);
+        } else if (srSelected) {
+            await updateSapling.mutateAsync({ id: srSelected.id, data });
+
+            // Update monitoring request source_type if there's a linked monitoring request
+            const monitoring_request_id = data.monitoring_request_id || srSelected.monitoring_request_id;
+            if (monitoring_request_id) {
+                try {
+                    const currentMonitoring = await fetchMonitoringRequest(monitoring_request_id);
+                    await updateMonitoringRequest(monitoring_request_id, {
+                        ...currentMonitoring,
+                        source_type: "urban_greening"
+                    });
+                } catch (error) {
+                    console.error("Failed to update monitoring request source_type:", error);
+                    // Don't show error to user as this is a background update
+                }
+            }
+        }
         setSrOpen(false);
     };
     const handleSrDelete = async (row: SaplingRequest) => { await deleteSapling.mutateAsync(row.id); };
-
-    // Load linked monitoring request for location/status
-    React.useEffect(() => {
-        const id = srSelected?.monitoring_request_id;
-        if (!id) { setLinkedMonitoring(null); return; }
-        setLinkedLoading(true);
-        fetchMonitoringRequest(id)
-            .then((res) => setLinkedMonitoring(res))
-            .catch(() => setLinkedMonitoring(null))
-            .finally(() => setLinkedLoading(false));
-    }, [srSelected?.monitoring_request_id]);
 
     // Urban Greening Plantings (reuse existing hooks + UI pattern)
     const { data: plantings = [] } = useUrbanGreeningPlantings();
@@ -138,6 +149,16 @@ const SaplingManagement: React.FC = () => {
             .catch(() => setUgLinkedMonitoring(null))
             .finally(() => setUgLinkedLoading(false));
     }, [(ugSelected as any)?.monitoring_request_id]);
+
+    // Load linked monitoring request for SR selected row
+    React.useEffect(() => {
+        const id = srSelected?.monitoring_request_id as string | undefined;
+        if (!id) { setSrLinkedMonitoring(null); return; }
+
+        fetchMonitoringRequest(id)
+            .then((res) => setSrLinkedMonitoring(res))
+            .catch(() => setSrLinkedMonitoring(null))
+    }, [srSelected?.monitoring_request_id]);
 
     return (
         <div className="flex min-h-screen w-full">
@@ -181,36 +202,41 @@ const SaplingManagement: React.FC = () => {
                                                                     <li key={idx}>{i.name} - {i.qty}</li>
                                                                 ))}
                                                             </ul>
+
+                                                            {/* Monitoring Request Link for Sapling Requests */}
                                                             {srSelected.monitoring_request_id && (
-                                                                <div className="pt-2 space-y-1">
-                                                                    <div className="text-gray-500">Monitoring Link:</div>
-                                                                    {linkedLoading ? (
-                                                                        <div className="text-xs text-gray-500">Loading linked request…</div>
-                                                                    ) : linkedMonitoring ? (
-                                                                        <div className="text-xs">
-                                                                            <div><span className="text-gray-500">Title:</span> {linkedMonitoring.title}</div>
-                                                                            <div><span className="text-gray-500">Status:</span> {linkedMonitoring.status}</div>
-                                                                            <div>
-                                                                                <span className="text-gray-500">Location:</span>{" "}
-                                                                                {linkedMonitoring.address && linkedMonitoring.address.trim().length > 0
-                                                                                    ? linkedMonitoring.address
-                                                                                    : `(${linkedMonitoring.location?.lat ?? '—'}, ${linkedMonitoring.location?.lng ?? '—'})`}
+                                                                <div className="space-y-2 pt-3 border-t">
+                                                                    <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
+                                                                    {!srLinkedMonitoring ? (
+                                                                        <Badge variant="outline" className="text-xs">Loading...</Badge>
+                                                                    ) : srLinkedMonitoring ? (
+                                                                        <div className="space-y-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="flex-1">
+                                                                                    <span className="text-xs font-medium">{srLinkedMonitoring.title}</span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <Badge variant="outline" className="text-xs">{srLinkedMonitoring.status}</Badge>
+                                                                                </div>
                                                                             </div>
-                                                                            <div className="flex gap-2 pt-2">
-                                                                                {(["Living", "Dead", "Replaced", "Untracked"] as const).map(s => (
-                                                                                    <Button key={s} size="sm" variant="outline" onClick={async () => {
-                                                                                        await updateMonitoringRequest(linkedMonitoring.id, { status: s, location: linkedMonitoring.location });
-                                                                                        const updated = await fetchMonitoringRequest(linkedMonitoring.id);
-                                                                                        setLinkedMonitoring(updated);
-                                                                                    }}>{s}</Button>
-                                                                                ))}
+                                                                            <div className="text-xs text-gray-600">
+                                                                                <span className="font-medium">Location:</span>{" "}
+                                                                                {srLinkedMonitoring.address && srLinkedMonitoring.address.trim().length > 0
+                                                                                    ? srLinkedMonitoring.address
+                                                                                    : `(${srLinkedMonitoring.location?.lat ?? '—'}, ${srLinkedMonitoring.location?.lng ?? '—'})`}
                                                                             </div>
+                                                                            {srLinkedMonitoring.description && (
+                                                                                <div className="text-xs text-gray-600">
+                                                                                    <span className="font-medium">Description:</span> {srLinkedMonitoring.description}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-xs text-gray-500">Not found (ID: {srSelected.monitoring_request_id})</div>
+                                                                        <Badge variant="outline" className="text-xs">Error loading monitoring data</Badge>
                                                                     )}
                                                                 </div>
                                                             )}
+
                                                             <div className="flex gap-2 pt-2">
                                                                 <Button size="sm" onClick={() => setSrOpen(true)}>Edit</Button>
                                                                 <Button size="sm" variant="destructive" onClick={() => handleSrDelete(srSelected!)}>Delete</Button>
@@ -279,32 +305,59 @@ const SaplingManagement: React.FC = () => {
                                                             )}
                                                             <div className="flex justify-between"><span className="text-gray-500">Date</span><span className="font-medium">{(ugSelected as any).planting_date}</span></div>
                                                             {(ugSelected as any).monitoring_request_id && (
-                                                                <div className="pt-2 space-y-1">
-                                                                    <div className="text-gray-500">Monitoring Link</div>
+                                                                <div className="pt-2 border-t space-y-2">
+                                                                    <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
                                                                     {ugLinkedLoading ? (
-                                                                        <div className="text-xs text-gray-500">Loading linked request…</div>
+                                                                        <div className="text-xs text-gray-500">Loading linked request...</div>
                                                                     ) : ugLinkedMonitoring ? (
-                                                                        <div className="text-xs">
-                                                                            <div><span className="text-gray-500">Title:</span> {ugLinkedMonitoring.title}</div>
-                                                                            <div><span className="text-gray-500">Status:</span> {ugLinkedMonitoring.status}</div>
-                                                                            <div>
-                                                                                <span className="text-gray-500">Location:</span>{" "}
-                                                                                {ugLinkedMonitoring.address && ugLinkedMonitoring.address.trim().length > 0
-                                                                                    ? ugLinkedMonitoring.address
-                                                                                    : `(${ugLinkedMonitoring.location?.lat ?? '—'}, ${ugLinkedMonitoring.location?.lng ?? '—'})`}
+                                                                        <div className="space-y-2">
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-xs text-gray-600">Title:</span>
+                                                                                <span className="text-xs font-medium">{ugLinkedMonitoring.title}</span>
                                                                             </div>
-                                                                            <div className="flex gap-2 pt-2">
-                                                                                {(["Living", "Dead", "Replaced", "Untracked"] as const).map(s => (
-                                                                                    <Button key={s} size="sm" variant="outline" onClick={async () => {
-                                                                                        await updateMonitoringRequest(ugLinkedMonitoring.id, { status: s, location: ugLinkedMonitoring.location });
-                                                                                        const updated = await fetchMonitoringRequest(ugLinkedMonitoring.id);
-                                                                                        setUgLinkedMonitoring(updated);
-                                                                                    }}>{s}</Button>
+                                                                            <div className="flex justify-between items-center">
+                                                                                <span className="text-xs text-gray-600">Status:</span>
+                                                                                <Badge variant="outline" className="text-xs">{ugLinkedMonitoring.status}</Badge>
+                                                                            </div>
+                                                                            <div className="space-y-1">
+                                                                                <span className="text-xs text-gray-600">Location:</span>
+                                                                                <div className="text-xs">
+                                                                                    {ugLinkedMonitoring.address && ugLinkedMonitoring.address.trim().length > 0
+                                                                                        ? ugLinkedMonitoring.address
+                                                                                        : `(${ugLinkedMonitoring.location?.lat ?? '—'}, ${ugLinkedMonitoring.location?.lng ?? '—'})`}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex flex-wrap gap-1 pt-2">
+                                                                                {PLANT_STATUS_OPTIONS.map(status => (
+                                                                                    <Button
+                                                                                        key={status}
+                                                                                        size="sm"
+                                                                                        variant="outline"
+                                                                                        className="text-xs h-6 px-2"
+                                                                                        onClick={async () => {
+                                                                                            try {
+                                                                                                await updateMonitoringRequest(ugLinkedMonitoring.id, {
+                                                                                                    status: status,
+                                                                                                    location: ugLinkedMonitoring.location,
+                                                                                                    source_type: "urban_greening"
+                                                                                                });
+                                                                                                const updated = await fetchMonitoringRequest(ugLinkedMonitoring.id);
+                                                                                                setUgLinkedMonitoring(updated);
+                                                                                                toast.success(`Status updated to ${status}`);
+                                                                                            } catch (error) {
+                                                                                                toast.error("Failed to update status");
+                                                                                            }
+                                                                                        }}
+                                                                                    >
+                                                                                        {status}
+                                                                                    </Button>
                                                                                 ))}
                                                                             </div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="text-xs">ID: {(ugSelected as any).monitoring_request_id}</div>
+                                                                        <div className="text-xs text-gray-500">
+                                                                            Linked to ID: {(ugSelected as any).monitoring_request_id}
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -327,7 +380,7 @@ const SaplingManagement: React.FC = () => {
                 </div>
 
                 <Dialog open={srOpen} onOpenChange={setSrOpen}>
-                    <DialogContent className="max-w-3xl">
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{srMode === "add" ? "Add Sapling Request" : "Edit Sapling Request"}</DialogTitle></DialogHeader>
                         <SaplingRequestForm
                             mode={srMode}
@@ -349,6 +402,21 @@ const SaplingManagement: React.FC = () => {
                                     await createUG.mutateAsync(data);
                                 } else if (ugMode === "edit" && ugSelected) {
                                     await updateUG.mutateAsync({ id: ugSelected.id, data });
+
+                                    // Update monitoring request source_type if there's a linked monitoring request
+                                    const monitoring_request_id = data.monitoring_request_id || (ugSelected as any)?.monitoring_request_id;
+                                    if (monitoring_request_id) {
+                                        try {
+                                            const currentMonitoring = await fetchMonitoringRequest(monitoring_request_id);
+                                            await updateMonitoringRequest(monitoring_request_id, {
+                                                ...currentMonitoring,
+                                                source_type: "urban_greening"
+                                            });
+                                        } catch (error) {
+                                            console.error("Failed to update monitoring request source_type:", error);
+                                            // Don't show error to user as this is a background update
+                                        }
+                                    }
                                 }
                                 setUgOpen(false);
                             }}

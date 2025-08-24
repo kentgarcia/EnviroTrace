@@ -128,6 +128,9 @@ class TreeManagementRequest(Base):
     # Optional fields
     notes = Column(Text, nullable=True)  # General notes
     
+    # Link to Monitoring Request (string id from monitoring module)
+    monitoring_request_id = Column(String, nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -220,7 +223,9 @@ class SaplingRequest(Base):
     requester_name = Column(String(255), nullable=False)
     address = Column(String(500), nullable=False)
     saplings = Column(Text, nullable=False)  # JSON array string: [{ name, qty }]
-    monitoring_request_id = Column(String, nullable=True)  # reference to MonitoringRequest.id (string key)
+    
+    # Link to Monitoring Request
+    monitoring_request_id = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
