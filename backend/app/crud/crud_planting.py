@@ -102,6 +102,15 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
             UrbanGreeningPlanting.location.ilike(f"%{location}%")
         ).offset(skip).limit(limit).all()
     
+    def get_by_monitoring_request(self, db: Session, *, monitoring_request_id: str) -> List[UrbanGreeningPlanting]:
+        """Get plantings linked to a specific monitoring request"""
+        return db.query(UrbanGreeningPlanting).filter(
+            UrbanGreeningPlanting.monitoring_request_id == monitoring_request_id
+        ).all()
+        return db.query(UrbanGreeningPlanting).filter(
+            UrbanGreeningPlanting.location.ilike(f"%{location}%")
+        ).offset(skip).limit(limit).all()
+    
     def search(
         self, 
         db: Session, 

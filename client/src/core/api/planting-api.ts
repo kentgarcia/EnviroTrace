@@ -227,3 +227,13 @@ export const fetchSaplingStatistics = async (): Promise<SaplingStatistics> => {
   const response = await apiClient.get("/planting/saplings/statistics/");
   return response.data;
 };
+
+// Function to fetch plantings by monitoring request ID
+export const getPlantingsByMonitoringRequest = async (
+  monitoringRequestId: string
+): Promise<UrbanGreeningPlanting[]> => {
+  const response = await apiClient.get(
+    `/planting/urban-greening/by-monitoring-request/${monitoringRequestId}`
+  );
+  return response.data;
+};

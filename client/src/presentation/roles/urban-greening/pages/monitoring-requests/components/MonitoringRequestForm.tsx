@@ -6,7 +6,7 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import LocationPickerMap from "../../LocationPickerMap";
 import { toast } from "sonner";
 import { MonitoringRequestSubmission } from "../logic/useMonitoringRequests";
-import { MONITORING_REQUEST_STATUS_OPTIONS, DEFAULT_MONITORING_REQUEST_STATUS } from "../../../constants";
+import { MONITORING_REQUEST_STATUS_OPTIONS, DEFAULT_MONITORING_REQUEST_STATUS, SOURCE_TYPE_OPTIONS, SOURCE_TYPE_LABELS } from "../../../constants";
 
 interface Coordinates {
   lat: number;
@@ -15,9 +15,9 @@ interface Coordinates {
 
 interface MonitoringRequestFormProps {
   mode: "adding" | "editing";
-  initialValues?: Partial<MonitoringRequestSubmission> & { status?: string };
+  initialValues?: Partial<MonitoringRequestSubmission> & { status?: string; source_type?: string };
   location: Coordinates;
-  onLocationChange: (loc: Coordinates) => void;
+  onLocationChange: (loc: Coordinates | null) => void;
   onSave: (data: MonitoringRequestSubmission, location: Coordinates, status: string) => void;
   onCancel: () => void;
 }
@@ -33,6 +33,9 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
   const [status, setStatus] = React.useState<string>(
     initialValues?.status || DEFAULT_MONITORING_REQUEST_STATUS
   );
+  const [sourceType, setSourceType] = React.useState<string>(
+    initialValues?.source_type || "urban_greening"
+  );
   const [form, setForm] = React.useState<MonitoringRequestSubmission>({
     title: "",
     description: "",
@@ -44,6 +47,7 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
   // Update form state when initialValues change (e.g., switching from add to edit mode)
   React.useEffect(() => {
     setStatus(initialValues?.status || DEFAULT_MONITORING_REQUEST_STATUS);
+    setSourceType(initialValues?.source_type || "urban_greening");
     setForm({
       title: "",
       description: "",
@@ -84,6 +88,7 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
     onSave(
       {
         ...form,
+        source_type: sourceType,
         date: form.date || new Date(),
       },
       location,
@@ -121,6 +126,22 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
       </div>
 
       <div>
+        <Label className="text-sm font-medium">Source Type *</Label>
+        <select
+          value={sourceType}
+          onChange={(e) => setSourceType(e.target.value)}
+          className="w-full border rounded px-3 py-2"
+          required
+        >
+          {SOURCE_TYPE_OPTIONS.map(type => (
+            <option key={type} value={type}>
+              {SOURCE_TYPE_LABELS[type]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
         <Label htmlFor="description" className="text-sm font-medium">Description</Label>
         <Textarea
           id="description"
@@ -128,17 +149,6 @@ const MonitoringRequestForm: React.FC<MonitoringRequestFormProps> = ({
           onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
           placeholder="Enter description of the monitoring request"
           rows={3}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
-        <Textarea
-          id="notes"
-          value={form.notes}
-          onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Additional notes"
-          rows={2}
         />
       </div>
 

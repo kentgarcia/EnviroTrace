@@ -24,6 +24,7 @@ import {
     FileText
 } from "lucide-react";
 import TreeRequestForm from "./components/TreeRequestForm";
+import SaplingRecommendationEngine from "../../components/SaplingRecommendationEngine";
 
 import {
     TreeRequest,
@@ -39,6 +40,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { fetchMonitoringRequest, updateMonitoringRequest } from "@/core/api/monitoring-request-service";
 import { PLANT_STATUS_OPTIONS } from "../../constants";
+import { useUrbanGreeningPlantings } from "../planting-records/logic/usePlantingRecords";
 
 const TreeManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +51,7 @@ const TreeManagement: React.FC = () => {
     const [selectedRequest, setSelectedRequest] = useState<TreeRequest | null>(null); // For add modal initial data (unused but kept for potential future)
     const [selectedRowForDetails, setSelectedRowForDetails] = useState<TreeRequest | null>(null);
     const [isEditingDetails, setIsEditingDetails] = useState(false); // Inline edit mode
+    const [activeTab, setActiveTab] = useState<"requests" | "recommendations">("requests");
 
     // Monitoring request state
     const [linkedMonitoring, setLinkedMonitoring] = useState<any | null>(null);
@@ -69,6 +72,9 @@ const TreeManagement: React.FC = () => {
         staleTime: 60_000, // 1 min
         gcTime: 5 * 60_000, // 5 min
     });
+
+    // Fetch planting records for recommendations
+    const { data: plantingRecords = [] } = useUrbanGreeningPlantings({});
 
     // Load linked monitoring request when tree request is selected
     React.useEffect(() => {
@@ -274,6 +280,32 @@ const TreeManagement: React.FC = () => {
                 <TopNavBarContainer dashboardType="urban-greening" />
                 <div className="flex-1 p-6 bg-[#F9FBFC] overflow-hidden">
 
+                    {/* Tab Navigation */}
+                    <div className="border-b border-gray-200 mb-6">
+                        <nav className="-mb-px flex space-x-8">
+                            <button
+                                onClick={() => setActiveTab("requests")}
+                                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "requests"
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                            >
+                                <TreePine className="w-4 h-4 inline mr-2" />
+                                Tree Requests
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("recommendations")}
+                                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "recommendations"
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                            >
+                                <AlertTriangle className="w-4 h-4 inline mr-2" />
+                                Sapling Recommendations
+                            </button>
+                        </nav>
+                    </div>
+
                     {error && (
                         <div className="mt-6">
                             <Alert className="border-red-200 bg-red-50">
@@ -292,381 +324,397 @@ const TreeManagement: React.FC = () => {
                         </div>
                     )}
 
-                    <div className={`flex gap-6 mt-6 h-[calc(100vh-140px)] transition-all duration-300`}>
-                        {/* Left Panel */}
-                        <div className={`min-w-0 flex flex-col transition-all duration-300 ${selectedRowForDetails ? 'basis-[55%]' : 'flex-1'}`}>
-                            <Card className="flex-1 flex flex-col min-h-0">
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
-                                    <CardTitle>Tree Management Requests</CardTitle>
-                                    <Button
-                                        onClick={handleAddRequest}
-                                        size="sm"
-                                        disabled={isLoading}
-                                    >
-                                        Add New Request
-                                    </Button>
-                                </CardHeader>
-                                <CardContent className="flex-1 flex flex-col overflow-hidden">
-                                    {/* Filters and Search */}
-                                    <div className="flex flex-col xl:flex-row gap-4 mb-4 shrink-0">
-                                        <div className="flex-1">
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                                <Input
-                                                    placeholder="Search by request number, requester, or address..."
-                                                    value={searchTerm}
-                                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="pl-10"
-                                                />
-                                            </div>
-                                        </div>
-                                        <select
-                                            value={statusFilter}
-                                            onChange={(e) => setStatusFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
-                                        >
-                                            <option value="all">All Status</option>
-                                            <option value="filed">Filed</option>
-                                            <option value="on_hold">On Hold</option>
-                                            <option value="for_signature">For Signature</option>
-                                            <option value="payment_pending">Payment Pending</option>
-                                        </select>
-                                        <select
-                                            value={typeFilter}
-                                            onChange={(e) => setTypeFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
-                                        >
-                                            <option value="all">All Types</option>
-                                            <option value="pruning">Pruning</option>
-                                            <option value="cutting">Tree Cutting</option>
-                                            <option value="violation_complaint">Violation/Complaint</option>
-                                        </select>
-                                        <select
-                                            value={monthFilter}
-                                            onChange={(e) => setMonthFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
-                                        >
-                                            {Array.from({ length: 12 }).map((_, i) => {
-                                                const m = String(i + 1).padStart(2, '0');
-                                                const label = new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' });
-                                                return <option key={m} value={m}>{label}</option>;
-                                            })}
-                                        </select>
-                                        <select
-                                            value={yearFilter}
-                                            onChange={(e) => setYearFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
-                                        >
-                                            {Array.from({ length: 3 }).map((_, i) => {
-                                                const y = String(now.getFullYear() - i);
-                                                return <option key={y} value={y}>{y}</option>;
-                                            })}
-                                        </select>
-                                    </div>
-
-                                    {isLoading && allRequests.length === 0 ? (
-                                        <div className="flex items-center justify-center h-32 flex-1">
-                                            <div className="text-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                                                <p className="mt-2 text-sm text-gray-600">Loading requests...</p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex-1 overflow-auto rounded border border-gray-100">
-                                            <DataTable
-                                                data={filteredData}
-                                                columns={treeColumns}
-                                                onRowClick={handleRowClick}
-                                            />
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </div>
-                        {/* Right Panel */}
-                        <div className={`flex flex-col min-h-0 transition-all duration-300 ${selectedRowForDetails ? 'basis-[45%]' : 'basis-[35%] max-w-[420px]'} }`}>
-                            <Card className={`flex-1 flex flex-col min-h-0 transition-colors duration-300 ${selectedRowForDetails ? 'bg-gray-50' : 'bg-white'}`}>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
-                                    <CardTitle className="text-lg">
-                                        {selectedRowForDetails ? (isEditingDetails ? 'Edit Request' : 'Request Details') : 'Statistics'}
-                                    </CardTitle>
-                                    {selectedRowForDetails && (
+                    {/* Tab Content */}
+                    {activeTab === "requests" && (
+                        <div className={`flex gap-6 mt-6 h-[calc(100vh-140px)] transition-all duration-300`}>
+                            {/* Left Panel */}
+                            <div className={`min-w-0 flex flex-col transition-all duration-300 ${selectedRowForDetails ? 'basis-[55%]' : 'flex-1'}`}>
+                                <Card className="flex-1 flex flex-col min-h-0">
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
+                                        <CardTitle>Tree Management Requests</CardTitle>
                                         <Button
-                                            variant="ghost"
+                                            onClick={handleAddRequest}
                                             size="sm"
-                                            onClick={handleCloseDetails}
-                                            className="gap-1"
+                                            disabled={isLoading}
                                         >
-                                            <XCircle className="w-4 h-4" />
-                                            Hide
+                                            Add New Request
                                         </Button>
-                                    )}
-                                </CardHeader>
-                                <CardContent className="flex-1 overflow-auto space-y-4">
-                                    {selectedRowForDetails ? (
-                                        // Show selected row details
-                                        <div className="space-y-4">
-                                            {isEditingDetails ? (
-                                                <TreeRequestForm
-                                                    mode="edit"
-                                                    initialData={selectedRowForDetails}
-                                                    onSave={handleInlineEditSave}
-                                                    onCancel={handleInlineEditCancel}
-                                                    variant="inline"
-                                                />
-                                            ) : (
-                                                <>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Request Number:</span>
-                                                        <Badge variant="outline">{selectedRowForDetails.request_number}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Type:</span>
-                                                        <Badge variant="outline">{getRequestTypeLabel(selectedRowForDetails.request_type)}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Status:</span>
-                                                        <Badge className={getStatusColor(selectedRowForDetails.status)}>
-                                                            {selectedRowForDetails.status.replace("_", " ").toUpperCase()}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Requester:</span>
-                                                        <span className="text-sm font-medium">{selectedRowForDetails.requester_name}</span>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <span className="text-sm text-gray-600">Address:</span>
-                                                        <p className="text-sm font-medium">{selectedRowForDetails.property_address}</p>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Date:</span>
-                                                        <span className="text-sm font-medium">{selectedRowForDetails.request_date}</span>
-                                                    </div>
-                                                    {selectedRowForDetails.notes && (
-                                                        <div className="space-y-2">
-                                                            <span className="text-sm text-gray-600">Notes:</span>
-                                                            <p className="text-sm">{selectedRowForDetails.notes}</p>
-                                                        </div>
-                                                    )}
+                                    </CardHeader>
+                                    <CardContent className="flex-1 flex flex-col overflow-hidden">
+                                        {/* Filters and Search */}
+                                        <div className="flex flex-col xl:flex-row gap-4 mb-4 shrink-0">
+                                            <div className="flex-1">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                    <Input
+                                                        placeholder="Search by request number, requester, or address..."
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                        className="pl-10"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <select
+                                                value={statusFilter}
+                                                onChange={(e) => setStatusFilter(e.target.value)}
+                                                className="px-3 py-2 border rounded-md"
+                                            >
+                                                <option value="all">All Status</option>
+                                                <option value="filed">Filed</option>
+                                                <option value="on_hold">On Hold</option>
+                                                <option value="for_signature">For Signature</option>
+                                                <option value="payment_pending">Payment Pending</option>
+                                            </select>
+                                            <select
+                                                value={typeFilter}
+                                                onChange={(e) => setTypeFilter(e.target.value)}
+                                                className="px-3 py-2 border rounded-md"
+                                            >
+                                                <option value="all">All Types</option>
+                                                <option value="pruning">Pruning</option>
+                                                <option value="cutting">Tree Cutting</option>
+                                                <option value="violation_complaint">Violation/Complaint</option>
+                                            </select>
+                                            <select
+                                                value={monthFilter}
+                                                onChange={(e) => setMonthFilter(e.target.value)}
+                                                className="px-3 py-2 border rounded-md"
+                                            >
+                                                {Array.from({ length: 12 }).map((_, i) => {
+                                                    const m = String(i + 1).padStart(2, '0');
+                                                    const label = new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' });
+                                                    return <option key={m} value={m}>{label}</option>;
+                                                })}
+                                            </select>
+                                            <select
+                                                value={yearFilter}
+                                                onChange={(e) => setYearFilter(e.target.value)}
+                                                className="px-3 py-2 border rounded-md"
+                                            >
+                                                {Array.from({ length: 3 }).map((_, i) => {
+                                                    const y = String(now.getFullYear() - i);
+                                                    return <option key={y} value={y}>{y}</option>;
+                                                })}
+                                            </select>
+                                        </div>
 
-                                                    {/* Monitoring Request Information */}
-                                                    {selectedRowForDetails.monitoring_request_id && (
-                                                        <div className="pt-2 border-t space-y-2">
-                                                            <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
-                                                            {linkedLoading ? (
-                                                                <div className="text-xs text-gray-500">Loading linked request...</div>
-                                                            ) : linkedMonitoring ? (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <span className="text-xs text-gray-600">Title:</span>
-                                                                        <span className="text-xs font-medium">{linkedMonitoring.title}</span>
-                                                                    </div>
-                                                                    <div className="flex justify-between items-center">
-                                                                        <span className="text-xs text-gray-600">Status:</span>
-                                                                        <Badge variant="outline" className="text-xs">{linkedMonitoring.status}</Badge>
-                                                                    </div>
-                                                                    <div className="space-y-1">
-                                                                        <span className="text-xs text-gray-600">Location:</span>
-                                                                        <div className="text-xs">
-                                                                            {linkedMonitoring.address && linkedMonitoring.address.trim().length > 0
-                                                                                ? linkedMonitoring.address
-                                                                                : `(${linkedMonitoring.location?.lat ?? '—'}, ${linkedMonitoring.location?.lng ?? '—'})`}
+                                        {isLoading && allRequests.length === 0 ? (
+                                            <div className="flex items-center justify-center h-32 flex-1">
+                                                <div className="text-center">
+                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                                                    <p className="mt-2 text-sm text-gray-600">Loading requests...</p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex-1 overflow-auto rounded border border-gray-100">
+                                                <DataTable
+                                                    data={filteredData}
+                                                    columns={treeColumns}
+                                                    onRowClick={handleRowClick}
+                                                />
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            {/* Right Panel */}
+                            <div className={`flex flex-col min-h-0 transition-all duration-300 ${selectedRowForDetails ? 'basis-[45%]' : 'basis-[35%] max-w-[420px]'} }`}>
+                                <Card className={`flex-1 flex flex-col min-h-0 transition-colors duration-300 ${selectedRowForDetails ? 'bg-gray-50' : 'bg-white'}`}>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
+                                        <CardTitle className="text-lg">
+                                            {selectedRowForDetails ? (isEditingDetails ? 'Edit Request' : 'Request Details') : 'Statistics'}
+                                        </CardTitle>
+                                        {selectedRowForDetails && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleCloseDetails}
+                                                className="gap-1"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                                Hide
+                                            </Button>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent className="flex-1 overflow-auto space-y-4">
+                                        {selectedRowForDetails ? (
+                                            // Show selected row details
+                                            <div className="space-y-4">
+                                                {isEditingDetails ? (
+                                                    <TreeRequestForm
+                                                        mode="edit"
+                                                        initialData={selectedRowForDetails}
+                                                        onSave={handleInlineEditSave}
+                                                        onCancel={handleInlineEditCancel}
+                                                        variant="inline"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Request Number:</span>
+                                                            <Badge variant="outline">{selectedRowForDetails.request_number}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Type:</span>
+                                                            <Badge variant="outline">{getRequestTypeLabel(selectedRowForDetails.request_type)}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Status:</span>
+                                                            <Badge className={getStatusColor(selectedRowForDetails.status)}>
+                                                                {selectedRowForDetails.status.replace("_", " ").toUpperCase()}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Requester:</span>
+                                                            <span className="text-sm font-medium">{selectedRowForDetails.requester_name}</span>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <span className="text-sm text-gray-600">Address:</span>
+                                                            <p className="text-sm font-medium">{selectedRowForDetails.property_address}</p>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Date:</span>
+                                                            <span className="text-sm font-medium">{selectedRowForDetails.request_date}</span>
+                                                        </div>
+                                                        {selectedRowForDetails.notes && (
+                                                            <div className="space-y-2">
+                                                                <span className="text-sm text-gray-600">Notes:</span>
+                                                                <p className="text-sm">{selectedRowForDetails.notes}</p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Monitoring Request Information */}
+                                                        {selectedRowForDetails.monitoring_request_id && (
+                                                            <div className="pt-2 border-t space-y-2">
+                                                                <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
+                                                                {linkedLoading ? (
+                                                                    <div className="text-xs text-gray-500">Loading linked request...</div>
+                                                                ) : linkedMonitoring ? (
+                                                                    <div className="space-y-2">
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-xs text-gray-600">Title:</span>
+                                                                            <span className="text-xs font-medium">{linkedMonitoring.title}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <span className="text-xs text-gray-600">Status:</span>
+                                                                            <Badge variant="outline" className="text-xs">{linkedMonitoring.status}</Badge>
+                                                                        </div>
+                                                                        <div className="space-y-1">
+                                                                            <span className="text-xs text-gray-600">Location:</span>
+                                                                            <div className="text-xs">
+                                                                                {linkedMonitoring.address && linkedMonitoring.address.trim().length > 0
+                                                                                    ? linkedMonitoring.address
+                                                                                    : `(${linkedMonitoring.location?.lat ?? '—'}, ${linkedMonitoring.location?.lng ?? '—'})`}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex flex-wrap gap-1 pt-2">
+                                                                            {PLANT_STATUS_OPTIONS.map(status => (
+                                                                                <Button
+                                                                                    key={status}
+                                                                                    size="sm"
+                                                                                    variant="outline"
+                                                                                    className="text-xs h-6 px-2"
+                                                                                    onClick={async () => {
+                                                                                        try {
+                                                                                            await updateMonitoringRequest(linkedMonitoring.id, {
+                                                                                                status: status,
+                                                                                                location: linkedMonitoring.location,
+                                                                                                source_type: "tree_management"
+                                                                                            });
+                                                                                            const updated = await fetchMonitoringRequest(linkedMonitoring.id);
+                                                                                            setLinkedMonitoring(updated);
+                                                                                            toast.success(`Status updated to ${status}`);
+                                                                                        } catch (error) {
+                                                                                            toast.error("Failed to update status");
+                                                                                        }
+                                                                                    }}
+                                                                                >
+                                                                                    {status}
+                                                                                </Button>
+                                                                            ))}
                                                                         </div>
                                                                     </div>
-                                                                    <div className="flex flex-wrap gap-1 pt-2">
-                                                                        {PLANT_STATUS_OPTIONS.map(status => (
-                                                                            <Button
-                                                                                key={status}
-                                                                                size="sm"
-                                                                                variant="outline"
-                                                                                className="text-xs h-6 px-2"
-                                                                                onClick={async () => {
-                                                                                    try {
-                                                                                        await updateMonitoringRequest(linkedMonitoring.id, {
-                                                                                            status: status,
-                                                                                            location: linkedMonitoring.location,
-                                                                                            source_type: "tree_management"
-                                                                                        });
-                                                                                        const updated = await fetchMonitoringRequest(linkedMonitoring.id);
-                                                                                        setLinkedMonitoring(updated);
-                                                                                        toast.success(`Status updated to ${status}`);
-                                                                                    } catch (error) {
-                                                                                        toast.error("Failed to update status");
-                                                                                    }
-                                                                                }}
-                                                                            >
-                                                                                {status}
-                                                                            </Button>
+                                                                ) : (
+                                                                    <div className="text-xs text-gray-500">
+                                                                        Linked to ID: {selectedRowForDetails.monitoring_request_id}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Inspection Information */}
+                                                        <div className="pt-2 border-t">
+                                                            <h4 className="text-sm font-medium text-gray-700 mb-2">Inspection Information</h4>
+
+                                                            {selectedRowForDetails.inspectors && selectedRowForDetails.inspectors.length > 0 && (
+                                                                <div className="space-y-2">
+                                                                    <span className="text-sm text-gray-600">Inspectors:</span>
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {selectedRowForDetails.inspectors.map((inspector, index) => (
+                                                                            <Badge key={index} variant="secondary" className="text-xs">
+                                                                                {inspector}
+                                                                            </Badge>
                                                                         ))}
                                                                     </div>
                                                                 </div>
-                                                            ) : (
-                                                                <div className="text-xs text-gray-500">
-                                                                    Linked to ID: {selectedRowForDetails.monitoring_request_id}
+                                                            )}
+
+                                                            {selectedRowForDetails.trees_and_quantities && selectedRowForDetails.trees_and_quantities.length > 0 && (
+                                                                <div className="space-y-2">
+                                                                    <span className="text-sm text-gray-600">Trees & Quantities:</span>
+                                                                    <div className="space-y-1">
+                                                                        {selectedRowForDetails.trees_and_quantities.map((tree, index) => (
+                                                                            <div key={index} className="text-sm bg-gray-50 p-2 rounded">
+                                                                                {tree}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
                                                             )}
-                                                        </div>
-                                                    )}
 
-                                                    {/* Inspection Information */}
-                                                    <div className="pt-2 border-t">
-                                                        <h4 className="text-sm font-medium text-gray-700 mb-2">Inspection Information</h4>
-
-                                                        {selectedRowForDetails.inspectors && selectedRowForDetails.inspectors.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                <span className="text-sm text-gray-600">Inspectors:</span>
-                                                                <div className="flex flex-wrap gap-1">
-                                                                    {selectedRowForDetails.inspectors.map((inspector, index) => (
-                                                                        <Badge key={index} variant="secondary" className="text-xs">
-                                                                            {inspector}
-                                                                        </Badge>
-                                                                    ))}
+                                                            {selectedRowForDetails.picture_links && selectedRowForDetails.picture_links.length > 0 && (
+                                                                <div className="space-y-2">
+                                                                    <span className="text-sm text-gray-600">Pictures:</span>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        {selectedRowForDetails.picture_links.map((link, index) => (
+                                                                            <a
+                                                                                key={index}
+                                                                                href={link}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="text-xs text-blue-600 hover:text-blue-800 underline truncate"
+                                                                            >
+                                                                                Picture {index + 1}
+                                                                            </a>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
-
-                                                        {selectedRowForDetails.trees_and_quantities && selectedRowForDetails.trees_and_quantities.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                <span className="text-sm text-gray-600">Trees & Quantities:</span>
-                                                                <div className="space-y-1">
-                                                                    {selectedRowForDetails.trees_and_quantities.map((tree, index) => (
-                                                                        <div key={index} className="text-sm bg-gray-50 p-2 rounded">
-                                                                            {tree}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {selectedRowForDetails.picture_links && selectedRowForDetails.picture_links.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                <span className="text-sm text-gray-600">Pictures:</span>
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    {selectedRowForDetails.picture_links.map((link, index) => (
-                                                                        <a
-                                                                            key={index}
-                                                                            href={link}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="text-xs text-blue-600 hover:text-blue-800 underline truncate"
-                                                                        >
-                                                                            Picture {index + 1}
-                                                                        </a>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {(!selectedRowForDetails.inspectors || selectedRowForDetails.inspectors.length === 0) &&
-                                                            (!selectedRowForDetails.trees_and_quantities || selectedRowForDetails.trees_and_quantities.length === 0) &&
-                                                            (!selectedRowForDetails.picture_links || selectedRowForDetails.picture_links.length === 0) && (
-                                                                <p className="text-sm text-gray-500 italic">No inspection information available</p>
                                                             )}
-                                                    </div>
 
-                                                    {/* Action Buttons */}
-                                                    <div className="pt-4 border-t space-y-2">
-                                                        <h4 className="text-sm font-medium text-gray-700 mb-2">Actions</h4>
-                                                        <div className="space-y-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="w-full justify-start"
-                                                                onClick={handleStartInlineEdit}
-                                                                disabled={isEditingDetails}
-                                                            >
-                                                                <Edit className="w-4 h-4 mr-2" />
-                                                                Edit Request
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="w-full justify-start text-red-600 hover:text-red-700"
-                                                                onClick={() => handleDeleteRequest(selectedRowForDetails)}
-                                                                disabled={isEditingDetails}
-                                                            >
-                                                                <Trash className="w-4 h-4 mr-2" />
-                                                                Delete Request
-                                                            </Button>
+                                                            {(!selectedRowForDetails.inspectors || selectedRowForDetails.inspectors.length === 0) &&
+                                                                (!selectedRowForDetails.trees_and_quantities || selectedRowForDetails.trees_and_quantities.length === 0) &&
+                                                                (!selectedRowForDetails.picture_links || selectedRowForDetails.picture_links.length === 0) && (
+                                                                    <p className="text-sm text-gray-500 italic">No inspection information available</p>
+                                                                )}
+                                                        </div>
+
+                                                        {/* Action Buttons */}
+                                                        <div className="pt-4 border-t space-y-2">
+                                                            <h4 className="text-sm font-medium text-gray-700 mb-2">Actions</h4>
+                                                            <div className="space-y-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full justify-start"
+                                                                    onClick={handleStartInlineEdit}
+                                                                    disabled={isEditingDetails}
+                                                                >
+                                                                    <Edit className="w-4 h-4 mr-2" />
+                                                                    Edit Request
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full justify-start text-red-600 hover:text-red-700"
+                                                                    onClick={() => handleDeleteRequest(selectedRowForDetails)}
+                                                                    disabled={isEditingDetails}
+                                                                >
+                                                                    <Trash className="w-4 h-4 mr-2" />
+                                                                    Delete Request
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </>)}
+                                            </div>
+                                        ) : (
+                                            // Show statistics
+                                            <>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-600">Total Requests:</span>
+                                                    <Badge variant="outline">{allRequests.length}</Badge>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-600">Total Fees:</span>
+                                                    <span className="font-semibold">{formatCurrency(totalFeeAmount)}</span>
+                                                </div>
+
+                                                {/* Status Breakdown */}
+                                                <div className="pt-2 border-t">
+                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">By Status</h4>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Filed:</span>
+                                                            <Badge className="bg-blue-100 text-blue-800">{statusCounts.filed}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">On Hold:</span>
+                                                            <Badge className="bg-gray-100 text-gray-800">{statusCounts.on_hold}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">For Signature:</span>
+                                                            <Badge className="bg-indigo-100 text-indigo-800">{statusCounts.for_signature}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Payment Pending:</span>
+                                                            <Badge className="bg-orange-100 text-orange-800">{statusCounts.payment_pending}</Badge>
                                                         </div>
                                                     </div>
-                                                </>)}
-                                        </div>
-                                    ) : (
-                                        // Show statistics
-                                        <>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Total Requests:</span>
-                                                <Badge variant="outline">{allRequests.length}</Badge>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Total Fees:</span>
-                                                <span className="font-semibold">{formatCurrency(totalFeeAmount)}</span>
-                                            </div>
+                                                </div>
 
-                                            {/* Status Breakdown */}
-                                            <div className="pt-2 border-t">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">By Status</h4>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Filed:</span>
-                                                        <Badge className="bg-blue-100 text-blue-800">{statusCounts.filed}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">On Hold:</span>
-                                                        <Badge className="bg-gray-100 text-gray-800">{statusCounts.on_hold}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">For Signature:</span>
-                                                        <Badge className="bg-indigo-100 text-indigo-800">{statusCounts.for_signature}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Payment Pending:</span>
-                                                        <Badge className="bg-orange-100 text-orange-800">{statusCounts.payment_pending}</Badge>
+                                                {/* Processing Information - Connected to Fee Records */}
+                                                <div className="pt-2 border-t">
+                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">Processing Information</h4>
+                                                    <div className="space-y-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="w-full justify-start"
+                                                            onClick={() => {/* Navigate to Fee Records */ }}
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2" />
+                                                            View Fee Records
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Processing Information - Connected to Fee Records */}
-                                            <div className="pt-2 border-t">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">Processing Information</h4>
-                                                <div className="space-y-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full justify-start"
-                                                        onClick={() => {/* Navigate to Fee Records */ }}
-                                                    >
-                                                        <FileText className="w-4 h-4 mr-2" />
-                                                        View Fee Records
-                                                    </Button>
-                                                </div>
-                                            </div>
-
-                                            {/* Type Breakdown */}
-                                            <div className="pt-2 border-t">
-                                                <h4 className="text-sm font-medium text-gray-700 mb-2">By Type</h4>
-                                                <div className="space-y-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Pruning:</span>
-                                                        <Badge className="bg-green-100 text-green-800">{typeCounts.pruning}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Tree Cutting:</span>
-                                                        <Badge className="bg-orange-100 text-orange-800">{typeCounts.cutting}</Badge>
-                                                    </div>
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm text-gray-600">Violations:</span>
-                                                        <Badge className="bg-red-100 text-red-800">{typeCounts.violation_complaint}</Badge>
+                                                {/* Type Breakdown */}
+                                                <div className="pt-2 border-t">
+                                                    <h4 className="text-sm font-medium text-gray-700 mb-2">By Type</h4>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Pruning:</span>
+                                                            <Badge className="bg-green-100 text-green-800">{typeCounts.pruning}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Tree Cutting:</span>
+                                                            <Badge className="bg-orange-100 text-orange-800">{typeCounts.cutting}</Badge>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">Violations:</span>
+                                                            <Badge className="bg-red-100 text-red-800">{typeCounts.violation_complaint}</Badge>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                            </>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Recommendations Tab */}
+                    {activeTab === "recommendations" && (
+                        <div className="h-[calc(100vh-200px)] overflow-y-auto">
+                            <SaplingRecommendationEngine
+                                treeCuttingRequests={allRequests}
+                                plantingRecords={plantingRecords || []}
+                                onSelectRecommendation={(analysis, recommendation) => {
+                                    toast.success(`Selected ${recommendation.species} for ${analysis.treeCuttingRequest.request_number}`);
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 

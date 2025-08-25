@@ -287,3 +287,13 @@ def get_collections_by_species(
 def get_sapling_statistics(db: Session = Depends(get_db)):
     """Get sapling collection statistics"""
     return sapling_collection_crud.get_statistics(db)
+
+# Dedicated endpoint for monitoring request related data
+@router.get("/urban-greening/by-monitoring-request/{monitoring_request_id}", response_model=List[UrbanGreeningPlantingInDB])
+def get_plantings_by_monitoring_request(
+    monitoring_request_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get all urban greening planting records linked to a specific monitoring request"""
+    items = urban_greening_planting_crud.get_by_monitoring_request(db, monitoring_request_id=monitoring_request_id)
+    return [_serialize_plants(item) for item in items]

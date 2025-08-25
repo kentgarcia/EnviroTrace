@@ -1,5 +1,5 @@
 import React from "react";
-import { useMonitoringRequests } from "./logic/useMonitoringRequests";
+import { Coordinates, MonitoringRequestSubmission, useMonitoringRequests } from "./logic/useMonitoringRequests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -52,7 +52,6 @@ const MonitoringRequests: React.FC = () => {
     handleEdit,
     handleDelete,
     handleSaveRequest,
-    handleUpdateSourceType,
     getStatusColor,
     refetchRequests,
   } = useMonitoringRequests();
@@ -101,17 +100,20 @@ const MonitoringRequests: React.FC = () => {
   // Modal handlers
   const handleOpenAddModal = () => {
     setModalMode("adding");
+    handleAddRequest(); // Call the hook's handleAddRequest to set the internal mode
     setIsRequestModalOpen(true);
   };
 
   const handleOpenEditModal = (id: string) => {
     setSelectedRequestId(id);
     setModalMode("editing");
+    handleEdit(); // Call the hook's handleEdit to set the internal mode
     setIsRequestModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsRequestModalOpen(false);
+    handleCancel(); // Call the hook's handleCancel to reset the internal mode
     setFormLocation(null);
   };
 
@@ -136,14 +138,16 @@ const MonitoringRequests: React.FC = () => {
     }
   };
 
-  const handleUpdateTitle = async (id: string, title: string) => {
+  const handleSaveWithModalClose = async (data: MonitoringRequestSubmission, location: Coordinates, status: string) => {
+    console.log('Save initiated with data:', data, 'location:', location, 'status:', status, 'mode:', mode);
     try {
-      await updateMonitoringRequest(id, { title });
-      toast.success('Title updated successfully');
-      refetchRequests();
+      await handleSaveRequest(data, location, status);
+      console.log('Save successful, closing modal');
+      handleCloseModal();
     } catch (error) {
-      console.error('Error updating title:', error);
-      toast.error('Failed to update title');
+      console.error('Save failed:', error);
+      // Don't close modal if save failed
+      toast.error('Failed to save request. Please try again.');
     }
   };
 
@@ -220,13 +224,6 @@ const MonitoringRequests: React.FC = () => {
     <div className="flex min-h-screen w-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopNavBarContainer dashboardType="urban-greening" />
-        {/* Header Section */}
-        <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-          <h1 className="text-2xl font-semibold text-gray-900">Environmental Monitoring Hub</h1>
-          <div className="flex items-center gap-4">
-
-          </div>
-        </div>
         {/* Body Section */}
         <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
 
@@ -276,80 +273,39 @@ const MonitoringRequests: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="map" className="space-y-6">
-              {/* Search and Filter Controls */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Monitoring Locations</span>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Search requests..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-64"
-                      />
-                      <select
-                        value={sourceTypeFilter}
-                        onChange={(e) => setSourceTypeFilter(e.target.value)}
-                        className="border rounded px-3 py-2"
-                      >
-                        <option value="all">All Sources</option>
-                        {SOURCE_TYPE_OPTIONS.map(type => (
-                          <option key={type} value={type}>
-                            {SOURCE_TYPE_LABELS[type]}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="border rounded px-3 py-2"
-                      >
-                        <option value="all">All Status</option>
-                        {MONITORING_REQUEST_STATUS_OPTIONS.map(status => (
-                          <option key={status} value={status}>
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <MapView
-                    requests={requests
-                      .filter((r) => typeof r.title === "string")
-                      .map((r) => ({
-                        ...r,
-                        title: r.title as string,
-                      }))
-                      .filter((request) => {
-                        let matchesSearch = true;
-                        let matchesStatus = true;
-                        let matchesSourceType = true;
 
-                        if (searchTerm) {
-                          matchesSearch = (
-                            (request.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (request.requester_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (request.id || "").toLowerCase().includes(searchTerm.toLowerCase())
-                          );
-                        }
+              <MapView
+                requests={requests
+                  .filter((r) => typeof r.title === "string")
+                  .map((r) => ({
+                    ...r,
+                    title: r.title as string,
+                  }))
+                  .filter((request) => {
+                    let matchesSearch = true;
+                    let matchesStatus = true;
+                    let matchesSourceType = true;
 
-                        if (statusFilter && statusFilter !== "all") {
-                          matchesStatus = request.status?.toLowerCase() === statusFilter.toLowerCase();
-                        }
+                    if (searchTerm) {
+                      matchesSearch = (
+                        (request.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (request.requester_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (request.id || "").toLowerCase().includes(searchTerm.toLowerCase())
+                      );
+                    }
 
-                        if (sourceTypeFilter && sourceTypeFilter !== "all") {
-                          matchesSourceType = request.source_type === sourceTypeFilter;
-                        }
+                    if (statusFilter && statusFilter !== "all") {
+                      matchesStatus = request.status?.toLowerCase() === statusFilter.toLowerCase();
+                    }
 
-                        return matchesSearch && matchesStatus && matchesSourceType;
-                      })}
-                    onSelectRequest={handleSelectRequest}
-                  />
-                </CardContent>
-              </Card>
+                    if (sourceTypeFilter && sourceTypeFilter !== "all") {
+                      matchesSourceType = request.source_type === sourceTypeFilter;
+                    }
+
+                    return matchesSearch && matchesStatus && matchesSourceType;
+                  })}
+                height={700}
+              />
             </TabsContent>
 
             <TabsContent value="data" className="space-y-6">
@@ -359,110 +315,24 @@ const MonitoringRequests: React.FC = () => {
                   <Card className="h-full">
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>
-                          {mode === "adding"
-                            ? "New Monitoring Request"
-                            : mode === "editing"
-                              ? "Edit Monitoring Request"
-                              : "Monitoring Requests Data"}
-                        </span>
+                        <span>Monitoring Requests Data</span>
                         <div className="flex items-center gap-2">
-                          {mode === "viewing" && (
-                            <>
-                              <Button onClick={handleOpenAddModal} size="sm">
-                                <Plus className="w-4 h-4 mr-2" />
-                                New Request
-                              </Button>
-                              <Input
-                                placeholder="Search requests..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-48"
-                              />
-                              <select
-                                value={sourceTypeFilter}
-                                onChange={(e) => setSourceTypeFilter(e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                              >
-                                <option value="all">All Sources</option>
-                                {SOURCE_TYPE_OPTIONS.map(type => (
-                                  <option key={type} value={type}>
-                                    {SOURCE_TYPE_LABELS[type]}
-                                  </option>
-                                ))}
-                              </select>
-                              <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="border rounded px-3 py-2 text-sm"
-                              >
-                                <option value="all">All Status</option>
-                                {MONITORING_REQUEST_STATUS_OPTIONS.map(status => (
-                                  <option key={status} value={status}>
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                  </option>
-                                ))}
-                              </select>
-                            </>
-                          )}
+                          <Button onClick={handleOpenAddModal} size="sm">
+                            <Plus className="w-4 h-4 mr-2" />
+                            New Request
+                          </Button>
                         </div>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      {mode === "adding" || mode === "editing" ? (
-                        <MonitoringRequestForm
-                          mode={mode}
-                          initialValues={
-                            mode === "editing" && selectedRequest
-                              ? {
-                                ...selectedRequest,
-                                date: new Date(selectedRequest.date),
-                                status: selectedRequest.status
-                              }
-                              : {}
-                          }
-                          location={formLocation || { lat: 0, lng: 0 }}
-                          onLocationChange={setFormLocation}
-                          onSave={handleSaveRequest}
-                          onCancel={handleCancel}
-                        />
-                      ) : (
-                        <MonitoringRequestsTable
-                          requests={requests.filter((request) => {
-                            let matchesSearch = true;
-                            let matchesStatus = true;
-                            let matchesSourceType = true;
-
-                            if (searchTerm) {
-                              matchesSearch = (
-                                (request.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                (request.id || "").toLowerCase().includes(searchTerm.toLowerCase())
-                              );
-                            }
-
-                            if (statusFilter && statusFilter !== "all") {
-                              matchesStatus = request.status?.toLowerCase() === statusFilter.toLowerCase();
-                            }
-
-                            if (sourceTypeFilter && sourceTypeFilter !== "all") {
-                              matchesSourceType = request.source_type === sourceTypeFilter;
-                            }
-
-                            return matchesSearch && matchesStatus && matchesSourceType;
-                          })}
-                          selectedRequestId={selectedRequestId}
-                          onSelectRequest={handleSelectRequest}
-                          searchTerm={searchTerm}
-                          onSearchTermChange={setSearchTerm}
-                          statusFilter={statusFilter}
-                          onStatusFilterChange={setStatusFilter}
-                          onEdit={handleOpenEditModal}
-                          onDelete={handleOpenDeleteModal}
-                          onUpdateSourceType={handleUpdateSourceType}
-                          onUpdateTitle={handleUpdateTitle}
-                          getStatusColor={getStatusColor}
-                        />
-                      )}
+                      <MonitoringRequestsTable
+                        requests={requests}
+                        selectedRequestId={selectedRequestId}
+                        onSelectRequest={handleSelectRequest}
+                        onEdit={handleOpenEditModal}
+                        onDelete={handleOpenDeleteModal}
+                        getStatusColor={getStatusColor}
+                      />
                     </CardContent>
                   </Card>
                 </div>
@@ -479,10 +349,7 @@ const MonitoringRequests: React.FC = () => {
                     <Card className="h-full">
                       <CardContent className="p-6">
                         <div className="text-center text-gray-500">
-                          {mode === "adding" || mode === "editing"
-                            ? "Complete the form to see related data"
-                            : "Select a monitoring request from the table to view details and related environmental data"
-                          }
+                          Select a monitoring request from the table to view details and related environmental data
                         </div>
                       </CardContent>
                     </Card>
@@ -513,13 +380,14 @@ const MonitoringRequests: React.FC = () => {
             ? {
               ...selectedRequest,
               date: new Date(selectedRequest.date),
-              status: selectedRequest.status
+              status: selectedRequest.status,
+              source_type: selectedRequest.source_type
             }
             : {}
         }
         location={formLocation || { lat: 0, lng: 0 }}
         onLocationChange={setFormLocation}
-        onSave={handleSaveRequest}
+        onSave={handleSaveWithModalClose}
       />
 
       {/* Delete Confirmation Modal */}

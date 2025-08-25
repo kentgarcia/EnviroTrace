@@ -6,6 +6,7 @@ import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import FeeRecords from "./pages/fee-records/FeeRecords";
 import TreeManagement from "./pages/tree-management/TreeManagement";
 import SaplingManagement from "./pages/sapling-management/SaplingManagement";
+import SaplingRecommendationDemo from "./pages/SaplingRecommendationDemo";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -28,4 +29,5 @@ export const urbanGreeningRoute = [
   createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
   createUrbanGreeningRoute("/urban-greening/tree-management", TreeManagement),
   createUrbanGreeningRoute("/urban-greening/planting-records", SaplingManagement),
+  createUrbanGreeningRoute("/urban-greening/sapling-recommendations-demo", SaplingRecommendationDemo),
 ];

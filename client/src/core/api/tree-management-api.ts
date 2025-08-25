@@ -178,3 +178,13 @@ export const fetchOverdueTreeManagementRequests = async (): Promise<
   const res = await apiClient.get("/tree-management/overdue/all");
   return res.data;
 };
+
+// Function to fetch tree management requests by monitoring request ID
+export const getTreeManagementByMonitoringRequest = async (
+  monitoringRequestId: string
+): Promise<TreeManagementRequest[]> => {
+  const res = await apiClient.get(
+    `/tree-management/by-monitoring-request/${monitoringRequestId}`
+  );
+  return res.data;
+};

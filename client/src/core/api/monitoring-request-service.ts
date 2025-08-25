@@ -1,10 +1,11 @@
+import apiClient from "./api-client";
+
 export const markUntracked = async (
   requestId: string,
   location: { lat: number; lng: number }
 ): Promise<MonitoringRequest> => {
   return updateMonitoringRequest(requestId, { status: "Untracked", location });
 };
-import apiClient from "./api-client";
 
 // Types for monitoring requests - matching the backend structure
 export interface MonitoringRequest {
@@ -38,8 +39,8 @@ export interface MonitoringRequestCreate {
 }
 
 export interface MonitoringRequestUpdate {
-  status: string;
-  location: { lat: number; lng: number };
+  status?: string;
+  location?: { lat: number; lng: number };
   title?: string;
   description?: string;
   requester_name?: string;

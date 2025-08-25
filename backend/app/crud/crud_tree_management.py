@@ -90,5 +90,11 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
             db.commit()
         return obj
 
+    def get_by_monitoring_request(self, db: Session, *, monitoring_request_id: str) -> List[TreeManagementRequest]:
+        """Get tree management requests linked to a specific monitoring request"""
+        return db.query(TreeManagementRequest).filter(
+            TreeManagementRequest.monitoring_request_id == monitoring_request_id
+        ).all()
+
 
 tree_management_request = CRUDTreeManagementRequest(TreeManagementRequest)

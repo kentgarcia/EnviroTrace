@@ -19,7 +19,7 @@ interface MonitoringRequestModalProps {
     mode: "adding" | "editing";
     initialValues?: Partial<MonitoringRequestSubmission> & { status?: string };
     location: Coordinates;
-    onLocationChange: (loc: Coordinates) => void;
+    onLocationChange: (loc: Coordinates | null) => void;
     onSave: (data: MonitoringRequestSubmission, location: Coordinates, status: string) => void;
 }
 

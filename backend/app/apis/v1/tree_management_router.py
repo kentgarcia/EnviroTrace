@@ -149,6 +149,16 @@ def read_pending_tree_management_requests(db: Session = Depends(get_db)):
     requests = tree_management_request.get_pending_requests(db)
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
+# Dedicated endpoint for monitoring request related data
+@router.get("/by-monitoring-request/{monitoring_request_id}", response_model=List[TreeManagementRequest])
+def get_tree_management_by_monitoring_request(
+    monitoring_request_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get all tree management requests linked to a specific monitoring request"""
+    requests = tree_management_request.get_by_monitoring_request(db, monitoring_request_id=monitoring_request_id)
+    return [TreeManagementRequest.from_db_model(req) for req in requests]
+
 # @router.get("/overdue/all", response_model=List[TreeManagementRequest])
 # def read_overdue_tree_management_requests(db: Session = Depends(get_db)):
 #     """

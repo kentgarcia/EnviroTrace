@@ -4,7 +4,7 @@ import L, { divIcon, point, LatLngExpression } from "leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
-import { MapPin, Search, X, Filter, RotateCcw, TreePine, Sprout, Leaf } from "lucide-react";
+import { MapPin, Search, X, Filter, RotateCcw, TreePine, Sprout, Leaf, Eye, EyeOff, Calendar, User } from "lucide-react";
 import ReactDOMServer from "react-dom/server";
 import {
   DropdownMenu,
@@ -12,7 +12,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/presentation/components/shared/ui/dropdown-menu";
+import { Badge } from "@/presentation/components/shared/ui/badge";
 import { MONITORING_REQUEST_STATUS_OPTIONS } from "../constants";
+// API imports
+import { getPlantingsByMonitoringRequest } from "@/core/api/planting-api";
+import { getTreeManagementByMonitoringRequest } from "@/core/api/tree-management-api";
+import type { UrbanGreeningPlanting } from "@/core/api/planting-api";
+import type { TreeManagementRequest } from "@/core/api/tree-management-api";
 
 // Types
 interface Coordinates {
@@ -36,7 +42,6 @@ interface MonitoringRequest {
 
 interface MapViewProps {
   requests: MonitoringRequest[];
-  onSelectRequest: (id: string) => void;
   height?: number;
   center?: Coordinates;
   zoom?: number;
@@ -62,24 +67,54 @@ const createIcon = (status: MonitoringStatus, sourceType?: string) => {
     sourceType === "urban_greening" ? Sprout :
       MapPin;
 
-  // Status-based colors
-  const getStatusColor = (status: string) => {
+  // Status-based colors with gradient pairs
+  const getStatusGradient = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'untracked': return '#9ca3af'; // gray
-      case 'living': return '#10b981'; // green
-      case 'dead': return '#ef4444'; // red
-      case 'replaced': return '#3b82f6'; // blue
+      case 'untracked': return {
+        start: '#9ca3af', // darker gray
+        end: '#4b5563'   // much darker gray
+      };
+      case 'living': return {
+        start: '#10b981', // darker green
+        end: '#047857'   // much darker green
+      };
+      case 'dead': return {
+        start: '#ef4444', // darker red
+        end: '#b91c1c'   // much darker red
+      };
+      case 'replaced': return {
+        start: '#3b82f6', // darker blue
+        end: '#1d4ed8'   // much darker blue
+      };
       // Legacy status values (keeping for backward compatibility)
-      case 'pending': return '#f59e0b'; // amber
-      case 'in-progress': return '#3b82f6'; // blue
-      case 'completed': return '#10b981'; // green
-      case 'approved': return '#10b981'; // green
-      case 'rejected': return '#ef4444'; // red
-      default: return '#9ca3af'; // gray
+      case 'pending': return {
+        start: '#f59e0b', // darker amber
+        end: '#b45309'   // much darker amber
+      };
+      case 'in-progress': return {
+        start: '#3b82f6', // darker blue
+        end: '#1d4ed8'   // much darker blue
+      };
+      case 'completed': return {
+        start: '#10b981', // darker green
+        end: '#047857'   // much darker green
+      };
+      case 'approved': return {
+        start: '#10b981', // darker green
+        end: '#047857'   // much darker green
+      };
+      case 'rejected': return {
+        start: '#ef4444', // darker red
+        end: '#b91c1c'   // much darker red
+      };
+      default: return {
+        start: '#9ca3af', // darker gray
+        end: '#4b5563'   // much darker gray
+      };
     }
   };
 
-  const backgroundColor = getStatusColor(status);
+  const gradient = getStatusGradient(status);
 
   return L.divIcon({
     html: ReactDOMServer.renderToString(
@@ -88,19 +123,42 @@ const createIcon = (status: MonitoringStatus, sourceType?: string) => {
           width: '32px',
           height: '32px',
           borderRadius: '50%',
-          backgroundColor: backgroundColor,
-          border: '3px solid white',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+          background: `radial-gradient(circle at 30% 30%, ${gradient.start}, ${gradient.end})`,
+          border: '2px solid rgba(255, 255, 255, 0.8)',
+          boxShadow: `
+            0 4px 8px rgba(0, 0, 0, 0.3),
+            0 2px 4px rgba(0, 0, 0, 0.2),
+            inset 0 1px 2px rgba(255, 255, 255, 0.4)
+          `,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          position: 'relative'
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
+        {/* Highlight effect for orb-like appearance */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '8%',
+            left: '20%',
+            width: '40%',
+            height: '40%',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.4)',
+            filter: 'blur(2px)'
+          }}
+        />
         <IconComponent
           size={18}
           color="white"
-          strokeWidth={2.5}
+          strokeWidth={3}
+          style={{
+            filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.8))',
+            zIndex: 1,
+            position: 'relative'
+          }}
         />
       </div>
     ),
@@ -116,8 +174,8 @@ const createClusterCustomIcon = (cluster: any) => {
 
   return divIcon({
     html: `<div style="
-      background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary)) 50%, hsl(var(--primary)));
-      color: hsl(var(--primary-foreground));
+      background: radial-gradient(circle at 30% 30%, #3b82f6, #1e3a8a);
+      color: white;
       width: ${size}px;
       height: ${size}px;
       border-radius: 50%;
@@ -126,10 +184,28 @@ const createClusterCustomIcon = (cluster: any) => {
       justify-content: center;
       font-weight: bold;
       font-size: ${count < 10 ? '14px' : count < 100 ? '12px' : '10px'};
-      border: 3px solid white;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 2px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
       transition: all 0.2s ease;
-    ">${count}</div>`,
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+      position: relative;
+      overflow: hidden;
+    ">
+      <div style="
+        position: absolute;
+        top: 15%;
+        left: 25%;
+        width: 35%;
+        height: 35%;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        filter: blur(2px);
+      "></div>
+      <span style="position: relative; z-index: 1;">${count}</span>
+    </div>`,
     className: "",
     iconSize: point(size, size, true),
   });
@@ -140,6 +216,235 @@ const statusOptions: { value: MonitoringStatus; label: string }[] =
     value: status,
     label: status.charAt(0).toUpperCase() + status.slice(1)
   }));
+
+// Helper function to get status badge color
+const getStatusBadgeColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'living':
+    case 'completed':
+    case 'approved':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'dead':
+    case 'rejected':
+      return 'bg-red-100 text-red-800 border-red-200';
+    case 'replaced':
+    case 'in-progress':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'untracked':
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+// Component to display related data in popup
+const RelatedDataPopup: React.FC<{ monitoringRequestId: string }> = ({ monitoringRequestId }) => {
+  const [plantings, setPlantings] = React.useState<UrbanGreeningPlanting[]>([]);
+  const [treeManagement, setTreeManagement] = React.useState<TreeManagementRequest[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchRelatedData = async () => {
+      try {
+        const [plantingsData, treeData] = await Promise.all([
+          getPlantingsByMonitoringRequest(monitoringRequestId),
+          getTreeManagementByMonitoringRequest(monitoringRequestId)
+        ]);
+        setPlantings(plantingsData);
+        setTreeManagement(treeData);
+      } catch (error) {
+        console.error('Error fetching related data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRelatedData();
+  }, [monitoringRequestId]);
+
+  if (loading) {
+    return (
+      <div className="mt-3 pt-3 border-t">
+        <p className="text-xs text-gray-500">Loading related records...</p>
+      </div>
+    );
+  }
+
+  if (plantings.length === 0 && treeManagement.length === 0) {
+    return (
+      <div className="mt-3 pt-3 border-t">
+        <p className="text-xs text-gray-500">No related planting or tree management records found.</p>
+      </div>
+    );
+  }
+
+  // Calculate summary statistics
+  const totalPlants = plantings.reduce((sum, p) => sum + (p.quantity_planted || 0), 0);
+  const speciesCount = new Set(plantings.map(p => p.species_name).filter(Boolean)).size;
+  const livingPlants = plantings.filter(p => p.status === 'growing' || p.status === 'mature' || p.status === 'planted').length;
+  const deadPlants = plantings.filter(p => p.status === 'died' || p.status === 'removed').length;
+
+  return (
+    <div className="mt-3 pt-3 border-t space-y-3">
+      <h5 className="font-semibold text-sm text-gray-700">Related Environmental Records</h5>
+
+      {/* Summary Statistics */}
+      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-3 border">
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="text-center">
+            <div className="font-bold text-lg text-green-600">{totalPlants}</div>
+            <div className="text-gray-600">Total Plants</div>
+          </div>
+          <div className="text-center">
+            <div className="font-bold text-lg text-purple-600">{speciesCount}</div>
+            <div className="text-gray-600">Species</div>
+          </div>
+          <div className="text-center">
+            <div className="font-bold text-lg text-blue-600">{treeManagement.length}</div>
+            <div className="text-gray-600">Tree Requests</div>
+          </div>
+          <div className="text-center">
+            <div className="font-bold text-lg text-orange-600">{livingPlants}/{plantings.length}</div>
+            <div className="text-gray-600">Survival Rate</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Plantings */}
+      {plantings.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Leaf className="h-4 w-4 text-green-600" />
+            <span className="text-sm font-medium text-gray-700">Recent Plantings</span>
+          </div>
+          <div className="space-y-2">
+            {plantings.slice(0, 2).map((planting) => (
+              <div key={planting.id} className="bg-green-50 rounded p-2 border border-green-200">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-sm text-green-800">{planting.species_name}</span>
+                  <Badge className={getStatusBadgeColor(planting.status)} variant="outline">
+                    {planting.status}
+                  </Badge>
+                </div>
+                <div className="text-xs text-green-700 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Sprout className="h-3 w-3" />
+                      <span>{planting.quantity_planted} planted</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{new Date(planting.planting_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    <span>{planting.responsible_person}</span>
+                  </div>
+                  {planting.location && (
+                    <div className="text-xs text-green-600">📍 {planting.location}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {plantings.length > 2 && (
+              <p className="text-xs text-gray-500 text-center">
+                +{plantings.length - 2} more planting records
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tree Management */}
+      {treeManagement.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <TreePine className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-700">Tree Management</span>
+          </div>
+          <div className="space-y-2">
+            {treeManagement.slice(0, 2).map((tree) => (
+              <div key={tree.id} className="bg-blue-50 rounded p-2 border border-blue-200">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium text-sm text-blue-800">{tree.request_number}</span>
+                  <Badge className={getStatusBadgeColor(tree.status)} variant="outline">
+                    {tree.status}
+                  </Badge>
+                </div>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <TreePine className="h-3 w-3" />
+                      <span>{tree.request_type}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>{new Date(tree.request_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    <span>{tree.requester_name}</span>
+                  </div>
+                  {tree.trees_and_quantities && tree.trees_and_quantities.length > 0 && (
+                    <div className="text-xs text-blue-600">
+                      🌳 Trees: {tree.trees_and_quantities.slice(0, 2).join(', ')}
+                      {tree.trees_and_quantities.length > 2 && ` (+${tree.trees_and_quantities.length - 2} more)`}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {treeManagement.length > 2 && (
+              <p className="text-xs text-gray-500 text-center">
+                +{treeManagement.length - 2} more tree management records
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Species Breakdown */}
+      {speciesCount > 0 && (
+        <div className="bg-purple-50 rounded p-2 border border-purple-200">
+          <div className="text-xs text-purple-700">
+            <div className="font-medium mb-1">🌿 Species Diversity</div>
+            <div className="flex flex-wrap gap-1">
+              {Array.from(new Set(plantings.map(p => p.species_name).filter(Boolean))).slice(0, 3).map(species => (
+                <span key={species} className="bg-purple-100 px-2 py-1 rounded text-xs">
+                  {species}
+                </span>
+              ))}
+              {speciesCount > 3 && (
+                <span className="text-purple-600">+{speciesCount - 3} more</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Environmental Impact */}
+      {(totalPlants > 0 || treeManagement.length > 0) && (
+        <div className="bg-gray-50 rounded p-2 border text-xs text-gray-600">
+          <div className="font-medium text-gray-700 mb-1">🌍 Environmental Impact</div>
+          <div className="space-y-1">
+            {totalPlants > 0 && (
+              <div>💨 CO₂ Absorption: ~{(totalPlants * 0.048).toFixed(1)} kg/year</div>
+            )}
+            {livingPlants > 0 && (
+              <div>🌿 Air Purification: {livingPlants} active plants filtering air</div>
+            )}
+            {treeManagement.length > 0 && (
+              <div>🌳 Tree Care: {treeManagement.length} management actions</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Component to handle map center changes and setup
 const MapController: React.FC<{
@@ -198,6 +503,8 @@ function MapControls({
   filteredCount: number;
   filteredRequests: MonitoringRequest[];
 }) {
+  const [showLegend, setShowLegend] = React.useState(false);
+
   const handleToggle = (status: MonitoringStatus) => {
     if (selectedStatuses.includes(status)) {
       onFilterChange(selectedStatuses.filter((s) => s !== status));
@@ -237,128 +544,147 @@ function MapControls({
         </div>
       </div>
 
-      {/* Icon Legend */}
+      {/* Legend Toggle */}
       <div className="bg-white rounded-lg shadow-lg p-3">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Marker Icons</h4>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: '#10b981',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <TreePine size={12} color="white" strokeWidth={2.5} />
-            </div>
-            <span className="text-gray-600">Tree Management</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: '#3b82f6',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Sprout size={12} color="white" strokeWidth={2.5} />
-            </div>
-            <span className="text-gray-600">Urban Greening</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: '#8b5cf6',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <MapPin size={12} color="white" strokeWidth={2.5} />
-            </div>
-            <span className="text-gray-600">Other/Unknown</span>
-          </div>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium text-gray-700">Map Legend</h4>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowLegend(!showLegend)}
+            className="h-8 w-8 p-0"
+          >
+            {showLegend ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
         </div>
-      </div>
 
-      {/* Status Color Legend */}
-      <div className="bg-white rounded-lg shadow-lg p-3">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Status Colors & Actions</h4>
-        <div className="space-y-2 text-xs">
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                backgroundColor: '#9ca3af',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-              }}
-            />
-            <span className="text-gray-600">Untracked</span>
-            <span className="text-yellow-600 text-xs ml-auto">⚠️ Needs Inspection</span>
+        {showLegend && (
+          <div className="mt-3 space-y-4">
+            {/* Icon Legend */}
+            <div>
+              <h5 className="text-xs font-medium text-gray-600 mb-2">Marker Icons</h5>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10b981',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <TreePine size={12} color="white" strokeWidth={2.5} style={{ filter: 'drop-shadow(0.5px 0.5px 0.5px rgba(0,0,0,0.8))' }} />
+                  </div>
+                  <span className="text-gray-600">Tree Management</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: '#3b82f6',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Sprout size={12} color="white" strokeWidth={2.5} style={{ filter: 'drop-shadow(0.5px 0.5px 0.5px rgba(0,0,0,0.8))' }} />
+                  </div>
+                  <span className="text-gray-600">Urban Greening</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      backgroundColor: '#8b5cf6',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <MapPin size={12} color="white" strokeWidth={2.5} style={{ filter: 'drop-shadow(0.5px 0.5px 0.5px rgba(0,0,0,0.8))' }} />
+                  </div>
+                  <span className="text-gray-600">Other/Unknown</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Color Legend */}
+            <div>
+              <h5 className="text-xs font-medium text-gray-600 mb-2">Status Colors</h5>
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: '#9ca3af',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                  <span className="text-gray-600">Untracked</span>
+                  <span className="text-yellow-600 text-xs ml-auto">⚠️ Needs Inspection</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10b981',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                  <span className="text-gray-600">Living</span>
+                  <span className="text-green-600 text-xs ml-auto">✓ Healthy</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: '#ef4444',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                  <span className="text-gray-600">Dead</span>
+                  <span className="text-red-600 text-xs ml-auto">🔄 Needs Replacement</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      backgroundColor: '#3b82f6',
+                      border: '2px solid #000000',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }}
+                  />
+                  <span className="text-gray-600">Replaced</span>
+                  <span className="text-blue-600 text-xs ml-auto">🔄 Recently Replaced</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                backgroundColor: '#10b981',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-              }}
-            />
-            <span className="text-gray-600">Living</span>
-            <span className="text-green-600 text-xs ml-auto">✓ Healthy</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                backgroundColor: '#ef4444',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-              }}
-            />
-            <span className="text-gray-600">Dead</span>
-            <span className="text-red-600 text-xs ml-auto">🔄 Needs Replacement</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: '16px',
-                height: '16px',
-                borderRadius: '50%',
-                backgroundColor: '#3b82f6',
-                border: '2px solid white',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-              }}
-            />
-            <span className="text-gray-600">Replaced</span>
-            <span className="text-blue-600 text-xs ml-auto">📋 Monitor Progress</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Environmental Impact Summary */}
@@ -454,7 +780,6 @@ function MapControls({
 
 export default function MapView({
   requests,
-  onSelectRequest,
   height = 600,
   center,
   zoom = 13
@@ -533,8 +858,8 @@ export default function MapView({
               position={[request.location!.lat, request.location!.lng]}
               icon={createIcon(request.status, request.source_type)}
             >
-              <Popup maxWidth={300} className="monitoring-request-popup">
-                <div className="p-2 space-y-3 min-w-[250px]">
+              <Popup maxWidth={350} className="monitoring-request-popup">
+                <div className="p-2 space-y-3 min-w-[300px] max-h-[400px] overflow-y-auto">
                   <div>
                     <h4 className="font-bold text-base text-gray-900 mb-1">
                       {request.title}
@@ -582,14 +907,10 @@ export default function MapView({
                         </div>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => onSelectRequest(request.id)}
-                      className="ml-2"
-                    >
-                      View Details
-                    </Button>
                   </div>
+
+                  {/* Related Data Component */}
+                  <RelatedDataPopup monitoringRequestId={request.id} />
                 </div>
               </Popup>
             </Marker>

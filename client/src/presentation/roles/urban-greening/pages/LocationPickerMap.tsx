@@ -52,12 +52,52 @@ interface Coordinates {
 const createIcon = () => {
   return L.divIcon({
     html: ReactDOMServer.renderToString(
-      <div className="relative">
-        <MapPin className="h-8 w-8 text-blue-500 fill-blue-100 drop-shadow-lg" />
+      <div
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle at 30% 30%, #3b82f6, #1e3a8a)',
+          border: '2px solid rgba(255, 255, 255, 0.8)',
+          boxShadow: `
+            0 4px 8px rgba(0, 0, 0, 0.3),
+            0 2px 4px rgba(0, 0, 0, 0.2),
+            inset 0 1px 2px rgba(255, 255, 255, 0.4)
+          `,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Highlight effect for orb-like appearance */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '8%',
+            left: '20%',
+            width: '40%',
+            height: '40%',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.4)',
+            filter: 'blur(2px)'
+          }}
+        />
+        <MapPin
+          size={18}
+          color="white"
+          strokeWidth={3}
+          style={{
+            filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.8))',
+            zIndex: 1,
+            position: 'relative'
+          }}
+        />
       </div>
     ),
     className: "border-0 bg-transparent",
-    iconSize: [32, 40],
+    iconSize: [32, 32],
     iconAnchor: [16, 40],
   });
 };

@@ -17,6 +17,7 @@ export type MonitoringRequestSubmission = {
   description: string;
   date: Date;
   notes?: string;
+  source_type?: string;
 };
 
 export function useMonitoringRequests() {
@@ -66,7 +67,7 @@ export function useMonitoringRequests() {
     [requests, selectedRequestId]
   );
 
-  const [formLocation, setFormLocation] = useState<Coordinates>({
+  const [formLocation, setFormLocation] = useState<Coordinates | null>({
     lat: selectedRequest?.location?.lat || 14.5995,
     lng: selectedRequest?.location?.lng || 120.9842,
   });
@@ -194,10 +195,10 @@ export function useMonitoringRequests() {
               },
               // Optional metadata passthrough
               title: baseData.title,
-              requester_name: baseData.requester_name,
               date: baseData.date,
-              address: baseData.address,
               description: baseData.description,
+              notes: baseData.notes,
+              source_type: baseData.source_type,
             };
           await updateMutation.mutateAsync({
             id: selectedRequest.id,
@@ -210,48 +211,19 @@ export function useMonitoringRequests() {
               location: location || { lat: 0, lng: 0 },
               // Optional metadata
               title: baseData.title,
-              requester_name: baseData.requester_name,
               date: baseData.date,
-              address: baseData.address,
               description: baseData.description,
+              notes: baseData.notes,
+              source_type: baseData.source_type || "urban_greening",
             };
           await createMutation.mutateAsync(requestData);
         }
       } catch (err) {
-        // Error handling is done in the mutations
+        // Re-throw the error so the calling component can handle it
+        throw err;
       }
     },
     [mode, selectedRequest, updateMutation, createMutation]
-  );
-
-  // Handle source type updates
-  const handleUpdateSourceType = useCallback(
-    async (id: string, sourceType: string) => {
-      try {
-        const request = requests.find((r) => r.id === id);
-        if (request) {
-          const requestData: monitoringRequestService.MonitoringRequestUpdate =
-            {
-              source_type: sourceType,
-              // Preserve existing data
-              status: request.status,
-              location: request.location || { lat: 0, lng: 0 },
-              title: request.title,
-              requester_name: request.requester_name,
-              date: request.date,
-              address: request.address,
-              description: request.description,
-            };
-          await updateMutation.mutateAsync({
-            id,
-            data: requestData,
-          });
-        }
-      } catch (err) {
-        // Error handling is done in the mutations
-      }
-    },
-    [requests, updateMutation]
   );
 
   const getStatusColor = (status: string) => {
@@ -307,7 +279,6 @@ export function useMonitoringRequests() {
     handleEdit,
     handleDelete,
     handleSaveRequest,
-    handleUpdateSourceType,
     getStatusColor,
     refetchRequests,
   };
