@@ -1,6 +1,6 @@
 import enum
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, Text, Integer
+from sqlalchemy.dialects.postgresql import UUID, INET
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text # For server_default text
 from app.db.database import Base # Use the Base from database.py
@@ -67,3 +67,61 @@ class Profile(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="profile")
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    __table_args__ = (
+        Index("idx_auth_user_sessions_user_id", "user_id"),
+        Index("idx_auth_user_sessions_created_at", "created_at"),
+        {"schema": "auth"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
+    session_token = Column(String(255), unique=True, nullable=False)
+    ip_address = Column(INET, nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+
+class FailedLogin(Base):
+    __tablename__ = "failed_logins"
+    __table_args__ = (
+        Index("idx_auth_failed_logins_email", "email"),
+        Index("idx_auth_failed_logins_created_at", "created_at"),
+        Index("idx_auth_failed_logins_ip_address", "ip_address"),
+        {"schema": "auth"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    email = Column(String(255), nullable=False)
+    ip_address = Column(INET, nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    failure_reason = Column(String(100), nullable=True)  # 'invalid_password', 'user_not_found', 'account_locked', etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+    __table_args__ = (
+        Index("idx_auth_activity_logs_user_id", "user_id"),
+        Index("idx_auth_activity_logs_created_at", "created_at"),
+        Index("idx_auth_activity_logs_activity_type", "activity_type"),
+        {"schema": "auth"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="SET NULL"), nullable=True)
+    activity_type = Column(String(100), nullable=False)  # 'login', 'logout', 'user_created', 'role_assigned', etc.
+    description = Column(Text, nullable=False)
+    extra_data = Column(Text, nullable=True)  # JSON string for additional data
+    ip_address = Column(INET, nullable=True)
+    user_agent = Column(String(500), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")

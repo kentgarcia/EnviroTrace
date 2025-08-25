@@ -3,6 +3,7 @@ import { useAdminOverviewData } from "./logic/useAdminOverviewData";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { AdminStatsCards } from "./components/AdminStatsCards";
 import { AdminVisualDashboard } from "./components/AdminVisualDashboard";
+import { AdminQuickActions } from "./components/AdminQuickActions";
 import { NetworkStatus } from "@/presentation/components/shared/layout/NetworkStatus";
 
 export const AdminOverview: React.FC = () => {
@@ -11,7 +12,6 @@ export const AdminOverview: React.FC = () => {
         keyStatsData,
         userActivityData,
         systemHealthData,
-        recentActivityData,
 
         // Loading states
         isLoading,
@@ -73,11 +73,13 @@ export const AdminOverview: React.FC = () => {
                         isLoading={isLoading}
                     />
 
+                    {/* Quick Actions */}
+                    <AdminQuickActions />
+
                     {/* Visual Dashboard */}
                     <AdminVisualDashboard
                         userActivityData={userActivityData}
                         systemHealthData={systemHealthData}
-                        recentActivityData={recentActivityData}
                         isLoading={isLoading}
                     />
                 </div>

@@ -23,14 +23,6 @@ export interface SystemHealthData {
   status: "good" | "warning" | "critical";
 }
 
-export interface RecentActivityData {
-  id: string;
-  type: string;
-  description: string;
-  timestamp: string;
-  user?: string;
-}
-
 export interface UserRole {
   value: string;
   label: string;
@@ -89,10 +81,6 @@ class AdminApiService extends ApiService {
 
   async getSystemHealthData(): Promise<SystemHealthData[]> {
     return this.get<SystemHealthData[]>("/admin/dashboard/system-health");
-  }
-
-  async getRecentActivity(): Promise<RecentActivityData[]> {
-    return this.get<RecentActivityData[]>("/admin/dashboard/recent-activity");
   }
 
   // User management endpoints
@@ -170,14 +158,6 @@ export const useSystemHealthData = () => {
   });
 };
 
-export const useRecentActivity = () => {
-  return useQuery({
-    queryKey: ["admin", "dashboard", "recent-activity"],
-    queryFn: () => adminApiService.getRecentActivity(),
-    refetchInterval: 10000, // Refetch every 10 seconds
-  });
-};
-
 // React Query hooks for user management
 export const useUsers = (params?: {
   skip?: number;
@@ -187,7 +167,6 @@ export const useUsers = (params?: {
   return useQuery({
     queryKey: ["admin", "users", params],
     queryFn: () => adminApiService.getUsers(params),
-    keepPreviousData: true,
   });
 };
 

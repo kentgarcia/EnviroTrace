@@ -12,6 +12,7 @@ from app.schemas.user_schemas import (
     UserFullPublic, UserRoleMappingCreate
 )
 from app.services.auth_service import auth_service
+from app.services.system_health_service import SystemHealthService
 
 router = APIRouter()
 
@@ -23,23 +24,11 @@ async def get_admin_dashboard_stats(
 ):
     """Get admin dashboard statistics"""
     
-    # Total users count
-    total_users_result = await db.execute(
-        select(func.count(User.id)).where(User.deleted_at.is_(None))
-    )
-    total_users = total_users_result.scalar() or 0
+    # Get user statistics from the service
+    user_stats = await SystemHealthService.get_user_statistics(db)
     
-    # Active users (signed in within last 30 days)
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    active_users_result = await db.execute(
-        select(func.count(User.id)).where(
-            and_(
-                User.deleted_at.is_(None),
-                User.last_sign_in_at >= thirty_days_ago
-            )
-        )
-    )
-    active_users = active_users_result.scalar() or 0
+    # Get real system uptime
+    system_uptime = SystemHealthService.get_system_uptime()
     
     # Total roles count
     total_roles_result = await db.execute(
@@ -47,25 +36,13 @@ async def get_admin_dashboard_stats(
     )
     total_roles = total_roles_result.scalar() or 0
     
-    # System uptime (mock for now)
-    uptime_days = 15
-    uptime_hours = 8
-    uptime_minutes = 42
-    system_uptime = f"{uptime_days}d {uptime_hours}h {uptime_minutes}m"
-    
-    # Total sessions (mock - could be implemented with session tracking)
-    total_sessions = 234
-    
-    # Failed logins (mock - could be implemented with failed login tracking)
-    failed_logins = 12
-    
     return {
-        "totalUsers": total_users,
-        "activeUsers": active_users,
+        "totalUsers": user_stats["total_users"],
+        "activeUsers": user_stats["active_users"],
         "totalRoles": total_roles,
         "systemUptime": system_uptime,
-        "totalSessions": total_sessions,
-        "failedLogins": failed_logins
+        "totalSessions": user_stats["active_sessions"],
+        "failedLogins": user_stats["failed_logins"]
     }
 
 @router.get("/dashboard/user-activity")
@@ -75,17 +52,8 @@ async def get_user_activity_data(
 ):
     """Get user activity data for charts"""
     
-    # Mock data for now - in a real implementation, you'd have activity tracking
-    activity_data = [
-        {"date": "Jan", "logins": 65, "registrations": 12, "activeUsers": 45},
-        {"date": "Feb", "logins": 78, "registrations": 18, "activeUsers": 52},
-        {"date": "Mar", "logins": 82, "registrations": 15, "activeUsers": 58},
-        {"date": "Apr", "logins": 91, "registrations": 22, "activeUsers": 61},
-        {"date": "May", "logins": 88, "registrations": 19, "activeUsers": 67},
-        {"date": "Jun", "logins": 95, "registrations": 25, "activeUsers": 73},
-    ]
-    
-    return activity_data
+    # Get real user activity data from the service
+    return await SystemHealthService.get_user_activity_data(db)
 
 @router.get("/dashboard/system-health")
 async def get_system_health_data(
@@ -94,56 +62,9 @@ async def get_system_health_data(
 ):
     """Get system health metrics"""
     
-    # Mock data for now - in a real implementation, you'd have actual system monitoring
-    health_data = [
-        {"metric": "CPU Usage", "value": 65, "status": "good"},
-        {"metric": "Memory Usage", "value": 78, "status": "warning"},
-        {"metric": "Disk Space", "value": 45, "status": "good"},
-        {"metric": "Network I/O", "value": 89, "status": "critical"},
-    ]
-    
-    return health_data
+    # Get real system health metrics from the service
+    return SystemHealthService.get_system_metrics()
 
-@router.get("/dashboard/recent-activity")
-async def get_recent_activity(
-    db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
-):
-    """Get recent system activity"""
-    
-    # Mock data for now - in a real implementation, you'd have activity logging
-    recent_activity = [
-        {
-            "id": "1",
-            "type": "User Registration",
-            "description": "New user registered: john.doe@example.com",
-            "timestamp": "2 minutes ago",
-            "user": "System"
-        },
-        {
-            "id": "2",
-            "type": "Role Assignment",
-            "description": "Admin role assigned to user: jane.smith@example.com",
-            "timestamp": "15 minutes ago",
-            "user": "admin@system.com"
-        },
-        {
-            "id": "3",
-            "type": "System Update",
-            "description": "Database backup completed successfully",
-            "timestamp": "1 hour ago",
-            "user": "System"
-        },
-        {
-            "id": "4",
-            "type": "Security Alert",
-            "description": "Multiple failed login attempts detected",
-            "timestamp": "2 hours ago",
-            "user": "Security Monitor"
-        },
-    ]
-    
-    return recent_activity
 
 # User Management Endpoints
 

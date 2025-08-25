@@ -1,18 +1,12 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "@tanstack/react-router";
 import {
     UserPlus,
-    Settings,
-    Download,
-    Upload,
     RefreshCw,
-    Shield,
-    FileText,
-    BarChart3,
+    Activity,
+    Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
-import { Button } from "@/presentation/components/shared/ui/button";
 
 interface QuickActionProps {
     title: string;
@@ -52,57 +46,33 @@ const QuickActionCard: React.FC<QuickActionProps> = ({
 );
 
 export const AdminQuickActions: React.FC = () => {
-    const navigate = useNavigate();
-
     const quickActions = [
         {
             title: "Add New User",
             description: "Create a new user account and assign roles",
             icon: <UserPlus className="w-6 h-6 text-blue-600" />,
-            onClick: () => navigate({ to: "/admin/user-management" }),
+            onClick: () => window.location.href = "/admin/user-management",
             color: "bg-blue-100",
         },
         {
-            title: "System Settings",
-            description: "Configure system preferences and parameters",
-            icon: <Settings className="w-6 h-6 text-gray-600" />,
-            onClick: () => navigate({ to: "/admin/settings" }),
-            color: "bg-gray-100",
-        },
-        {
-            title: "Export Data",
-            description: "Download system data and reports",
-            icon: <Download className="w-6 h-6 text-green-600" />,
-            onClick: () => navigate({ to: "/admin/data" }),
+            title: "Manage Users",
+            description: "View and manage existing user accounts",
+            icon: <Users className="w-6 h-6 text-green-600" />,
+            onClick: () => window.location.href = "/admin/user-management",
             color: "bg-green-100",
         },
         {
-            title: "Import Data",
-            description: "Upload and import data into the system",
-            icon: <Upload className="w-6 h-6 text-purple-600" />,
-            onClick: () => navigate({ to: "/admin/data" }),
+            title: "View System Health",
+            description: "Monitor system performance and health metrics",
+            icon: <Activity className="w-6 h-6 text-purple-600" />,
+            onClick: () => {
+                // Scroll to system health section on the same page
+                const element = document.querySelector('[data-section="system-health"]');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            },
             color: "bg-purple-100",
-        },
-        {
-            title: "Security Audit",
-            description: "Review security logs and access controls",
-            icon: <Shield className="w-6 h-6 text-red-600" />,
-            onClick: () => navigate({ to: "/admin/security" }),
-            color: "bg-red-100",
-        },
-        {
-            title: "Activity Logs",
-            description: "View system and user activity logs",
-            icon: <FileText className="w-6 h-6 text-orange-600" />,
-            onClick: () => navigate({ to: "/admin/logs" }),
-            color: "bg-orange-100",
-        },
-        {
-            title: "Generate Reports",
-            description: "Create custom reports and analytics",
-            icon: <BarChart3 className="w-6 h-6 text-indigo-600" />,
-            onClick: () => navigate({ to: "/admin/data" }),
-            color: "bg-indigo-100",
         },
         {
             title: "System Refresh",
@@ -124,7 +94,7 @@ export const AdminQuickActions: React.FC = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {quickActions.map((action, index) => (
                         <motion.div
                             key={action.title}

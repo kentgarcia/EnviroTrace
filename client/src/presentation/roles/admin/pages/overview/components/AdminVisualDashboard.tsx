@@ -16,12 +16,11 @@ import {
     LineChart,
     Line
 } from "recharts";
-import { UserActivityData, SystemHealthData, RecentActivityData } from "../logic/useAdminOverviewData";
+import { UserActivityData, SystemHealthData } from "../logic/useAdminOverviewData";
 
 interface AdminVisualDashboardProps {
     userActivityData?: UserActivityData[];
     systemHealthData?: SystemHealthData[];
-    recentActivityData?: RecentActivityData[];
     isLoading?: boolean;
 }
 
@@ -33,7 +32,6 @@ const COLORS = [
 export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
     userActivityData = [],
     systemHealthData = [],
-    recentActivityData = [],
     isLoading = false
 }) => {
     // Helper function to safely convert to number
@@ -62,20 +60,14 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
                 item.status === 'warning' ? '#f59e0b' : '#22c55e'
         }));
 
-    const safeRecentActivityData = recentActivityData
-        .slice(0, 10) // Limit to recent 10 activities
-        .map((item, index) => ({
-            ...item,
-            id: String(item.id || index),
-            type: String(item.type || 'Unknown'),
-            description: String(item.description || 'No description'),
-            timestamp: String(item.timestamp || 'Unknown time'),
-        }));
+    // Debug logging
+    console.log('AdminVisualDashboard - systemHealthData:', systemHealthData);
+    console.log('AdminVisualDashboard - safeSystemHealthData:', safeSystemHealthData);
 
     if (isLoading) {
         return (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map((i) => (
+                {[1, 2].map((i) => (
                     <Card key={i}>
                         <CardHeader>
                             <CardTitle className="animate-pulse bg-gray-200 h-4 w-32 rounded"></CardTitle>
@@ -152,7 +144,7 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
             </Card>
 
             {/* System Health Metrics */}
-            <Card>
+            <Card data-section="system-health">
                 <CardHeader>
                     <CardTitle className="text-base font-medium">System Health Metrics</CardTitle>
                 </CardHeader>
@@ -186,51 +178,13 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
                                 <Bar
                                     dataKey="value"
                                     radius={[0, 4, 4, 0]}
-                                />
+                                >
+                                    {safeSystemHealthData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Recent Activity */}
-            <Card className="lg:col-span-2">
-                <CardHeader>
-                    <CardTitle className="text-base font-medium">Recent System Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                        {safeRecentActivityData.length === 0 ? (
-                            <div className="text-center text-gray-500 py-8">
-                                <p>No recent activity to display</p>
-                            </div>
-                        ) : (
-                            safeRecentActivityData.map((activity) => (
-                                <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-sm font-medium text-gray-900">
-                                                {activity.type}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                {activity.timestamp}
-                                            </p>
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {activity.description}
-                                        </p>
-                                        {activity.user && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                by {activity.user}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
                     </div>
                 </CardContent>
             </Card>

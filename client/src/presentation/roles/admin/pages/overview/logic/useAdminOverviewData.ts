@@ -3,11 +3,9 @@ import {
   useAdminDashboardStats,
   useUserActivityData,
   useSystemHealthData,
-  useRecentActivity,
   AdminDashboardStats,
   UserActivityData,
   SystemHealthData,
-  RecentActivityData,
 } from "@/core/api/admin-api";
 
 export const useAdminOverviewData = () => {
@@ -30,18 +28,11 @@ export const useAdminOverviewData = () => {
     error: healthError,
   } = useSystemHealthData();
 
-  const {
-    data: recentActivityData,
-    isLoading: recentLoading,
-    error: recentError,
-  } = useRecentActivity();
-
   // Combine loading states
-  const isLoading =
-    statsLoading || activityLoading || healthLoading || recentLoading;
+  const isLoading = statsLoading || activityLoading || healthLoading;
 
   // Combine errors (prioritize the first error encountered)
-  const error = statsError || activityError || healthError || recentError;
+  const error = statsError || activityError || healthError;
 
   // Provide default data structures
   const defaultKeyStats: AdminDashboardStats = {
@@ -58,10 +49,10 @@ export const useAdminOverviewData = () => {
     keyStatsData: keyStatsData || defaultKeyStats,
     userActivityData: userActivityData || [],
     systemHealthData: systemHealthData || [],
-    recentActivityData: recentActivityData || [],
 
     // Loading states
     isLoading,
     error,
   };
 };
+export type { UserActivityData, SystemHealthData };

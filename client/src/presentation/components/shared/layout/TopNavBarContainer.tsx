@@ -5,10 +5,6 @@ import {
   ChevronDown,
   BarChart2,
   Users,
-  Settings,
-  Activity,
-  Shield,
-  Database,
   Car,
   Calendar,
   Building,
@@ -82,26 +78,6 @@ function getMenuItems(
         label: "User Management",
         icon: <Users className="w-4 h-4 mr-1" />,
         path: `${basePath}/user-management`,
-      },
-      {
-        label: "Settings",
-        icon: <Settings className="w-4 h-4 mr-1" />,
-        path: `${basePath}/settings`,
-      },
-      {
-        label: "Activity Logs",
-        icon: <Activity className="w-4 h-4 mr-1" />,
-        path: `${basePath}/logs`,
-      },
-      {
-        label: "Security",
-        icon: <Shield className="w-4 h-4 mr-1" />,
-        path: `${basePath}/security`,
-      },
-      {
-        label: "Data Management",
-        icon: <Database className="w-4 h-4 mr-1" />,
-        path: `${basePath}/data`,
       },
     ];
   } else if (dashboardType === "government-emission") {
