@@ -35,7 +35,7 @@ async def generate_text(
     Generate text using Gemini API
     
     - **prompt**: Text prompt for generation
-    - **model**: Gemini model to use (default: gemini-2.5-flash)
+    - **model**: Gemini model to use (default: gemini-2.0-flash-lite)
     - **max_tokens**: Maximum tokens to generate
     - **temperature**: Temperature for generation (0.0-2.0)
     """
@@ -100,7 +100,7 @@ async def generate_text_stream(
 @router.post("/image/analyze", response_model=GeminiResponse)
 async def analyze_image(
     prompt: str = Form(...),
-    model: str = Form(default="gemini-2.5-flash"),
+    model: str = Form(default="gemini-2.0-flash-lite"),
     max_tokens: Optional[int] = Form(default=None),
     temperature: Optional[float] = Form(default=None),
     image: UploadFile = File(...),
@@ -208,7 +208,7 @@ async def generate_multimodal(
 @router.post("/multimodal/upload")
 async def upload_multimodal(
     text_prompt: str = Form(...),
-    model: str = Form(default="gemini-2.5-flash"),
+    model: str = Form(default="gemini-2.0-flash-lite"),
     max_tokens: Optional[int] = Form(default=None),
     temperature: Optional[float] = Form(default=None),
     images: List[UploadFile] = File(...),
@@ -397,45 +397,27 @@ async def recognize_license_plate(
             )
         # Create a specialized prompt for license plate recognition
         plate_recognition_prompt = """
-        You are a license plate recognition expert. Analyze this image to find and extract license plate numbers.
+        Extract license plate number from this image.
 
-        TASK: Find ANY visible license plates, registration plates, or number plates in this image.
-
-        WHAT TO LOOK FOR:
-        - Rectangular plates mounted on vehicles (cars, trucks, motorcycles, etc.)
-        - Plates can be on front bumper, rear bumper, or windshield
-        - Plates typically have white, yellow, blue, or other colored backgrounds
-        - Text can be black, blue, red, or other contrasting colors
-        - May contain combinations of letters and numbers like: ABC123, 123ABC, ABC-1234, etc.
+        TASK: Find visible license plate and return ONLY the alphanumeric characters.
 
         INSTRUCTIONS:
-        1. Scan the ENTIRE image carefully for any rectangular plates with text/numbers
-        2. Look at all vehicles visible in the image (cars, trucks, motorcycles, etc.)
-        3. Check both front and rear areas of vehicles
-        4. Even if the plate is partially visible, blurry, or at an angle, try to read it
-        5. If you can make out even part of a plate number, extract what you can see
-        6. Return the MOST COMPLETE and CLEARLY VISIBLE plate number you find
-        7. Remove any spaces, dashes, or special characters - return only letters and numbers
-        8. If absolutely no license plate is visible anywhere, return "NOT_FOUND"
+        - Look for rectangular plates on vehicles
+        - Extract letters and numbers only
+        - If no plate visible, return "NOT_FOUND"
+        - Return ONLY the plate characters, no explanation
 
-        EXAMPLES OF VALID RESPONSES:
-        - ABC123
-        - 123ABC
-        - AB123CD
-        - 1234567
-        - XYZ9876
-
-        RETURN: Only the plate number characters (no spaces, no explanation, no additional text)
+        EXAMPLES: ABC123, 123ABC, AB123CD
         """
         
-        # Create request for Gemini
+        # Create request for Gemini with optimized settings
         request = GeminiImageRequest(
             prompt=plate_recognition_prompt,
             image_data=image_data,
             mime_type=mime_type,
-            model="gemini-2.5-flash",
-            temperature=0.1,  # Low temperature for consistent results
-            max_tokens=50
+            model="gemini-2.0-flash-lite",
+            temperature=0.0,  # Zero temperature for fastest processing
+            max_tokens=20  # Reduced tokens for faster response
         )
         
         # Get plate recognition result
@@ -449,10 +431,13 @@ async def recognize_license_plate(
         # Check if plate was found
         if recognized_text == "NOT_FOUND" or not recognized_text:
             logger.warning(f"No license plate detected. Gemini response was: '{result.content}'")
-            raise HTTPException(
-                status_code=404,
-                detail=f"No license plate found in the image. AI response: '{result.content[:100]}'"
-            )
+            return {
+                "plate_number": None,
+                "confidence": 0.0,
+                "vehicle_exists": False,
+                "message": "No license plate found in the image",
+                "ai_response": result.content[:100]
+            }
         
         # Clean up the recognized plate number
         import re
@@ -462,10 +447,13 @@ async def recognize_license_plate(
         
         if not plate_number:
             logger.warning(f"Could not extract valid plate number from: '{recognized_text}'")
-            raise HTTPException(
-                status_code=404,
-                detail=f"Could not extract a valid plate number from the image. Detected text: '{recognized_text}'"
-            )
+            return {
+                "plate_number": None,
+                "confidence": 0.0,
+                "vehicle_exists": False,
+                "message": f"Could not extract a valid plate number from the image. Detected text: '{recognized_text}'",
+                "ai_response": recognized_text
+            }
         
         # Check if vehicle exists in database
         from app.crud.crud_emission import vehicle as vehicle_crud
@@ -496,13 +484,19 @@ async def recognize_license_plate(
                 "vehicle_details": vehicle_details
             }
         else:
-            # Vehicle not found
+            # Vehicle not found - suggest creation
             return {
                 "plate_number": plate_number,
                 "confidence": 0.85,
                 "vehicle_exists": False,
                 "vehicle_id": None,
-                "vehicle_details": None
+                "vehicle_details": None,
+                "message": f"License plate '{plate_number}' detected but not found in database",
+                "suggest_creation": True,
+                "creation_data": {
+                    "plate_number": plate_number,
+                    "detected_confidence": 0.85
+                }
             }
         
     except HTTPException:
@@ -551,7 +545,7 @@ async def test_plate_recognition(
         # Create a simple test prompt to verify Gemini is working
         test_request = GeminiTextRequest(
             prompt="What is the capital of France? Reply with just the city name.",
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash-lite",
             temperature=0.1,
             max_tokens=10
         )

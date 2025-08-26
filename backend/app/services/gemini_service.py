@@ -60,24 +60,53 @@ class GeminiService:
             if request.temperature is not None:
                 config['temperature'] = request.temperature
             
+            # Create properly structured content using the official API format
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=request.prompt),
+                    ],
+                ),
+            ]
+            
             # Generate content
             response = self.client.models.generate_content(
                 model=request.model.value,
-                contents=request.prompt,
+                contents=contents,
                 config=types.GenerateContentConfig(**config) if config else None
             )
+            
+            # Debug logging
+            logger.info(f"Raw response object: {response}")
+            logger.info(f"Response text: {response.text}")
+            logger.info(f"Response candidates: {getattr(response, 'candidates', 'N/A')}")
             
             # Handle empty or None response text
             response_text = response.text if response.text is not None else ""
             
+            # Try to extract text from candidates if main text is empty
+            if not response_text and hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                if hasattr(candidate, 'content') and candidate.content:
+                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                response_text = part.text
+                                break
+            
             # Log if we get an empty response
             if not response_text:
                 logger.warning(f"Empty response from Gemini for prompt: {request.prompt[:50]}...")
+                logger.warning(f"Full response object: {response}")
+                # Return a default response instead of empty content
+                response_text = "I understand your question, but I'm having trouble generating a response right now. Could you please rephrase your question?"
             
             return GeminiResponse(
                 content=response_text,
                 model_used=request.model.value,
                 content_type=ContentType.TEXT,
+                success=True,
                 metadata={
                     "usage": self._extract_usage_stats(response) if hasattr(response, 'usage_metadata') else None
                 }
@@ -99,11 +128,21 @@ class GeminiService:
             if request.temperature is not None:
                 config['temperature'] = request.temperature
             
+            # Create properly structured content using the official API format
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=request.prompt),
+                    ],
+                ),
+            ]
+            
             chunk_id = 0
             # Stream content
             for chunk in self.client.models.generate_content_stream(
                 model=request.model.value,
-                contents=request.prompt,
+                contents=contents,
                 config=types.GenerateContentConfig(**config) if config else None
             ):
                 # Handle chunk text that might be None
@@ -142,10 +181,15 @@ class GeminiService:
             if request.temperature is not None:
                 config['temperature'] = request.temperature
             
-            # Create content with image and text
+            # Create properly structured content using the official API format
             contents = [
-                types.Part.from_bytes(data=image_bytes, mime_type=request.mime_type),
-                request.prompt
+                types.Content(
+                    role="user",
+                    parts=[
+                        types.Part.from_text(text=request.prompt),
+                        types.Part.from_bytes(data=image_bytes, mime_type=request.mime_type),
+                    ],
+                ),
             ]
             
             # Generate content
@@ -162,6 +206,7 @@ class GeminiService:
                 content=response_text,
                 model_used=request.model.value,
                 content_type=ContentType.IMAGE,
+                success=True,
                 metadata={
                     "image_mime_type": request.mime_type,
                     "usage": self._extract_usage_stats(response) if hasattr(response, 'usage_metadata') else None
@@ -184,18 +229,26 @@ class GeminiService:
             if request.temperature is not None:
                 config['temperature'] = request.temperature
             
-            # Build content parts
-            contents = [request.text_prompt]
+            # Build content parts using official API format
+            parts = [types.Part.from_text(text=request.text_prompt)]
             
             # Add images
             for img in request.images:
                 image_bytes = base64.b64decode(img['data'])
-                contents.append(
+                parts.append(
                     types.Part.from_bytes(
                         data=image_bytes, 
                         mime_type=img.get('mime_type', 'image/jpeg')
                     )
                 )
+            
+            # Create properly structured content
+            contents = [
+                types.Content(
+                    role="user",
+                    parts=parts,
+                ),
+            ]
             
             # Generate content
             response = self.client.models.generate_content(
@@ -211,6 +264,7 @@ class GeminiService:
                 content=response_text,
                 model_used=request.model.value,
                 content_type=ContentType.MULTIMODAL,
+                success=True,
                 metadata={
                     "image_count": len(request.images),
                     "usage": self._extract_usage_stats(response) if hasattr(response, 'usage_metadata') else None

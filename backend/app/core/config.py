@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     
     # Gemini API Configuration
     GOOGLE_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
     
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None

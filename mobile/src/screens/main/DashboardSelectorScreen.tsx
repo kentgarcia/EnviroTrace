@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { View, StyleSheet, ScrollView, StatusBar } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Appbar, Card, Title, Paragraph, Chip, Avatar, useTheme, Portal, Dialog, Button } from "react-native-paper";
+import { Appbar, Card, Title, Paragraph, Chip, Avatar, useTheme, Portal, Dialog, Button, FAB } from "react-native-paper";
 import { ImageBackground, View as RNView } from "react-native";
 import { useAuthStore } from "../../core/stores/authStore";
+import ChatbotModal from "../../components/chatbot/ChatbotModal";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
@@ -19,6 +20,7 @@ export default function DashboardSelectorScreen() {
     const { colors } = useTheme();
     const [profileVisible, setProfileVisible] = useState(false);
     const [logoutVisible, setLogoutVisible] = useState(false);
+    const [chatbotVisible, setChatbotVisible] = useState(false);
     const insets = useSafeAreaInsets();
 
     const roleImageMap: Record<string, any> = {
@@ -114,6 +116,15 @@ export default function DashboardSelectorScreen() {
                     )}
                 </ScrollView>
 
+                {/* Floating Action Button for Chatbot */}
+                <FAB
+                    style={[styles.fab, { backgroundColor: colors.primary }]}
+                    icon="robot"
+                    color="#FFFFFF"
+                    onPress={() => setChatbotVisible(true)}
+                    label="Assistant"
+                />
+
                 <Portal>
                     <Dialog visible={profileVisible} onDismiss={() => setProfileVisible(false)}>
                         <Dialog.Title>Profile</Dialog.Title>
@@ -148,6 +159,12 @@ export default function DashboardSelectorScreen() {
                         </Dialog.Actions>
                     </Dialog>
                 </Portal>
+
+                {/* Chatbot Modal */}
+                <ChatbotModal
+                    visible={chatbotVisible}
+                    onDismiss={() => setChatbotVisible(false)}
+                />
             </SafeAreaView>
         </>
     );
@@ -216,4 +233,10 @@ const styles = StyleSheet.create({
     roleTitle: { fontSize: 16, fontWeight: "700" },
     roleDesc: { color: "#6B7280", fontSize: 12 },
     noRoles: { textAlign: "center", color: "#9E9E9E", marginTop: 12 },
+    fab: {
+        position: "absolute",
+        margin: 16,
+        right: 0,
+        bottom: 0,
+    },
 });

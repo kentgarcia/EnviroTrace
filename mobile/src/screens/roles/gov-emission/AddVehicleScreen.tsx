@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, StyleSheet, Alert } from "react-native";
 import { TextInput, Button, HelperText, useTheme, Card, Paragraph } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import Icon from "../../../components/icons/Icon";
 import { database, LocalVehicle } from "../../../core/database/database";
@@ -19,6 +19,10 @@ function randomId() {
 export default function AddVehicleScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const route = useRoute();
+
+  // Get parameters from route
+  const params = route.params as { plateNumber?: string; fromPlateRecognition?: string } | undefined;
 
   const [plate, setPlate] = useState("");
   const [driver, setDriver] = useState("");
@@ -29,6 +33,13 @@ export default function AddVehicleScreen() {
   const [engineType, setEngineType] = useState("");
   const [wheels, setWheels] = useState("4");
   const [saving, setSaving] = useState(false);
+
+  // Pre-fill plate number if coming from plate recognition
+  useEffect(() => {
+    if (params?.plateNumber) {
+      setPlate(params.plateNumber);
+    }
+  }, [params?.plateNumber]);
 
   const isValid = useMemo(() => {
     return plate.trim() && driver.trim() && engineType.trim() && vehicleType.trim() && officeId.trim();
@@ -85,9 +96,14 @@ export default function AddVehicleScreen() {
                 left={<TextInput.Icon icon={() => <Icon name="directions-car" size={18} color={colors.primary} />} />}
                 style={styles.input}
               />
-              <HelperText type="error" visible={!plate.trim()}>
+              <HelperText type="error" visible={!plate.trim() && !params?.fromPlateRecognition}>
                 Plate number is required
               </HelperText>
+              {params?.fromPlateRecognition && (
+                <HelperText type="info" visible={true}>
+                  📷 Plate number detected from image
+                </HelperText>
+              )}
 
               <TextInput
                 label="Driver Name"

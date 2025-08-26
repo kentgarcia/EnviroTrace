@@ -24,6 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
+import ScreenWrapper from "../../../components/layout/ScreenWrapper";
 
 import { database, LocalVehicle } from "../../../core/database/database";
 import { useNetworkSync } from "../../../hooks/useNetworkSync";
@@ -213,7 +214,7 @@ export default function VehiclesScreen() {
   );
 
   return (
-    <>
+    <ScreenWrapper showFAB={false}>
       <StandardHeader
         title="Vehicles"
         chip={{ label: "Gov. Emission", iconName: "directions-car" }}
@@ -320,7 +321,7 @@ export default function VehiclesScreen() {
           backgroundColor: colors.primary
         }]}
       />
-    </>
+    </ScreenWrapper>
   );
 }
 

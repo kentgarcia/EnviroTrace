@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { View, StyleSheet, Alert, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { Title, Paragraph, Button, TextInput, useTheme, HelperText, Card, Chip, Divider } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import Icon from "../../../components/icons/Icon";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -92,6 +93,26 @@ export default function AddTestScreen() {
 
       console.log("Plate recognition response:", response);
 
+      if (response.plate_number === null || response.plate_number === undefined) {
+        // No plate was detected
+        Alert.alert(
+          "No License Plate Detected",
+          response.message || "Could not detect a license plate in the image. Please try again with a clearer photo.",
+          [
+            {
+              text: "Try Again",
+              onPress: () => setShowCamera(true),
+            },
+            {
+              text: "Search Manually",
+              onPress: () => setPlateSearchManual(true),
+            },
+            { text: "Cancel" },
+          ]
+        );
+        return;
+      }
+
       if (response.vehicle_exists && response.vehicle_details) {
         // Map the vehicle details to match VehicleSearchResponse interface
         const vehicleDetails: VehicleSearchResponse = {
@@ -108,341 +129,383 @@ export default function AddTestScreen() {
         );
       } else {
         setPlateNumber(response.plate_number);
-        Alert.alert(
-          "Vehicle Not Found",
-          `Recognized plate number: "${response.plate_number}"\n\nThis vehicle is not registered in the system. Please ensure the vehicle is registered before adding tests.`,
-          [
-            {
-              text: "Search Manually",
-              onPress: () => setPlateSearchManual(true),
-            },
-            { text: "OK" },
-          ]
-        );
-      }
-    } catch (error: any) {
-      console.error("Plate recognition error:", error);
 
-      let errorMessage = "Could not recognize the license plate. Please try again or search manually.";
-
-      if (error?.message === "Request timeout") {
-        errorMessage = "The request took too long to complete. Please check your internet connection and try again.";
-      } else if (error?.response?.status === 404) {
-        // Handle 404 errors specifically - likely no plate detected
-        const detail = error?.response?.data?.detail || "";
-        if (detail.includes("AI response:")) {
-          errorMessage = `No license plate detected in the image.\n\n${detail}\n\nTips:\n• Ensure the plate is clearly visible and well-lit\n• Try getting closer to the vehicle\n• Make sure the plate fills most of the camera frame`;
+        if (response.suggest_creation) {
+          // Suggest creating a new vehicle record
+          Alert.alert(
+            "Vehicle Not Found",
+            `License plate "${response.plate_number}" was detected but this vehicle is not registered in the system.\n\nWould you like to register this vehicle?`,
+            [
+              {
+                text: "Register Vehicle",
+                onPress: () => {
+                  // Navigate to AddVehicleScreen with pre-filled plate number
+                  router.push({
+                    pathname: "/gov-emission/add-vehicle",
+                    params: {
+                      plateNumber: response.plate_number,
+                      fromPlateRecognition: "true"
+                    }
+                  });
+                },
+              },
+              {
+                text: "Search Manually",
+                onPress: () => setPlateSearchManual(true),
+              },
+              { text: "Cancel" },
+            ]
+          );
         } else {
-          errorMessage = "No license plate was detected in the image. Please try:\n\n• Getting closer to the vehicle\n• Ensuring good lighting\n• Making sure the plate is clearly visible";
+          Alert.alert(
+            "Vehicle Not Found",
+            `Recognized plate number: "${response.plate_number}"\n\nThis vehicle is not registered in the system. Please ensure the vehicle is registered before adding tests.`,
+            [
+              {
+                text: "Register Vehicle",
+                onPress: () => {
+                  router.push({
+                    pathname: "/gov-emission/add-vehicle",
+                    params: {
+                      plateNumber: response.plate_number,
+                      fromPlateRecognition: "true"
+                    }
+                  });
+                },
+              },
+              {
+                text: "Search Manually",
+                onPress: () => setPlateSearchManual(true),
+              },
+              { text: "Cancel" },
+            ]
+          );
         }
-      } else if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
+        );
+}
+    } catch (error: any) {
+  console.error("Plate recognition error:", error);
 
-      Alert.alert(
-        "Recognition Failed",
-        errorMessage,
-        [
-          {
-            text: "Search Manually",
-            onPress: () => setPlateSearchManual(true),
-          },
-          { text: "Retry", onPress: () => setShowCamera(true) },
-        ]
-      );
-    } finally {
-      setIsProcessingPlate(false);
-      setShowCamera(false);
+  let errorMessage = "Could not recognize the license plate. Please try again or search manually.";
+
+  if (error?.message === "Request timeout") {
+    errorMessage = "The request took too long to complete. Please check your internet connection and try again.";
+  } else if (error?.response?.status === 404) {
+    // Handle 404 errors specifically - likely no plate detected
+    const detail = error?.response?.data?.detail || "";
+    if (detail.includes("AI response:")) {
+      errorMessage = `No license plate detected in the image.\n\n${detail}\n\nTips:\n• Ensure the plate is clearly visible and well-lit\n• Try getting closer to the vehicle\n• Make sure the plate fills most of the camera frame`;
+    } else {
+      errorMessage = "No license plate was detected in the image. Please try:\n\n• Getting closer to the vehicle\n• Ensuring good lighting\n• Making sure the plate is clearly visible";
     }
+  } else if (error?.response?.data?.detail) {
+    errorMessage = error.response.data.detail;
+  } else if (error?.message) {
+    errorMessage = error.message;
+  }
+
+  Alert.alert(
+    "Recognition Failed",
+    errorMessage,
+    [
+      {
+        text: "Search Manually",
+        onPress: () => setPlateSearchManual(true),
+      },
+      { text: "Retry", onPress: () => setShowCamera(true) },
+    ]
+  );
+} finally {
+  setIsProcessingPlate(false);
+  setShowCamera(false);
+}
   };
 
-  const handleManualPlateSearch = async () => {
-    const cleanPlateNumber = plateNumber.trim().toUpperCase();
-    if (!cleanPlateNumber) {
-      Alert.alert("Error", "Please enter a plate number to search.");
-      return;
-    }
+const handleManualPlateSearch = async () => {
+  const cleanPlateNumber = plateNumber.trim().toUpperCase();
+  if (!cleanPlateNumber) {
+    Alert.alert("Error", "Please enter a plate number to search.");
+    return;
+  }
 
-    setIsProcessingPlate(true);
-    try {
-      const vehicle = await PlateRecognitionService.searchVehicleByPlate(cleanPlateNumber);
-      if (vehicle) {
-        setRecognizedVehicle(vehicle);
-        setPlateNumber(cleanPlateNumber); // Update with formatted version
-        Alert.alert(
-          "Vehicle Found!",
-          `Vehicle with plate "${cleanPlateNumber}" found.\n\nDriver: ${vehicle.driver_name}`,
-          [{ text: "OK" }]
-        );
-      } else {
-        Alert.alert(
-          "Vehicle Not Found",
-          `No vehicle found with plate number "${cleanPlateNumber}". Please check the plate number or ensure the vehicle is registered.`,
-          [{ text: "OK" }]
-        );
-      }
-    } catch (error: any) {
-      console.error("Manual search error:", error);
+  setIsProcessingPlate(true);
+  try {
+    const vehicle = await PlateRecognitionService.searchVehicleByPlate(cleanPlateNumber);
+    if (vehicle) {
+      setRecognizedVehicle(vehicle);
+      setPlateNumber(cleanPlateNumber); // Update with formatted version
       Alert.alert(
-        "Search Failed",
-        error?.response?.data?.detail || error?.message || "Could not search for the vehicle.",
+        "Vehicle Found!",
+        `Vehicle with plate "${cleanPlateNumber}" found.\n\nDriver: ${vehicle.driver_name}`,
         [{ text: "OK" }]
       );
-    } finally {
-      setIsProcessingPlate(false);
-      setPlateSearchManual(false);
+    } else {
+      Alert.alert(
+        "Vehicle Not Found",
+        `No vehicle found with plate number "${cleanPlateNumber}". Please check the plate number or ensure the vehicle is registered.`,
+        [{ text: "OK" }]
+      );
     }
-  };
+  } catch (error: any) {
+    console.error("Manual search error:", error);
+    Alert.alert(
+      "Search Failed",
+      error?.response?.data?.detail || error?.message || "Could not search for the vehicle.",
+      [{ text: "OK" }]
+    );
+  } finally {
+    setIsProcessingPlate(false);
+    setPlateSearchManual(false);
+  }
+};
 
-  const clearVehicleSelection = () => {
-    setRecognizedVehicle(null);
-    setPlateNumber("");
-  };
+const clearVehicleSelection = () => {
+  setRecognizedVehicle(null);
+  setPlateNumber("");
+};
 
-  return (
-    <>
-      <StandardHeader
-        title="Record Test"
-        showBack
-        chip={{ label: "Gov. Emission", iconName: "assignment" }}
-      />
-      <SafeAreaView style={styles.container}>
-        <View style={styles.formWrap}>
-          <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
-            <Card.Content style={styles.cardContent}>
+return (
+  <>
+    <StandardHeader
+      title="Record Test"
+      showBack
+      chip={{ label: "Gov. Emission", iconName: "assignment" }}
+    />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.formWrap}>
+        <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
+          <Card.Content style={styles.cardContent}>
 
-              {/* Vehicle Selection Section */}
-              <Paragraph style={styles.section}>Vehicle Selection</Paragraph>
+            {/* Vehicle Selection Section */}
+            <Paragraph style={styles.section}>Vehicle Selection</Paragraph>
 
-              {!vehicleId && !recognizedVehicle && (
-                <View style={styles.vehicleSelection}>
-                  <Button
-                    mode="contained"
-                    onPress={() => setShowCamera(true)}
-                    icon={() => <Icon name="camera" size={20} color="white" />}
-                    style={styles.plateButton}
-                    disabled={isProcessingPlate}
-                  >
-                    Scan License Plate
-                  </Button>
-
-                  <View style={styles.orDivider}>
-                    <Divider style={styles.dividerLine} />
-                    <Paragraph style={styles.orText}>OR</Paragraph>
-                    <Divider style={styles.dividerLine} />
-                  </View>
-
-                  <Button
-                    mode="outlined"
-                    onPress={() => setPlateSearchManual(true)}
-                    icon={() => <Icon name="search" size={20} color={colors.primary} />}
-                    style={styles.searchButton}
-                    disabled={isProcessingPlate}
-                  >
-                    Search Manually
-                  </Button>
-
-                  {/* Debug/Troubleshooting Section */}
-                  <View style={styles.debugSection}>
-                    <Button
-                      mode="text"
-                      onPress={async () => {
-                        try {
-                          const result = await PlateRecognitionService.testGeminiService();
-                          Alert.alert(
-                            result.working ? "Service Working" : "Service Issue",
-                            result.message,
-                            [{ text: "OK" }]
-                          );
-                        } catch (error: any) {
-                          Alert.alert("Test Failed", error?.message || "Could not test service", [{ text: "OK" }]);
-                        }
-                      }}
-                      icon={() => <Icon name="settings" size={16} color={colors.outline} />}
-                      textColor={colors.outline}
-                      style={styles.debugButton}
-                    >
-                      Test Recognition Service
-                    </Button>
-                  </View>
-                </View>
-              )}
-
-              {recognizedVehicle && (
-                <View style={styles.selectedVehicle}>
-                  <View style={styles.vehicleInfo}>
-                    <Chip
-                      icon={() => <Icon name="directions-car" size={16} color={colors.primary} />}
-                      style={[styles.plateChip, { backgroundColor: `${colors.primary}15` }]}
-                      textStyle={{ color: colors.primary }}
-                    >
-                      {recognizedVehicle.plate_number}
-                    </Chip>
-                    <Paragraph style={styles.driverName}>
-                      Driver: {recognizedVehicle.driver_name}
-                    </Paragraph>
-                    <Paragraph style={styles.vehicleDetails}>
-                      {recognizedVehicle.vehicle_type} • {recognizedVehicle.engine_type}
-                    </Paragraph>
-                  </View>
-                  <Button
-                    mode="text"
-                    onPress={clearVehicleSelection}
-                    compact
-                    textColor={colors.error}
-                  >
-                    Change
-                  </Button>
-                </View>
-              )}
-
-              {vehicleId && (
-                <View style={styles.selectedVehicle}>
-                  <Paragraph style={styles.preSelectedVehicle}>
-                    Using pre-selected vehicle
-                  </Paragraph>
-                </View>
-              )}
-
-              <Divider style={styles.sectionDivider} />
-
-              {/* Test Details Section */}
-              <Paragraph style={styles.section}>Test Details</Paragraph>
-
-              <TextInput
-                label="Test Date (YYYY-MM-DD)"
-                value={date}
-                onChangeText={setDate}
-                keyboardType="numbers-and-punctuation"
-                mode="flat"
-                left={<TextInput.Icon icon={() => <Icon name="event" size={18} color={colors.primary} />} />}
-                style={styles.input}
-              />
-
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    label="Quarter (1-4)"
-                    value={quarter}
-                    onChangeText={setQuarter}
-                    keyboardType="number-pad"
-                    mode="flat"
-                    style={styles.input}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <TextInput
-                    label="Year"
-                    value={year}
-                    onChangeText={setYear}
-                    keyboardType="number-pad"
-                    mode="flat"
-                    style={styles.input}
-                  />
-                </View>
-              </View>
-
-              <TextInput
-                label="Result (pass/fail/unknown)"
-                value={result}
-                onChangeText={(v) => setResult((v as any) || "unknown")}
-                mode="flat"
-                style={styles.input}
-              />
-              <HelperText type="info" visible>
-                Enter "pass", "fail", or "unknown"
-              </HelperText>
-
-              <TextInput
-                label="Remarks"
-                value={remarks}
-                onChangeText={setRemarks}
-                mode="flat"
-                style={styles.input}
-                multiline
-              />
-
-              <Button
-                mode="contained"
-                onPress={onSave}
-                disabled={!isValid || saving}
-                loading={saving}
-                style={styles.saveBtn}
-              >
-                Save Test
-              </Button>
-            </Card.Content>
-          </Card>
-        </View>
-
-        {/* Camera Modal */}
-        <Modal
-          visible={showCamera}
-          animationType="slide"
-          presentationStyle="fullScreen"
-        >
-          <PlateCaptureCameraComponent
-            onCapture={handlePlateCapture}
-            onClose={() => setShowCamera(false)}
-            isProcessing={isProcessingPlate}
-          />
-        </Modal>
-
-        {/* Manual Search Modal */}
-        <Modal
-          visible={plateSearchManual}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setPlateSearchManual(false)}
-        >
-          <KeyboardAvoidingView
-            style={styles.modalOverlay}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-          >
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-              <Title style={styles.modalTitle}>Search Vehicle by Plate Number</Title>
-
-              <TextInput
-                label="Enter Plate Number"
-                value={plateNumber}
-                onChangeText={setPlateNumber}
-                mode="outlined"
-                style={styles.modalInput}
-                autoCapitalize="characters"
-                placeholder="e.g., ABC123, XYZ789"
-                maxLength={20}
-                autoFocus
-                returnKeyType="search"
-                onSubmitEditing={handleManualPlateSearch}
-              />
-
-              <View style={styles.modalButtons}>
-                <Button
-                  mode="text"
-                  onPress={() => setPlateSearchManual(false)}
-                  disabled={isProcessingPlate}
-                  style={styles.modalCancelButton}
-                >
-                  Cancel
-                </Button>
+            {!vehicleId && !recognizedVehicle && (
+              <View style={styles.vehicleSelection}>
                 <Button
                   mode="contained"
-                  onPress={handleManualPlateSearch}
-                  loading={isProcessingPlate}
-                  disabled={!plateNumber.trim() || isProcessingPlate}
-                  style={styles.modalSearchButton}
+                  onPress={() => setShowCamera(true)}
+                  icon={() => <Icon name="camera" size={20} color="white" />}
+                  style={styles.plateButton}
+                  disabled={isProcessingPlate}
                 >
-                  Search
+                  Scan License Plate
+                </Button>
+
+                <View style={styles.orDivider}>
+                  <Divider style={styles.dividerLine} />
+                  <Paragraph style={styles.orText}>OR</Paragraph>
+                  <Divider style={styles.dividerLine} />
+                </View>
+
+                <Button
+                  mode="outlined"
+                  onPress={() => setPlateSearchManual(true)}
+                  icon={() => <Icon name="search" size={20} color={colors.primary} />}
+                  style={styles.searchButton}
+                  disabled={isProcessingPlate}
+                >
+                  Search Manually
+                </Button>
+
+                {/* Debug/Troubleshooting Section */}
+                <View style={styles.debugSection}>
+                  <Button
+                    mode="text"
+                    onPress={async () => {
+                      try {
+                        const result = await PlateRecognitionService.testGeminiService();
+                        Alert.alert(
+                          result.working ? "Service Working" : "Service Issue",
+                          result.message,
+                          [{ text: "OK" }]
+                        );
+                      } catch (error: any) {
+                        Alert.alert("Test Failed", error?.message || "Could not test service", [{ text: "OK" }]);
+                      }
+                    }}
+                    icon={() => <Icon name="settings" size={16} color={colors.outline} />}
+                    textColor={colors.outline}
+                    style={styles.debugButton}
+                  >
+                    Test Recognition Service
+                  </Button>
+                </View>
+              </View>
+            )}
+
+            {recognizedVehicle && (
+              <View style={styles.selectedVehicle}>
+                <View style={styles.vehicleInfo}>
+                  <Chip
+                    icon={() => <Icon name="directions-car" size={16} color={colors.primary} />}
+                    style={[styles.plateChip, { backgroundColor: `${colors.primary}15` }]}
+                    textStyle={{ color: colors.primary }}
+                  >
+                    {recognizedVehicle.plate_number}
+                  </Chip>
+                  <Paragraph style={styles.driverName}>
+                    Driver: {recognizedVehicle.driver_name}
+                  </Paragraph>
+                  <Paragraph style={styles.vehicleDetails}>
+                    {recognizedVehicle.vehicle_type} • {recognizedVehicle.engine_type}
+                  </Paragraph>
+                </View>
+                <Button
+                  mode="text"
+                  onPress={clearVehicleSelection}
+                  compact
+                  textColor={colors.error}
+                >
+                  Change
                 </Button>
               </View>
+            )}
+
+            {vehicleId && (
+              <View style={styles.selectedVehicle}>
+                <Paragraph style={styles.preSelectedVehicle}>
+                  Using pre-selected vehicle
+                </Paragraph>
+              </View>
+            )}
+
+            <Divider style={styles.sectionDivider} />
+
+            {/* Test Details Section */}
+            <Paragraph style={styles.section}>Test Details</Paragraph>
+
+            <TextInput
+              label="Test Date (YYYY-MM-DD)"
+              value={date}
+              onChangeText={setDate}
+              keyboardType="numbers-and-punctuation"
+              mode="flat"
+              left={<TextInput.Icon icon={() => <Icon name="event" size={18} color={colors.primary} />} />}
+              style={styles.input}
+            />
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  label="Quarter (1-4)"
+                  value={quarter}
+                  onChangeText={setQuarter}
+                  keyboardType="number-pad"
+                  mode="flat"
+                  style={styles.input}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  label="Year"
+                  value={year}
+                  onChangeText={setYear}
+                  keyboardType="number-pad"
+                  mode="flat"
+                  style={styles.input}
+                />
+              </View>
             </View>
-          </KeyboardAvoidingView>
-        </Modal>
-      </SafeAreaView>
-    </>
-  );
+
+            <TextInput
+              label="Result (pass/fail/unknown)"
+              value={result}
+              onChangeText={(v) => setResult((v as any) || "unknown")}
+              mode="flat"
+              style={styles.input}
+            />
+            <HelperText type="info" visible>
+              Enter "pass", "fail", or "unknown"
+            </HelperText>
+
+            <TextInput
+              label="Remarks"
+              value={remarks}
+              onChangeText={setRemarks}
+              mode="flat"
+              style={styles.input}
+              multiline
+            />
+
+            <Button
+              mode="contained"
+              onPress={onSave}
+              disabled={!isValid || saving}
+              loading={saving}
+              style={styles.saveBtn}
+            >
+              Save Test
+            </Button>
+          </Card.Content>
+        </Card>
+      </View>
+
+      {/* Camera Modal */}
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <PlateCaptureCameraComponent
+          onCapture={handlePlateCapture}
+          onClose={() => setShowCamera(false)}
+          isProcessing={isProcessingPlate}
+        />
+      </Modal>
+
+      {/* Manual Search Modal */}
+      <Modal
+        visible={plateSearchManual}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPlateSearchManual(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Title style={styles.modalTitle}>Search Vehicle by Plate Number</Title>
+
+            <TextInput
+              label="Enter Plate Number"
+              value={plateNumber}
+              onChangeText={setPlateNumber}
+              mode="outlined"
+              style={styles.modalInput}
+              autoCapitalize="characters"
+              placeholder="e.g., ABC123, XYZ789"
+              maxLength={20}
+              autoFocus
+              returnKeyType="search"
+              onSubmitEditing={handleManualPlateSearch}
+            />
+
+            <View style={styles.modalButtons}>
+              <Button
+                mode="text"
+                onPress={() => setPlateSearchManual(false)}
+                disabled={isProcessingPlate}
+                style={styles.modalCancelButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleManualPlateSearch}
+                loading={isProcessingPlate}
+                disabled={!plateNumber.trim() || isProcessingPlate}
+                style={styles.modalSearchButton}
+              >
+                Search
+              </Button>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
+  </>
+);
 }
 
 const styles = StyleSheet.create({

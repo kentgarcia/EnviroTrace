@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuthStore } from "../stores/authStore";
 
 // API base URL - update this to your backend URL
-const API_BASE_URL = "http://192.168.100.20:8000/api/v1"; // Development - your backend server IP
+const API_BASE_URL = "http://192.168.1.7:8000/api/v1"; // Development - your backend server IP
 
 console.log("Using API URL:", API_BASE_URL);
 

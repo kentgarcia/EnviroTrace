@@ -9,6 +9,7 @@ import { database } from "./src/core/database/database";
 import AppNavigator from "./src/navigation/AppNavigator";
 import theme from "./src/core/theme/theme";
 import { LoadingScreen } from "./src/components/LoadingScreen";
+import { ChatbotProvider } from "./src/core/contexts/ChatbotContext";
 import { useFonts } from "expo-font";
 import {
   Poppins_400Regular,
@@ -60,10 +61,12 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme} settings={{ icon: (props) => <PaperIcon {...props} /> }}>
-        <NavigationContainer>
-          <StatusBar style="auto" />
-          <AppNavigator />
-        </NavigationContainer>
+        <ChatbotProvider>
+          <NavigationContainer>
+            <StatusBar style="auto" />
+            <AppNavigator />
+          </NavigationContainer>
+        </ChatbotProvider>
       </PaperProvider>
     </QueryClientProvider>
   );

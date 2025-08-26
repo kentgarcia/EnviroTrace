@@ -6,10 +6,18 @@ export interface PlateRecognitionRequest {
 }
 
 export interface PlateRecognitionResponse {
-  plate_number: string;
+  plate_number: string | null;
   confidence: number;
   vehicle_exists: boolean;
   vehicle_id?: string;
+  message?: string; // Added to handle "no plate found" messages
+  ai_response?: string; // Raw AI response for debugging
+  suggest_creation?: boolean; // Whether to suggest creating a new vehicle record
+  creation_data?: {
+    // Data to pre-populate vehicle creation form
+    plate_number: string;
+    detected_confidence: number;
+  };
   vehicle_details?: {
     id: string;
     driver_name: string;

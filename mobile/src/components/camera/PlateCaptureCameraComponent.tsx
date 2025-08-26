@@ -47,7 +47,7 @@ export default function PlateCaptureCameraComponent({
             setIsCapturing(true);
 
             const photo = await cameraRef.current.takePictureAsync({
-                quality: 0.8, // Increased quality for better OCR
+                quality: 0.7, // Reduced quality for faster processing
                 base64: true,
                 skipProcessing: false,
             });
@@ -57,14 +57,14 @@ export default function PlateCaptureCameraComponent({
                 return;
             }
 
-            // Process image with better settings for license plate recognition
+            // Process image with optimized settings for faster license plate recognition
             const manipulatedImage = await ImageManipulator.manipulateAsync(
                 photo.uri,
                 [
-                    { resize: { width: 1024 } }, // Increased back to 1024px for better text recognition
+                    { resize: { width: 800 } }, // Reduced size for faster processing while maintaining readability
                 ],
                 {
-                    compress: 0.8, // Better compression for clearer text
+                    compress: 0.7, // Balanced compression for speed vs quality
                     format: ImageManipulator.SaveFormat.JPEG,
                     base64: true,
                 }

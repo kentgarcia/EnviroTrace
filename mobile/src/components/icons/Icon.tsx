@@ -45,6 +45,11 @@ import {
     SearchX,
     Edit,
     Trash2,
+    Bot,
+    MessageCircle,
+    Send,
+    Minimize2,
+    Maximize2,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -90,6 +95,11 @@ const ICONS = {
     SearchX,
     Edit,
     Trash2,
+    Bot,
+    MessageCircle,
+    Send,
+    Minimize2,
+    Maximize2,
 } as const;
 
 // Supported icon names mapping from existing MaterialIcons names to Lucide icons
@@ -141,6 +151,12 @@ const nameMap: Record<string, keyof typeof ICONS> = {
     // edit and delete icons
     pencil: "Edit",
     delete: "Trash2",
+    // chatbot icons
+    bot: "Bot",
+    "message-circle": "MessageCircle",
+    send: "Send",
+    "minimize-2": "Minimize2",
+    "maximize-2": "Maximize2",
     // extras used by code
     "assignment-add": "ClipboardPlus",
     filter: "Filter",
