@@ -27,7 +27,6 @@ export default function RoleNavBar({
     const { selectedDashboard, setSelectedDashboard } = useAuthStore();
 
     const roleLabelMap: Record<string, string> = {
-        admin: "Admin",
         government_emission: "Gov. Emission",
         air_quality: "Air Quality",
         tree_management: "Tree Management",

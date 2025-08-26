@@ -15,8 +15,8 @@ export default function TreeManagementDashboard() {
             title: "Dashboard Overview",
             description: "View summary and recent activities",
             icon: "dashboard",
-            screen: "TreeManagementOverview",
-            color: "#2196F3",
+            screen: "OverviewScreen",
+            color: colors.primary,
         },
         {
             title: "Tree Requests",
@@ -29,7 +29,7 @@ export default function TreeManagementDashboard() {
             title: "Add New Request",
             description: "Submit a new tree management request",
             icon: "add-circle",
-            screen: "TreeRequests", // Will navigate to the stack and then to AddRequest
+            screen: "AddRequest",
             color: "#FF9800",
         },
         {
@@ -45,60 +45,59 @@ export default function TreeManagementDashboard() {
         <>
             <StandardHeader
                 title="Tree Management"
+                chip={{ label: "Tree Management", iconName: "park" }}
                 showBack={false}
             />
             <SafeAreaView style={styles.container}>
-                <ScrollView style={styles.scrollView}>
-                    <View style={styles.header}>
-                        <Title style={styles.headerTitle}>Tree Management System</Title>
-                        <Paragraph style={styles.headerSubtitle}>
-                            Manage tree maintenance requests, inspections, and urban forestry activities
-                        </Paragraph>
-                    </View>
-
-                    <View style={styles.menuContainer}>
-                        {menuItems.map((item, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={styles.menuItem}
-                                onPress={() => navigation.navigate(item.screen as never)}
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {menuItems.map((item, index) => (
+                        <TouchableOpacity
+                            key={index}
+                            onPress={() => navigation.navigate(item.screen as never)}
+                            style={styles.menuItemContainer}
+                        >
+                            <Card
+                                mode="outlined"
+                                style={[
+                                    styles.menuCard,
+                                    { borderColor: `${item.color}26` }
+                                ]}
                             >
-                                <Card style={styles.menuCard}>
-                                    <Card.Content style={styles.menuCardContent}>
-                                        <View style={[styles.iconContainer, { backgroundColor: item.color + "20" }]}>
-                                            <Icon name={item.icon} size={24} color={item.color} />
+                                <Card.Content style={styles.cardContent}>
+                                    <View style={styles.cardHeader}>
+                                        <View
+                                            style={[
+                                                styles.iconContainer,
+                                                { backgroundColor: `${item.color}15` }
+                                            ]}
+                                        >
+                                            <Icon
+                                                name={item.icon}
+                                                size={28}
+                                                color={item.color}
+                                            />
                                         </View>
-                                        <View style={styles.menuTextContainer}>
-                                            <Title style={styles.menuTitle}>{item.title}</Title>
-                                            <Paragraph style={styles.menuDescription}>{item.description}</Paragraph>
+                                        <View style={styles.textContainer}>
+                                            <Title style={[styles.menuTitle, { color: colors.onSurface }]}>
+                                                {item.title}
+                                            </Title>
+                                            <Paragraph style={styles.menuDescription}>
+                                                {item.description}
+                                            </Paragraph>
                                         </View>
-                                        <Icon name="chevron-right" size={20} color="#999" />
-                                    </Card.Content>
-                                </Card>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
-                    {/* Quick Stats */}
-                    <Card style={styles.quickStatsCard}>
-                        <Card.Content>
-                            <Title style={styles.quickStatsTitle}>Quick Stats</Title>
-                            <View style={styles.quickStatsContainer}>
-                                <View style={styles.quickStatItem}>
-                                    <Paragraph style={styles.quickStatValue}>24</Paragraph>
-                                    <Paragraph style={styles.quickStatLabel}>Pending Requests</Paragraph>
-                                </View>
-                                <View style={styles.quickStatItem}>
-                                    <Paragraph style={styles.quickStatValue}>12</Paragraph>
-                                    <Paragraph style={styles.quickStatLabel}>This Week</Paragraph>
-                                </View>
-                                <View style={styles.quickStatItem}>
-                                    <Paragraph style={styles.quickStatValue}>156</Paragraph>
-                                    <Paragraph style={styles.quickStatLabel}>Total Processed</Paragraph>
-                                </View>
-                            </View>
-                        </Card.Content>
-                    </Card>
+                                        <Icon
+                                            name="chevron-right"
+                                            size={20}
+                                            color={colors.outline}
+                                        />
+                                    </View>
+                                </Card.Content>
+                            </Card>
+                        </TouchableOpacity>
+                    ))}
                 </ScrollView>
             </SafeAreaView>
         </>
@@ -108,90 +107,46 @@ export default function TreeManagementDashboard() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#FAFAFA",
     },
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         padding: 16,
     },
-    header: {
-        marginBottom: 24,
-        alignItems: "center",
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: "700",
-        color: "#333",
-        textAlign: "center",
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: "#666",
-        textAlign: "center",
-        marginTop: 8,
-        lineHeight: 20,
-    },
-    menuContainer: {
-        marginBottom: 24,
-    },
-    menuItem: {
+    menuItemContainer: {
         marginBottom: 12,
     },
     menuCard: {
-        elevation: 2,
+        borderRadius: 12,
     },
-    menuCardContent: {
+    cardContent: {
+        padding: 16,
+    },
+    cardHeader: {
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 16,
+        gap: 16,
     },
     iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        justifyContent: "center",
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         alignItems: "center",
-        marginRight: 16,
+        justifyContent: "center",
     },
-    menuTextContainer: {
+    textContainer: {
         flex: 1,
     },
     menuTitle: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#333",
         marginBottom: 4,
     },
     menuDescription: {
-        fontSize: 13,
-        color: "#666",
-        lineHeight: 18,
-    },
-    quickStatsCard: {
-        elevation: 2,
-    },
-    quickStatsTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#333",
-        marginBottom: 16,
-    },
-    quickStatsContainer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-    },
-    quickStatItem: {
-        alignItems: "center",
-    },
-    quickStatValue: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#333",
-    },
-    quickStatLabel: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 4,
-        textAlign: "center",
+        fontSize: 14,
+        color: "#666666",
+        lineHeight: 20,
     },
 });

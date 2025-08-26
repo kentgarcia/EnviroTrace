@@ -212,6 +212,24 @@ def get_vehicles(
         return crud_emission.vehicle.get_multi_optimized(db, skip=skip, limit=limit, filters=filters)
 
 
+@router.get("/vehicles/search/plate/{plate_number}", response_model=Vehicle)
+def get_vehicle_by_plate(
+    plate_number: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get vehicle by exact plate number match.
+    """
+    vehicle = crud_emission.vehicle.get_by_plate_number(db, plate_number=plate_number)
+    if not vehicle:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Vehicle with plate number '{plate_number}' not found"
+        )
+    return vehicle
+
+
 @router.post("/vehicles", response_model=Vehicle, status_code=status.HTTP_201_CREATED)
 def create_vehicle(
     *,

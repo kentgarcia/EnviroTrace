@@ -6,7 +6,6 @@ import { ImageBackground, View as RNView } from "react-native";
 import { useAuthStore } from "../../core/stores/authStore";
 
 const roleLabels: Record<string, string> = {
-    admin: "Admin Dashboard",
     government_emission: "Government Emission",
     air_quality: "Air Quality",
     tree_management: "Tree Management",
@@ -14,7 +13,9 @@ const roleLabels: Record<string, string> = {
 
 export default function DashboardSelectorScreen() {
     const { user, getUserRoles, setSelectedDashboard, logout } = useAuthStore();
-    const roles = useMemo(() => getUserRoles(), [getUserRoles]);
+    const allRoles = useMemo(() => getUserRoles(), [getUserRoles]);
+    // Filter out admin role for mobile app
+    const roles = useMemo(() => allRoles.filter(role => role !== 'admin'), [allRoles]);
     const { colors } = useTheme();
     const [profileVisible, setProfileVisible] = useState(false);
     const [logoutVisible, setLogoutVisible] = useState(false);
@@ -24,7 +25,6 @@ export default function DashboardSelectorScreen() {
         government_emission: require("../../../assets/images/bg_govemissions.jpg"),
         air_quality: require("../../../assets/images/bg_asbu.jpg"),
         tree_management: require("../../../assets/images/bg_envicompliance.jpg"),
-        admin: require("../../../assets/images/bg_envicompliance.jpg"),
     };
 
     const handleSelect = async (role: string) => {
@@ -59,8 +59,7 @@ export default function DashboardSelectorScreen() {
                         {roles.map((r) => {
                             const icon = r === "government_emission" ? "car" :
                                 r === "tree_management" ? "tree" :
-                                    r === "air_quality" ? "weather-windy" :
-                                        r === "admin" ? "shield" : "view-dashboard";
+                                    r === "air_quality" ? "weather-windy" : "view-dashboard";
 
                             const description = r === "government_emission"
                                 ? "Vehicles, testing, and offices"
@@ -68,9 +67,7 @@ export default function DashboardSelectorScreen() {
                                     ? "Urban greening and requests"
                                     : r === "air_quality"
                                         ? "Monitoring and AQ metrics"
-                                        : r === "admin"
-                                            ? "Admin tools and management"
-                                            : undefined;
+                                        : undefined;
 
                             const bg = roleImageMap[r];
                             return (
@@ -124,7 +121,7 @@ export default function DashboardSelectorScreen() {
                             {!!user?.full_name && <Paragraph style={{ marginBottom: 4 }}>{user.full_name}</Paragraph>}
                             {!!user?.email && <Paragraph>{user.email}</Paragraph>}
                             <Paragraph style={{ marginTop: 8, color: "#6B7280" }}>
-                                Roles: {roles.length ? roles.join(", ") : "None"}
+                                Roles: {allRoles.length ? allRoles.join(", ") : "None"}
                             </Paragraph>
                         </Dialog.Content>
                         <Dialog.Actions>

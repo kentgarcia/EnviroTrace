@@ -4,56 +4,37 @@ import { Card, Title, Paragraph, Chip, Divider, useTheme } from "react-native-pa
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
+
+import { useTreeManagementData } from "../../../hooks/useTreeManagementData";
+import { useNetworkSync } from "../../../hooks/useNetworkSync";
+import { useAuthStore } from "../../../core/stores/authStore";
 import StatsCard from "../../../components/StatsCard";
+import Svg, { Defs, LinearGradient, Stop, Rect, Line } from "react-native-svg";
 import StandardHeader from "../../../components/layout/StandardHeader";
 
 export default function TreeManagementOverviewScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const navigation = useNavigation();
+    const { user } = useAuthStore();
+    const { data, loading, refetch } = useTreeManagementData();
+    const { syncData, isSyncing, lastSyncTime } = useNetworkSync();
     const { colors } = useTheme();
+    const [headerDims, setHeaderDims] = useState({ width: 0, height: 0 });
 
     // Mock data - replace with actual API calls
     const dashboardStats = {
-        totalRequests: 145,
-        pendingRequests: 23,
-        completedThisMonth: 18,
-        totalTreesCut: 67,
-        totalTreesPruned: 124,
-        totalComplaints: 15,
+        totalRequests: data?.totalRequests || 145,
+        pendingRequests: data?.pendingRequests || 23,
+        completedThisMonth: data?.completedThisMonth || 18,
+        totalTreesCut: data?.totalTreesCut || 67,
+        totalTreesPruned: data?.totalTreesPruned || 124,
+        totalComplaints: data?.totalComplaints || 15,
     };
-
-    const recentRequests = [
-        {
-            id: "1",
-            requestNumber: "TM-PR-2025-001",
-            type: "pruning",
-            requesterName: "Maria Santos",
-            status: "filed",
-            requestDate: "2025-01-15",
-        },
-        {
-            id: "2",
-            requestNumber: "TM-CT-2025-002",
-            type: "cutting",
-            requesterName: "Juan Cruz",
-            status: "payment_pending",
-            requestDate: "2025-01-14",
-        },
-        {
-            id: "3",
-            requestNumber: "TM-VC-2025-003",
-            type: "violation_complaint",
-            requesterName: "Lisa Garcia",
-            status: "for_signature",
-            requestDate: "2025-01-13",
-        },
-    ];
 
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            // Add API refresh logic here
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await Promise.all([refetch(), syncData()]);
         } catch (error) {
             console.error("Refresh error:", error);
         } finally {
@@ -61,170 +42,232 @@ export default function TreeManagementOverviewScreen() {
         }
     };
 
-    const getRequestTypeLabel = (type: string) => {
-        switch (type) {
-            case "pruning": return "Pruning";
-            case "cutting": return "Tree Cutting";
-            case "violation_complaint": return "Violation/Complaint";
-            default: return type;
-        }
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "filed": return "#2196F3";
-            case "on_hold": return "#9E9E9E";
-            case "for_signature": return "#9C27B0";
-            case "payment_pending": return "#FF9800";
-            default: return "#9E9E9E";
-        }
-    };
-
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case "filed": return "Filed";
-            case "on_hold": return "On Hold";
-            case "for_signature": return "For Signature";
-            case "payment_pending": return "Payment Pending";
-            default: return status;
-        }
+    const formatLastSync = () => {
+        if (!lastSyncTime) return "Never";
+        const now = new Date();
+        const diff = now.getTime() - lastSyncTime.getTime();
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 1) return "Just now";
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return lastSyncTime.toLocaleDateString();
     };
 
     return (
         <>
             <StandardHeader
-                title="Tree Management Dashboard"
-                showBack={false}
+                title="Dashboard"
+                chip={{ label: "Tree Management", iconName: "park" }}
             />
-            <SafeAreaView style={styles.container}>
-                <ScrollView
-                    style={styles.scrollView}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                    }
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={[colors.primary]}
+                        tintColor={colors.primary}
+                    />
+                }
+            >
+                {/* Header Section */}
+                <View
+                    style={styles.headerCard}
+                    onLayout={(e) => setHeaderDims({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
                 >
-                    {/* Quick Stats */}
-                    <View style={styles.statsContainer}>
-                        <View style={styles.statsRow}>
-                            <StatsCard
-                                title="Total Requests"
-                                value={dashboardStats.totalRequests.toString()}
-                                icon="assignment"
-                                color="#2196F3"
-                                style={styles.statCard}
-                            />
-                            <StatsCard
-                                title="Pending"
-                                value={dashboardStats.pendingRequests.toString()}
-                                icon="schedule"
-                                color="#FF9800"
-                                style={styles.statCard}
-                            />
-                        </View>
-                        <View style={styles.statsRow}>
-                            <StatsCard
-                                title="Completed This Month"
-                                value={dashboardStats.completedThisMonth.toString()}
-                                icon="check-circle"
-                                color="#4CAF50"
-                                style={styles.statCard}
-                            />
-                            <StatsCard
-                                title="Trees Processed"
-                                value={(dashboardStats.totalTreesCut + dashboardStats.totalTreesPruned).toString()}
-                                icon="park"
-                                color="#8BC34A"
-                                style={styles.statCard}
-                            />
-                        </View>
+                    {/* Gradient background with subtle grid */}
+                    <View style={styles.headerBg}>
+                        {headerDims.width > 0 && headerDims.height > 0 && (
+                            <Svg width={headerDims.width} height={headerDims.height}>
+                                <Defs>
+                                    <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                                        <Stop offset="0" stopColor={colors.primary} stopOpacity={1} />
+                                        <Stop offset="1" stopColor={colors.primary} stopOpacity={0.85} />
+                                    </LinearGradient>
+                                </Defs>
+                                <Rect x={0} y={0} width={headerDims.width} height={headerDims.height} fill="url(#grad)" />
+                                {/* Grid lines */}
+                                {Array.from({ length: Math.ceil(headerDims.width / 20) + 1 }).map((_, i) => (
+                                    <Line
+                                        key={`v-${i}`}
+                                        x1={i * 20}
+                                        y1={0}
+                                        x2={i * 20}
+                                        y2={headerDims.height}
+                                        stroke="#FFFFFF"
+                                        strokeOpacity={0.08}
+                                        strokeWidth={1}
+                                    />
+                                ))}
+                                {Array.from({ length: Math.ceil(headerDims.height / 20) + 1 }).map((_, i) => (
+                                    <Line
+                                        key={`h-${i}`}
+                                        x1={0}
+                                        y1={i * 20}
+                                        x2={headerDims.width}
+                                        y2={i * 20}
+                                        stroke="#FFFFFF"
+                                        strokeOpacity={0.08}
+                                        strokeWidth={1}
+                                    />
+                                ))}
+                            </Svg>
+                        )}
                     </View>
 
-                    {/* Quick Actions */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.cardTitle}>Quick Actions</Title>
-                            <View style={styles.actionsContainer}>
-                                <TouchableOpacity
-                                    style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                                    onPress={() => navigation.navigate("TreeRequests" as never)}
-                                >
-                                    <Icon name="add" size={24} color="#FFFFFF" />
-                                    <Paragraph style={styles.actionButtonText}>New Request</Paragraph>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.actionButton, { backgroundColor: "#4CAF50" }]}
-                                    onPress={() => navigation.navigate("TreeRequests" as never)}
-                                >
-                                    <Icon name="list" size={24} color="#FFFFFF" />
-                                    <Paragraph style={styles.actionButtonText}>View All</Paragraph>
-                                </TouchableOpacity>
-                            </View>
-                        </Card.Content>
-                    </Card>
+                    <View style={styles.headerContent}>
+                        <View style={styles.welcomeSection}>
+                            <Title style={styles.welcomeTitle}>
+                                Welcome, {user?.full_name || user?.username || "User"}
+                            </Title>
+                            <Paragraph style={styles.welcomeSubtitle}>
+                                Tree Management Monitoring Dashboard
+                            </Paragraph>
+                        </View>
 
-                    {/* Request Type Breakdown */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.cardTitle}>Request Types</Title>
-                            <View style={styles.breakdownContainer}>
-                                <View style={styles.breakdownItem}>
-                                    <Icon name="content-cut" size={20} color="#FF5722" />
-                                    <Paragraph style={styles.breakdownLabel}>Pruning</Paragraph>
-                                    <Paragraph style={styles.breakdownValue}>{dashboardStats.totalTreesPruned}</Paragraph>
-                                </View>
-                                <View style={styles.breakdownItem}>
-                                    <Icon name="dangerous" size={20} color="#F44336" />
-                                    <Paragraph style={styles.breakdownLabel}>Cutting</Paragraph>
-                                    <Paragraph style={styles.breakdownValue}>{dashboardStats.totalTreesCut}</Paragraph>
-                                </View>
-                                <View style={styles.breakdownItem}>
-                                    <Icon name="report" size={20} color="#FF9800" />
-                                    <Paragraph style={styles.breakdownLabel}>Complaints</Paragraph>
-                                    <Paragraph style={styles.breakdownValue}>{dashboardStats.totalComplaints}</Paragraph>
-                                </View>
-                            </View>
-                        </Card.Content>
-                    </Card>
+                        <View style={styles.syncSection}>
+                            <Chip
+                                icon={(props) => (
+                                    <Icon
+                                        name={isSyncing ? "sync" : "cloud-done"}
+                                        color="#FFFFFF"
+                                        size={props?.size ?? 18}
+                                    />
+                                )}
+                                style={[styles.syncChip, { backgroundColor: colors.primary }]}
+                                textStyle={[styles.syncText, { color: "#FFFFFF" }]}
+                            >
+                                {isSyncing ? "Syncing..." : `Last sync: ${formatLastSync()}`}
+                            </Chip>
+                        </View>
+                    </View>
+                </View>
 
-                    {/* Recent Requests */}
-                    <Card style={styles.card}>
+                {/* Statistics Section */}
+                <View style={styles.statsSection}>
+                    <Title style={styles.sectionTitle}>Overview Statistics</Title>
+                    <View style={styles.statsGrid}>
+                        <StatsCard
+                            title="Total Requests"
+                            value={dashboardStats.totalRequests || 0}
+                            icon="assignment"
+                            loading={loading}
+                            onPress={() => navigation.navigate("TreeRequests" as never)}
+                        />
+                        <StatsCard
+                            title="Pending Requests"
+                            value={dashboardStats.pendingRequests || 0}
+                            icon="schedule"
+                            loading={loading}
+                            onPress={() => navigation.navigate("TreeRequests" as never)}
+                        />
+                        <StatsCard
+                            title="Completed This Month"
+                            value={dashboardStats.completedThisMonth || 0}
+                            icon="check-circle"
+                            loading={loading}
+                            onPress={() => navigation.navigate("TreeRequests" as never)}
+                        />
+                        <StatsCard
+                            title="Trees Processed"
+                            value={(dashboardStats.totalTreesCut + dashboardStats.totalTreesPruned) || 0}
+                            icon="park"
+                            loading={loading}
+                            onPress={() => navigation.navigate("TreeRequests" as never)}
+                        />
+                    </View>
+                </View>
+
+                <Divider style={styles.divider} />
+
+                {/* Quick Actions Section */}
+                <View style={styles.quickActionsSection}>
+                    <Title style={styles.sectionTitle}>Quick Actions</Title>
+                    <View style={styles.actionRow}>
+                        <View style={styles.actionItem}>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                onPress={() => navigation.navigate("AddRequest" as never)}
+                                style={[
+                                    styles.actionButton,
+                                    { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                                ]}
+                                activeOpacity={0.7}
+                            >
+                                <Icon name="add-circle" size={22} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Paragraph style={styles.actionLabel}>New Request</Paragraph>
+                        </View>
+
+                        <View style={styles.actionItem}>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                onPress={() => navigation.navigate("TreeRequests" as never)}
+                                style={[
+                                    styles.actionButton,
+                                    { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                                ]}
+                                activeOpacity={0.7}
+                            >
+                                <Icon name="list" size={22} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Paragraph style={styles.actionLabel}>View Requests</Paragraph>
+                        </View>
+
+                        <View style={styles.actionItem}>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                onPress={() => syncData()}
+                                style={[
+                                    styles.actionButton,
+                                    { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                                ]}
+                                activeOpacity={0.7}
+                            >
+                                <Icon name="sync" size={22} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Paragraph style={styles.actionLabel}>Sync Data</Paragraph>
+                        </View>
+
+                        <View style={styles.actionItem}>
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                onPress={() => navigation.navigate("Statistics" as never)}
+                                style={[
+                                    styles.actionButton,
+                                    { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}66` },
+                                ]}
+                                activeOpacity={0.7}
+                            >
+                                <Icon name="bar-chart" size={22} color={colors.primary} />
+                            </TouchableOpacity>
+                            <Paragraph style={styles.actionLabel}>Statistics</Paragraph>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Recent Activity Placeholder */}
+                <View style={styles.recentSection}>
+                    <Title style={styles.sectionTitle}>Recent Activity</Title>
+                    <Card style={styles.recentCard}>
                         <Card.Content>
-                            <View style={styles.cardHeader}>
-                                <Title style={styles.cardTitle}>Recent Requests</Title>
-                                <TouchableOpacity onPress={() => navigation.navigate("TreeRequests" as never)}>
-                                    <Paragraph style={[styles.viewAllText, { color: colors.primary }]}>
-                                        View All
-                                    </Paragraph>
-                                </TouchableOpacity>
-                            </View>
-                            <Divider style={styles.divider} />
-                            {recentRequests.map((request, index) => (
-                                <TouchableOpacity
-                                    key={request.id}
-                                    style={styles.requestItem}
-                                    onPress={() => navigation.navigate("RequestDetail" as never, { requestId: request.id } as never)}
-                                >
-                                    <View style={styles.requestHeader}>
-                                        <Paragraph style={styles.requestNumber}>{request.requestNumber}</Paragraph>
-                                        <Chip
-                                            style={[styles.statusChip, { backgroundColor: getStatusColor(request.status) + "20" }]}
-                                            textStyle={[styles.statusChipText, { color: getStatusColor(request.status) }]}
-                                        >
-                                            {getStatusLabel(request.status)}
-                                        </Chip>
-                                    </View>
-                                    <View style={styles.requestDetails}>
-                                        <Paragraph style={styles.requestType}>{getRequestTypeLabel(request.type)}</Paragraph>
-                                        <Paragraph style={styles.requesterName}>{request.requesterName}</Paragraph>
-                                        <Paragraph style={styles.requestDate}>{request.requestDate}</Paragraph>
-                                    </View>
-                                    {index < recentRequests.length - 1 && <Divider style={styles.itemDivider} />}
-                                </TouchableOpacity>
-                            ))}
+                            <Paragraph style={styles.recentText}>
+                                {data?.pendingSync > 0
+                                    ? `${data.pendingSync} items pending sync`
+                                    : "All data is synchronized"}
+                            </Paragraph>
+                            {data?.lastRequestDate && (
+                                <Paragraph style={styles.recentSubtext}>
+                                    Last request submitted:{" "}
+                                    {new Date(data.lastRequestDate).toLocaleDateString()}
+                                </Paragraph>
+                            )}
                         </Card.Content>
                     </Card>
-                </ScrollView>
-            </SafeAreaView>
+                </View>
+            </ScrollView>
         </>
     );
 }
@@ -232,117 +275,105 @@ export default function TreeManagementOverviewScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#FAFAFA",
     },
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         padding: 16,
     },
-    statsContainer: {
+    headerCard: {
+        marginBottom: 16,
+        borderRadius: 12,
+        overflow: "hidden",
+    },
+    headerBg: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    headerContent: {
+        padding: 20,
+    },
+    welcomeSection: {
         marginBottom: 16,
     },
-    statsRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 8,
-    },
-    statCard: {
-        flex: 1,
-        marginHorizontal: 4,
-    },
-    card: {
-        marginBottom: 16,
-        elevation: 2,
-    },
-    cardTitle: {
-        fontSize: 18,
+    welcomeTitle: {
+        fontSize: 20,
         fontWeight: "600",
-        marginBottom: 12,
-    },
-    cardHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    viewAllText: {
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    divider: {
-        marginBottom: 12,
-    },
-    actionsContainer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-    },
-    actionButton: {
-        flex: 1,
-        alignItems: "center",
-        padding: 16,
-        borderRadius: 8,
-        marginHorizontal: 8,
-    },
-    actionButtonText: {
         color: "#FFFFFF",
-        fontWeight: "500",
-        marginTop: 4,
-    },
-    breakdownContainer: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-    },
-    breakdownItem: {
-        alignItems: "center",
-        flex: 1,
-    },
-    breakdownLabel: {
-        fontSize: 12,
-        color: "#666",
-        marginTop: 4,
-    },
-    breakdownValue: {
-        fontSize: 18,
-        fontWeight: "600",
-        marginTop: 2,
-    },
-    requestItem: {
-        paddingVertical: 8,
-    },
-    requestHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
         marginBottom: 4,
     },
-    requestNumber: {
+    welcomeSubtitle: {
         fontSize: 14,
-        fontWeight: "600",
+        color: "#E5E7EB",
     },
-    statusChip: {
-        height: 24,
+    syncSection: {
+        alignItems: "flex-start",
     },
-    statusChipText: {
-        fontSize: 10,
-        fontWeight: "500",
+    syncChip: {
+        borderRadius: 16,
     },
-    requestDetails: {
-        marginLeft: 4,
-    },
-    requestType: {
-        fontSize: 13,
-        fontWeight: "500",
-        color: "#333",
-    },
-    requesterName: {
+    syncText: {
         fontSize: 12,
-        color: "#666",
+        fontWeight: "500",
     },
-    requestDate: {
-        fontSize: 11,
-        color: "#999",
+    statsSection: {
+        marginBottom: 16,
     },
-    itemDivider: {
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#212121",
+        marginBottom: 12,
+    },
+    statsGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
+    divider: {
+        marginVertical: 8,
+    },
+    quickActionsSection: {
+        marginBottom: 16,
+    },
+    actionRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    actionItem: {
+        alignItems: "center",
+        justifyContent: "center",
+        flex: 1,
+    },
+    actionButton: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+    },
+    actionLabel: {
         marginTop: 8,
+        fontSize: 12,
+        fontWeight: "500",
+        textAlign: "center",
+    },
+    recentSection: {
+        marginBottom: 16,
+    },
+    recentCard: {
+        borderRadius: 12,
+    },
+    recentText: {
+        fontSize: 14,
+        color: "#424242",
+    },
+    recentSubtext: {
+        fontSize: 12,
+        color: "#757575",
+        marginTop: 4,
     },
 });

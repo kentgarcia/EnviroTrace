@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.apis.deps import get_db, get_current_user
@@ -628,3 +628,56 @@ def get_dashboard_statistics(
     dashboard_data = air_quality_record.get_dashboard_statistics_sync(db=db)
     
     return AirQualityDashboardResponse(**dashboard_data)
+
+
+# Reports endpoints
+@router.get("/reports/offenders")
+def get_offenders_report(
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    location: Optional[str] = None,
+    vehicleType: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Any:
+    """Get offenders report with optional filters"""
+    
+    try:
+        # For now, return a basic structure
+        # TODO: Implement actual report logic with filtering
+        violations = air_quality_violation.get_multi_sync(db=db, skip=0, limit=100)
+        
+        # Basic aggregation
+        total_offenders = len(set(v.record_id for v in violations if v.record_id))
+        total_violations = len(violations)
+        total_fines = sum(float(v.record.fees[0].amount) if v.record and v.record.fees else 0 for v in violations)
+        
+        return {
+            "offenders": [
+                {
+                    "id": v.id,
+                    "plate_number": v.plate_number,
+                    "vehicle_type": v.vehicle_type,
+                    "operator_company_name": v.operator_company_name,
+                    "place_of_apprehension": v.place_of_apprehension,
+                    "date_of_apprehension": v.date_of_apprehension,
+                    "paid_driver": v.paid_driver,
+                    "paid_operator": v.paid_operator,
+                } for v in violations
+            ],
+            "summary": {
+                "totalOffenders": total_offenders,
+                "totalViolations": total_violations,
+                "totalFines": total_fines
+            }
+        }
+    except Exception as e:
+        return {
+            "offenders": [],
+            "summary": {
+                "totalOffenders": 0,
+                "totalViolations": 0,
+                "totalFines": 0
+            },
+            "error": str(e)
+        }

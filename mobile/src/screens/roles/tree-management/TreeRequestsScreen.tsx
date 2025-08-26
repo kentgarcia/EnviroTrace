@@ -5,7 +5,6 @@ import {
     StyleSheet,
     RefreshControl,
     FlatList,
-    TouchableOpacity,
 } from "react-native";
 import {
     Card,
@@ -20,84 +19,110 @@ import {
     List,
     IconButton,
     useTheme,
-    Divider,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
 
-// Mock data - replace with actual database/API calls
-const mockRequests = [
-    {
-        id: "1",
-        request_number: "TM-PR-2025-001",
-        request_type: "pruning",
-        requester_name: "Maria Santos",
-        property_address: "123 Rizal Ave., Manila",
-        status: "filed",
-        request_date: "2025-01-15",
-        trees_and_quantities: ["Acacia: 2", "Mahogany: 1"],
-        inspectors: ["Inspector Rodriguez"],
-        notes: "Trees blocking power lines",
-    },
-    {
-        id: "2",
-        request_number: "TM-CT-2025-002",
-        request_type: "cutting",
-        requester_name: "Juan Cruz",
-        property_address: "456 Mabini Ave., Manila",
-        status: "payment_pending",
-        request_date: "2025-01-14",
-        trees_and_quantities: ["Narra: 1"],
-        inspectors: ["Inspector Santos"],
-        notes: "Dead tree posing safety risk",
-    },
-    {
-        id: "3",
-        request_number: "TM-VC-2025-003",
-        request_type: "violation_complaint",
-        requester_name: "Lisa Garcia",
-        property_address: "789 Del Pilar St., Makati",
-        status: "for_signature",
-        request_date: "2025-01-13",
-        trees_and_quantities: ["Mango: 3"],
-        inspectors: ["Inspector Dela Cruz", "Inspector Martinez"],
-        notes: "Unauthorized tree cutting complaint",
-    },
-    {
-        id: "4",
-        request_number: "TM-PR-2025-004",
-        request_type: "pruning",
-        requester_name: "Robert Tan",
-        property_address: "321 Quezon Blvd., Quezon City",
-        status: "on_hold",
-        request_date: "2025-01-12",
-        trees_and_quantities: ["Balete: 1", "Acacia: 2"],
-        inspectors: [],
-        notes: "Waiting for property owner consent",
-    },
-];
+import { useNetworkSync } from "../../../hooks/useNetworkSync";
+
+// Mock data structure for tree requests
+interface LocalTreeRequest {
+    id: string;
+    request_number: string;
+    request_type: string;
+    requester_name: string;
+    property_address: string;
+    status: string;
+    request_date: string;
+    trees_and_quantities: string[];
+    inspectors: string[];
+    notes: string;
+    sync_status?: string;
+    latest_update_date?: string;
+}
 
 export default function TreeRequestsScreen() {
     const { colors } = useTheme();
-    const [requests, setRequests] = useState(mockRequests);
-    const [filteredRequests, setFilteredRequests] = useState(mockRequests);
+    const [requests, setRequests] = useState<LocalTreeRequest[]>([]);
+    const [filteredRequests, setFilteredRequests] = useState<LocalTreeRequest[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [refreshing, setRefreshing] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [filterModalVisible, setFilterModalVisible] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState<string>("");
     const [selectedType, setSelectedType] = useState<string>("");
 
     const navigation = useNavigation();
+    const { syncData, isSyncing } = useNetworkSync();
 
-    // Load requests from database/API
+    // Mock data - replace with actual database/API calls
+    const mockRequests: LocalTreeRequest[] = [
+        {
+            id: "1",
+            request_number: "TM-PR-2025-001",
+            request_type: "pruning",
+            requester_name: "Maria Santos",
+            property_address: "123 Rizal Ave., Manila",
+            status: "filed",
+            request_date: "2025-01-15",
+            trees_and_quantities: ["Acacia: 2", "Mahogany: 1"],
+            inspectors: ["Inspector Rodriguez"],
+            notes: "Trees blocking power lines",
+            sync_status: "synced",
+            latest_update_date: "2025-01-15",
+        },
+        {
+            id: "2",
+            request_number: "TM-CT-2025-002",
+            request_type: "cutting",
+            requester_name: "Juan Cruz",
+            property_address: "456 Mabini Ave., Manila",
+            status: "payment_pending",
+            request_date: "2025-01-14",
+            trees_and_quantities: ["Narra: 1"],
+            inspectors: ["Inspector Santos"],
+            notes: "Dead tree posing safety risk",
+            sync_status: "pending",
+            latest_update_date: "2025-01-14",
+        },
+        {
+            id: "3",
+            request_number: "TM-VC-2025-003",
+            request_type: "violation_complaint",
+            requester_name: "Lisa Garcia",
+            property_address: "789 Del Pilar St., Makati",
+            status: "for_signature",
+            request_date: "2025-01-13",
+            trees_and_quantities: ["Mango: 3"],
+            inspectors: ["Inspector Dela Cruz", "Inspector Martinez"],
+            notes: "Unauthorized tree cutting complaint",
+            sync_status: "synced",
+            latest_update_date: "2025-01-13",
+        },
+        {
+            id: "4",
+            request_number: "TM-PR-2025-004",
+            request_type: "pruning",
+            requester_name: "Robert Tan",
+            property_address: "321 Quezon Blvd., Quezon City",
+            status: "on_hold",
+            request_date: "2025-01-12",
+            trees_and_quantities: ["Balete: 1", "Acacia: 2"],
+            inspectors: [],
+            notes: "Waiting for property owner consent",
+            sync_status: "synced",
+            latest_update_date: "2025-01-12",
+        },
+    ];
+
+    // Load requests from database
     const loadRequests = async () => {
         try {
             setLoading(true);
-            // Replace with actual API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Replace with actual database call when available
+            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
             setRequests(mockRequests);
             setFilteredRequests(mockRequests);
         } catch (error) {
@@ -129,33 +154,47 @@ export default function TreeRequestsScreen() {
 
         // Apply status filter
         if (selectedStatus) {
-            filtered = filtered.filter((request) => request.status === selectedStatus);
+            filtered = filtered.filter(
+                (request) => request.status === selectedStatus
+            );
         }
 
         // Apply type filter
         if (selectedType) {
-            filtered = filtered.filter((request) => request.request_type === selectedType);
+            filtered = filtered.filter(
+                (request) => request.request_type === selectedType
+            );
         }
 
         setFilteredRequests(filtered);
     }, [requests, searchQuery, selectedStatus, selectedType]);
 
-    const onRefresh = async () => {
-        setRefreshing(true);
-        try {
-            await loadRequests();
-        } catch (error) {
-            console.error("Refresh error:", error);
-        } finally {
-            setRefreshing(false);
-        }
-    };
+    // Load data on mount
+    useEffect(() => {
+        loadRequests();
+    }, []);
 
+    // Reload when returning to this screen
     useFocusEffect(
         React.useCallback(() => {
             loadRequests();
+            return () => { };
         }, [])
     );
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([loadRequests(), syncData()]);
+        setRefreshing(false);
+    };
+
+    const handleRequestPress = (request: LocalTreeRequest) => {
+        (navigation as any).navigate("RequestDetail", { requestId: request.id });
+    };
+
+    const handleAddRequest = () => {
+        (navigation as any).navigate("AddRequest");
+    };
 
     const getRequestTypeLabel = (type: string) => {
         switch (type) {
@@ -172,6 +211,7 @@ export default function TreeRequestsScreen() {
             case "on_hold": return "#9E9E9E";
             case "for_signature": return "#9C27B0";
             case "payment_pending": return "#FF9800";
+            case "completed": return "#4CAF50";
             default: return "#9E9E9E";
         }
     };
@@ -182,155 +222,192 @@ export default function TreeRequestsScreen() {
             case "on_hold": return "On Hold";
             case "for_signature": return "For Signature";
             case "payment_pending": return "Payment Pending";
+            case "completed": return "Completed";
             default: return status;
         }
     };
 
-    const getTypeIcon = (type: string) => {
-        switch (type) {
-            case "pruning": return "content-cut";
-            case "cutting": return "dangerous";
-            case "violation_complaint": return "report";
-            default: return "assignment";
-        }
-    };
-
-    const renderRequestItem = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            onPress={() => navigation.navigate("RequestDetail" as never, { requestId: item.id } as never)}
+    const renderRequestCard = ({ item: request }: { item: LocalTreeRequest }) => (
+        <Card
+            mode="outlined"
+            style={[styles.requestCard, { borderColor: `${colors.primary}26` }]}
+            onPress={() => handleRequestPress(request)}
         >
-            <Card style={styles.requestCard}>
-                <Card.Content>
-                    <View style={styles.requestHeader}>
-                        <View style={styles.requestHeaderLeft}>
-                            <Icon
-                                name={getTypeIcon(item.request_type)}
-                                size={20}
-                                color={colors.primary}
-                                style={styles.typeIcon}
-                            />
-                            <View>
-                                <Paragraph style={styles.requestNumber}>{item.request_number}</Paragraph>
-                                <Paragraph style={styles.requestType}>
-                                    {getRequestTypeLabel(item.request_type)}
-                                </Paragraph>
-                            </View>
-                        </View>
+            <Card.Content style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                    <View style={styles.requestInfo}>
+                        <Title style={[styles.requestNumber, { color: colors.primary }]}>
+                            {request.request_number}
+                        </Title>
+                        <Paragraph style={styles.requesterName}>
+                            {request.requester_name}
+                        </Paragraph>
+                    </View>
+                    <View style={styles.statusContainer}>
+                        {request.sync_status === "pending" && (
+                            <Chip
+                                compact
+                                icon="sync"
+                                style={styles.pendingChip}
+                                textStyle={styles.chipText}
+                            >
+                                Pending
+                            </Chip>
+                        )}
                         <Chip
-                            style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) + "20" }]}
-                            textStyle={[styles.statusChipText, { color: getStatusColor(item.status) }]}
+                            compact
+                            icon={
+                                request.status === "completed" ? "check-circle" :
+                                    request.status === "on_hold" ? "pause-circle" : "schedule"
+                            }
+                            style={[
+                                styles.statusChip,
+                                {
+                                    backgroundColor: `${getStatusColor(request.status)}20`,
+                                },
+                            ]}
+                            textStyle={[
+                                styles.chipText,
+                                { color: getStatusColor(request.status) },
+                            ]}
                         >
-                            {getStatusLabel(item.status)}
+                            {getStatusLabel(request.status)}
                         </Chip>
                     </View>
+                </View>
 
-                    <View style={styles.requestDetails}>
+                <View style={styles.requestDetails}>
+                    <View style={styles.detailRow}>
+                        <Icon name="location-on" size={16} color="#757575" />
+                        <Paragraph style={styles.detailText}>
+                            {request.property_address}
+                        </Paragraph>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="park" size={16} color="#757575" />
+                        <Paragraph style={styles.detailText}>
+                            {getRequestTypeLabel(request.request_type)} • {request.trees_and_quantities.join(", ")}
+                        </Paragraph>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="people" size={16} color="#757575" />
+                        <Paragraph style={styles.detailText}>
+                            {request.inspectors.length > 0
+                                ? `Inspectors: ${request.inspectors.join(", ")}`
+                                : "No inspectors assigned"
+                            }
+                        </Paragraph>
+                    </View>
+                    {request.latest_update_date && (
                         <View style={styles.detailRow}>
-                            <Icon name="person" size={16} color="#666" />
-                            <Paragraph style={styles.detailText}>{item.requester_name}</Paragraph>
-                        </View>
-                        <View style={styles.detailRow}>
-                            <Icon name="location-on" size={16} color="#666" />
-                            <Paragraph style={styles.detailText} numberOfLines={2}>
-                                {item.property_address}
+                            <Icon name="event" size={16} color="#757575" />
+                            <Paragraph style={styles.detailText}>
+                                Last updated:{" "}
+                                {new Date(request.latest_update_date).toLocaleDateString()}
                             </Paragraph>
                         </View>
-                        <View style={styles.detailRow}>
-                            <Icon name="event" size={16} color="#666" />
-                            <Paragraph style={styles.detailText}>{item.request_date}</Paragraph>
-                        </View>
-                        {item.trees_and_quantities && item.trees_and_quantities.length > 0 && (
-                            <View style={styles.detailRow}>
-                                <Icon name="park" size={16} color="#666" />
-                                <Paragraph style={styles.detailText}>
-                                    {item.trees_and_quantities.join(", ")}
-                                </Paragraph>
-                            </View>
-                        )}
-                    </View>
-
-                    {item.notes && (
-                        <>
-                            <Divider style={styles.notesDivider} />
-                            <View style={styles.notesSection}>
-                                <Icon name="note" size={16} color="#666" />
-                                <Paragraph style={styles.notesText} numberOfLines={2}>
-                                    {item.notes}
-                                </Paragraph>
-                            </View>
-                        </>
                     )}
-                </Card.Content>
-            </Card>
-        </TouchableOpacity>
+                    {request.notes && (
+                        <View style={styles.detailRow}>
+                            <Icon name="note" size={16} color="#757575" />
+                            <Paragraph style={styles.detailText} numberOfLines={2}>
+                                {request.notes}
+                            </Paragraph>
+                        </View>
+                    )}
+                </View>
+            </Card.Content>
+        </Card>
+    );
+
+    const renderEmptyState = () => (
+        <View style={styles.emptyState}>
+            <Icon name="assignment" size={64} color="#BDBDBD" />
+            <Title style={styles.emptyTitle}>No requests found</Title>
+            <Paragraph style={styles.emptyText}>
+                {searchQuery || selectedStatus || selectedType
+                    ? "Try adjusting your search or filters"
+                    : "Add your first tree management request"}
+            </Paragraph>
+            {!searchQuery && !selectedStatus && !selectedType && (
+                <Button
+                    mode="contained"
+                    onPress={handleAddRequest}
+                    style={styles.emptyButton}
+                >
+                    Add Request
+                </Button>
+            )}
+        </View>
     );
 
     const clearFilters = () => {
         setSelectedStatus("");
         setSelectedType("");
-        setFilterModalVisible(false);
+        setSearchQuery("");
     };
 
-    const applyFilters = () => {
-        setFilterModalVisible(false);
-    };
+    const hasActiveFilters = selectedStatus || selectedType;
 
     return (
         <>
             <StandardHeader
                 title="Tree Requests"
-                showBack={true}
-                onBack={() => navigation.goBack()}
+                chip={{ label: "Tree Management", iconName: "park" }}
             />
-            <SafeAreaView style={styles.container}>
-                <View style={styles.searchContainer}>
+            <View style={styles.container}>
+                {/* Search and Filter Section */}
+                <View style={styles.searchSection}>
                     <Searchbar
                         placeholder="Search requests..."
                         onChangeText={setSearchQuery}
                         value={searchQuery}
                         style={styles.searchBar}
+                        inputStyle={styles.searchInput}
                     />
-                    <IconButton
-                        icon="filter-list"
-                        size={24}
-                        onPress={() => setFilterModalVisible(true)}
-                        style={styles.filterButton}
-                    />
+                    <View style={styles.filterRow}>
+                        <IconButton
+                            icon="filter-list"
+                            mode="contained-tonal"
+                            onPress={() => setFilterModalVisible(true)}
+                            style={[
+                                styles.filterButton,
+                                hasActiveFilters && { backgroundColor: colors.primary + "20" },
+                            ]}
+                            iconColor={hasActiveFilters ? colors.primary : undefined}
+                        />
+                        {hasActiveFilters && (
+                            <Button mode="text" onPress={clearFilters} compact>
+                                Clear Filters
+                            </Button>
+                        )}
+                    </View>
                 </View>
 
-                {/* Active Filters */}
-                {(selectedStatus || selectedType) && (
-                    <View style={styles.activeFiltersContainer}>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {selectedStatus && (
-                                <Chip
-                                    onClose={() => setSelectedStatus("")}
-                                    style={styles.filterChip}
-                                >
-                                    Status: {getStatusLabel(selectedStatus)}
-                                </Chip>
-                            )}
-                            {selectedType && (
-                                <Chip
-                                    onClose={() => setSelectedType("")}
-                                    style={styles.filterChip}
-                                >
-                                    Type: {getRequestTypeLabel(selectedType)}
-                                </Chip>
-                            )}
-                        </ScrollView>
-                    </View>
-                )}
-
+                {/* Requests List */}
                 <FlatList
                     data={filteredRequests}
-                    renderItem={renderRequestItem}
+                    renderItem={renderRequestCard}
                     keyExtractor={(item) => item.id}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                    }
                     contentContainerStyle={styles.listContainer}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={[colors.primary]}
+                            tintColor={colors.primary}
+                        />
+                    }
+                    ListEmptyComponent={renderEmptyState}
                     showsVerticalScrollIndicator={false}
+                />
+
+                {/* Floating Action Button */}
+                <FAB
+                    icon="add"
+                    style={[styles.fab, { backgroundColor: colors.primary }]}
+                    onPress={handleAddRequest}
+                    label="Add Request"
                 />
 
                 {/* Filter Modal */}
@@ -338,63 +415,64 @@ export default function TreeRequestsScreen() {
                     <Modal
                         visible={filterModalVisible}
                         onDismiss={() => setFilterModalVisible(false)}
-                        contentContainerStyle={styles.modalContent}
+                        contentContainerStyle={styles.modalContainer}
                     >
                         <Title style={styles.modalTitle}>Filter Requests</Title>
 
-                        <View style={styles.filterSection}>
-                            <Paragraph style={styles.filterLabel}>Status</Paragraph>
-                            {["filed", "on_hold", "for_signature", "payment_pending"].map((status) => (
-                                <List.Item
+                        {/* Status Filter */}
+                        <List.Subheader>Status</List.Subheader>
+                        <View style={styles.chipContainer}>
+                            {["filed", "on_hold", "for_signature", "payment_pending", "completed"].map((status) => (
+                                <Chip
                                     key={status}
-                                    title={getStatusLabel(status)}
-                                    onPress={() => setSelectedStatus(selectedStatus === status ? "" : status)}
-                                    left={() => (
-                                        <Icon
-                                            name={selectedStatus === status ? "radio-button-checked" : "radio-button-unchecked"}
-                                            size={20}
-                                            color={colors.primary}
-                                        />
-                                    )}
-                                />
+                                    selected={selectedStatus === status}
+                                    onPress={() =>
+                                        setSelectedStatus(selectedStatus === status ? "" : status)
+                                    }
+                                    style={styles.filterChip}
+                                >
+                                    {getStatusLabel(status)}
+                                </Chip>
                             ))}
                         </View>
 
-                        <View style={styles.filterSection}>
-                            <Paragraph style={styles.filterLabel}>Request Type</Paragraph>
+                        {/* Type Filter */}
+                        <List.Subheader>Request Type</List.Subheader>
+                        <View style={styles.chipContainer}>
                             {["pruning", "cutting", "violation_complaint"].map((type) => (
-                                <List.Item
+                                <Chip
                                     key={type}
-                                    title={getRequestTypeLabel(type)}
-                                    onPress={() => setSelectedType(selectedType === type ? "" : type)}
-                                    left={() => (
-                                        <Icon
-                                            name={selectedType === type ? "radio-button-checked" : "radio-button-unchecked"}
-                                            size={20}
-                                            color={colors.primary}
-                                        />
-                                    )}
-                                />
+                                    selected={selectedType === type}
+                                    onPress={() =>
+                                        setSelectedType(selectedType === type ? "" : type)
+                                    }
+                                    style={styles.filterChip}
+                                >
+                                    {getRequestTypeLabel(type)}
+                                </Chip>
                             ))}
                         </View>
 
                         <View style={styles.modalActions}>
-                            <Button mode="outlined" onPress={clearFilters} style={styles.modalButton}>
-                                Clear
+                            <Button
+                                mode="outlined"
+                                onPress={() => {
+                                    clearFilters();
+                                    setFilterModalVisible(false);
+                                }}
+                            >
+                                Clear All
                             </Button>
-                            <Button mode="contained" onPress={applyFilters} style={styles.modalButton}>
+                            <Button
+                                mode="contained"
+                                onPress={() => setFilterModalVisible(false)}
+                            >
                                 Apply
                             </Button>
                         </View>
                     </Modal>
                 </Portal>
-
-                <FAB
-                    icon="add"
-                    style={styles.fab}
-                    onPress={() => navigation.navigate("AddRequest" as never)}
-                />
-            </SafeAreaView>
+            </View>
         </>
     );
 }
@@ -402,125 +480,141 @@ export default function TreeRequestsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#FAFAFA",
     },
-    searchContainer: {
-        flexDirection: "row",
+    searchSection: {
         padding: 16,
-        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E0E0E0",
     },
     searchBar: {
-        flex: 1,
-        marginRight: 8,
+        marginBottom: 8,
+    },
+    searchInput: {
+        fontSize: 16,
+    },
+    filterRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
     },
     filterButton: {
         margin: 0,
     },
-    activeFiltersContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 8,
-    },
-    filterChip: {
-        marginRight: 8,
-    },
     listContainer: {
         padding: 16,
-        paddingTop: 0,
+        paddingBottom: 100,
     },
     requestCard: {
         marginBottom: 12,
-        elevation: 2,
+        borderRadius: 12,
     },
-    requestHeader: {
+    cardContent: {
+        padding: 16,
+    },
+    cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
         marginBottom: 12,
     },
-    requestHeaderLeft: {
-        flexDirection: "row",
-        alignItems: "center",
+    requestInfo: {
         flex: 1,
     },
-    typeIcon: {
-        marginRight: 8,
-    },
     requestNumber: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: "600",
-        color: "#333",
+        marginBottom: 2,
     },
-    requestType: {
-        fontSize: 12,
-        color: "#666",
+    requesterName: {
+        fontSize: 14,
+        color: "#666666",
+    },
+    statusContainer: {
+        alignItems: "flex-end",
+        gap: 4,
+    },
+    pendingChip: {
+        backgroundColor: "#FFF3E0",
     },
     statusChip: {
         height: 28,
     },
-    statusChipText: {
+    chipText: {
         fontSize: 11,
         fontWeight: "500",
     },
     requestDetails: {
-        marginTop: 8,
+        gap: 6,
     },
     detailRow: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginBottom: 6,
+        gap: 8,
     },
     detailText: {
         fontSize: 13,
-        color: "#666",
-        marginLeft: 8,
+        color: "#666666",
         flex: 1,
+        lineHeight: 18,
     },
-    notesDivider: {
-        marginVertical: 8,
-    },
-    notesSection: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-    },
-    notesText: {
-        fontSize: 12,
-        color: "#666",
-        marginLeft: 8,
-        fontStyle: "italic",
+    emptyState: {
         flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 32,
+        paddingVertical: 64,
+    },
+    emptyTitle: {
+        fontSize: 20,
+        fontWeight: "600",
+        color: "#666666",
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: "#999999",
+        textAlign: "center",
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    emptyButton: {
+        paddingHorizontal: 24,
     },
     fab: {
         position: "absolute",
-        bottom: 16,
-        right: 16,
+        margin: 16,
+        right: 0,
+        bottom: 0,
     },
-    modalContent: {
-        backgroundColor: "white",
-        padding: 20,
+    modalContainer: {
+        backgroundColor: "#FFFFFF",
         margin: 20,
-        borderRadius: 8,
+        borderRadius: 12,
+        padding: 20,
         maxHeight: "80%",
     },
     modalTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "600",
         marginBottom: 16,
+        textAlign: "center",
     },
-    filterSection: {
+    chipContainer: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
         marginBottom: 16,
     },
-    filterLabel: {
-        fontSize: 14,
-        fontWeight: "500",
+    filterChip: {
         marginBottom: 8,
-        color: "#333",
     },
     modalActions: {
         flexDirection: "row",
-        justifyContent: "flex-end",
-        marginTop: 16,
-    },
-    modalButton: {
-        marginLeft: 8,
+        justifyContent: "space-between",
+        gap: 12,
+        marginTop: 24,
     },
 });

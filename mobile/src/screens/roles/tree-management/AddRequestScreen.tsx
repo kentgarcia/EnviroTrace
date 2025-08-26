@@ -1,43 +1,60 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import {
-    View,
-    ScrollView,
-    StyleSheet,
-    Alert,
-} from "react-native";
-import {
-    Card,
-    Title,
-    Paragraph,
-    Button,
     TextInput,
-    Chip,
-    useTheme,
+    Button,
     HelperText,
+    useTheme,
+    Card,
+    Paragraph,
+    Chip,
     Portal,
     Modal,
     List,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
+import Icon from "../../../components/icons/Icon";
+
+function randomId() {
+    // RFC4122-ish simple UUID v4 generator (sufficient for local IDs)
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0,
+            v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+interface LocalTreeRequest {
+    id: string;
+    request_number: string;
+    request_type: string;
+    requester_name: string;
+    property_address: string;
+    status: string;
+    request_date: string;
+    trees_and_quantities: string[];
+    inspectors: string[];
+    notes: string;
+    sync_status?: string;
+    created_at: string;
+    updated_at: string;
+}
 
 export default function AddRequestScreen() {
-    const navigation = useNavigation();
     const { colors } = useTheme();
+    const navigation = useNavigation();
 
-    const [formData, setFormData] = useState({
-        request_type: "",
-        requester_name: "",
-        property_address: "",
-        notes: "",
-        trees_and_quantities: [] as string[],
-        inspectors: [] as string[],
-    });
+    const [requestType, setRequestType] = useState("");
+    const [requesterName, setRequesterName] = useState("");
+    const [propertyAddress, setPropertyAddress] = useState("");
+    const [notes, setNotes] = useState("");
+    const [treesAndQuantities, setTreesAndQuantities] = useState<string[]>([]);
+    const [inspectors, setInspectors] = useState<string[]>([]);
+    const [saving, setSaving] = useState(false);
 
-    const [errors, setErrors] = useState<{ [key: string]: string }>({});
-    const [loading, setLoading] = useState(false);
+    // Modal states
     const [typeModalVisible, setTypeModalVisible] = useState(false);
     const [treeModalVisible, setTreeModalVisible] = useState(false);
     const [inspectorModalVisible, setInspectorModalVisible] = useState(false);
@@ -50,44 +67,66 @@ export default function AddRequestScreen() {
         { value: "violation_complaint", label: "Violation/Complaint", icon: "report" },
     ];
 
-    const validateForm = () => {
-        const newErrors: { [key: string]: string } = {};
+    const isValid = useMemo(() => {
+        return requestType.trim() && requesterName.trim() && propertyAddress.trim();
+    }, [requestType, requesterName, propertyAddress]);
 
-        if (!formData.request_type) {
-            newErrors.request_type = "Request type is required";
-        }
-        if (!formData.requester_name.trim()) {
-            newErrors.requester_name = "Requester name is required";
-        }
-        if (!formData.property_address.trim()) {
-            newErrors.property_address = "Property address is required";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+    const getRequestTypeLabel = (type: string) => {
+        const requestTypeObj = requestTypes.find(rt => rt.value === type);
+        return requestTypeObj ? requestTypeObj.label : type;
     };
 
-    const handleSubmit = async () => {
-        if (!validateForm()) {
-            Alert.alert("Validation Error", "Please fill in all required fields");
-            return;
+    const addTreeEntry = () => {
+        if (newTreeEntry.trim()) {
+            setTreesAndQuantities([...treesAndQuantities, newTreeEntry.trim()]);
+            setNewTreeEntry("");
+            setTreeModalVisible(false);
         }
+    };
 
+    const removeTreeEntry = (index: number) => {
+        setTreesAndQuantities(treesAndQuantities.filter((_, i) => i !== index));
+    };
+
+    const addInspector = () => {
+        if (newInspector.trim()) {
+            setInspectors([...inspectors, newInspector.trim()]);
+            setNewInspector("");
+            setInspectorModalVisible(false);
+        }
+    };
+
+    const removeInspector = (index: number) => {
+        setInspectors(inspectors.filter((_, i) => i !== index));
+    };
+
+    const onSave = async () => {
+        if (!isValid) return;
         try {
-            setLoading(true);
+            setSaving(true);
+            const now = new Date().toISOString();
 
-            // Generate request number (in real app, this would be done by backend)
-            const requestNumber = `TM-${formData.request_type.substring(0, 2).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+            // Generate request number
+            const requestNumber = `TM-${requestType.substring(0, 2).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
 
-            const requestData = {
-                ...formData,
+            const request: LocalTreeRequest = {
+                id: randomId(),
                 request_number: requestNumber,
-                request_date: new Date().toISOString().split('T')[0],
+                request_type: requestType.trim(),
+                requester_name: requesterName.trim(),
+                property_address: propertyAddress.trim(),
                 status: "filed",
+                request_date: now.split('T')[0],
+                trees_and_quantities: treesAndQuantities,
+                inspectors: inspectors,
+                notes: notes.trim(),
+                sync_status: "pending",
+                created_at: now,
+                updated_at: now,
             };
 
-            // Replace with actual API call
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // TODO: Replace with actual database save when available
+            // await database.saveTreeRequest(request);
 
             Alert.alert(
                 "Success",
@@ -95,164 +134,102 @@ export default function AddRequestScreen() {
                 [
                     {
                         text: "OK",
-                        onPress: () => navigation.goBack(),
+                        onPress: () => (navigation as any).goBack(),
                     },
                 ]
             );
-        } catch (error) {
-            console.error("Error submitting request:", error);
-            Alert.alert("Error", "Failed to submit request. Please try again.");
+        } catch (e: any) {
+            Alert.alert("Save failed", e?.message || "Could not save request.");
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
-    };
-
-    const handleTypeSelect = (type: string) => {
-        setFormData(prev => ({ ...prev, request_type: type }));
-        setTypeModalVisible(false);
-        setErrors(prev => ({ ...prev, request_type: "" }));
-    };
-
-    const addTreeEntry = () => {
-        if (newTreeEntry.trim()) {
-            setFormData(prev => ({
-                ...prev,
-                trees_and_quantities: [...prev.trees_and_quantities, newTreeEntry.trim()],
-            }));
-            setNewTreeEntry("");
-            setTreeModalVisible(false);
-        }
-    };
-
-    const removeTreeEntry = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            trees_and_quantities: prev.trees_and_quantities.filter((_, i) => i !== index),
-        }));
-    };
-
-    const addInspector = () => {
-        if (newInspector.trim()) {
-            setFormData(prev => ({
-                ...prev,
-                inspectors: [...prev.inspectors, newInspector.trim()],
-            }));
-            setNewInspector("");
-            setInspectorModalVisible(false);
-        }
-    };
-
-    const removeInspector = (index: number) => {
-        setFormData(prev => ({
-            ...prev,
-            inspectors: prev.inspectors.filter((_, i) => i !== index),
-        }));
-    };
-
-    const getSelectedTypeLabel = () => {
-        const selected = requestTypes.find(type => type.value === formData.request_type);
-        return selected ? selected.label : "Select request type";
-    };
-
-    const getSelectedTypeIcon = () => {
-        const selected = requestTypes.find(type => type.value === formData.request_type);
-        return selected ? selected.icon : "assignment";
     };
 
     return (
         <>
             <StandardHeader
-                title="New Tree Request"
-                showBack={true}
-                onBack={() => navigation.goBack()}
+                title="Add Request"
+                showBack
+                chip={{ label: "Tree Management", iconName: "park" }}
             />
             <SafeAreaView style={styles.container}>
-                <ScrollView style={styles.scrollView}>
-                    {/* Request Type */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Request Type *</Title>
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
+                        <Card.Content style={styles.cardContent}>
+                            <Paragraph style={styles.section}>Request Information</Paragraph>
+
+                            {/* Request Type */}
                             <Button
                                 mode="outlined"
                                 onPress={() => setTypeModalVisible(true)}
-                                style={[
-                                    styles.selectButton,
-                                    errors.request_type && styles.errorBorder,
-                                ]}
-                                contentStyle={styles.selectButtonContent}
-                                icon={getSelectedTypeIcon()}
+                                style={styles.input}
+                                contentStyle={styles.buttonContent}
+                                labelStyle={[styles.buttonLabel, !requestType && { color: '#999' }]}
+                                icon={() => <Icon name="assignment" size={18} color={colors.primary} />}
                             >
-                                {getSelectedTypeLabel()}
+                                {requestType ? getRequestTypeLabel(requestType) : "Select Request Type"}
                             </Button>
-                            {errors.request_type && (
-                                <HelperText type="error">{errors.request_type}</HelperText>
-                            )}
-                        </Card.Content>
-                    </Card>
-
-                    {/* Requester Information */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Requester Information</Title>
+                            <HelperText type="error" visible={!requestType.trim()}>
+                                Request type is required
+                            </HelperText>
 
                             <TextInput
-                                mode="outlined"
-                                label="Requester Name *"
-                                value={formData.requester_name}
-                                onChangeText={(text) => {
-                                    setFormData(prev => ({ ...prev, requester_name: text }));
-                                    setErrors(prev => ({ ...prev, requester_name: "" }));
-                                }}
-                                error={!!errors.requester_name}
-                                style={styles.textInput}
-                                left={<TextInput.Icon icon="person" />}
+                                label="Requester Name"
+                                value={requesterName}
+                                onChangeText={setRequesterName}
+                                mode="flat"
+                                left={<TextInput.Icon icon={() => <Icon name="person" size={18} color={colors.primary} />} />}
+                                style={styles.input}
                             />
-                            {errors.requester_name && (
-                                <HelperText type="error">{errors.requester_name}</HelperText>
-                            )}
+                            <HelperText type="error" visible={!requesterName.trim()}>
+                                Requester name is required
+                            </HelperText>
 
                             <TextInput
-                                mode="outlined"
-                                label="Property Address *"
-                                value={formData.property_address}
-                                onChangeText={(text) => {
-                                    setFormData(prev => ({ ...prev, property_address: text }));
-                                    setErrors(prev => ({ ...prev, property_address: "" }));
-                                }}
-                                error={!!errors.property_address}
+                                label="Property Address"
+                                value={propertyAddress}
+                                onChangeText={setPropertyAddress}
+                                mode="flat"
+                                multiline
+                                numberOfLines={2}
+                                left={<TextInput.Icon icon={() => <Icon name="location-on" size={18} color={colors.primary} />} />}
+                                style={styles.input}
+                            />
+                            <HelperText type="error" visible={!propertyAddress.trim()}>
+                                Property address is required
+                            </HelperText>
+
+                            <TextInput
+                                label="Notes (Optional)"
+                                value={notes}
+                                onChangeText={setNotes}
+                                mode="flat"
                                 multiline
                                 numberOfLines={3}
-                                style={styles.textInput}
-                                left={<TextInput.Icon icon="location-on" />}
+                                left={<TextInput.Icon icon={() => <Icon name="note" size={18} color={colors.primary} />} />}
+                                style={styles.input}
                             />
-                            {errors.property_address && (
-                                <HelperText type="error">{errors.property_address}</HelperText>
-                            )}
                         </Card.Content>
                     </Card>
 
                     {/* Trees and Quantities */}
-                    <Card style={styles.card}>
-                        <Card.Content>
+                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
+                        <Card.Content style={styles.cardContent}>
                             <View style={styles.sectionHeader}>
-                                <Title style={styles.sectionTitle}>Trees & Quantities</Title>
+                                <Paragraph style={styles.section}>Trees & Quantities</Paragraph>
                                 <Button
-                                    mode="outlined"
-                                    icon="add"
+                                    mode="contained-tonal"
                                     onPress={() => setTreeModalVisible(true)}
                                     compact
+                                    icon="add"
                                 >
-                                    Add
+                                    Add Tree
                                 </Button>
                             </View>
 
-                            {formData.trees_and_quantities.length === 0 ? (
-                                <Paragraph style={styles.emptyText}>
-                                    No trees added yet. Tap "Add" to specify trees and quantities.
-                                </Paragraph>
-                            ) : (
-                                <View style={styles.chipsContainer}>
-                                    {formData.trees_and_quantities.map((tree, index) => (
+                            {treesAndQuantities.length > 0 ? (
+                                <View style={styles.chipContainer}>
+                                    {treesAndQuantities.map((tree, index) => (
                                         <Chip
                                             key={index}
                                             onClose={() => removeTreeEntry(index)}
@@ -262,32 +239,30 @@ export default function AddRequestScreen() {
                                         </Chip>
                                     ))}
                                 </View>
+                            ) : (
+                                <Paragraph style={styles.emptyText}>No trees added yet</Paragraph>
                             )}
                         </Card.Content>
                     </Card>
 
                     {/* Inspectors */}
-                    <Card style={styles.card}>
-                        <Card.Content>
+                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
+                        <Card.Content style={styles.cardContent}>
                             <View style={styles.sectionHeader}>
-                                <Title style={styles.sectionTitle}>Inspectors</Title>
+                                <Paragraph style={styles.section}>Assigned Inspectors</Paragraph>
                                 <Button
-                                    mode="outlined"
-                                    icon="add"
+                                    mode="contained-tonal"
                                     onPress={() => setInspectorModalVisible(true)}
                                     compact
+                                    icon="add"
                                 >
-                                    Add
+                                    Add Inspector
                                 </Button>
                             </View>
 
-                            {formData.inspectors.length === 0 ? (
-                                <Paragraph style={styles.emptyText}>
-                                    No inspectors assigned yet. Tap "Add" to assign inspectors.
-                                </Paragraph>
-                            ) : (
-                                <View style={styles.chipsContainer}>
-                                    {formData.inspectors.map((inspector, index) => (
+                            {inspectors.length > 0 ? (
+                                <View style={styles.chipContainer}>
+                                    {inspectors.map((inspector, index) => (
                                         <Chip
                                             key={index}
                                             onClose={() => removeInspector(index)}
@@ -298,37 +273,21 @@ export default function AddRequestScreen() {
                                         </Chip>
                                     ))}
                                 </View>
+                            ) : (
+                                <Paragraph style={styles.emptyText}>No inspectors assigned yet</Paragraph>
                             )}
                         </Card.Content>
                     </Card>
 
-                    {/* Notes */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Notes</Title>
-                            <TextInput
-                                mode="outlined"
-                                label="Additional notes (optional)"
-                                value={formData.notes}
-                                onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-                                multiline
-                                numberOfLines={4}
-                                style={styles.textInput}
-                                left={<TextInput.Icon icon="note" />}
-                            />
-                        </Card.Content>
-                    </Card>
-
-                    {/* Submit Button */}
                     <Button
                         mode="contained"
-                        onPress={handleSubmit}
-                        loading={loading}
-                        disabled={loading}
+                        onPress={onSave}
+                        loading={saving}
+                        disabled={!isValid || saving}
                         style={styles.submitButton}
                         contentStyle={styles.submitButtonContent}
                     >
-                        Submit Request
+                        {saving ? "Submitting..." : "Submit Request"}
                     </Button>
                 </ScrollView>
 
@@ -337,15 +296,18 @@ export default function AddRequestScreen() {
                     <Modal
                         visible={typeModalVisible}
                         onDismiss={() => setTypeModalVisible(false)}
-                        contentContainerStyle={styles.modalContent}
+                        contentContainerStyle={styles.modalContainer}
                     >
-                        <Title style={styles.modalTitle}>Select Request Type</Title>
+                        <Paragraph style={styles.modalTitle}>Select Request Type</Paragraph>
                         {requestTypes.map((type) => (
                             <List.Item
                                 key={type.value}
                                 title={type.label}
-                                onPress={() => handleTypeSelect(type.value)}
                                 left={() => <Icon name={type.icon} size={24} color={colors.primary} />}
+                                onPress={() => {
+                                    setRequestType(type.value);
+                                    setTypeModalVisible(false);
+                                }}
                                 style={styles.listItem}
                             />
                         ))}
@@ -357,22 +319,31 @@ export default function AddRequestScreen() {
                     <Modal
                         visible={treeModalVisible}
                         onDismiss={() => setTreeModalVisible(false)}
-                        contentContainerStyle={styles.modalContent}
+                        contentContainerStyle={styles.modalContainer}
                     >
-                        <Title style={styles.modalTitle}>Add Tree Entry</Title>
+                        <Paragraph style={styles.modalTitle}>Add Tree & Quantity</Paragraph>
                         <TextInput
-                            mode="outlined"
-                            label="Tree species and quantity (e.g., Acacia: 2 trees)"
+                            label="Tree type and quantity (e.g., Mango: 2)"
                             value={newTreeEntry}
                             onChangeText={setNewTreeEntry}
-                            style={styles.modalTextInput}
-                            placeholder="Mahogany: 1 tree"
+                            mode="outlined"
+                            style={styles.modalInput}
                         />
                         <View style={styles.modalActions}>
-                            <Button mode="outlined" onPress={() => setTreeModalVisible(false)}>
+                            <Button
+                                mode="outlined"
+                                onPress={() => {
+                                    setNewTreeEntry("");
+                                    setTreeModalVisible(false);
+                                }}
+                            >
                                 Cancel
                             </Button>
-                            <Button mode="contained" onPress={addTreeEntry}>
+                            <Button
+                                mode="contained"
+                                onPress={addTreeEntry}
+                                disabled={!newTreeEntry.trim()}
+                            >
                                 Add
                             </Button>
                         </View>
@@ -384,22 +355,31 @@ export default function AddRequestScreen() {
                     <Modal
                         visible={inspectorModalVisible}
                         onDismiss={() => setInspectorModalVisible(false)}
-                        contentContainerStyle={styles.modalContent}
+                        contentContainerStyle={styles.modalContainer}
                     >
-                        <Title style={styles.modalTitle}>Add Inspector</Title>
+                        <Paragraph style={styles.modalTitle}>Add Inspector</Paragraph>
                         <TextInput
-                            mode="outlined"
                             label="Inspector name"
                             value={newInspector}
                             onChangeText={setNewInspector}
-                            style={styles.modalTextInput}
-                            placeholder="Inspector Rodriguez"
+                            mode="outlined"
+                            style={styles.modalInput}
                         />
                         <View style={styles.modalActions}>
-                            <Button mode="outlined" onPress={() => setInspectorModalVisible(false)}>
+                            <Button
+                                mode="outlined"
+                                onPress={() => {
+                                    setNewInspector("");
+                                    setInspectorModalVisible(false);
+                                }}
+                            >
                                 Cancel
                             </Button>
-                            <Button mode="contained" onPress={addInspector}>
+                            <Button
+                                mode="contained"
+                                onPress={addInspector}
+                                disabled={!newInspector.trim()}
+                            >
                                 Add
                             </Button>
                         </View>
@@ -413,84 +393,87 @@ export default function AddRequestScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#FAFAFA",
     },
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
         padding: 16,
+        paddingBottom: 100,
     },
     card: {
         marginBottom: 16,
-        elevation: 2,
+        borderRadius: 12,
     },
-    sectionTitle: {
+    cardContent: {
+        padding: 16,
+    },
+    section: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#333",
-        marginBottom: 12,
+        color: "#333333",
+        marginBottom: 16,
     },
     sectionHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 16,
     },
-    selectButton: {
+    input: {
         marginBottom: 8,
     },
-    selectButtonContent: {
+    buttonContent: {
+        height: 48,
         justifyContent: "flex-start",
-        paddingVertical: 8,
     },
-    errorBorder: {
-        borderColor: "#F44336",
+    buttonLabel: {
+        fontSize: 16,
+        textAlign: "left",
     },
-    textInput: {
-        marginBottom: 8,
-    },
-    emptyText: {
-        fontSize: 14,
-        color: "#666",
-        fontStyle: "italic",
-        textAlign: "center",
-        paddingVertical: 16,
-    },
-    chipsContainer: {
+    chipContainer: {
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 8,
     },
     chip: {
-        marginBottom: 4,
+        marginBottom: 8,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: "#999999",
+        fontStyle: "italic",
     },
     submitButton: {
-        marginTop: 8,
-        marginBottom: 32,
-    },
-    submitButtonContent: {
+        marginTop: 24,
         paddingVertical: 8,
     },
-    modalContent: {
-        backgroundColor: "white",
-        padding: 20,
+    submitButtonContent: {
+        height: 48,
+    },
+    modalContainer: {
+        backgroundColor: "#FFFFFF",
         margin: 20,
-        borderRadius: 8,
+        borderRadius: 12,
+        padding: 20,
         maxHeight: "80%",
     },
     modalTitle: {
         fontSize: 18,
         fontWeight: "600",
         marginBottom: 16,
+        textAlign: "center",
     },
-    listItem: {
-        paddingVertical: 8,
-    },
-    modalTextInput: {
+    modalInput: {
         marginBottom: 16,
     },
     modalActions: {
         flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 8,
+        justifyContent: "space-between",
+        gap: 12,
+    },
+    listItem: {
+        paddingVertical: 8,
     },
 });

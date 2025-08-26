@@ -5,6 +5,7 @@ from .sapling_requests import router as sapling_requests_router
 from . import auth_router, profile_router, emission_router, fee_router, test_schedules, tree_management_router, planting_router, admin_router
 from .dashboard_router import router as dashboard_router
 from .air_quality_router import router as air_quality_router
+from .gemini_router import router as gemini_router
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(auth_router.router, prefix="/auth", tags=["Authentication"])
@@ -20,3 +21,4 @@ api_v1_router.include_router(planting_router.router, prefix="/planting", tags=["
 api_v1_router.include_router(monitoring_requests_router)
 api_v1_router.include_router(sapling_requests_router)
 api_v1_router.include_router(dashboard_router)
+api_v1_router.include_router(gemini_router, prefix="/gemini", tags=["Gemini AI"])
