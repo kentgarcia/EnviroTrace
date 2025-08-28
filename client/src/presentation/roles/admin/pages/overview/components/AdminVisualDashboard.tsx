@@ -1,37 +1,23 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import {
-    BarChart,
-    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
     AreaChart,
     Area,
-    LineChart,
-    Line
 } from "recharts";
-import { UserActivityData, SystemHealthData } from "../logic/useAdminOverviewData";
+import { UserActivityData } from "../logic/useAdminOverviewData";
 
 interface AdminVisualDashboardProps {
     userActivityData?: UserActivityData[];
-    systemHealthData?: SystemHealthData[];
     isLoading?: boolean;
 }
 
-const COLORS = [
-    "#22c55e", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6",
-    "#ec4899", "#14b8a6", "#f97316", "#84cc16", "#6366f1"
-];
-
 export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
     userActivityData = [],
-    systemHealthData = [],
     isLoading = false
 }) => {
     // Helper function to safely convert to number
@@ -50,39 +36,23 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
             activeUsers: safeNumber(item.activeUsers),
         }));
 
-    const safeSystemHealthData = systemHealthData
-        .filter(item => item && item.metric)
-        .map(item => ({
-            metric: String(item.metric || 'Unknown'),
-            value: Math.min(Math.max(safeNumber(item.value), 0), 100), // Ensure 0-100 range
-            status: item.status || 'good',
-            fill: item.status === 'critical' ? '#ef4444' :
-                item.status === 'warning' ? '#f59e0b' : '#22c55e'
-        }));
-
-    // Debug logging
-    console.log('AdminVisualDashboard - systemHealthData:', systemHealthData);
-    console.log('AdminVisualDashboard - safeSystemHealthData:', safeSystemHealthData);
-
     if (isLoading) {
         return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[1, 2].map((i) => (
-                    <Card key={i}>
-                        <CardHeader>
-                            <CardTitle className="animate-pulse bg-gray-200 h-4 w-32 rounded"></CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[300px] animate-pulse bg-gray-100 rounded-lg"></div>
-                        </CardContent>
-                    </Card>
-                ))}
+            <div className="grid grid-cols-1 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="animate-pulse bg-gray-200 h-4 w-32 rounded"></CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[300px] animate-pulse bg-gray-100 rounded-lg"></div>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
             {/* User Activity Trends */}
             <Card>
                 <CardHeader>
@@ -138,52 +108,6 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
                                     name="Active Users"
                                 />
                             </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* System Health Metrics */}
-            <Card data-section="system-health">
-                <CardHeader>
-                    <CardTitle className="text-base font-medium">System Health Metrics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={safeSystemHealthData} layout="horizontal">
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis
-                                    type="number"
-                                    domain={[0, 100]}
-                                    stroke="#666"
-                                    fontSize={12}
-                                />
-                                <YAxis
-                                    type="category"
-                                    dataKey="metric"
-                                    stroke="#666"
-                                    fontSize={12}
-                                    width={80}
-                                />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#fff',
-                                        border: '1px solid #e0e0e0',
-                                        borderRadius: '8px',
-                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                    }}
-                                    formatter={(value: any) => [`${value}%`, 'Usage']}
-                                />
-                                <Bar
-                                    dataKey="value"
-                                    radius={[0, 4, 4, 0]}
-                                >
-                                    {safeSystemHealthData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </CardContent>

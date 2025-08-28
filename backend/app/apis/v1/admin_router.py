@@ -9,7 +9,7 @@ from app.apis.deps import get_current_user_async, get_db_session, require_roles
 from app.models.auth_models import User, UserRoleMapping, Profile, UserRoleEnum
 from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
-    UserFullPublic, UserRoleMappingCreate
+    UserRoleMappingCreate
 )
 from app.services.auth_service import auth_service
 from app.services.system_health_service import SystemHealthService
@@ -68,7 +68,7 @@ async def get_system_health_data(
 
 # User Management Endpoints
 
-@router.get("/users", response_model=List[UserFullPublic])
+@router.get("/users", response_model=List[UserWithRoles])
 async def get_all_users(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles([UserRoleEnum.admin])),
@@ -100,7 +100,7 @@ async def get_all_users(
     
     return users_with_details
 
-@router.post("/users", response_model=UserFullPublic, status_code=status.HTTP_201_CREATED)
+@router.post("/users", response_model=UserWithRoles, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db_session),
@@ -110,7 +110,7 @@ async def create_user(
     
     return await auth_service.register_user(db=db, user_in=user_in)
 
-@router.get("/users/{user_id}", response_model=UserFullPublic)
+@router.get("/users/{user_id}", response_model=UserWithRoles)
 async def get_user_by_id(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
@@ -127,7 +127,7 @@ async def get_user_by_id(
     
     return user_details
 
-@router.put("/users/{user_id}", response_model=UserFullPublic)
+@router.put("/users/{user_id}", response_model=UserWithRoles)
 async def update_user(
     user_id: uuid.UUID,
     user_update: UserUpdate,
@@ -217,7 +217,7 @@ async def delete_user(
     user.deleted_at = datetime.utcnow()
     await db.commit()
 
-@router.post("/users/{user_id}/roles", response_model=UserFullPublic)
+@router.post("/users/{user_id}/roles", response_model=UserWithRoles)
 async def assign_role_to_user(
     user_id: uuid.UUID,
     role_data: UserRoleMappingCreate,

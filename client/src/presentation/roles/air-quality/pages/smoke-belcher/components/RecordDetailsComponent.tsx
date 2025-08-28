@@ -926,7 +926,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                         </div>
                     </div>
 
-                    {/* Action Buttons - Side by Side */}
+                    {/* Action Buttons - Hidden for now 
                     <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                             <Button
@@ -951,6 +951,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                             </Button>
                         </div>
                     </div>
+                    */}
                 </div>
             </CardContent>
 
@@ -961,7 +962,7 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                     onValueChange={(value) => onTabChange(value as "violations" | "history")}
                     className="flex-1 flex flex-col"
                 >
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-1">
                         <TabsTrigger value="violations" className="flex items-center gap-2">
                             <TestTube className="h-4 w-4" />
                             Violations
@@ -970,10 +971,6 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                     {violationSummary.totalViolations}
                                 </Badge>
                             )}
-                        </TabsTrigger>
-                        <TabsTrigger value="history" className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            History
                         </TabsTrigger>
                     </TabsList>
 
@@ -1138,16 +1135,6 @@ const RecordDetailsComponent: React.FC<RecordDetailsComponentProps> = ({
                                     </Table>
                                 </div>
                             )}
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="history" className="flex-1">
-                        <div className="flex items-center justify-center p-8">
-                            <div className="text-center text-muted-foreground">
-                                <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p>History feature coming soon</p>
-                                <p className="text-xs">View complete record history</p>
-                            </div>
                         </div>
                     </TabsContent>
                 </Tabs>

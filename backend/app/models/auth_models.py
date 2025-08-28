@@ -42,7 +42,7 @@ class UserRoleMapping(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
-    role = Column(SAEnum(UserRoleEnum, name="user_role_enum_auth", schema="auth"), nullable=False) # Ensure enum is created in schema
+    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="auth"), nullable=False) # Use the enum name that exists in DB
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="roles")

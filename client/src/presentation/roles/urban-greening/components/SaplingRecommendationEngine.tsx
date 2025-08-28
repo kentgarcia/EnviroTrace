@@ -17,20 +17,23 @@ import { UrbanGreeningPlanting } from '@/core/api/planting-api';
 
 // Utility functions
 const getEstimatedCostPerSapling = (species: string): number => {
-    // Basic cost estimation based on species type
+    // Enhanced cost estimation based on species type and commercial suitability
     const costs: Record<string, number> = {
-        'mahogany': 150,
-        'narra': 200,
-        'molave': 180,
-        'bamboo': 50,
-        'mango': 120,
-        'default': 100
+        'narra': 250, // Premium native hardwood
+        'mahogany': 180, // Popular commercial species
+        'molave': 220, // High-quality hardwood
+        'fire tree': 160, // Ornamental tree
+        'acacia': 120, // Fast-growing species
+        'ilang-ilang': 140, // Fragrant ornamental
+        'bougainvillea': 80, // Ornamental shrub
+        'mango': 150, // Fruit tree
+        'bamboo': 60, // Fast-growing utility
+        'default': 120
     };
 
     const lowerSpecies = species.toLowerCase();
-    return Object.keys(costs).find(key => lowerSpecies.includes(key))
-        ? costs[Object.keys(costs).find(key => lowerSpecies.includes(key))!]
-        : costs.default;
+    const matchingKey = Object.keys(costs).find(key => lowerSpecies.includes(key));
+    return matchingKey ? costs[matchingKey] : costs.default;
 };
 
 const getOptimalPlantingSeason = (species: string): string => {
@@ -56,19 +59,43 @@ const generateRecommendationReasons = (
     proximityMatch: boolean
 ): string[] => {
     const reasons: string[] = [];
+    const lowerSpecies = species.toLowerCase();
 
-    if (stats.avgSurvivalRate > 80) {
+    // Success rate reasons
+    if (stats.avgSurvivalRate > 90) {
+        reasons.push('Excellent survival rate in your area');
+    } else if (stats.avgSurvivalRate > 80) {
         reasons.push('High success rate in your area');
+    } else if (stats.avgSurvivalRate > 70) {
+        reasons.push('Good performance in local conditions');
     }
 
+    // Location-specific reasons
     if (proximityMatch) {
-        reasons.push('Proven to thrive in similar locations');
+        reasons.push('Proven to thrive in similar business districts');
     }
 
-    if (stats.total > 10) {
-        reasons.push('Extensively tested locally');
+    // Species-specific benefits
+    if (lowerSpecies.includes('narra')) {
+        reasons.push('Premium native hardwood, excellent for corporate landscaping');
+    } else if (lowerSpecies.includes('mahogany')) {
+        reasons.push('Fast-growing, low maintenance, professional appearance');
+    } else if (lowerSpecies.includes('fire tree')) {
+        reasons.push('Beautiful flowering ornamental, attracts positive attention');
+    } else if (lowerSpecies.includes('acacia')) {
+        reasons.push('Quick establishment, cost-effective solution');
+    } else if (lowerSpecies.includes('ilang-ilang')) {
+        reasons.push('Fragrant flowers, enhances property ambiance');
     }
 
+    // Data reliability
+    if (stats.total > 5) {
+        reasons.push('Extensively tested in Muntinlupa area');
+    } else if (stats.total > 2) {
+        reasons.push('Well-documented local performance');
+    }
+
+    // Add survival rate as final reason
     reasons.push(`${stats.avgSurvivalRate.toFixed(0)}% average survival rate`);
 
     return reasons;
@@ -159,49 +186,117 @@ export const SaplingRecommendationEngine: React.FC<SaplingRecommendationEnginePr
             .map(request => {
                 // Parse trees and quantities to understand what was cut
                 const treesAndQuantities = request.trees_and_quantities || [];
-                const totalTreesCut = treesAndQuantities.reduce((total, entry) => {
-                    // Try to extract quantity from strings like "5 Mahogany trees" or "Oak tree x3"
-                    const quantityMatch = entry.match(/(\d+)/) || ['1'];
-                    return total + parseInt(quantityMatch[0]);
-                }, treesAndQuantities.length > 0 ? 0 : 1); // Default to 1 if no specific quantities
+                
+                // Enhanced parsing for realistic tree data format
+                let totalTreesCut = 0;
+                const speciesRemoved: string[] = [];
+                
+                treesAndQuantities.forEach(entry => {
+                    // Parse entries like "Acacia (Acacia mangium): 12 trees, DBH: 30-50cm"
+                    const quantityMatch = entry.match(/(\d+)\s+trees?/i);
+                    const speciesMatch = entry.match(/^([^(]+)/);
+                    
+                    if (quantityMatch) {
+                        totalTreesCut += parseInt(quantityMatch[1]);
+                    } else {
+                        totalTreesCut += 1; // Default to 1 if no quantity specified
+                    }
+                    
+                    if (speciesMatch) {
+                        speciesRemoved.push(speciesMatch[1].trim());
+                    }
+                });
 
-                // Calculate replacement ratio based on cutting reason and tree characteristics
+                // Enhanced replacement ratio calculation for commercial developments
                 let baseReplacementRatio = 1;
 
-                // Increase ratio for mature trees or environmental reasons
-                if (request.notes?.toLowerCase().includes('mature') ||
-                    request.notes?.toLowerCase().includes('large')) {
-                    baseReplacementRatio = 2;
+                // Commercial development requires higher replacement ratios
+                if (request.requester_name?.toLowerCase().includes('corporation') ||
+                    request.requester_name?.toLowerCase().includes('development') ||
+                    request.notes?.toLowerCase().includes('development') ||
+                    request.notes?.toLowerCase().includes('commercial')) {
+                    baseReplacementRatio = 3; // 3:1 ratio for commercial projects
                 }
 
-                // Reduce ratio for emergency cuts
-                if (request.notes?.toLowerCase().includes('emergency') ||
-                    request.notes?.toLowerCase().includes('danger') ||
-                    request.notes?.toLowerCase().includes('diseased')) {
-                    baseReplacementRatio = Math.max(1, baseReplacementRatio - 0.5);
-                }
-
-                const totalReplacementRatio = baseReplacementRatio * totalTreesCut;
-
-                // Find species in the same area for recommendations
-                const areaPlantings = plantingRecords.filter(planting =>
-                    planting.location?.toLowerCase().includes(request.property_address.toLowerCase().split(',')[0]) ||
-                    planting.barangay?.toLowerCase().includes(request.property_address.toLowerCase())
+                // Increase ratio for mature trees (DBH > 40cm)
+                const hasMatureTrees = treesAndQuantities.some(entry => 
+                    entry.includes('DBH') && (
+                        entry.includes('45cm') || 
+                        entry.includes('50cm') ||
+                        entry.match(/DBH:\s*(\d+)-(\d+)cm/) && parseInt(entry.match(/DBH:\s*(\d+)-(\d+)cm/)![2]) > 40
+                    )
                 );
+                
+                if (hasMatureTrees) {
+                    baseReplacementRatio = Math.max(baseReplacementRatio, 2); // At least 2:1 for mature trees
+                }
 
-                // Get top performing species
+                // Adjust for emergency/safety cuts (lower ratio)
+                if (request.notes?.toLowerCase().includes('emergency') ||
+                    request.notes?.toLowerCase().includes('safety') ||
+                    request.notes?.toLowerCase().includes('diseased')) {
+                    baseReplacementRatio = Math.max(1, baseReplacementRatio * 0.67);
+                }
+
+                const totalReplacementRatio = Math.ceil(baseReplacementRatio * totalTreesCut);
+
+                // Find species in the same area for recommendations (enhanced for Muntinlupa/Ayala Alabang)
+                const areaKeywords = ['ayala', 'alabang', 'business', 'corporate', 'office'];
+                const locationKeywords = request.property_address.toLowerCase();
+                
+                const areaPlantings = plantingRecords.filter(planting => {
+                    const plantingLocation = (planting.location || '').toLowerCase();
+                    const plantingBarangay = (planting.barangay || '').toLowerCase();
+                    
+                    return areaKeywords.some(keyword => 
+                        locationKeywords.includes(keyword) && (
+                            plantingLocation.includes(keyword) || 
+                            plantingBarangay.includes(keyword) ||
+                            plantingLocation.includes('business') ||
+                            plantingLocation.includes('commercial')
+                        )
+                    );
+                });
+
+                // Enhanced species selection with business district preferences
+                const businessDistrictSpecies = ['narra', 'mahogany', 'fire tree', 'acacia'];
+                
                 const topSpecies = Object.entries(speciesAnalysis)
-                    .filter(([_, stats]) => stats.total >= 2) // Only species with sufficient data
-                    .sort(([_, a], [__, b]) => b.avgSurvivalRate - a.avgSurvivalRate)
-                    .slice(0, 5);
+                    .filter(([_, stats]) => stats.total >= 1) // Include species with any planting data
+                    .sort(([speciesA, statsA], [speciesB, statsB]) => {
+                        // Prioritize business-friendly species
+                        const aIsBusinessFriendly = businessDistrictSpecies.some(bds => 
+                            speciesA.toLowerCase().includes(bds));
+                        const bIsBusinessFriendly = businessDistrictSpecies.some(bds => 
+                            speciesB.toLowerCase().includes(bds));
+                        
+                        if (aIsBusinessFriendly && !bIsBusinessFriendly) return -1;
+                        if (!aIsBusinessFriendly && bIsBusinessFriendly) return 1;
+                        
+                        // Then sort by survival rate
+                        return statsB.avgSurvivalRate - statsA.avgSurvivalRate;
+                    })
+                    .slice(0, 6); // Get top 6 species
 
-                const recommendations: SaplingRecommendation[] = topSpecies.map(([species, stats]) => {
-                    const proximityMatch = areaPlantings.some(p => p.species_name === species);
-                    const baseQuantity = Math.ceil(totalReplacementRatio / topSpecies.length);
+                const recommendations: SaplingRecommendation[] = topSpecies.map(([species, stats], index) => {
+                    const proximityMatch = areaPlantings.some(p => 
+                        p.species_name.toLowerCase() === species.toLowerCase());
+                    
+                    // Distribute saplings based on success rate and suitability
+                    let baseQuantity: number;
+                    if (index === 0) {
+                        baseQuantity = Math.ceil(totalReplacementRatio * 0.4); // 40% to top species
+                    } else if (index === 1) {
+                        baseQuantity = Math.ceil(totalReplacementRatio * 0.3); // 30% to second
+                    } else if (index === 2) {
+                        baseQuantity = Math.ceil(totalReplacementRatio * 0.2); // 20% to third
+                    } else {
+                        baseQuantity = Math.ceil(totalReplacementRatio * 0.1 / (topSpecies.length - 3)); // Remaining 10%
+                    }
 
                     return {
                         species,
-                        recommendedQuantity: baseQuantity,
+                        recommendedQuantity: Math.max(1, baseQuantity),
                         successRate: Math.round(stats.avgSurvivalRate),
                         estimatedCost: baseQuantity * getEstimatedCostPerSapling(species),
                         plantingSeason: getOptimalPlantingSeason(species),

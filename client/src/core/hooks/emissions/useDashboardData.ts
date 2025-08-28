@@ -49,9 +49,9 @@ export interface DashboardData {
     id: string;
     label: string;
     value: number;
-    passedCount?: number;
-    vehicleCount?: number;
-    complianceRate?: number;
+    passedCount: number;
+    vehicleCount: number;
+    complianceRate: number;
   }>;
 
   // Vehicle type breakdown for detailed stats
@@ -244,11 +244,14 @@ export function useDashboardData(
     // Process office compliance data (keep existing format)
     const officeComplianceData = offices.map((office) => ({
       id: office.office_name,
-      label: office.office_name,
+      label:
+        office.office_name.length > 25
+          ? office.office_name.substring(0, 22) + "..."
+          : office.office_name, // Truncate long office names for chart display
       value: Math.round(office.compliance_rate || 0),
-      passedCount: office.compliant_vehicles,
-      vehicleCount: office.total_vehicles,
-      complianceRate: office.compliance_rate,
+      passedCount: office.compliant_vehicles || 0,
+      vehicleCount: office.total_vehicles || 0,
+      complianceRate: office.compliance_rate || 0,
     }));
 
     // Create vehicle summaries for chatbot
@@ -257,7 +260,7 @@ export function useDashboardData(
       engineType: vehicle.engine_type || "Unknown",
       wheels: vehicle.wheels || 0,
       officeName: vehicle.office?.name || "Unknown",
-      latestTestResult: vehicle.latest_test_result,
+      latestTestResult: vehicle.latest_test_result ?? null, // Convert undefined to null
     }));
 
     return {

@@ -16,6 +16,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Progress } from "@/presentation/components/shared/ui/progress";
 import { Badge } from "@/presentation/components/shared/ui/badge";
+import StatCard from "@/presentation/components/shared/StatCard";
 
 interface QuarterlyOverviewProps {
     stats: any;
@@ -99,63 +100,6 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             };
         });
     }, [officeGroups, quarterNames]);
-
-    const InfoCard: React.FC<{
-        title: string;
-        value: number | string;
-        subtitle?: string;
-        icon: React.ReactNode;
-        color?: "green" | "red" | "blue" | "yellow" | "purple";
-    }> = ({ title, value, subtitle, icon, color = "blue" }) => {
-        const colorClasses = {
-            green: "bg-green-50 border-green-200",
-            red: "bg-red-50 border-red-200",
-            blue: "bg-blue-50 border-blue-200",
-            yellow: "bg-yellow-50 border-yellow-200",
-            purple: "bg-purple-50 border-purple-200",
-        };
-
-        const iconColors = {
-            green: "text-green-600",
-            red: "text-red-600",
-            blue: "text-blue-600",
-            yellow: "text-yellow-600",
-            purple: "text-purple-600",
-        };
-
-        const textColors = {
-            green: "text-green-700",
-            red: "text-red-700",
-            blue: "text-blue-700",
-            yellow: "text-yellow-700",
-            purple: "text-purple-700",
-        };
-
-        return (
-            <Card className={`border ${colorClasses[color]} ${colorClasses[color]} shadow-none`}>
-                <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                        <div className={`p-3 rounded-lg bg-white ${iconColors[color]}`}>
-                            {icon}
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-600 mb-1">
-                                {title}
-                            </p>
-                            <p className={`text-3xl font-bold ${textColors[color]} mb-1`}>
-                                {value}
-                            </p>
-                            {subtitle && (
-                                <p className="text-sm text-gray-500">
-                                    {subtitle}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    };
 
     const CircularProgress: React.FC<{
         percentage: number;
@@ -251,83 +195,39 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
         );
     };
 
-    const StatCard: React.FC<{
-        title: string;
-        value: number;
-        subtitle?: string;
-        icon: React.ReactNode;
-        trend?: "up" | "down" | "neutral";
-        color?: "green" | "red" | "blue" | "yellow";
-    }> = ({ title, value, subtitle, icon, trend, color = "blue" }) => {
-        const colorClasses = {
-            green: "text-green-600 bg-green-50",
-            red: "text-red-600 bg-red-50",
-            blue: "text-blue-600 bg-blue-50",
-            yellow: "text-yellow-600 bg-yellow-50",
-        };
-
-        return (
-            <Card>
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">{title}</p>
-                            <p className="text-3xl font-bold text-gray-900">{value}</p>
-                            {subtitle && (
-                                <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
-                            )}
-                        </div>
-                        <div className={`p-3 rounded-full ${colorClasses[color]}`}>
-                            {icon}
-                        </div>
-                    </div>
-                    {trend && (
-                        <div className="mt-4 flex items-center">
-                            {trend === "up" && <TrendingUp className="h-4 w-4 text-green-500 mr-1" />}
-                            {trend === "down" && <TrendingDown className="h-4 w-4 text-red-500 mr-1" />}
-                            <span className={`text-sm ${trend === "up" ? "text-green-600" : trend === "down" ? "text-red-600" : "text-gray-600"}`}>
-                                vs last quarter
-                            </span>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        );
-    };
-
     return (
         <div className="space-y-6">
             {/* Main Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <InfoCard
-                    title="Total Vehicles"
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
+                <StatCard
+                    label="Total Vehicles"
                     value={overallStats.totalVehicles}
-                    subtitle={selectedOffices.length > 0 && !selectedOffices.includes("all") ?
-                        `in ${selectedOffices.length} selected office${selectedOffices.length > 1 ? 's' : ''}` :
-                        "across all offices"}
-                    icon={<Car className="h-6 w-6" />}
-                    color="blue"
+                    Icon={Car}
                 />
-                <InfoCard
-                    title="Tests Completed"
+                <StatCard
+                    label="Tests Completed"
                     value={overallStats.totalTests}
-                    subtitle={`${overallStats.completionRate.toFixed(1)}% completion rate`}
-                    icon={<Target className="h-6 w-6" />}
-                    color="purple"
+                    Icon={Target}
                 />
-                <InfoCard
-                    title="Tests Passed"
+                <StatCard
+                    label="Tests Passed"
                     value={overallStats.totalPassed}
-                    subtitle={`${overallStats.passRate.toFixed(1)}% success rate`}
-                    icon={<Award className="h-6 w-6" />}
-                    color="green"
+                    Icon={CheckCircle}
                 />
-                <InfoCard
-                    title="Tests Failed"
+                <StatCard
+                    label="Tests Failed"
                     value={overallStats.totalFailed}
-                    subtitle="need attention"
-                    icon={<AlertTriangle className="h-6 w-6" />}
-                    color="red"
+                    Icon={XCircle}
+                />
+                <StatCard
+                    label="Pending Tests"
+                    value={overallStats.notTested}
+                    Icon={Clock}
+                />
+                <StatCard
+                    label={`Completion Rate (${selectedYear})`}
+                    value={`${overallStats.completionRate.toFixed(1)}%`}
+                    Icon={BarChart3}
                 />
             </div>
 

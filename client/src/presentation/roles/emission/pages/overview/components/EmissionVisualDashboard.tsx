@@ -20,7 +20,6 @@ import {
 interface EmissionVisualDashboardProps {
     quarterlyData?: Array<{ quarter: string; passed: number; failed: number; pending: number }>;
     vehicleTypeData?: Array<{ id: string; label: string; value: number; color?: string }>;
-    officeComplianceData?: Array<{ id: string; label: string; value: number }>;
     engineTypeData?: Array<{ type: string; count: number; passedCount: number }>;
     monthlyTrendsData?: Array<{ month: string; tests: number; compliance: number }>;
 }
@@ -33,7 +32,6 @@ const COLORS = [
 const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
     quarterlyData = [],
     vehicleTypeData = [],
-    officeComplianceData = [],
     engineTypeData = [],
     monthlyTrendsData = [],
 }) => {
@@ -64,15 +62,6 @@ const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
         }))
         .filter(item => item.value > 0);
 
-    const safeOfficeComplianceData = officeComplianceData
-        .filter(item => item && item.label)
-        .map(item => ({
-            id: String(item.id || 'unknown'),
-            label: String(item.label || 'Unknown Office'),
-            value: Math.min(Math.max(safeNumber(item.value), 0), 100), // Ensure 0-100 range
-        }))
-        .filter(item => item.value >= 0 && item.value <= 100);
-
     const safeEngineTypeData = engineTypeData
         .filter(item => item && item.type)
         .map(item => ({
@@ -84,12 +73,25 @@ const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
 
     const safeMonthlyTrendsData = monthlyTrendsData
         .filter(item => item && item.month)
-        .map(item => ({
-            month: String(item.month || 'Jan'),
-            tests: safeNumber(item.tests),
-            compliance: Math.min(Math.max(safeNumber(item.compliance), 0), 100), // Ensure 0-100 range
-        }))
-        .filter(item => item.tests >= 0 && item.compliance >= 0 && item.compliance <= 100);
+        .map(item => {
+            const tests = safeNumber(item.tests);
+            const rawCompliance = safeNumber(item.compliance);
+
+            // Ensure compliance never exceeds tests (data integrity validation)
+            const compliance = Math.min(rawCompliance, tests);
+
+            // Log data inconsistencies for debugging
+            if (rawCompliance > tests && tests > 0) {
+                console.warn(`Monthly Trends Data Issue - ${item.month}: ${rawCompliance} compliance > ${tests} tests`);
+            }
+
+            return {
+                month: String(item.month || 'Jan'),
+                tests,
+                compliance,
+            };
+        })
+        .filter(item => item.tests >= 0 && item.compliance >= 0 && item.compliance <= item.tests);
 
     // Provide fallback data if all arrays are empty
     const fallbackQuarterly = safeQuarterlyData.length === 0 ? [
@@ -205,7 +207,7 @@ const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
                 </Card>
             </div>
 
-            {/* Bottom Row: Quarterly Comparison and Office Compliance */}
+            {/* Bottom Row: Quarterly Comparison and Engine Type Analysis */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Quarterly Test Results */}
                 <Card>
@@ -233,33 +235,7 @@ const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
                     </CardContent>
                 </Card>
 
-                {/* Office Compliance Ranking */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg font-semibold text-gray-800">
-                            Office Compliance Ranking
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={safeOfficeComplianceData.length > 0 ? safeOfficeComplianceData : [{ id: 'no-data', label: 'No Data', value: 0 }]} layout="horizontal">
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" domain={[0, 100]} />
-                                <YAxis dataKey="label" type="category" width={80} />
-                                <Tooltip formatter={(value) => [`${value}%`, 'Compliance Rate']} />
-                                <Bar
-                                    dataKey="value"
-                                    fill="#3b82f6"
-                                    radius={[0, 4, 4, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Engine Type Analysis */}
-            {safeEngineTypeData.length > 0 && (
+                {/* Engine Type Performance Analysis */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-lg font-semibold text-gray-800">
@@ -267,23 +243,32 @@ const EmissionVisualDashboard: React.FC<EmissionVisualDashboardProps> = ({
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={safeEngineTypeData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="type" />
-                                <YAxis
-                                    domain={[0, 'dataMax + 5']}
-                                    allowDataOverflow={false}
-                                    type="number"
-                                />
-                                <Tooltip />
-                                <Bar dataKey="count" fill="#8b5cf6" name="Total Vehicles" />
-                                <Bar dataKey="passedCount" fill="#22c55e" name="Passed Tests" />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {safeEngineTypeData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={safeEngineTypeData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="type" />
+                                    <YAxis
+                                        domain={[0, 'dataMax + 5']}
+                                        allowDataOverflow={false}
+                                        type="number"
+                                    />
+                                    <Tooltip />
+                                    <Bar dataKey="count" fill="#8b5cf6" name="Total Vehicles" />
+                                    <Bar dataKey="passedCount" fill="#22c55e" name="Passed Tests" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex items-center justify-center h-[300px] text-gray-500">
+                                <div className="text-center">
+                                    <div className="text-lg mb-2">No Engine Data Available</div>
+                                    <div className="text-sm">Engine performance data will appear here once testing is completed.</div>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
-            )}
+            </div>
         </div>
     );
 };

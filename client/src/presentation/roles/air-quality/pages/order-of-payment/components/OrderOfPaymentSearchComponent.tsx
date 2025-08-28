@@ -30,7 +30,7 @@ const OrderOfPaymentSearchComponent: React.FC<OrderOfPaymentSearchComponentProps
     showAsFullPage = false,
 }) => {
     const [searchQuery, setSearchQuery] = useState("");
-    const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0]); // Default to today
+    const [dateFilter, setDateFilter] = useState<string>(""); // Remove default date filter to show all orders
 
     const handleSearch = () => {
         const params: OrderOfPaymentSearchParams = {};
@@ -43,11 +43,21 @@ const OrderOfPaymentSearchComponent: React.FC<OrderOfPaymentSearchComponentProps
             params.created_date = dateFilter;
         }
 
+        // Set a high limit to get all orders
+        params.limit = 1000;
+
         onSearch(params);
     };
 
     // Auto-search when search query or date changes
     useEffect(() => {
+        // If no filters are set, search immediately
+        if (!searchQuery.trim() && !dateFilter) {
+            handleSearch();
+            return;
+        }
+
+        // Otherwise, debounce the search
         const timeoutId = setTimeout(() => {
             handleSearch();
         }, 500); // 500ms debounce
@@ -55,7 +65,7 @@ const OrderOfPaymentSearchComponent: React.FC<OrderOfPaymentSearchComponentProps
         return () => clearTimeout(timeoutId);
     }, [searchQuery, dateFilter]);
 
-    // Initial search on component mount
+    // Initial search on component mount to load all orders
     useEffect(() => {
         handleSearch();
     }, []);
@@ -116,17 +126,39 @@ const OrderOfPaymentSearchComponent: React.FC<OrderOfPaymentSearchComponentProps
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="dateFilter">Date Created</Label>
+                            <Label htmlFor="dateFilter">Date Created (optional)</Label>
                             <Input
                                 id="dateFilter"
                                 type="date"
                                 value={dateFilter}
                                 onChange={(e) => setDateFilter(e.target.value)}
+                                placeholder="Filter by date (leave empty for all dates)"
                             />
                         </div>
                     </div>
 
-
+                    {/* Search Info */}
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>
+                            {!searchQuery && !dateFilter
+                                ? "Showing all orders"
+                                : `Filtered results${searchResults.length > 0 ? ` (${searchResults.length} found)` : ''}`
+                            }
+                        </span>
+                        {(searchQuery || dateFilter) && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    setSearchQuery("");
+                                    setDateFilter("");
+                                }}
+                                className="text-xs"
+                            >
+                                Clear Filters
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Search Results */}

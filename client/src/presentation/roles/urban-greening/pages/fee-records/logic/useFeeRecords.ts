@@ -31,7 +31,7 @@ export const transformApiRecord = (
   id: record.id,
   reference_number: record.reference_number,
   type: record.type,
-  amount: record.amount,
+  amount: Number(record.amount), // Ensure amount is a number
   payer_name: record.payer_name,
   date: record.date,
   due_date: record.due_date,
@@ -137,13 +137,19 @@ export const getStatusCounts = (records: FeeRecord[]) => {
 };
 
 export const getTotalAmount = (records: FeeRecord[]) => {
-  return records.reduce((total, record) => total + record.amount, 0);
+  return records.reduce((total, record) => {
+    const amount = Number(record.amount) || 0;
+    return total + amount;
+  }, 0);
 };
 
 export const getPaidAmount = (records: FeeRecord[]) => {
   return records
     .filter((record) => record.status === "paid")
-    .reduce((total, record) => total + record.amount, 0);
+    .reduce((total, record) => {
+      const amount = Number(record.amount) || 0;
+      return total + amount;
+    }, 0);
 };
 
 export const filterRecords = (

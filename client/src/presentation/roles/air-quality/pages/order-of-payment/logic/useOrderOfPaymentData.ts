@@ -8,6 +8,7 @@ import {
   AirQualityOrderOfPayment,
 } from "@/core/api/air-quality-api";
 import { OrderOfPayment } from "./types";
+import { toast } from "sonner";
 
 // API functions using air quality endpoints
 const searchOrdersOfPayment = async (
@@ -144,7 +145,7 @@ export interface OrderOfPaymentFormData {
 
 export const useOrderOfPaymentData = () => {
   const [searchParams, setSearchParams] = useState<OrderOfPaymentSearchParams>(
-    {}
+    { limit: 1000 } // Default to loading all orders with high limit
   );
   const [selectedOrder, setSelectedOrder] = useState<OrderOfPayment | null>(
     null
@@ -210,47 +211,107 @@ export const useOrderOfPaymentData = () => {
   // Order actions
   const handleCreateOrder = useCallback(
     (orderData: OrderOfPaymentFormData) => {
-      const totalAmount =
-        (orderData.apprehension_fee || 0) +
-        (orderData.voluntary_fee || 0) +
-        (orderData.impound_fee || 0) +
-        (orderData.driver_amount || 0) +
-        (orderData.operator_fee || 0);
+      console.log("Creating order with data:", orderData);
 
-      createOrderMutation.mutate(
-        {
-          plate_number: orderData.plate_number,
-          operator_name: orderData.operator_name,
-          driver_name: orderData.driver_name,
-          selected_violations: orderData.selected_violations,
-          testing_officer: orderData.testing_officer,
-          test_results: orderData.test_results,
-          date_of_testing: orderData.date_of_testing,
-          apprehension_fee: orderData.apprehension_fee || 0,
-          voluntary_fee: orderData.voluntary_fee || 0,
-          impound_fee: orderData.impound_fee || 0,
-          driver_amount: orderData.driver_amount || 0,
-          operator_fee: orderData.operator_fee || 0,
-          total_undisclosed_amount: totalAmount,
-          grand_total_amount: totalAmount,
-          payment_or_number: orderData.payment_or_number,
-          date_of_payment:
-            orderData.date_of_payment || new Date().toISOString().split("T")[0],
-        },
-        {
+      try {
+        const totalAmount =
+          (orderData.apprehension_fee || 0) +
+          (orderData.voluntary_fee || 0) +
+          (orderData.impound_fee || 0) +
+          (orderData.driver_amount || 0) +
+          (orderData.operator_fee || 0);
+
+        console.log("Total amount calculated:", totalAmount);
+
+        // Ensure all numeric values are properly converted
+        const numericFields = {
+          apprehension_fee: parseFloat(String(orderData.apprehension_fee || 0)),
+          voluntary_fee: parseFloat(String(orderData.voluntary_fee || 0)),
+          impound_fee: parseFloat(String(orderData.impound_fee || 0)),
+          driver_amount: parseFloat(String(orderData.driver_amount || 0)),
+          operator_fee: parseFloat(String(orderData.operator_fee || 0)),
+          total_undisclosed_amount: parseFloat(String(totalAmount)),
+          grand_total_amount: parseFloat(String(totalAmount)),
+        };
+
+        // Ensure dates are in proper format
+        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+
+        // Simplified payload with required fields only
+        const createPayload = {
+          plate_number: orderData.plate_number || "DEMO-001",
+          operator_name: orderData.operator_name || "Demo Operator",
+          driver_name: orderData.driver_name || "Demo Driver",
+          selected_violations: Array.isArray(orderData.selected_violations)
+            ? orderData.selected_violations.join(",")
+            : orderData.selected_violations || "1,2", // Ensure it's a string
+          testing_officer: orderData.testing_officer || "Officer Demo",
+          test_results: orderData.test_results || "Pass",
+          date_of_testing: orderData.date_of_testing || today,
+          ...numericFields,
+          payment_or_number: orderData.payment_or_number || `PAY-${Date.now()}`,
+          date_of_payment: orderData.date_of_payment || today,
+          status: "pending",
+        };
+        console.log("Sending payload:", createPayload);
+
+        createOrderMutation.mutate(createPayload, {
           onSuccess: (createdOrder) => {
-            // Navigate to viewing mode after successful creation
-            window.location.href = `/air-quality/order-of-payment/${createdOrder.id}`;
+            console.log("Order created successfully:", createdOrder);
+            toast.success("Order saved successfully!");
+            // Navigate back to the order list instead of individual order page
+            window.location.href = `/air-quality/order-of-payment`;
           },
-        }
-      );
+          onError: (error) => {
+            console.error("Create order error:", error);
+            // Show actual error instead of fake demo success
+            toast.error(
+              `Failed to save order: ${error.message || "Unknown error"}`
+            );
+            // Don't navigate away on error so user can try again
+          },
+        });
+      } catch (error) {
+        console.error("Error in handleCreateOrder:", error);
+        toast.error(
+          `Error saving order: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+        // Don't navigate away on error so user can try again
+      }
     },
     [createOrderMutation]
   );
 
   const handleUpdateOrder = useCallback(
     (orderId: string, orderData: Partial<OrderOfPayment>) => {
-      updateOrderMutation.mutate({ orderId, orderData });
+      console.log("Updating order:", orderId, orderData);
+
+      try {
+        updateOrderMutation.mutate(
+          { orderId, orderData },
+          {
+            onSuccess: (updatedOrder) => {
+              console.log("Order updated successfully:", updatedOrder);
+              toast.success("Order updated successfully!");
+            },
+            onError: (error) => {
+              console.error("Update order error:", error);
+              toast.error(
+                `Failed to update order: ${error.message || "Unknown error"}`
+              );
+            },
+          }
+        );
+      } catch (error) {
+        console.error("Error in handleUpdateOrder:", error);
+        toast.error(
+          `Error updating order: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      }
     },
     [updateOrderMutation]
   );

@@ -1,13 +1,14 @@
 /**
  * useOffices hook for office management
- * This hook provides office data from the normalized office table and calculates compliance
+ * This hook provides office data from the office compliance API with proper stats calculation
  */
 
 import { useState, useCallback, useMemo } from "react";
 import {
   useOffices as useOfficesAPI,
-  useVehicles,
+  useOfficeCompliance,
   Office,
+  OfficeData,
 } from "@/core/api/emission-service";
 
 // Types that match the expected interface from the Offices page
@@ -48,7 +49,7 @@ export function useOffices(): UseOfficesReturn {
   // Local state for filters
   const [filters, setFilters] = useState<OfficeFilters>({
     searchTerm: "",
-    year: undefined,
+    year: new Date().getFullYear(), // Default to current year
     quarter: undefined,
   });
 
@@ -60,13 +61,17 @@ export function useOffices(): UseOfficesReturn {
     refetch: refetchOffices,
   } = useOfficesAPI(filters.searchTerm);
 
-  // Fetch all vehicles to calculate compliance data
+  // Fetch office compliance data with proper stats
   const {
-    data: vehiclesResponse,
-    isLoading: vehiclesLoading,
-    error: vehiclesError,
-    refetch: refetchVehicles,
-  } = useVehicles({});
+    data: complianceResponse,
+    isLoading: complianceLoading,
+    error: complianceError,
+    refetch: refetchCompliance,
+  } = useOfficeCompliance({
+    search_term: filters.searchTerm,
+    year: filters.year,
+    quarter: filters.quarter,
+  });
 
   // Handle filter changes
   const handleFilterChange = useCallback(
@@ -82,56 +87,53 @@ export function useOffices(): UseOfficesReturn {
   // Wrap the refetch function
   const refetch = useCallback(() => {
     refetchOffices();
-    refetchVehicles();
-  }, [refetchOffices, refetchVehicles]);
+    refetchCompliance();
+  }, [refetchOffices, refetchCompliance]);
 
-  // Calculate compliance data for each office
+  // Combine office data with compliance data
   const officeData = useMemo<OfficeWithCompliance[]>(() => {
-    if (!officesResponse?.offices || !vehiclesResponse?.vehicles) {
+    if (!officesResponse?.offices || !complianceResponse?.offices) {
       return [];
     }
 
-    return officesResponse.offices.map((office) => {
-      // Get vehicles for this office
-      const officeVehicles = vehiclesResponse.vehicles.filter(
-        (vehicle) => vehicle.office_id === office.id
-      );
-
-      // Calculate compliance metrics
-      const totalVehicles = officeVehicles.length;
-      const testedVehicles = officeVehicles.filter(
-        (vehicle) => vehicle.latest_test_date !== null
-      ).length;
-      const compliantVehicles = officeVehicles.filter(
-        (vehicle) => vehicle.latest_test_result === true
-      ).length;
-      const nonCompliantVehicles = testedVehicles - compliantVehicles;
-      const complianceRate =
-        testedVehicles > 0 ? (compliantVehicles / testedVehicles) * 100 : 0;
-
-      // Find the most recent test date
-      const testDates = officeVehicles
-        .map((vehicle) => vehicle.latest_test_date)
-        .filter((date): date is string => date !== null)
-        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
-      const lastTestDate = testDates.length > 0 ? testDates[0] : null;
-
-      return {
-        ...office,
-        total_vehicles: totalVehicles,
-        tested_vehicles: testedVehicles,
-        compliant_vehicles: compliantVehicles,
-        non_compliant_vehicles: nonCompliantVehicles,
-        compliance_rate: Math.round(complianceRate * 100) / 100,
-        last_test_date: lastTestDate,
-      };
+    // Create a map of compliance data by office name for quick lookup
+    const complianceMap = new Map<string, OfficeData>();
+    complianceResponse.offices.forEach((complianceOffice) => {
+      complianceMap.set(complianceOffice.office_name, complianceOffice);
     });
-  }, [officesResponse?.offices, vehiclesResponse?.vehicles]);
 
-  // Calculate summary statistics
+    // Combine office information with compliance data
+    return officesResponse.offices.map((office) => {
+      const complianceData = complianceMap.get(office.name);
+
+      if (complianceData) {
+        return {
+          ...office,
+          total_vehicles: complianceData.total_vehicles,
+          tested_vehicles: complianceData.tested_vehicles,
+          compliant_vehicles: complianceData.compliant_vehicles,
+          non_compliant_vehicles: complianceData.non_compliant_vehicles,
+          compliance_rate: complianceData.compliance_rate,
+          last_test_date: complianceData.last_test_date,
+        };
+      } else {
+        // If no compliance data, return office with zero stats
+        return {
+          ...office,
+          total_vehicles: 0,
+          tested_vehicles: 0,
+          compliant_vehicles: 0,
+          non_compliant_vehicles: 0,
+          compliance_rate: 0,
+          last_test_date: null,
+        };
+      }
+    });
+  }, [officesResponse?.offices, complianceResponse?.offices]);
+
+  // Use summary stats from the compliance API
   const summaryStats: SummaryStats = useMemo(() => {
-    if (officeData.length === 0) {
+    if (!complianceResponse?.summary) {
       return {
         totalOffices: 0,
         totalVehicles: 0,
@@ -140,28 +142,18 @@ export function useOffices(): UseOfficesReturn {
       };
     }
 
-    const totalVehicles = officeData.reduce(
-      (sum, office) => sum + office.total_vehicles,
-      0
-    );
-    const totalCompliant = officeData.reduce(
-      (sum, office) => sum + office.compliant_vehicles,
-      0
-    );
-    const overallComplianceRate =
-      totalVehicles > 0 ? (totalCompliant / totalVehicles) * 100 : 0;
-
+    const summary = complianceResponse.summary;
     return {
-      totalOffices: officeData.length,
-      totalVehicles,
-      totalCompliant,
-      overallComplianceRate: Math.round(overallComplianceRate * 100) / 100,
+      totalOffices: summary.total_offices,
+      totalVehicles: summary.total_vehicles,
+      totalCompliant: summary.total_compliant,
+      overallComplianceRate: summary.overall_compliance_rate,
     };
-  }, [officeData]);
+  }, [complianceResponse?.summary]);
 
   // Determine loading and error states
-  const isLoading = officesLoading || vehiclesLoading;
-  const error = officesError || vehiclesError;
+  const isLoading = officesLoading || complianceLoading;
+  const error = officesError || complianceError;
   const errorMessage = error ? (error as Error).message : null;
 
   return {

@@ -23,6 +23,7 @@ export interface OrderOfPayment {
   date_of_testing?: string;
   date_of_payment?: string;
   total_undisclosed_amount?: number;
+  payment_or_number?: string;
 }
 
 export interface PaymentChecklistItem {

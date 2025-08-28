@@ -148,7 +148,7 @@ class AirQualityOrderOfPayment(Base):
     date_of_payment = Column(Date, nullable=False)
     
     # Status
-    status = Column(String(32), default='pending', server_default="'pending'")  # 'pending', 'paid', 'cancelled'
+    status = Column(String(32), default='unpaid', server_default="'unpaid'")  # 'unpaid', 'partially_paid', 'fully_paid'
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

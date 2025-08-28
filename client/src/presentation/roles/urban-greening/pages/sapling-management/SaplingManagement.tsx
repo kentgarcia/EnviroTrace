@@ -33,9 +33,6 @@ const SaplingManagement: React.FC = () => {
     const [srMode, setSrMode] = useState<"add" | "edit">("add");
     const [srSelected, setSrSelected] = useState<SaplingRequest | null>(null);
 
-    // State for monitoring requests for sapling requests
-    const [srLinkedMonitoring, setSrLinkedMonitoring] = useState<any | null>(null);
-
     const { saplingRequests } = useSaplingRequests();
     const { createSapling, updateSapling, deleteSapling } = useSaplingRequestMutations();
 
@@ -92,21 +89,6 @@ const SaplingManagement: React.FC = () => {
             await createSapling.mutateAsync(data);
         } else if (srSelected) {
             await updateSapling.mutateAsync({ id: srSelected.id, data });
-
-            // Update monitoring request source_type if there's a linked monitoring request
-            const monitoring_request_id = data.monitoring_request_id || srSelected.monitoring_request_id;
-            if (monitoring_request_id) {
-                try {
-                    const currentMonitoring = await fetchMonitoringRequest(monitoring_request_id);
-                    await updateMonitoringRequest(monitoring_request_id, {
-                        ...currentMonitoring,
-                        source_type: "urban_greening"
-                    });
-                } catch (error) {
-                    console.error("Failed to update monitoring request source_type:", error);
-                    // Don't show error to user as this is a background update
-                }
-            }
         }
         setSrOpen(false);
     };
@@ -150,16 +132,6 @@ const SaplingManagement: React.FC = () => {
             .finally(() => setUgLinkedLoading(false));
     }, [(ugSelected as any)?.monitoring_request_id]);
 
-    // Load linked monitoring request for SR selected row
-    React.useEffect(() => {
-        const id = srSelected?.monitoring_request_id as string | undefined;
-        if (!id) { setSrLinkedMonitoring(null); return; }
-
-        fetchMonitoringRequest(id)
-            .then((res) => setSrLinkedMonitoring(res))
-            .catch(() => setSrLinkedMonitoring(null))
-    }, [srSelected?.monitoring_request_id]);
-
     return (
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -202,40 +174,6 @@ const SaplingManagement: React.FC = () => {
                                                                     <li key={idx}>{i.name} - {i.qty}</li>
                                                                 ))}
                                                             </ul>
-
-                                                            {/* Monitoring Request Link for Sapling Requests */}
-                                                            {srSelected.monitoring_request_id && (
-                                                                <div className="space-y-2 pt-3 border-t">
-                                                                    <span className="text-sm font-medium text-gray-700">Monitoring Link:</span>
-                                                                    {!srLinkedMonitoring ? (
-                                                                        <Badge variant="outline" className="text-xs">Loading...</Badge>
-                                                                    ) : srLinkedMonitoring ? (
-                                                                        <div className="space-y-1">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <div className="flex-1">
-                                                                                    <span className="text-xs font-medium">{srLinkedMonitoring.title}</span>
-                                                                                </div>
-                                                                                <div>
-                                                                                    <Badge variant="outline" className="text-xs">{srLinkedMonitoring.status}</Badge>
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="text-xs text-gray-600">
-                                                                                <span className="font-medium">Location:</span>{" "}
-                                                                                {srLinkedMonitoring.address && srLinkedMonitoring.address.trim().length > 0
-                                                                                    ? srLinkedMonitoring.address
-                                                                                    : `(${srLinkedMonitoring.location?.lat ?? '—'}, ${srLinkedMonitoring.location?.lng ?? '—'})`}
-                                                                            </div>
-                                                                            {srLinkedMonitoring.description && (
-                                                                                <div className="text-xs text-gray-600">
-                                                                                    <span className="font-medium">Description:</span> {srLinkedMonitoring.description}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <Badge variant="outline" className="text-xs">Error loading monitoring data</Badge>
-                                                                    )}
-                                                                </div>
-                                                            )}
 
                                                             <div className="flex gap-2 pt-2">
                                                                 <Button size="sm" onClick={() => setSrOpen(true)}>Edit</Button>

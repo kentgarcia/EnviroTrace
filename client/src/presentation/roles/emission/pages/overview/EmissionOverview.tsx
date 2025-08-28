@@ -8,7 +8,8 @@ import { NetworkStatus } from "@/presentation/components/shared/layout/NetworkSt
 
 export const EmissionOverview: React.FC = () => {
     const currentYear = new Date().getFullYear();
-    const selectedYear = currentYear; // For now, we'll use current year
+    // Use current year (2025) to get the latest test data
+    const selectedYear = currentYear;
     const selectedQuarter = undefined; // Show all quarters
 
     const {
@@ -91,7 +92,6 @@ export const EmissionOverview: React.FC = () => {
                     <EmissionVisualDashboard
                         quarterlyData={quarterlyData}
                         vehicleTypeData={vehicleTypeData}
-                        officeComplianceData={officeComplianceData}
                         engineTypeData={engineTypeData}
                         monthlyTrendsData={monthlyTrendsData}
                     />

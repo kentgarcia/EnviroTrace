@@ -95,86 +95,70 @@ export default function QuarterlyTesting() {
               onOfficeChange={handleOfficeChange}
             />
 
-            {/* Show message if no year selected */}
-            {!selectedYear && (
-              <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                <div className="p-8 text-center">
-                  <div className="text-gray-500 text-lg">
-                    Please select a year to view quarterly testing data
-                  </div>
-                  <div className="text-gray-400 text-sm mt-2">
-                    Use the filters above to get started
-                  </div>
-                </div>
-              </Card>
-            )}
+            {/* Tabs Content */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="overview" className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="quarters" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Manage Quarters
+                </TabsTrigger>
+                <TabsTrigger value="testing" className="flex items-center gap-2" disabled={selectedOffices.length === 0 || !selectedOffices.includes("all") && selectedOffices.length === 0}>
+                  <Table className="h-4 w-4" />
+                  Vehicle Testing
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Tabs Content - Show when year is selected */}
-            {selectedYear && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger value="overview" className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="quarters" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Manage Quarters
-                  </TabsTrigger>
-                  <TabsTrigger value="testing" className="flex items-center gap-2" disabled={selectedOffices.length === 0}>
-                    <Table className="h-4 w-4" />
-                    Vehicle Testing
-                  </TabsTrigger>
-                </TabsList>
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="space-y-6">
+                <QuarterlyOverview
+                  stats={summaryStats}
+                  selectedYear={selectedYear}
+                  officeGroups={officeGroups}
+                  selectedOffices={selectedOffices}
+                />
+              </TabsContent>
 
-                {/* Overview Tab */}
-                <TabsContent value="overview" className="space-y-6">
-                  <QuarterlyOverview
-                    stats={summaryStats}
-                    selectedYear={selectedYear}
-                    officeGroups={officeGroups}
-                    selectedOffices={selectedOffices}
-                  />
-                </TabsContent>
+              {/* Manage Quarters Tab */}
+              <TabsContent value="quarters">
+                <QuarterInfoEditor selectedYear={selectedYear} />
+              </TabsContent>
 
-                {/* Manage Quarters Tab */}
-                <TabsContent value="quarters">
-                  <QuarterInfoEditor selectedYear={selectedYear} />
-                </TabsContent>
-
-                {/* Vehicle Testing Tab */}
-                <TabsContent value="testing">
-                  {selectedOffices.length === 0 ? (
-                    <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                      <div className="p-8 text-center">
-                        <div className="text-gray-500 text-lg">
-                          Please select one or more offices to view vehicle testing data
-                        </div>
-                        <div className="text-gray-400 text-sm mt-2">
-                          Use the office filter above to continue
-                        </div>
+              {/* Vehicle Testing Tab */}
+              <TabsContent value="testing">
+                {(!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
+                  <Card className="border border-gray-200 shadow-none rounded-none bg-white">
+                    <div className="p-8 text-center">
+                      <div className="text-gray-500 text-lg">
+                        Please select one or more offices to view vehicle testing data
                       </div>
-                    </Card>
-                  ) : (
-                    <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                      <div className="p-6">
-                        <OfficeVehicleTable
-                          officeGroups={officeGroups}
-                          selectedYear={selectedYear}
-                          isLoading={isLoading}
-                          onAddTest={handleAddTest}
-                          onEditTest={handleEditTest}
-                          onAddRemarks={handleAddRemarks}
-                          onBatchAddTests={handleBatchAddTests}
-                          onUpdateTest={handleUpdateTest}
-                          onBatchUpdateTests={handleBatchUpdateTests}
-                        />
+                      <div className="text-gray-400 text-sm mt-2">
+                        Use the office filter above to continue, or select "All Offices" to view all data
                       </div>
-                    </Card>
-                  )}
-                </TabsContent>
-              </Tabs>
-            )}
+                    </div>
+                  </Card>
+                ) : (
+                  <Card className="border border-gray-200 shadow-none rounded-none bg-white">
+                    <div className="p-6">
+                      <OfficeVehicleTable
+                        officeGroups={officeGroups}
+                        selectedYear={selectedYear}
+                        isLoading={isLoading}
+                        onAddTest={handleAddTest}
+                        onEditTest={handleEditTest}
+                        onAddRemarks={handleAddRemarks}
+                        onBatchAddTests={handleBatchAddTests}
+                        onUpdateTest={handleUpdateTest}
+                        onBatchUpdateTests={handleBatchUpdateTests}
+                      />
+                    </div>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

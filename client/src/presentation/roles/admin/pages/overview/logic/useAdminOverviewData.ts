@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import {
   useAdminDashboardStats,
   useUserActivityData,
-  useSystemHealthData,
   AdminDashboardStats,
   UserActivityData,
-  SystemHealthData,
 } from "@/core/api/admin-api";
 
 export const useAdminOverviewData = () => {
@@ -22,17 +20,11 @@ export const useAdminOverviewData = () => {
     error: activityError,
   } = useUserActivityData();
 
-  const {
-    data: systemHealthData,
-    isLoading: healthLoading,
-    error: healthError,
-  } = useSystemHealthData();
-
   // Combine loading states
-  const isLoading = statsLoading || activityLoading || healthLoading;
+  const isLoading = statsLoading || activityLoading;
 
   // Combine errors (prioritize the first error encountered)
-  const error = statsError || activityError || healthError;
+  const error = statsError || activityError;
 
   // Provide default data structures
   const defaultKeyStats: AdminDashboardStats = {
@@ -48,11 +40,10 @@ export const useAdminOverviewData = () => {
     // Data with defaults
     keyStatsData: keyStatsData || defaultKeyStats,
     userActivityData: userActivityData || [],
-    systemHealthData: systemHealthData || [],
 
     // Loading states
     isLoading,
     error,
   };
 };
-export type { UserActivityData, SystemHealthData };
+export type { UserActivityData };

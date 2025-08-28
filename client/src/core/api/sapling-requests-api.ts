@@ -11,7 +11,6 @@ export interface SaplingRequest {
   requester_name: string;
   address: string;
   saplings: SaplingItem[] | string; // backend may return JSON string; we'll normalize in consumer
-  monitoring_request_id?: string; // Link to monitoring request
   created_at: string;
   updated_at: string;
 }
@@ -21,7 +20,6 @@ export interface SaplingRequestCreate {
   requester_name: string;
   address: string;
   saplings: SaplingItem[];
-  monitoring_request_id?: string;
 }
 
 export interface SaplingRequestUpdate {
@@ -29,7 +27,6 @@ export interface SaplingRequestUpdate {
   requester_name?: string;
   address?: string;
   saplings?: SaplingItem[];
-  monitoring_request_id?: string;
 }
 
 export const fetchSaplingRequests = async (): Promise<SaplingRequest[]> => {

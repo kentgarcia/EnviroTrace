@@ -11,7 +11,6 @@ export const AdminOverview: React.FC = () => {
         // Data
         keyStatsData,
         userActivityData,
-        systemHealthData,
 
         // Loading states
         isLoading,
@@ -62,7 +61,6 @@ export const AdminOverview: React.FC = () => {
                 <div className="bg-white px-6 py-3 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-                        <div className="text-xs text-gray-500">Updated {new Date().toLocaleString()}</div>
                     </div>
                 </div>
 
@@ -79,7 +77,6 @@ export const AdminOverview: React.FC = () => {
                     {/* Visual Dashboard */}
                     <AdminVisualDashboard
                         userActivityData={userActivityData}
-                        systemHealthData={systemHealthData}
                         isLoading={isLoading}
                     />
                 </div>

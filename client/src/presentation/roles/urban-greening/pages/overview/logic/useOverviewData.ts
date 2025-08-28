@@ -7,6 +7,7 @@ import {
 } from "@/core/api/planting-api";
 import { fetchTreeManagementRequests } from "@/core/api/tree-management-api";
 import { fetchUrbanGreeningDashboard } from "@/core/api/dashboard-api";
+import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
 
 // Overview data hooks
 export const useOverviewData = () => {
@@ -65,24 +66,37 @@ export const useOverviewData = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch fee records for accurate fee statistics
+  const {
+    data: feeRecords,
+    isLoading: feeRecordsLoading,
+    error: feeRecordsError,
+  } = useQuery({
+    queryKey: ["fee-records-overview"],
+    queryFn: fetchUrbanGreeningFeeRecords,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const isLoading =
     plantingStatsLoading ||
     saplingStatsLoading ||
     plantingsLoading ||
     saplingsLoading ||
-    treeRequestsLoading;
+    treeRequestsLoading ||
+    feeRecordsLoading;
   const hasError =
     plantingStatsError ||
     saplingStatsError ||
     plantingsError ||
     saplingsError ||
-    treeRequestsError;
+    treeRequestsError ||
+    feeRecordsError;
 
   // Transform data for charts
   const treeRequestCharts = transformTreeRequestData(treeRequests || []);
   const plantingCharts = transformPlantingData(plantingStats);
   const saplingCharts = transformSaplingData(saplingStats);
-  const feeData = calculateFeeData(treeRequests || []);
+  const feeData = calculateFeeDataFromRecords(feeRecords || []);
 
   // Fetch aggregated dashboard data (minimal payload for dashboard)
   const { data: dashboardData } = useQuery({
@@ -231,7 +245,64 @@ export const transformSaplingData = (saplingStats: any) => {
   return { speciesBreakdown, statusBreakdown, purposeBreakdown };
 };
 
-// Calculate fee amounts from tree requests
+// Calculate fee amounts from actual fee records
+export const calculateFeeDataFromRecords = (feeRecords: any[]) => {
+  if (!feeRecords || feeRecords.length === 0)
+    return { totalFees: 0, monthlyFees: [], latePayments: [] };
+
+  const currentYear = new Date().getFullYear();
+
+  // Calculate total fees for the current year (paid status only)
+  const totalFees = feeRecords
+    .filter(
+      (record) =>
+        record.status === "paid" &&
+        new Date(record.payment_date || record.date).getFullYear() ===
+          currentYear
+    )
+    .reduce((sum, record) => sum + Number(record.amount), 0);
+
+  // Calculate monthly fees for current year (paid status only)
+  const monthNames = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  const monthlyFees = monthNames.map((month, index) => {
+    const monthTotal = feeRecords
+      .filter((record) => {
+        if (record.status !== "paid") return false;
+        const recordDate = new Date(record.payment_date || record.date);
+        return (
+          recordDate.getFullYear() === currentYear &&
+          recordDate.getMonth() === index
+        );
+      })
+      .reduce((sum, record) => sum + Number(record.amount), 0);
+
+    return { month, amount: monthTotal };
+  });
+
+  // Mock late payments data (could be enhanced to calculate actual overdue amounts)
+  const latePayments = [
+    { year: currentYear - 1, amount: Math.floor(totalFees * 0.05) },
+    { year: currentYear - 2, amount: Math.floor(totalFees * 0.04) },
+    { year: currentYear - 3, amount: Math.floor(totalFees * 0.02) },
+  ];
+
+  return { totalFees, monthlyFees, latePayments };
+};
+
+// Legacy function - kept for backward compatibility but not used
 export const calculateFeeData = (requests: any[]) => {
   if (!requests || requests.length === 0)
     return { totalFees: 0, monthlyFees: [], latePayments: [] };

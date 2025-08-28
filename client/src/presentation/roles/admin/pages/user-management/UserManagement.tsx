@@ -41,6 +41,7 @@ import {
     AlertDialogTrigger,
 } from "@/presentation/components/shared/ui/alert-dialog";
 import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon } from "lucide-react";
+import { useToast } from "@/core/hooks/ui/use-toast";
 import {
     useUsers,
     useCreateUser,
@@ -65,6 +66,7 @@ export function UserManagement() {
     const [search, setSearch] = useState("");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const { toast } = useToast();
 
     // Queries
     const { data: users = [], isLoading, error } = useUsers({ search: search || undefined });
@@ -99,8 +101,30 @@ export function UserManagement() {
             await createUserMutation.mutateAsync(createData);
             setIsCreateDialogOpen(false);
             reset();
-        } catch (error) {
+            toast({
+                title: "Success",
+                description: "User created successfully!",
+                variant: "default",
+            });
+        } catch (error: any) {
             console.error("Failed to create user:", error);
+
+            // Handle specific error messages
+            let errorMessage = "Failed to create user. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                errorMessage = error.response.data.detail;
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
         }
     };
 
@@ -121,16 +145,60 @@ export function UserManagement() {
             await updateUserMutation.mutateAsync({ userId: editingUser.id, userData: updateData });
             setEditingUser(null);
             reset();
-        } catch (error) {
+            toast({
+                title: "Success",
+                description: "User updated successfully!",
+                variant: "default",
+            });
+        } catch (error: any) {
             console.error("Failed to update user:", error);
+
+            // Handle specific error messages
+            let errorMessage = "Failed to update user. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                errorMessage = error.response.data.detail;
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
         }
     };
 
     const handleDeleteUser = async (userId: string) => {
         try {
             await deleteUserMutation.mutateAsync(userId);
-        } catch (error) {
+            toast({
+                title: "Success",
+                description: "User deleted successfully!",
+                variant: "default",
+            });
+        } catch (error: any) {
             console.error("Failed to delete user:", error);
+
+            // Handle specific error messages
+            let errorMessage = "Failed to delete user. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                errorMessage = error.response.data.detail;
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
         }
     };
 

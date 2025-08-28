@@ -223,7 +223,7 @@ class AirQualityOrderOfPaymentBase(BaseModel):
     grand_total_amount: Decimal = Field(..., ge=0)
     payment_or_number: Optional[str] = Field(None, max_length=64)
     date_of_payment: date
-    status: Optional[str] = Field(default="pending", max_length=32)
+    status: Optional[str] = Field(default="unpaid", max_length=32)
 
 
 class AirQualityOrderOfPaymentCreate(AirQualityOrderOfPaymentBase):

@@ -490,7 +490,7 @@ export function useOfficeCompliance(
       }
 
       const { data } = await apiClient.get<OfficeComplianceResponse>(
-        `${API_ENDPOINTS.OFFICE_COMPLIANCE}?${params.toString()}`
+        `${OFFICE_API_ENDPOINTS.COMPLIANCE}?${params.toString()}`
       );
       return data;
     },

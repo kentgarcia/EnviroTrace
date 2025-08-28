@@ -7,7 +7,8 @@ import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
 import { Separator } from "@/presentation/components/shared/ui/separator";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/presentation/components/shared/ui/table";
-import { Calculator, Ban, Save, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
+import { Calculator, Ban, Save, X, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { OrderOfPayment, TestingInfo, PaymentDetails } from "../logic/types";
 import { formatSafeDate } from "../logic/utils";
@@ -35,6 +36,8 @@ interface OrderOfPaymentNewViewProps {
     resetViolationsPayment: () => void;
     feesLoading: boolean;
     fees: any[];
+    driverPenaltiesTotal: number;
+    operatorPenaltiesTotal: number;
 }
 
 const OrderOfPaymentNewView: React.FC<OrderOfPaymentNewViewProps> = ({
@@ -59,12 +62,18 @@ const OrderOfPaymentNewView: React.FC<OrderOfPaymentNewViewProps> = ({
     resetViolationsPayment,
     feesLoading,
     fees,
+    driverPenaltiesTotal,
+    operatorPenaltiesTotal,
 }) => {
     const handleReset = () => {
         resetPaymentChecklist();
         resetViolationsPayment();
         toast.success("Payment checklist reset");
     };
+
+    // Check if there are individual penalties selected
+    const hasIndividualDriverPenalties = driverPenaltiesTotal > 0;
+    const hasIndividualOperatorPenalties = operatorPenaltiesTotal > 0;
 
     return (
         <div className="h-full flex flex-col gap-2">
@@ -277,9 +286,10 @@ const OrderOfPaymentNewView: React.FC<OrderOfPaymentNewViewProps> = ({
                                     <Input
                                         type="number"
                                         value={paymentChecklist.apprehension_fee.amount}
-                                        onChange={(e) =>
-                                            handlePaymentChecklistChange('apprehension_fee', 'amount', Number(e.target.value))
-                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                            handlePaymentChecklistChange('apprehension_fee', 'amount', isNaN(value) ? 0 : value);
+                                        }}
                                         className="w-24"
                                         disabled={!paymentChecklist.apprehension_fee.checked}
                                     />
@@ -299,9 +309,10 @@ const OrderOfPaymentNewView: React.FC<OrderOfPaymentNewViewProps> = ({
                                     <Input
                                         type="number"
                                         value={paymentChecklist.voluntary_fee.amount}
-                                        onChange={(e) =>
-                                            handlePaymentChecklistChange('voluntary_fee', 'amount', Number(e.target.value))
-                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                            handlePaymentChecklistChange('voluntary_fee', 'amount', isNaN(value) ? 0 : value);
+                                        }}
                                         className="w-24"
                                         disabled={!paymentChecklist.voluntary_fee.checked}
                                     />
@@ -321,136 +332,96 @@ const OrderOfPaymentNewView: React.FC<OrderOfPaymentNewViewProps> = ({
                                     <Input
                                         type="number"
                                         value={paymentChecklist.impound_fee.amount}
-                                        onChange={(e) =>
-                                            handlePaymentChecklistChange('impound_fee', 'amount', Number(e.target.value))
-                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                            handlePaymentChecklistChange('impound_fee', 'amount', isNaN(value) ? 0 : value);
+                                        }}
                                         className="w-24"
                                         disabled={!paymentChecklist.impound_fee.checked}
                                     />
                                 </div>
                             </div>
-
-                            <Separator />
-
-                            <div className="flex items-center gap-3">
-                                <Checkbox
-                                    checked={paymentChecklist.driver_amount.checked}
-                                    onCheckedChange={(checked) =>
-                                        handlePaymentChecklistChange('driver_amount', 'checked', !!checked)
-                                    }
-                                />
-                                <Label className="flex-1">Driver Amount</Label>
-                                <div className="flex items-center gap-1">
-                                    <span>₱</span>
-                                    <Input
-                                        type="number"
-                                        value={Number(paymentChecklist.driver_amount.amount) || 0}
-                                        onChange={(e) =>
-                                            handlePaymentChecklistChange('driver_amount', 'amount', Number(e.target.value))
-                                        }
-                                        className="w-24"
-                                        disabled={!paymentChecklist.driver_amount.checked}
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <Checkbox
-                                    checked={paymentChecklist.operator_fee.checked}
-                                    onCheckedChange={(checked) =>
-                                        handlePaymentChecklistChange('operator_fee', 'checked', !!checked)
-                                    }
-                                />
-                                <Label className="flex-1">Operator Fee</Label>
-                                <div className="flex items-center gap-1">
-                                    <span>₱</span>
-                                    <Input
-                                        type="number"
-                                        value={Number(paymentChecklist.operator_fee.amount) || 0}
-                                        onChange={(e) =>
-                                            handlePaymentChecklistChange('operator_fee', 'amount', Number(e.target.value))
-                                        }
-                                        className="w-24"
-                                        disabled={!paymentChecklist.operator_fee.checked}
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <Separator />
-
-                        {/* Totals and Actions */}
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                {/* Breakdown of totals */}
-                                <div className="text-xs text-muted-foreground space-y-1">
-                                    <div className="flex justify-between">
-                                        <span>Fees Total:</span>
-                                        <span>₱{Object.values(paymentChecklist).reduce((sum: number, item: any) =>
-                                            sum + (item.checked ? Number(item.amount) : 0), 0
-                                        ).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>Driver Penalties Total:</span>
-                                        <span>₱{violations.reduce((sum: number, violation: any) => {
-                                            if (violation.paid_driver) {
-                                                const offenseLevel = getDriverOffenseLevel(violation.id);
-                                                const penalty = Number(getDriverPenalty(offenseLevel));
-                                                return sum + penalty;
-                                            }
-                                            return sum;
-                                        }, 0).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>Operator Penalties Total:</span>
-                                        <span>₱{violations.reduce((sum: number, violation: any) => {
-                                            if (violation.paid_operator) {
-                                                const offenseLevel = getOperatorOffenseLevel(violation.id);
-                                                const penalty = Number(getOperatorPenalty(offenseLevel));
-                                                return sum + penalty;
-                                            }
-                                            return sum;
-                                        }, 0).toLocaleString()}</span>
-                                    </div>
-                                    <Separator className="my-1" />
-                                </div>
-
-                                <div className="flex justify-between">
-                                    <span>Total Undisclosed Amount:</span>
-                                    <span className="font-medium">₱{totals.total_undisclosed_amount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-lg font-bold">
-                                    <span>Grand Total Amount:</span>
-                                    <span>₱{totals.grand_total_amount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <Label htmlFor="dateOfPayment">Date of Payment:</Label>
-                                    <Input
-                                        id="dateOfPayment"
-                                        type="date"
-                                        value={dateOfPayment}
-                                        onChange={(e) => setDateOfPayment(e.target.value)}
-                                        className="w-auto text-right border-none bg-transparent p-0 h-auto text-sm focus:ring-0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex gap-2">
-                                <Button onClick={handleCancelOrder} variant="destructive" className="flex-1">
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Cancel Order
-                                </Button>
-                                <Button onClick={handleSaveOrder} className="flex-1">
-                                    <Save className="h-4 w-4 mr-2" />
-                                    Save Order
-                                </Button>
-                            </div>
                         </div>
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Totals and Summary Panel - Moved below the grid */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Payment Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {/* Totals and Actions */}
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            {/* Breakdown of totals */}
+                            <div className="text-xs text-muted-foreground space-y-1">
+                                <div className="flex justify-between">
+                                    <span>Fees Total:</span>
+                                    <span>₱{['apprehension_fee', 'voluntary_fee', 'impound_fee'].reduce((sum: number, key: string) => {
+                                        const item = paymentChecklist[key];
+                                        return sum + (item && item.checked ? Number(item.amount) : 0);
+                                    }, 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Driver Penalties Total:</span>
+                                    <span>₱{violations.reduce((sum: number, violation: any) => {
+                                        if (violation.paid_driver) {
+                                            const offenseLevel = getDriverOffenseLevel(violation.id);
+                                            const penalty = Number(getDriverPenalty(offenseLevel));
+                                            return sum + penalty;
+                                        }
+                                        return sum;
+                                    }, 0).toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Operator Penalties Total:</span>
+                                    <span>₱{violations.reduce((sum: number, violation: any) => {
+                                        if (violation.paid_operator) {
+                                            const offenseLevel = getOperatorOffenseLevel(violation.id);
+                                            const penalty = Number(getOperatorPenalty(offenseLevel));
+                                            return sum + penalty;
+                                        }
+                                        return sum;
+                                    }, 0).toLocaleString()}</span>
+                                </div>
+                                <Separator className="my-1" />
+                            </div>
+
+                            <div className="flex justify-between">
+                                <span>Total Undisclosed Amount:</span>
+                                <span className="font-medium">₱{totals.total_undisclosed_amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-lg font-bold">
+                                <span>Grand Total Amount:</span>
+                                <span>₱{totals.grand_total_amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <Label htmlFor="dateOfPayment">Date of Payment:</Label>
+                                <Input
+                                    id="dateOfPayment"
+                                    type="date"
+                                    value={dateOfPayment}
+                                    onChange={(e) => setDateOfPayment(e.target.value)}
+                                    className="w-auto text-right border-none bg-transparent p-0 h-auto text-sm focus:ring-0"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <Button onClick={handleCancelOrder} variant="destructive" className="flex-1">
+                                <Ban className="h-4 w-4 mr-2" />
+                                Cancel Order
+                            </Button>
+                            <Button onClick={handleSaveOrder} className="flex-1">
+                                <Save className="h-4 w-4 mr-2" />
+                                Save Order
+                            </Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
@@ -485,6 +456,41 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
         getOperatorOffenseLevel: calculateOperatorOffenseLevel
     } = useFeeCalculation();
 
+    // Debug: Log fees when they load
+    React.useEffect(() => {
+        if (fees.length > 0) {
+            console.log("Fees loaded in component:", fees);
+        }
+    }, [fees]);
+
+    // Sync editable status when selectedOrder changes
+    React.useEffect(() => {
+        if (selectedOrder?.status) {
+            setEditableStatus(selectedOrder.status);
+        }
+    }, [selectedOrder?.status]);
+
+    // Function to format violation IDs into readable descriptions
+    const formatViolationDescriptions = (violationIds: string) => {
+        if (!violationIds) return 'No violations specified';
+
+        const violationMap: { [key: string]: string } = {
+            '1': 'Excessive smoke emission',
+            '2': 'Failure to pass emission test',
+            '3': 'Operating without valid emission certificate',
+            '4': 'Tampering with emission control equipment',
+            '5': 'Refusing emission inspection',
+            '6': 'Using banned fuel type',
+            '7': 'Operating overloaded vehicle',
+            '8': 'Violation of route restrictions',
+        };
+
+        const ids = violationIds.split(',').map(id => id.trim());
+        const descriptions = ids.map(id => violationMap[id] || `Violation ${id}`);
+
+        return descriptions.join(', ');
+    };
+
     // State for the form
     const [testingInfo, setTestingInfo] = React.useState<TestingInfo>({
         testing_officer: '',
@@ -495,12 +501,13 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
     const [paymentChecklist, setPaymentChecklist] = React.useState({
         apprehension_fee: { checked: false, amount: 0 },
         voluntary_fee: { checked: false, amount: 0 },
-        impound_fee: { checked: false, amount: 0 },
-        driver_amount: { checked: false, amount: 0 },
-        operator_fee: { checked: false, amount: 0 }
+        impound_fee: { checked: false, amount: 0 }
     });
 
     const [dateOfPayment, setDateOfPayment] = React.useState(new Date().toISOString().split('T')[0]);
+
+    // State for editable status
+    const [editableStatus, setEditableStatus] = React.useState(selectedOrder?.status || 'unpaid');
 
     // State for violations with payment status
     const [violationsWithPayment, setViolationsWithPayment] = React.useState(() => {
@@ -518,7 +525,7 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
         control_number: '',
         plate_number: newOrderData?.vehicle?.plate_number || '',
         operator_name: newOrderData?.vehicle?.operator_name || '',
-        status: 'pending',
+        status: 'unpaid',
         selected_violations: [],
         grand_total_amount: 0,
         created_at: new Date().toISOString(),
@@ -536,24 +543,16 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
 
             setPaymentChecklist({
                 apprehension_fee: {
-                    checked: false,
+                    checked: initialFees.apprehension_fee > 0, // Auto-check if fee amount > 0
                     amount: initialFees.apprehension_fee
                 },
                 voluntary_fee: {
-                    checked: false,
+                    checked: initialFees.voluntary_fee > 0, // Auto-check if fee amount > 0
                     amount: initialFees.voluntary_fee
                 },
                 impound_fee: {
-                    checked: false,
+                    checked: initialFees.impound_fee > 0, // Auto-check if fee amount > 0
                     amount: initialFees.impound_fee
-                },
-                driver_amount: {
-                    checked: false,
-                    amount: initialFees.driver_penalty
-                },
-                operator_fee: {
-                    checked: false,
-                    amount: initialFees.operator_penalty
                 }
             });
         }
@@ -584,7 +583,19 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
             "Second": 2,
             "Third": 3
         };
-        return getFeeByCategory("driver", levelMap[offenseLevel] || 1);
+        const level = levelMap[offenseLevel] || 1;
+        const penalty = getFeeByCategory("driver", level);
+
+        // Fallback values if fee lookup fails
+        const fallbackPenalties = {
+            1: 500,   // First offense
+            2: 1000,  // Second offense
+            3: 2000   // Third offense
+        };
+
+        const finalPenalty = penalty || fallbackPenalties[level] || 500;
+        console.log(`Driver penalty for ${offenseLevel} (level ${level}): ${penalty} -> using: ${finalPenalty}`);
+        return finalPenalty;
     };
 
     const getOperatorPenalty = (offenseLevel: string) => {
@@ -593,8 +604,43 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
             "Second": 2,
             "Third": 3
         };
-        return getFeeByCategory("operator", levelMap[offenseLevel] || 1);
+        const level = levelMap[offenseLevel] || 1;
+        const penalty = getFeeByCategory("operator", level);
+
+        // Fallback values if fee lookup fails
+        const fallbackPenalties = {
+            1: 1000,  // First offense
+            2: 2000,  // Second offense
+            3: 5000   // Third offense
+        };
+
+        const finalPenalty = penalty || fallbackPenalties[level] || 1000;
+        console.log(`Operator penalty for ${offenseLevel} (level ${level}): ${penalty} -> using: ${finalPenalty}`);
+        return finalPenalty;
     };
+
+    // Calculate penalty totals from actual violation payments (moved after function declarations)
+    const driverPenaltiesTotal = React.useMemo(() => {
+        return violationsWithPayment.reduce((sum: number, violation: any) => {
+            if (violation.paid_driver) {
+                const offenseLevel = getDriverOffenseLevel(violation.id);
+                const penalty = getDriverPenalty(offenseLevel);
+                return sum + Number(penalty || 0);
+            }
+            return sum;
+        }, 0);
+    }, [violationsWithPayment]);
+
+    const operatorPenaltiesTotal = React.useMemo(() => {
+        return violationsWithPayment.reduce((sum: number, violation: any) => {
+            if (violation.paid_operator) {
+                const offenseLevel = getOperatorOffenseLevel(violation.id);
+                const penalty = getOperatorPenalty(offenseLevel);
+                return sum + Number(penalty || 0);
+            }
+            return sum;
+        }, 0);
+    }, [violationsWithPayment]);
 
     // Payment checklist handlers
     const handlePaymentChecklistChange = (type: string, field: string, value: any) => {
@@ -609,135 +655,148 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
 
     const handleViolationPaymentChange = (violationId: number, field: 'paid_driver' | 'paid_operator', isChecked: boolean) => {
         // Update the violation payment status
-        setViolationsWithPayment(prev =>
-            prev.map(violation =>
+        setViolationsWithPayment(prev => {
+            const updated = prev.map(violation =>
                 violation.id === violationId
                     ? { ...violation, [field]: isChecked }
                     : violation
-            )
-        );
+            );
 
-        // Automatically update payment checklist amounts
-        const violation = violationsWithPayment.find(v => v.id === violationId);
-        if (violation) {
-            if (field === 'paid_driver') {
-                const offenseLevel = getDriverOffenseLevel(violationId);
-                const penalty = getDriverPenalty(offenseLevel);
+            console.log('Updated violation payments:', {
+                violationId,
+                field,
+                isChecked,
+                updatedViolations: updated
+            });
 
-                setPaymentChecklist(prev => {
-                    const currentDriverAmount = Number(prev.driver_amount.amount) || 0;
-                    const newDriverAmount = isChecked
-                        ? currentDriverAmount + penalty
-                        : Math.max(0, currentDriverAmount - penalty);
+            return updated;
+        });
+    };
 
-                    return {
-                        ...prev,
-                        driver_amount: {
-                            checked: newDriverAmount > 0,
-                            amount: newDriverAmount
-                        }
-                    };
-                });
-            } else if (field === 'paid_operator') {
-                const offenseLevel = getOperatorOffenseLevel(violationId);
-                const penalty = getOperatorPenalty(offenseLevel);
-
-                setPaymentChecklist(prev => {
-                    const currentOperatorAmount = Number(prev.operator_fee.amount) || 0;
-                    const newOperatorAmount = isChecked
-                        ? currentOperatorAmount + penalty
-                        : Math.max(0, currentOperatorAmount - penalty);
-
-                    return {
-                        ...prev,
-                        operator_fee: {
-                            checked: newOperatorAmount > 0,
-                            amount: newOperatorAmount
-                        }
-                    };
-                });
-            }
+    // Handle status change
+    const handleStatusChange = (newStatus: string) => {
+        setEditableStatus(newStatus);
+        if (selectedOrder && onUpdateOrder) {
+            onUpdateOrder(selectedOrder.id, { status: newStatus });
+            toast.success(`Status updated to ${newStatus}`);
         }
-
-        console.log('Violation payment updated:', { violationId, field, isChecked });
     };
 
     // Calculate totals including driver and operator penalties
-    const totals = {
+    const totals = React.useMemo(() => ({
         get total_undisclosed_amount() {
-            // Calculate payment checklist total
-            const checklistTotal = Object.values(paymentChecklist).reduce((sum: number, item: any) =>
-                sum + (item.checked ? Number(item.amount) : 0), 0
-            );
+            // Helper function to safely convert to number
+            const safeNumber = (value: any): number => {
+                const num = Number(value);
+                return isNaN(num) || !isFinite(num) ? 0 : num;
+            };
 
-            // Calculate driver penalties total for checked violations
-            const driverPenaltiesTotal = violations.reduce((sum: number, violation: any) => {
-                if (violation.paid_driver) {
-                    const offenseLevel = getDriverOffenseLevel(violation.id);
-                    const penalty = Number(getDriverPenalty(offenseLevel));
-                    return sum + penalty;
+            // Calculate basic fees total
+            const basicFeesTotal = ['apprehension_fee', 'voluntary_fee', 'impound_fee'].reduce((sum: number, key: string) => {
+                const item = paymentChecklist[key];
+                if (item && item.checked) {
+                    return sum + safeNumber(item.amount);
                 }
                 return sum;
             }, 0);
 
-            // Calculate operator penalties total for checked violations
-            const operatorPenaltiesTotal = violations.reduce((sum: number, violation: any) => {
-                if (violation.paid_operator) {
-                    const offenseLevel = getOperatorOffenseLevel(violation.id);
-                    const penalty = Number(getOperatorPenalty(offenseLevel));
-                    return sum + penalty;
-                }
-                return sum;
-            }, 0);
+            // Use the calculated penalty totals
+            const driverTotal = driverPenaltiesTotal || 0;
+            const operatorTotal = operatorPenaltiesTotal || 0;
 
-            return checklistTotal + driverPenaltiesTotal + operatorPenaltiesTotal;
+            const total = basicFeesTotal + driverTotal + operatorTotal;
+
+            console.log('Total calculation:', {
+                basicFeesTotal,
+                driverTotal,
+                operatorTotal,
+                finalTotal: total
+            });
+
+            return total;
         },
         get grand_total_amount() {
-            // Calculate payment checklist total
-            const checklistTotal = Object.values(paymentChecklist).reduce((sum: number, item: any) =>
-                sum + (item.checked ? Number(item.amount) : 0), 0
-            );
-
-            // Calculate driver penalties total for checked violations
-            const driverPenaltiesTotal = violations.reduce((sum: number, violation: any) => {
-                if (violation.paid_driver) {
-                    const offenseLevel = getDriverOffenseLevel(violation.id);
-                    const penalty = Number(getDriverPenalty(offenseLevel));
-                    return sum + penalty;
-                }
-                return sum;
-            }, 0);
-
-            // Calculate operator penalties total for checked violations
-            const operatorPenaltiesTotal = violations.reduce((sum: number, violation: any) => {
-                if (violation.paid_operator) {
-                    const offenseLevel = getOperatorOffenseLevel(violation.id);
-                    const penalty = Number(getOperatorPenalty(offenseLevel));
-                    return sum + penalty;
-                }
-                return sum;
-            }, 0);
-
-            return checklistTotal + driverPenaltiesTotal + operatorPenaltiesTotal;
+            return this.total_undisclosed_amount;
         }
-    };
+    }), [paymentChecklist, driverPenaltiesTotal, operatorPenaltiesTotal]);
 
     // Actions
     const handleSaveOrder = () => {
+        // Calculate fees that should be included
+        const apprehensionAmount = paymentChecklist.apprehension_fee.checked ? paymentChecklist.apprehension_fee.amount : 0;
+        const voluntaryAmount = paymentChecklist.voluntary_fee.checked ? paymentChecklist.voluntary_fee.amount : 0;
+        const impoundAmount = paymentChecklist.impound_fee.checked ? paymentChecklist.impound_fee.amount : 0;
+
         const orderData = {
-            ...currentOrder,
-            testing_info: testingInfo,
-            payment_checklist: paymentChecklist,
+            // Basic order info
+            plate_number: currentOrder.plate_number,
+            operator_name: currentOrder.operator_name,
+            driver_name: currentOrder.driver_name || '',
+
+            // Testing info
+            testing_officer: testingInfo.testing_officer,
+            test_results: testingInfo.test_results,
+            date_of_testing: testingInfo.date_of_testing,
+
+            // Flatten payment checklist to individual fields
+            apprehension_fee: apprehensionAmount,
+            voluntary_fee: voluntaryAmount,
+            impound_fee: impoundAmount,
+
+            // Driver and operator penalty amounts
+            driver_amount: driverPenaltiesTotal,
+            operator_fee: operatorPenaltiesTotal,
+
+            // Totals
+            total_undisclosed_amount: apprehensionAmount + voluntaryAmount + impoundAmount + driverPenaltiesTotal + operatorPenaltiesTotal,
+            grand_total_amount: apprehensionAmount + voluntaryAmount + impoundAmount + driverPenaltiesTotal + operatorPenaltiesTotal,
+
+            // Payment info
             date_of_payment: dateOfPayment,
-            violations: violationsWithPayment,
-            totals
+            payment_or_number: `PAY-${Date.now()}`, // Generate a payment OR number
+
+            // Violations (convert to comma-separated string if needed)
+            selected_violations: violationsWithPayment.map(v => v.id).join(','),
+
+            // Status
+            status: 'unpaid'
         };
+
+        console.log('Saving order with data:', orderData);
+        console.log('Payment checklist state:', paymentChecklist);
+        console.log('Driver penalties total:', driverPenaltiesTotal);
+        console.log('Operator penalties total:', operatorPenaltiesTotal);
         onCreateOrder(orderData);
     };
 
     const handleCancelOrder = () => {
-        // Reset form or navigate back
-        console.log('Order cancelled');
+        // Reset all form data
+        setPaymentChecklist({
+            apprehension_fee: { checked: false, amount: 0 },
+            voluntary_fee: { checked: false, amount: 0 },
+            impound_fee: { checked: false, amount: 0 }
+        });
+
+        // Reset violations payment status
+        setViolationsWithPayment(prev =>
+            prev.map(violation => ({
+                ...violation,
+                paid_driver: false,
+                paid_operator: false
+            }))
+        );
+
+        // Reset testing info
+        setTestingInfo({
+            testing_officer: '',
+            test_results: '',
+            date_of_testing: new Date().toISOString().split('T')[0]
+        });
+
+        // Navigate back to order list
+        window.history.back();
+
+        console.log('Order form reset and navigated back');
     };
 
     const calculateFeesFromControl = () => {
@@ -764,14 +823,6 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
                 impound_fee: {
                     checked: calculatedFees.impound_fee > 0,
                     amount: calculatedFees.impound_fee
-                },
-                driver_amount: {
-                    checked: calculatedFees.driver_penalty > 0,
-                    amount: calculatedFees.driver_penalty
-                },
-                operator_fee: {
-                    checked: calculatedFees.operator_penalty > 0,
-                    amount: calculatedFees.operator_penalty
                 }
             }));
 
@@ -786,9 +837,7 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
         setPaymentChecklist({
             apprehension_fee: { checked: false, amount: 0 },
             voluntary_fee: { checked: false, amount: 0 },
-            impound_fee: { checked: false, amount: 0 },
-            driver_amount: { checked: false, amount: 0 },
-            operator_fee: { checked: false, amount: 0 }
+            impound_fee: { checked: false, amount: 0 }
         });
     };
 
@@ -800,13 +849,6 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
                 paid_operator: false
             }))
         );
-
-        // Also reset driver and operator amounts in payment checklist
-        setPaymentChecklist(prev => ({
-            ...prev,
-            driver_amount: { checked: false, amount: 0 },
-            operator_fee: { checked: false, amount: 0 }
-        }));
 
         console.log('Violations payment status reset');
     };
@@ -836,22 +878,232 @@ const OrderOfPaymentDetailsComponent: React.FC<OrderOfPaymentDetailsComponentPro
                 resetViolationsPayment={resetViolationsPayment}
                 feesLoading={feesLoading}
                 fees={fees}
+                driverPenaltiesTotal={driverPenaltiesTotal}
+                operatorPenaltiesTotal={operatorPenaltiesTotal}
             />
         );
     }
 
     // For existing orders, show order details
     return (
-        <div className="p-4">
-            <div className="text-center">
-                <h3 className="text-lg font-semibold">Order Details Component</h3>
-                <p className="text-gray-600">Component integration in progress</p>
-                {selectedOrder && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded">
-                        <p><strong>Control Number:</strong> {selectedOrder.oop_control_number || selectedOrder.control_number}</p>
-                        <p><strong>Plate Number:</strong> {selectedOrder.plate_number}</p>
-                        <p><strong>Operator:</strong> {selectedOrder.operator_name}</p>
-                        <p><strong>Status:</strong> {selectedOrder.status}</p>
+        <div className="h-full overflow-auto bg-white">
+            {/* Order of Payment Document */}
+            <div className="max-w-4xl mx-auto p-8 bg-white">
+                {/* Header */}
+                <div className="text-center mb-8 border-b-2 border-gray-300 pb-6">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">ORDER OF PAYMENT</h1>
+                    <p className="text-gray-600">Environmental Protection and Natural Resources Office</p>
+                    <p className="text-sm text-gray-500">Air Quality Management Division</p>
+                </div>
+
+                {selectedOrder ? (
+                    <>
+                        {/* Order Information */}
+                        <div className="mb-8">
+                            <div className="grid grid-cols-2 gap-8">
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-4 text-gray-900">Order Information</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700">Control Number:</span>
+                                            <span className="text-gray-900">{selectedOrder.oop_control_number || selectedOrder.control_number || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium text-gray-700">Status:</span>
+                                            <Select
+                                                value={editableStatus}
+                                                onValueChange={handleStatusChange}
+                                            >
+                                                <SelectTrigger className="w-32 h-7">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unpaid">
+                                                        <span className="flex items-center">
+                                                            <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                                                            Unpaid
+                                                        </span>
+                                                    </SelectItem>
+                                                    <SelectItem value="partially_paid">
+                                                        <span className="flex items-center">
+                                                            <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                                                            Partially Paid
+                                                        </span>
+                                                    </SelectItem>
+                                                    <SelectItem value="fully_paid">
+                                                        <span className="flex items-center">
+                                                            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                                            Fully Paid
+                                                        </span>
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700">Date Created:</span>
+                                            <span className="text-gray-900">{selectedOrder.created_at ? new Date(selectedOrder.created_at).toLocaleDateString() : 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700">Payment OR Number:</span>
+                                            <span className="text-gray-900">{selectedOrder.payment_or_number || 'Not yet paid'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-semibold mb-4 text-gray-900">Vehicle Information</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700">Plate Number:</span>
+                                            <span className="text-gray-900 font-mono text-lg">{selectedOrder.plate_number}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700">Operator Name:</span>
+                                            <span className="text-gray-900">{selectedOrder.operator_name}</span>
+                                        </div>
+                                        {selectedOrder.driver_name && (
+                                            <div className="flex justify-between">
+                                                <span className="font-medium text-gray-700">Driver Name:</span>
+                                                <span className="text-gray-900">{selectedOrder.driver_name}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Testing Information */}
+                        {(selectedOrder.testing_officer || selectedOrder.test_results || selectedOrder.date_of_testing) && (
+                            <div className="mb-8">
+                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Testing Information</h3>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {selectedOrder.testing_officer && (
+                                            <div>
+                                                <span className="font-medium text-gray-700 block">Testing Officer:</span>
+                                                <span className="text-gray-900">{selectedOrder.testing_officer}</span>
+                                            </div>
+                                        )}
+                                        {selectedOrder.test_results && (
+                                            <div>
+                                                <span className="font-medium text-gray-700 block">Test Results:</span>
+                                                <span className="text-gray-900">{selectedOrder.test_results}</span>
+                                            </div>
+                                        )}
+                                        {selectedOrder.date_of_testing && (
+                                            <div>
+                                                <span className="font-medium text-gray-700 block">Date of Testing:</span>
+                                                <span className="text-gray-900">{new Date(selectedOrder.date_of_testing).toLocaleDateString()}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Fees and Charges */}
+                        <div className="mb-8">
+                            <h3 className="text-lg font-semibold mb-4 text-gray-900">Fees and Charges Breakdown</h3>
+                            <div className="border border-gray-300 rounded-lg overflow-hidden">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left font-medium text-gray-700">Description</th>
+                                            <th className="px-4 py-3 text-right font-medium text-gray-700">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {/* Always show basic fees, even if 0 */}
+                                        <tr>
+                                            <td className="px-4 py-3 text-gray-900">Apprehension Fee</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono">₱{Number(selectedOrder.apprehension_fee || 0).toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-3 text-gray-900">Voluntary Fee</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono">₱{Number(selectedOrder.voluntary_fee || 0).toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-3 text-gray-900">Impound Fee</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono">₱{Number(selectedOrder.impound_fee || 0).toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-3 text-gray-900">Driver Penalties</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono">₱{Number(selectedOrder.driver_amount || 0).toLocaleString()}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="px-4 py-3 text-gray-900">Operator Penalties</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono">₱{Number(selectedOrder.operator_fee || 0).toLocaleString()}</td>
+                                        </tr>
+
+                                        {/* Subtotal calculation */}
+                                        <tr className="bg-gray-100">
+                                            <td className="px-4 py-3 text-gray-900 font-medium">Subtotal</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono font-medium">
+                                                ₱{(
+                                                    Number(selectedOrder.apprehension_fee || 0) +
+                                                    Number(selectedOrder.voluntary_fee || 0) +
+                                                    Number(selectedOrder.impound_fee || 0) +
+                                                    Number(selectedOrder.driver_amount || 0) +
+                                                    Number(selectedOrder.operator_fee || 0)
+                                                ).toLocaleString()}
+                                            </td>
+                                        </tr>
+
+                                        {/* Grand Total */}
+                                        <tr className="bg-gray-50 font-semibold">
+                                            <td className="px-4 py-3 text-gray-900 text-lg">TOTAL AMOUNT DUE</td>
+                                            <td className="px-4 py-3 text-right text-gray-900 font-mono text-lg">
+                                                ₱{(
+                                                    Number(selectedOrder.apprehension_fee || 0) +
+                                                    Number(selectedOrder.voluntary_fee || 0) +
+                                                    Number(selectedOrder.impound_fee || 0) +
+                                                    Number(selectedOrder.driver_amount || 0) +
+                                                    Number(selectedOrder.operator_fee || 0)
+                                                ).toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Payment Information */}
+                        <div className="mb-8">
+                            <h3 className="text-lg font-semibold mb-4 text-gray-900">Payment Information</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <span className="font-medium text-gray-700 block">Date of Payment:</span>
+                                        <span className="text-gray-900">
+                                            {selectedOrder.date_of_payment ? new Date(selectedOrder.date_of_payment).toLocaleDateString() : 'Not yet paid'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium text-gray-700 block">Payment Status:</span>
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${editableStatus === 'fully paid' ? 'bg-green-100 text-green-800' :
+                                                editableStatus === 'partially paid' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-red-100 text-red-800'
+                                            }`}>
+                                            {editableStatus === 'fully paid' ? 'FULLY PAID' :
+                                                editableStatus === 'partially paid' ? 'PARTIALLY PAID' :
+                                                    'UNPAID'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-12 pt-8 border-t border-gray-300">
+                            <div className="text-center text-sm text-gray-600">
+                                <p>This order of payment is valid and must be settled within the prescribed period.</p>
+                                <p className="mt-2">For inquiries, please contact the Air Quality Management Division.</p>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center py-8">
+                        <p className="text-gray-500">No order selected</p>
                     </div>
                 )}
             </div>

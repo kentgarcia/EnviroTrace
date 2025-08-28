@@ -47,8 +47,9 @@ export const downloadCSV = (csv: string, filename: string): void => {
   window.URL.revokeObjectURL(url);
 };
 
-export const formatCurrency = (amount: number): string => {
-  return `₱${amount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
+export const formatCurrency = (amount: number | string): string => {
+  const numAmount = Number(amount) || 0;
+  return `₱${numAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
 };
 
 export const formatDate = (dateString: string): string => {

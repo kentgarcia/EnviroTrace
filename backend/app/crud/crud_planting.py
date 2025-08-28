@@ -377,7 +377,6 @@ class CRUDSaplingRequest(CRUDBase[SaplingRequest, SaplingRequestCreate, SaplingR
             requester_name=data["requester_name"],
             address=data["address"],
             saplings=saplings_text,
-            monitoring_request_id=data.get("monitoring_request_id"),
         )
         db.add(db_obj)
         db.commit()

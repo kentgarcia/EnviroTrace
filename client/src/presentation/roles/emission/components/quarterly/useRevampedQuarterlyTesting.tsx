@@ -32,9 +32,9 @@ interface TestFormData {
 export const useRevampedQuarterlyTesting = () => {
     const currentYear = new Date().getFullYear();
 
-    // State
-    const [selectedYear, setSelectedYear] = useState<number | null>(null);
-    const [selectedOffices, setSelectedOffices] = useState<string[]>([]);
+    // State - Default to current year and all offices
+    const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+    const [selectedOffices, setSelectedOffices] = useState<string[]>(["all"]);
     const [search, setSearch] = useState("");
     const [isQuickTestOpen, setIsQuickTestOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
@@ -64,11 +64,6 @@ export const useRevampedQuarterlyTesting = () => {
 
     // Process vehicles with tests grouped by office
     const officeGroups = useMemo((): OfficeGroup[] => {
-        // Return empty array if no year selected
-        if (!selectedYear) {
-            return [];
-        }
-
         let filteredVehicles = vehicles;
 
         // Filter by offices
@@ -222,7 +217,7 @@ export const useRevampedQuarterlyTesting = () => {
                 const testData = {
                     vehicle_id: vehicleId,
                     test_date: currentDate,
-                    year: selectedYear!,
+                    year: selectedYear,
                     quarter,
                     result,
                     remarks: "",
@@ -266,7 +261,7 @@ export const useRevampedQuarterlyTesting = () => {
                     const testData = {
                         vehicle_id: vehicleId,
                         test_date: currentDate,
-                        year: selectedYear!,
+                        year: selectedYear,
                         quarter,
                         result,
                         remarks: "",
@@ -305,7 +300,7 @@ export const useRevampedQuarterlyTesting = () => {
                 const testData = {
                     vehicle_id: vehicleId,
                     test_date: currentDate,
-                    year: selectedYear!,
+                    year: selectedYear,
                     quarter,
                     result,
                     remarks: "",

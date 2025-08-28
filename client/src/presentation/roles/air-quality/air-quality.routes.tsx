@@ -8,6 +8,7 @@ import SmokeBelcher from "./pages/SmokeBelcher";
 import DriverQuery from "./pages/driver-query/DriverQuery";
 import GarageTesting from "./pages/GarageTesting";
 import OrderOfPaymentList from "./pages/order-of-payment/OrderOfPaymentList";
+import OrderOfPaymentDetails from "./pages/order-of-payment/OrderOfPaymentDetails";
 import OffendersReport from "./pages/OffendersReport";
 
 const createAirQualityRoute = (path: string, component: RouteComponent) => {
@@ -30,5 +31,6 @@ export const airQualityRoute = [
   createAirQualityRoute("/air-quality/driver-query", DriverQuery),
   createAirQualityRoute("/air-quality/garage-testing", GarageTesting),
   createAirQualityRoute("/air-quality/order-of-payment", OrderOfPaymentList),
+  createAirQualityRoute("/air-quality/order-of-payment/$orderId", OrderOfPaymentDetails),
   createAirQualityRoute("/air-quality/reports", OffendersReport),
 ];

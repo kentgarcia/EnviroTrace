@@ -589,11 +589,56 @@ class CRUDAirQualityOrderOfPayment(CRUDBase[AirQualityOrderOfPayment, AirQuality
 
     def update_sync(self, db: Session, *, db_obj: AirQualityOrderOfPayment, obj_in: AirQualityOrderOfPaymentUpdate) -> AirQualityOrderOfPayment:
         update_data = obj_in.model_dump(exclude_unset=True)
+        
+        # Check if status is being updated
+        status_changed = 'status' in update_data and update_data['status'] != db_obj.status
+        
         for field, value in update_data.items():
             setattr(db_obj, field, value)
+        
         db.commit()
         db.refresh(db_obj)
+        
+        # Sync payment status with violations if status changed
+        if status_changed:
+            self.sync_payment_status_with_violations(db, db_obj)
+        
         return db_obj
+
+    def sync_payment_status_with_violations(self, db: Session, order: AirQualityOrderOfPayment) -> None:
+        """Sync Order of Payment status with related violation payment status"""
+        if not order.selected_violations:
+            return
+        
+        # Parse violation IDs from comma-separated string
+        try:
+            violation_ids = [int(vid.strip()) for vid in order.selected_violations.split(',') if vid.strip()]
+        except (ValueError, AttributeError):
+            return
+        
+        # Update violation payment status based on order status
+        paid_driver = False
+        paid_operator = False
+        
+        if order.status == 'fully_paid':
+            paid_driver = True
+            paid_operator = True
+        elif order.status == 'partially_paid':
+            # For partially paid, we'll assume driver is paid (common scenario)
+            # This could be made more sophisticated based on business rules
+            paid_driver = True
+            paid_operator = False
+        # unpaid means both remain False
+        
+        # Update all related violations
+        db.query(AirQualityViolation).filter(
+            AirQualityViolation.id.in_(violation_ids)
+        ).update({
+            'paid_driver': paid_driver,
+            'paid_operator': paid_operator
+        }, synchronize_session=False)
+        
+        db.commit()
 
     def count_sync(self, db: Session) -> int:
         return db.query(self.model).count()

@@ -15,7 +15,7 @@ import { Office } from "@/core/api/emission-service";
 interface QuarterlyTestingFiltersProps {
     search: string;
     onSearchChange: (value: string) => void;
-    selectedYear: number | null;
+    selectedYear: number;
     availableYears: number[];
     onYearChange: (year: string) => void;
     selectedOffices: string[];

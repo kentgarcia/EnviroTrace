@@ -223,9 +223,6 @@ class SaplingRequest(Base):
     requester_name = Column(String(255), nullable=False)
     address = Column(String(500), nullable=False)
     saplings = Column(Text, nullable=False)  # JSON array string: [{ name, qty }]
-    
-    # Link to Monitoring Request
-    monitoring_request_id = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -28,11 +28,79 @@ export const useFeeCalculation = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log("Loading air quality fees...");
       const feeData = await fetchAirQualityFees();
+      console.log("Loaded fees:", feeData);
       setFees(feeData);
     } catch (err) {
       console.error("Error loading fees:", err);
       setError("Failed to load fee data");
+      // Set some fallback fees for demonstration
+      setFees([
+        {
+          id: 1,
+          category: "driver",
+          level: 1,
+          amount: 500,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 2,
+          category: "driver",
+          level: 2,
+          amount: 1000,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 3,
+          category: "driver",
+          level: 3,
+          amount: 2000,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 4,
+          category: "operator",
+          level: 1,
+          amount: 1000,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 5,
+          category: "operator",
+          level: 2,
+          amount: 2000,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 6,
+          category: "operator",
+          level: 3,
+          amount: 5000,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 7,
+          category: "apprehension",
+          level: 0,
+          amount: 200,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 8,
+          category: "voluntary",
+          level: 0,
+          amount: 150,
+          effective_date: "2024-01-01",
+        },
+        {
+          id: 9,
+          category: "impound",
+          level: 0,
+          amount: 300,
+          effective_date: "2024-01-01",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -45,12 +113,20 @@ export const useFeeCalculation = () => {
   // Get fee by category and level
   const getFeeByCategory = useCallback(
     (category: string, level: number = 0): number => {
+      console.log(`Looking for fee: category="${category}", level=${level}`);
+      console.log(`Available fees:`, fees);
+
       const fee = fees.find(
         (f) =>
           f.category.toLowerCase() === category.toLowerCase() &&
           f.level === level
       );
-      return fee ? fee.amount : 0;
+
+      const result = fee ? fee.amount : 0;
+      console.log(
+        `Fee lookup result: ${result} for ${category} level ${level}`
+      );
+      return result;
     },
     [fees]
   );

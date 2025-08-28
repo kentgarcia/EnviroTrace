@@ -189,12 +189,14 @@ export const useEmissionOverviewData = (
 
     return months.map((month) => {
       const tests = safeNumber(Math.floor(Math.random() * 50) + 20, 20);
-      const compliance = safeNumber(Math.floor(Math.random() * 30) + 70, 70);
+      // Ensure compliance is always <= tests (70-95% compliance rate)
+      const complianceRate = Math.random() * 0.25 + 0.7; // 70% to 95%
+      const compliance = safeNumber(Math.floor(tests * complianceRate), 0);
 
       return {
         month,
         tests,
-        compliance,
+        compliance: Math.min(compliance, tests), // Additional safety check
       };
     });
   }, []);
