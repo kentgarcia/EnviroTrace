@@ -1,4 +1,4 @@
-# Eco Dashboard Navigator
+# EnviroTrace
 
 A comprehensive **multi-role environmental management system** designed for environmental monitoring, vehicle emission tracking, air quality management, and urban greening initiatives. The system provides cross-platform access through web, desktop, and mobile applications with role-based dashboards for different user types.
 
