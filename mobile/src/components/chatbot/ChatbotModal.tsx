@@ -19,6 +19,7 @@ import { Portal, Dialog, useTheme, IconButton, Surface } from "react-native-pape
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
 import DataDisplay, { ActionButtons } from "./DataDisplay";
 import Icon from "../icons/Icon";
+import MarkdownText from "../MarkdownText";
 
 interface ChatbotModalProps {
     visible: boolean;
@@ -219,12 +220,14 @@ export default function ChatbotModal({ visible, onDismiss }: ChatbotModalProps) 
                         styles.messageBubble,
                         isUser ? styles.userBubble : styles.botBubble,
                     ]}>
-                        <Text style={[
-                            styles.messageText,
-                            isUser ? styles.userText : styles.botText,
-                        ]}>
-                            {message.content}
-                        </Text>
+                        <MarkdownText
+                            content={message.content}
+                            style={[
+                                styles.messageText,
+                                isUser ? styles.userText : styles.botText,
+                            ]}
+                            linkStyle={{ color: isUser ? '#BBDEFB' : '#1E88E5' }}
+                        />
 
                         <Text style={[
                             styles.timestamp,

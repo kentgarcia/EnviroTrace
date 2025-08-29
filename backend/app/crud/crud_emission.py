@@ -245,7 +245,24 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     
     def get_by_plate_number(self, db: Session, *, plate_number: str) -> Optional[Vehicle]:
         """Get vehicle by plate number"""
-        return db.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
+        vehicle = db.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
+        if not vehicle:
+            return None
+
+        # Attach latest test info so callers can safely read these attributes
+        latest_test = db.query(Test)\
+            .filter(Test.vehicle_id == vehicle.id)\
+            .order_by(desc(Test.test_date))\
+            .first()
+
+        if latest_test:
+            setattr(vehicle, "latest_test_result", latest_test.result)
+            setattr(vehicle, "latest_test_date", latest_test.test_date)
+        else:
+            setattr(vehicle, "latest_test_result", None)
+            setattr(vehicle, "latest_test_date", None)
+
+        return vehicle
 
 class CRUDTest(CRUDBase[Test, TestCreate, TestUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Test]:

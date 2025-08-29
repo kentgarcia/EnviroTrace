@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, Circle, CircleMarker, Popup, Tooltip } from "react-leaflet";
 import L, { LatLngExpression } from "leaflet";
 import ReactDOMServer from "react-dom/server";
 import { MapPin, AlertCircle } from "lucide-react";
@@ -78,16 +78,29 @@ const MapViewUpdater: React.FC<{ center: LatLngExpression; zoom: number }> = ({
   return null;
 };
 
+interface Hotspot {
+  lat: number;
+  lng: number;
+  label?: string;
+  radius?: number; // meters
+}
+
 interface LocationMapProps {
   location: Coordinates;
   zoom?: number;
   height?: number;
+  // radii (in meters) to draw concentric circles around the central location
+  radii?: number[];
+  // optional hotspots to highlight on the map
+  hotspots?: Hotspot[];
 }
 
 export default function LocationMap({
   location,
   zoom = 15,
-  height = 180
+  height = 180,
+  radii = [200, 400, 500],
+  hotspots = []
 }: LocationMapProps) {
   const defaultIcon = React.useMemo(() => createIcon(), []);
 
@@ -146,6 +159,47 @@ export default function LocationMap({
           maxZoom={19}
         />
         <Marker position={mapCenter} icon={defaultIcon} />
+        {/* concentric radius circles for zones */}
+        {radii.map((r, idx) => (
+          <Circle
+            key={`radius-${r}`}
+            center={mapCenter}
+            radius={r}
+            pathOptions={{
+              color: idx === 0 ? '#16a34a' : idx === 1 ? '#f59e0b' : '#3b82f6',
+              weight: 2,
+              dashArray: '6',
+              opacity: 0.45
+            }}
+          />
+        ))}
+
+        {/* Hotspot markers: darker, larger center marker with subtle glow circle for visibility */}
+        {hotspots.map((h, i) => (
+          <React.Fragment key={`hotspot-${i}`}>
+            {/* glow / hotspot area (uses provided radius or a default) */}
+            <Circle
+              center={[h.lat, h.lng]}
+              radius={h.radius && h.radius > 0 ? h.radius : 30}
+              pathOptions={{
+                color: '#7f1d1d',
+                fillColor: '#7f1d1d',
+                fillOpacity: 0.12,
+                weight: 0
+              }}
+            />
+
+            {/* visible hotspot marker */}
+            <CircleMarker
+              center={[h.lat, h.lng]}
+              radius={10}
+              pathOptions={{ color: '#7f1d1d', fillColor: '#7f1d1d', fillOpacity: 1, weight: 2, opacity: 0.95 }}
+            >
+              <Popup>{h.label || `Hotspot ${i + 1}`}</Popup>
+              <Tooltip direction="top">{h.label || `Hotspot ${i + 1}`}</Tooltip>
+            </CircleMarker>
+          </React.Fragment>
+        ))}
         <MapViewUpdater center={mapCenter} zoom={zoom} />
       </MapContainer>
     </div>

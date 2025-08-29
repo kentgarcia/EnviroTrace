@@ -462,6 +462,10 @@ async def recognize_license_plate(
         
         if vehicle:
             # Vehicle found - return vehicle details
+            # Safely read dynamic attributes that may not be present on ORM object
+            latest_test_result = getattr(vehicle, "latest_test_result", None)
+            latest_test_date = getattr(vehicle, "latest_test_date", None)
+
             vehicle_details = {
                 "id": str(vehicle.id),
                 "driver_name": vehicle.driver_name,
@@ -472,8 +476,8 @@ async def recognize_license_plate(
                 "plate_number": vehicle.plate_number,
                 "vehicle_type": vehicle.vehicle_type,
                 "wheels": vehicle.wheels,
-                "latest_test_result": vehicle.latest_test_result,
-                "latest_test_date": vehicle.latest_test_date.isoformat() if vehicle.latest_test_date else None,
+                "latest_test_result": latest_test_result,
+                "latest_test_date": latest_test_date.isoformat() if latest_test_date else None,
             }
             
             return {

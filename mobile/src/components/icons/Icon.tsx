@@ -50,6 +50,8 @@ import {
     Send,
     Minimize2,
     Maximize2,
+    Eye,
+    EyeOff,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -100,6 +102,8 @@ const ICONS = {
     Send,
     Minimize2,
     Maximize2,
+    Eye,
+    EyeOff,
 } as const;
 
 // Supported icon names mapping from existing MaterialIcons names to Lucide icons
@@ -151,8 +155,15 @@ const nameMap: Record<string, keyof typeof ICONS> = {
     // edit and delete icons
     pencil: "Edit",
     delete: "Trash2",
+    // password visibility
+    eye: "Eye",
+    "eye-off": "EyeOff",
     // chatbot icons
     bot: "Bot",
+    // material 'psychology' used in ChatbotModal -> map to bot
+    psychology: "Bot",
+    // alias used by some components / Paper FABs
+    robot: "Bot",
     "message-circle": "MessageCircle",
     send: "Send",
     "minimize-2": "Minimize2",

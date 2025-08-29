@@ -21,12 +21,39 @@ def _serialize(obj) -> dict:
         saplings = json.loads(obj.saplings) if isinstance(obj.saplings, str) else (obj.saplings or [])
     except Exception:
         saplings = []
+    # Normalize sapling items to objects { name: str, qty: int }
+    def _normalize_item(it):
+        # If already a dict-like object, try to extract expected fields
+        if isinstance(it, dict):
+            name = it.get("name") or it.get("species") or it.get("species_name") or None
+            qty = it.get("qty") or it.get("quantity") or it.get("quantity_planted") or it.get("quantity_collected") or None
+            try:
+                qty = int(qty) if qty is not None else 1
+            except Exception:
+                qty = 1
+            return {"name": name or "", "qty": qty}
+        # If it's a legacy string like "Bougainvillea: 6", parse it
+        if isinstance(it, str):
+            import re
+            m = re.match(r"^(?P<name>.+?):\s*(?P<qty>\d+)$", it.strip())
+            if m:
+                return {"name": m.group("name").strip(), "qty": int(m.group("qty"))}
+            # fallback: whole string as name, qty 1
+            return {"name": it.strip(), "qty": 1}
+        # Unknown type -> stringify
+        try:
+            return {"name": str(it), "qty": 1}
+        except Exception:
+            return {"name": "", "qty": 1}
+
+    normalized = [_normalize_item(s) for s in saplings]
+
     return {
         "id": str(obj.id),
         "date_received": obj.date_received,
         "requester_name": obj.requester_name,
         "address": obj.address,
-        "saplings": saplings,
+        "saplings": normalized,
         "created_at": obj.created_at,
         "updated_at": obj.updated_at,
     }

@@ -182,6 +182,56 @@ class SaplingRequestBase(BaseModel):
     address: str
     saplings: list[SaplingItem]
 
+    # Accept both list of objects, list of legacy strings ("Name: N") or JSON string
+    @field_validator("saplings", mode="before")
+    @classmethod
+    def parse_saplings(cls, v):
+        # None -> empty list
+        if v is None:
+            return []
+        # Already a list -> normalize items below
+        if isinstance(v, list):
+            raw_items = v
+        elif isinstance(v, str):
+            # Try to parse JSON string
+            import json
+            try:
+                parsed = json.loads(v)
+                raw_items = parsed if isinstance(parsed, list) else []
+            except Exception:
+                # Not JSON: treat as single legacy string entry
+                raw_items = [v]
+        else:
+            # Unknown types -> empty
+            raw_items = []
+
+        normalized = []
+        for it in raw_items:
+            if isinstance(it, dict):
+                name = it.get("name") or it.get("species") or it.get("species_name") or ""
+                qty = it.get("qty") or it.get("quantity") or 1
+                try:
+                    qty = int(qty)
+                except Exception:
+                    qty = 1
+                normalized.append({"name": name, "qty": qty})
+                continue
+            if isinstance(it, str):
+                import re
+                m = re.match(r"^(?P<name>.+?):\s*(?P<qty>\d+)$", it.strip())
+                if m:
+                    normalized.append({"name": m.group("name").strip(), "qty": int(m.group("qty"))})
+                else:
+                    normalized.append({"name": it.strip(), "qty": 1})
+                continue
+            # Fallback
+            try:
+                normalized.append({"name": str(it), "qty": 1})
+            except Exception:
+                normalized.append({"name": "", "qty": 1})
+
+        return normalized
+
 class SaplingRequestCreate(SaplingRequestBase):
     pass
 
@@ -190,6 +240,52 @@ class SaplingRequestUpdate(BaseModel):
     requester_name: Optional[str] = None
     address: Optional[str] = None
     saplings: Optional[list[SaplingItem]] = None
+
+    @field_validator("saplings", mode="before")
+    @classmethod
+    def parse_saplings_update(cls, v):
+        # Reuse parser from create: accept same formats
+        if v is None:
+            return None
+        # Leverage the create parser logic by instantiating SaplingRequestBase validator
+        # Simpler: duplicate minimal parsing
+        if isinstance(v, list):
+            raw_items = v
+        elif isinstance(v, str):
+            import json
+            try:
+                parsed = json.loads(v)
+                raw_items = parsed if isinstance(parsed, list) else [v]
+            except Exception:
+                raw_items = [v]
+        else:
+            raw_items = []
+
+        normalized = []
+        for it in raw_items:
+            if isinstance(it, dict):
+                name = it.get("name") or it.get("species") or it.get("species_name") or ""
+                qty = it.get("qty") or it.get("quantity") or 1
+                try:
+                    qty = int(qty)
+                except Exception:
+                    qty = 1
+                normalized.append({"name": name, "qty": qty})
+                continue
+            if isinstance(it, str):
+                import re
+                m = re.match(r"^(?P<name>.+?):\s*(?P<qty>\d+)$", it.strip())
+                if m:
+                    normalized.append({"name": m.group("name").strip(), "qty": int(m.group("qty"))})
+                else:
+                    normalized.append({"name": it.strip(), "qty": 1})
+                continue
+            try:
+                normalized.append({"name": str(it), "qty": 1})
+            except Exception:
+                normalized.append({"name": "", "qty": 1})
+
+        return normalized
 
 class SaplingRequestInDB(SaplingRequestBase):
     id: UUID
