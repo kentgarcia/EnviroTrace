@@ -4,7 +4,7 @@ A comprehensive **multi-role environmental management system** designed for envi
 
 ## 🌍 Project Overview
 
-The Eco Dashboard Navigator is built around a **role-based architecture** supporting multiple environmental domains:
+The EnviroTrace System is built around a **role-based architecture** supporting multiple environmental domains:
 
 - **Admin**: System administration and user management
 - **Air Quality Monitoring**: Real-time air quality data collection and analysis
