@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.epnro.govemission"
@@ -36,7 +38,9 @@
         {
           "enableFTS": true
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store"
     ],
     "scheme": "gov-emission"
   }

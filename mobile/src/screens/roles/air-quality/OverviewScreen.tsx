@@ -48,7 +48,7 @@ export default function OverviewScreen() {
     <>
       <StandardHeader
         title="Air Quality Dashboard"
-        chip={{ label: "Air Quality", iconName: "weather-windy" }}
+       
       />
       <ScrollView
         style={styles.scrollView}

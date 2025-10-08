@@ -6,9 +6,26 @@ import MainNavigator from "./MainNavigator";
 import TreeManagementNavigator from "./TreeManagementNavigator";
 import AirQualityNavigator from "./AirQualityNavigator";
 import DashboardSelectorScreen from "../screens/main/DashboardSelectorScreen";
-import RoleDashboardPlaceholder from "../screens/roles/gov-emission/RoleDashboardPlaceholder";
+import ProfileScreen from "../screens/main/ProfileScreen";
+import AIAssistantScreen from "../screens/main/AIAssistantScreen";
 
 const Stack = createNativeStackNavigator();
+const SelectorStack = createNativeStackNavigator();
+
+function DashboardSelectorNavigator() {
+  return (
+    <SelectorStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+      }}
+    >
+      <SelectorStack.Screen name="DashboardSelectorMain" component={DashboardSelectorScreen} />
+      <SelectorStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <SelectorStack.Screen name="AIAssistant" component={AIAssistantScreen} />
+    </SelectorStack.Navigator>
+  );
+}
 
 export default function AppNavigator() {
   const { isAuthenticated, selectedDashboard } = useAuthStore();
@@ -31,7 +48,7 @@ export default function AppNavigator() {
       ) : !selectedDashboard ? (
         <Stack.Screen
           name="DashboardSelector"
-          component={DashboardSelectorScreen}
+          component={DashboardSelectorNavigator}
           options={{
             gestureEnabled: false,
           }}

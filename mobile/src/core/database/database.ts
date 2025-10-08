@@ -130,6 +130,10 @@ class DatabaseManager {
         CREATE INDEX IF NOT EXISTS idx_sync_status_offices ON offices (sync_status);
       `);
 
+      // Initialize sync queue tables
+      const { syncQueue } = await import("./sync-queue");
+      await syncQueue.init();
+
       console.log("All tables and indexes created successfully");
     } catch (error) {
       console.error("Error creating tables:", error);
@@ -201,6 +205,11 @@ class DatabaseManager {
     if (!this.db) return;
 
     try {
+      // Import sync queue dynamically to avoid circular dependencies
+      const { syncQueue } = await import("./sync-queue");
+      const exists = await this.getVehicleById(vehicle.id);
+      const operation = exists ? "update" : "create";
+
       await this.db.runAsync(
         `INSERT OR REPLACE INTO vehicles (
           id, driver_name, contact_number, engine_type, office_id, office_name,
@@ -228,6 +237,20 @@ class DatabaseManager {
           vehicle.sync_status,
         ]
       );
+
+      // Enqueue for sync if not already synced
+      if (vehicle.sync_status !== "synced") {
+        await syncQueue.enqueue("vehicle", vehicle.id, operation, {
+          driver_name: vehicle.driver_name,
+          contact_number: vehicle.contact_number,
+          engine_type: vehicle.engine_type,
+          office_id: vehicle.office_id,
+          plate_number: vehicle.plate_number,
+          vehicle_type: vehicle.vehicle_type,
+          wheels: vehicle.wheels,
+          updated_at: vehicle.updated_at || new Date().toISOString(),
+        });
+      }
     } catch (error) {
       console.error("Error saving vehicle:", error);
       throw error;
@@ -289,6 +312,16 @@ class DatabaseManager {
     if (!this.db) return;
 
     try {
+      // Import sync queue dynamically to avoid circular dependencies
+      const { syncQueue } = await import("./sync-queue");
+
+      // Check if test exists by querying
+      const existing = await this.db.getFirstAsync<LocalEmissionTest>(
+        "SELECT * FROM emission_tests WHERE id = ?",
+        [test.id]
+      );
+      const operation = existing ? "update" : "create";
+
       await this.db.runAsync(
         `INSERT OR REPLACE INTO emission_tests (
           id, vehicle_id, test_date, quarter, year, result, remarks,
@@ -308,6 +341,19 @@ class DatabaseManager {
           test.sync_status,
         ]
       );
+
+      // Enqueue for sync if not already synced
+      if (test.sync_status !== "synced") {
+        await syncQueue.enqueue("test", test.id, operation, {
+          vehicle_id: test.vehicle_id,
+          test_date: test.test_date,
+          quarter: test.quarter,
+          year: test.year,
+          result: test.result,
+          remarks: test.remarks,
+          updated_at: test.updated_at || new Date().toISOString(),
+        });
+      }
     } catch (error) {
       console.error("Error saving emission test:", error);
       throw error;

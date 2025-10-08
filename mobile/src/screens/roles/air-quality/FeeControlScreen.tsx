@@ -322,7 +322,7 @@ export default function FeeControlScreen() {
             <StandardHeader
                 title="Fee Control"
                 showBack={true}
-                chip={{ label: "Air Quality", iconName: "air" }}
+               
             />
 
             <View style={styles.container}>

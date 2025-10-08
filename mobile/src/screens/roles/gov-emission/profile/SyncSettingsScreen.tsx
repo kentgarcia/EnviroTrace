@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Title, Paragraph, Switch, Button, Divider, useTheme, Menu } from "react-native-paper";
-import StandardHeader from "../../../components/layout/StandardHeader";
-import Icon from "../../../components/icons/Icon";
-import { useNetworkSync } from "../../../hooks/useNetworkSync";
+import StandardHeader from "../../../../components/layout/StandardHeader";
+import Icon from "../../../../components/icons/Icon";
+import { useNetworkSync } from "../../../../hooks/useNetworkSync";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SETTINGS_KEY = "sync_settings";
@@ -38,7 +38,7 @@ export default function SyncSettingsScreen() {
 
     return (
         <>
-            <StandardHeader title="Sync Settings" chip={{ label: "Gov. Emission", iconName: "sync" }} showBack />
+            <StandardHeader title="Sync Settings" showBack />
             <View style={styles.container}>
                 <View style={styles.card}>
                     <Title style={styles.title}>Synchronization</Title>

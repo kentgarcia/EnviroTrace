@@ -58,7 +58,7 @@ export default function TreeManagementOverviewScreen() {
         <>
             <StandardHeader
                 title="Dashboard"
-                chip={{ label: "Tree Management", iconName: "park" }}
+               
             />
             <ScrollView
                 style={styles.scrollView}

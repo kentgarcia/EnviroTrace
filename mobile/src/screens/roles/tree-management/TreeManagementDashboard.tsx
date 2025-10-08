@@ -45,7 +45,7 @@ export default function TreeManagementDashboard() {
         <>
             <StandardHeader
                 title="Tree Management"
-                chip={{ label: "Tree Management", iconName: "park" }}
+               
                 showBack={false}
             />
             <SafeAreaView style={styles.container}>

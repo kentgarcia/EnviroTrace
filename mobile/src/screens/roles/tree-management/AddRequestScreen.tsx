@@ -150,7 +150,7 @@ export default function AddRequestScreen() {
             <StandardHeader
                 title="Add Request"
                 showBack
-                chip={{ label: "Tree Management", iconName: "park" }}
+               
             />
             <SafeAreaView style={styles.container}>
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>

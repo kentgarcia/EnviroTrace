@@ -157,7 +157,7 @@ export default function SmokeBelcherScreen() {
             <StandardHeader
                 title="Smoke Belcher Records"
                 showBack={true}
-                chip={{ label: "Air Quality", iconName: "air" }}
+               
             />
 
             <View style={styles.container}>

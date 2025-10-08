@@ -353,7 +353,7 @@ export default function TreeRequestsScreen() {
         <>
             <StandardHeader
                 title="Tree Requests"
-                chip={{ label: "Tree Management", iconName: "park" }}
+               
             />
             <View style={styles.container}>
                 {/* Search and Filter Section */}

@@ -121,7 +121,7 @@ export default function AddSmokeBelcherRecordScreen() {
             <StandardHeader
                 title="Add Record"
                 showBack={true}
-                chip={{ label: "Air Quality", iconName: "air" }}
+               
             />
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>

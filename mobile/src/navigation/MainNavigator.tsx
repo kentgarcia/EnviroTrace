@@ -1,19 +1,19 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import Icon from "../components/icons/Icon";
 
-// Screens - will create these next
-import OverviewScreen from "../screens/roles/gov-emission/OverviewScreen";
-import VehiclesScreen from "../screens/roles/gov-emission/VehiclesScreen";
-import TestingScreen from "../screens/roles/gov-emission/TestingScreen";
-import OfficesScreen from "../screens/roles/gov-emission/OfficesScreen";
-import ProfileScreen from "../screens/roles/gov-emission/ProfileScreen";
-import OfflineDataScreen from "../screens/roles/gov-emission/OfflineDataScreen";
-import SyncSettingsScreen from "../screens/roles/gov-emission/SyncSettingsScreen";
-import VehicleDetailScreen from "../screens/roles/gov-emission/VehicleDetailScreen";
-import AddVehicleScreen from "../screens/roles/gov-emission/AddVehicleScreen";
-import AddTestScreen from "../screens/roles/gov-emission/AddTestScreen";
+import OverviewScreen from "../screens/roles/gov-emission/overview/OverviewScreen";
+import VehiclesScreen from "../screens/roles/gov-emission/vehicles/VehiclesScreen";
+import TestingScreen from "../screens/roles/gov-emission/test/TestingScreen";
+import OfficesScreen from "../screens/roles/gov-emission/offices/OfficesScreen";
+import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
+import OfflineDataScreen from "../screens/roles/gov-emission/profile/OfflineDataScreen";
+import SyncSettingsScreen from "../screens/roles/gov-emission/profile/SyncSettingsScreen";
+import VehicleDetailScreen from "../screens/roles/gov-emission/vehicles/VehicleDetailScreen";
+import AddVehicleScreen from "../screens/roles/gov-emission/vehicles/AddVehicleScreen";
+import AddTestScreen from "../screens/roles/gov-emission/test/AddTestScreen";
 import CustomBottomTabBar from "../components/layout/CustomBottomTabBar";
 
 export type MainStackParamList = {
@@ -41,7 +41,9 @@ function VehiclesStack() {
       <Stack.Screen
         name="VehicleDetail"
         component={VehicleDetailScreen}
-        options={{ title: "Vehicle Details" }}
+        options={{
+          title: "Vehicle Details",
+        }}
       />
       <Stack.Screen
         name="AddVehicle"
@@ -81,6 +83,25 @@ function ProfileStack() {
       <Stack.Screen name="ProfileHome" component={ProfileScreen} />
       <Stack.Screen name="OfflineData" component={OfflineDataScreen} />
       <Stack.Screen name="SyncSettings" component={SyncSettingsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function OfficesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen
+        name="OfficesList"
+        component={OfficesScreen}
+        options={{ title: "Government Offices" }}
+      />
+      <Stack.Screen
+        name="VehicleDetail"
+        component={VehicleDetailScreen}
+        options={{
+          title: "Vehicle Details",
+        }}
+      />
     </Stack.Navigator>
   );
 }
@@ -144,37 +165,67 @@ export default function MainNavigator() {
       <Tab.Screen
         name="Vehicles"
         component={VehiclesStack}
-        options={{
-          title: "Vehicle Management",
-          tabBarLabel: "Vehicles",
-          headerShown: false, // VehiclesStack will handle its own headers
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "VehiclesList";
+          return {
+            title: "Vehicle Management",
+            tabBarLabel: "Vehicles",
+            headerShown: false,
+            tabBarStyle: routeName === "VehicleDetail" || routeName === "AddVehicle"
+              ? { display: "none" }
+              : undefined,
+          };
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Reset to root when tab is pressed
+            navigation.navigate("Vehicles", { screen: "VehiclesList" });
+          },
+        })}
       />
       <Tab.Screen
         name="Testing"
         component={TestingStack}
-        options={{
-          title: "Emission Testing",
-          tabBarLabel: "Testing",
-          headerShown: false, // TestingStack will handle its own headers
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "TestingList";
+          return {
+            title: "Emission Testing",
+            tabBarLabel: "Testing",
+            headerShown: false,
+            tabBarStyle: routeName === "AddTest"
+              ? { display: "none" }
+              : undefined,
+          };
         }}
       />
       <Tab.Screen
         name="Offices"
-        component={OfficesScreen}
-        options={{
-          title: "Government Offices",
-          tabBarLabel: "Offices",
-          headerShown: false,
+        component={OfficesStack}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "OfficesList";
+          return {
+            title: "Government Offices",
+            tabBarLabel: "Offices",
+            headerShown: false,
+            tabBarStyle: routeName === "VehicleDetail"
+              ? { display: "none" }
+              : undefined,
+          };
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
-        options={{
-          title: "Profile & Settings",
-          tabBarLabel: "Profile",
-          headerShown: false,
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? "ProfileHome";
+          return {
+            title: "Profile & Settings",
+            tabBarLabel: "Profile",
+            headerShown: false,
+            tabBarStyle: routeName === "OfflineData" || routeName === "SyncSettings"
+              ? { display: "none" }
+              : undefined,
+          };
         }}
       />
     </Tab.Navigator>

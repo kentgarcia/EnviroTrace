@@ -11,7 +11,7 @@ import {
   TabsTrigger,
 } from "@/presentation/components/shared/ui/tabs";
 import { QuarterlyTestingFilters } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingFilters";
-import OfficeVehicleTable from "@/presentation/roles/emission/components/quarterly/OfficeVehicleTable";
+import VehicleTestingSpreadsheet from "@/presentation/roles/emission/components/quarterly/VehicleTestingSpreadsheet";
 import { QuickTestForm } from "@/presentation/roles/emission/components/quarterly/QuickTestForm";
 import { QuarterlyTestingSummary } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingSummary";
 import { QuarterlyOverview } from "@/presentation/roles/emission/components/quarterly/QuarterlyOverview";
@@ -143,16 +143,19 @@ export default function QuarterlyTesting() {
                 ) : (
                   <Card className="border border-gray-200 shadow-none rounded-none bg-white">
                     <div className="p-6">
-                      <OfficeVehicleTable
+                      <VehicleTestingSpreadsheet
                         officeGroups={officeGroups}
                         selectedYear={selectedYear}
                         isLoading={isLoading}
-                        onAddTest={handleAddTest}
-                        onEditTest={handleEditTest}
-                        onAddRemarks={handleAddRemarks}
-                        onBatchAddTests={handleBatchAddTests}
                         onUpdateTest={handleUpdateTest}
-                        onBatchUpdateTests={handleBatchUpdateTests}
+                        onAddRemarks={handleAddRemarks}
+                        onLaunchQuickTest={(vehicleId, quarter, existingTest) => {
+                          if (existingTest) {
+                            handleEditTest(existingTest);
+                          } else {
+                            handleAddTest(vehicleId, quarter);
+                          }
+                        }}
                       />
                     </div>
                   </Card>

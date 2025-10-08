@@ -13,6 +13,7 @@ export { YearSelector } from "./YearSelector";
 
 // New revamped components
 export { OfficeVehicleTable } from "./OfficeVehicleTable";
+export { VehicleTestingSpreadsheet } from "./VehicleTestingSpreadsheet";
 export { QuickTestForm } from "./QuickTestForm";
 export { QuarterlyTestingSummary } from "./QuarterlyTestingSummary";
 export { useRevampedQuarterlyTesting } from "./useRevampedQuarterlyTesting";

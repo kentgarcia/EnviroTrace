@@ -3,6 +3,7 @@ import { ViewStyle } from "react-native";
 import {
     // tabs & common
     LayoutDashboard,
+    LayoutGrid,
     Car,
     ClipboardList,
     Building2,
@@ -16,6 +17,8 @@ import {
     CirclePlus,
     CalendarDays,
     ChevronRight,
+    ChevronLeft,
+    ChevronDown,
     Database,
     Info,
     BarChart3,
@@ -52,10 +55,24 @@ import {
     Maximize2,
     Eye,
     EyeOff,
+    Lock,
+    Bell,
+    Settings,
+    Fuel,
+    CircleDot,
+    Camera,
+    Hash,
+    XCircle,
+    Save,
+    Mail,
+    CameraOff,
+    SwitchCamera,
+    Hourglass,
 } from "lucide-react-native";
 
 const ICONS = {
     LayoutDashboard,
+    LayoutGrid,
     Car,
     ClipboardList,
     Building2,
@@ -68,6 +85,8 @@ const ICONS = {
     CirclePlus,
     CalendarDays,
     ChevronRight,
+    ChevronLeft,
+    ChevronDown,
     Database,
     Info,
     BarChart3,
@@ -104,6 +123,20 @@ const ICONS = {
     Maximize2,
     Eye,
     EyeOff,
+    Lock,
+    Bell,
+    Settings,
+    Fuel,
+    CircleDot,
+    Camera,
+    Hash,
+    XCircle,
+    Save,
+    Mail,
+    CameraOff,
+    SwitchCamera,
+    Hourglass,
+    CheckCircle: CheckCircle2, // Alias
 } as const;
 
 // Supported icon names mapping from existing MaterialIcons names to Lucide icons
@@ -176,6 +209,18 @@ const nameMap: Record<string, keyof typeof ICONS> = {
     magnify: "Search",
     close: "X",
     phone: "Phone",
+    lock: "Lock",
+    "lock-outline": "Lock",
+    bell: "Bell",
+    "bell-outline": "Bell",
+    settings: "Settings",
+    "settings-outline": "Settings",
+    // camera icons
+    "camera-off": "CameraOff",
+    camera: "Camera",
+    "flip-camera-ios": "SwitchCamera",
+    "switch-camera": "SwitchCamera",
+    "hourglass-empty": "Hourglass",
 };
 
 export type IconName = keyof typeof nameMap | keyof typeof ICONS;

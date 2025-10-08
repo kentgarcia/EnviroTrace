@@ -27,6 +27,7 @@ interface AuthState {
   checkAuth: () => Promise<void>;
   clearError: () => void;
   refreshProfile: () => Promise<void>;
+  finalizeLogin: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -35,6 +36,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   selectedDashboard: null,
+  finalizeLogin: () => {
+    const { user } = get();
+    if (!user) {
+      console.warn(
+        "finalizeLogin called without an authenticated user context"
+      );
+      return;
+    }
+    set({ isAuthenticated: true });
+  },
 
   setSelectedDashboard: async (dashboard: string | null) => {
     try {
@@ -100,9 +111,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({
         user,
-        isAuthenticated: true,
+        isAuthenticated: false,
         isLoading: false,
         error: null,
+        selectedDashboard: null,
       });
 
       console.log("Login completed successfully");

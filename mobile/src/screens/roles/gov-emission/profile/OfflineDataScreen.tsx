@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import { Title, Paragraph, Button, Divider, useTheme } from "react-native-paper";
-import StandardHeader from "../../../components/layout/StandardHeader";
-import Icon from "../../../components/icons/Icon";
-import { database } from "../../../core/database/database";
+import StandardHeader from "../../../../components/layout/StandardHeader";
+import Icon from "../../../../components/icons/Icon";
+import { database } from "../../../../core/database/database";
 
 export default function OfflineDataScreen() {
     const { colors } = useTheme();
@@ -45,7 +45,7 @@ export default function OfflineDataScreen() {
 
     return (
         <>
-            <StandardHeader title="Offline Data" chip={{ label: "Gov. Emission", iconName: "storage" }} showBack />
+            <StandardHeader title="Offline Data" showBack />
             <ScrollView contentContainerStyle={styles.container}>
                 <View style={styles.card}>
                     <Title style={styles.title}>Local Storage Overview</Title>

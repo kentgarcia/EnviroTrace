@@ -14,9 +14,9 @@ import {
 } from "../screens/roles/tree-management";
 
 // Import shared screens (profile, etc.)
-import ProfileScreen from "../screens/roles/gov-emission/ProfileScreen";
-import OfflineDataScreen from "../screens/roles/gov-emission/OfflineDataScreen";
-import SyncSettingsScreen from "../screens/roles/gov-emission/SyncSettingsScreen";
+import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
+import OfflineDataScreen from "../screens/roles/gov-emission/profile/OfflineDataScreen";
+import SyncSettingsScreen from "../screens/roles/gov-emission/profile/SyncSettingsScreen";
 import CustomBottomTabBar from "../components/layout/CustomBottomTabBar";
 
 export type TreeManagementStackParamList = {

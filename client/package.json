@@ -48,6 +48,7 @@
     "@tanstack/react-query": "^5.76.2",
     "@tanstack/react-router": "^1.119.0",
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.11.0",
     "@tanstack/zod-form-adapter": "^0.42.1",
     "@tauri-apps/plugin-store": "^2.2.0",
     "@types/jspdf": "^1.3.3",

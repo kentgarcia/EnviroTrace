@@ -87,7 +87,7 @@ export default function SmokeBelcherDetailsScreen() {
                 <StandardHeader
                     title="Record Details"
                     showBack={true}
-                    chip={{ label: "Air Quality", iconName: "air" }}
+                   
                 />
                 <View style={styles.centered}>
                     <ActivityIndicator size="large" />
@@ -103,7 +103,7 @@ export default function SmokeBelcherDetailsScreen() {
                 <StandardHeader
                     title="Record Details"
                     showBack={true}
-                    chip={{ label: "Air Quality", iconName: "air" }}
+                   
                 />
                 <View style={styles.centered}>
                     <Icon name="alert-circle" size={48} color={colors.error} />
@@ -121,7 +121,7 @@ export default function SmokeBelcherDetailsScreen() {
             <StandardHeader
                 title="Record Details"
                 showBack={true}
-                chip={{ label: "Air Quality", iconName: "air" }}
+               
             />
 
             <ScrollView style={styles.scrollView}>

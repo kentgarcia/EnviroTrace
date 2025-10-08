@@ -11,6 +11,7 @@ export function LoadingScreen() {
       imageStyle={styles.backgroundImage}
     >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <View style={styles.scrim} />
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <View style={styles.content}>
           <View style={styles.logoContainer}>
@@ -30,10 +31,10 @@ export function LoadingScreen() {
             </View>
           </View>
 
-          <ActivityIndicator size="large" style={styles.loader} />
+          <ActivityIndicator size="large" color="#FFFFFF" style={styles.loader} />
 
-          <Title style={styles.title}>Government Emission</Title>
-          <Paragraph style={styles.subtitle}>Initializing application...</Paragraph>
+          <Title style={styles.title}>Preparing your workspace</Title>
+          <Paragraph style={styles.subtitle}>Securing session & loading dashboards…</Paragraph>
         </View>
       </SafeAreaView>
     </ImageBackground>
@@ -50,6 +51,10 @@ const styles = StyleSheet.create({
   },
   backgroundImage: {
     resizeMode: "cover",
+  },
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5,14,30,0.55)",
   },
   content: {
     flex: 1,
@@ -70,18 +75,18 @@ const styles = StyleSheet.create({
     height: 72,
   },
   loader: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   title: {
-    color: "#003595",
-    fontSize: 20,
+    color: "#FFFFFF",
+    fontSize: 22,
     fontWeight: "600",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    color: "#757575",
-    fontSize: 14,
+    color: "#E5EEF9",
+    fontSize: 15,
     textAlign: "center",
   },
 });
