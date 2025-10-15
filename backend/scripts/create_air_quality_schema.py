@@ -23,7 +23,15 @@ def create_air_quality_schema():
     """Create the air_quality schema and tables"""
     try:
         # Create database engine
-        engine = create_engine(settings.DATABASE_URL)
+        def _to_sync_psycopg(url: str) -> str:
+            if "+asyncpg" in url:
+                return url.replace("+asyncpg", "+psycopg")
+            if "+psycopg" in url:
+                return url
+            if url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+psycopg://", 1)
+            return url
+        engine = create_engine(_to_sync_psycopg(settings.DATABASE_URL))
         
         # Create the air_quality schema if it doesn't exist
         with engine.connect() as conn:

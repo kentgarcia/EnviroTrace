@@ -13,7 +13,15 @@ from app.models.air_quality_models import (
 
 def create_air_quality_tables():
     # Use sync URL
-    db_url = settings.DATABASE_URL.replace('+asyncpg', '')
+    def _to_sync_psycopg(url: str) -> str:
+        if "+asyncpg" in url:
+            return url.replace("+asyncpg", "+psycopg")
+        if "+psycopg" in url:
+            return url
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
+    db_url = _to_sync_psycopg(settings.DATABASE_URL)
     engine = create_engine(db_url, future=True)
     
     print(f"Connecting to database: {db_url}")

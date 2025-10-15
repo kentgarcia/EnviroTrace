@@ -9,7 +9,15 @@ from app.db.database import Base
 def create_schema():
     """Create the air quality schema and tables"""
     # Use the sync engine
-    engine = create_engine(settings.DATABASE_URL.replace('+asyncpg', ''))
+    def _to_sync_psycopg(url: str) -> str:
+        if "+asyncpg" in url:
+            return url.replace("+asyncpg", "+psycopg")
+        if "+psycopg" in url:
+            return url
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
+    engine = create_engine(_to_sync_psycopg(settings.DATABASE_URL))
     
     try:
         # Create schema first

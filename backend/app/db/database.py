@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from app.core.config import settings
 
 from sqlalchemy import create_engine
+from typing import AsyncGenerator
 
 
 def _to_sync_psycopg(url: str) -> str:
@@ -26,8 +27,22 @@ sync_engine = create_engine(
     future=True
 )
 
+def _to_async_asyncpg(url: str) -> str:
+    # Normalize scheme alias
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    # If already asyncpg, keep it
+    if "+asyncpg" in url:
+        return url
+    # Convert psycopg or plain to asyncpg
+    if "+psycopg" in url:
+        return url.replace("+psycopg", "+asyncpg")
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    _to_async_asyncpg(settings.DATABASE_URL),
     future=True
 )
 
@@ -42,7 +57,7 @@ SessionLocal = sessionmaker(
 Base = declarative_base()
 
 # Dependency for getting an async DB session
-async def get_db_session() -> AsyncSession:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session
 

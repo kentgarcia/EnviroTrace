@@ -3,7 +3,7 @@
 Script to run the Tree Management Requests SQL migration
 """
 
-import psycopg2
+import psycopg
 import sys
 from pathlib import Path
 
@@ -28,27 +28,34 @@ def run_migration():
     try:
         # Connect to the database using DATABASE_URL
         print("Connecting to the database...")
-        database_url = settings.DATABASE_URL.replace('+asyncpg', '')  # Remove async driver
-        connection = psycopg2.connect(database_url)
-        
+        # Convert to psycopg v3 URL if needed
+        database_url = settings.DATABASE_URL
+        if "+asyncpg" in database_url:
+            database_url = database_url.replace("+asyncpg", "+psycopg")
+        elif database_url.startswith("postgresql://") and "+psycopg" not in database_url:
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+        # psycopg3 accepts a plain postgresql:// URL too; remove +psycopg for native driver
+        database_url = database_url.replace("+psycopg", "")
+        connection = psycopg.connect(database_url)
         cursor = connection.cursor()
-        
+
         # Execute the SQL script
         print("Executing tree management requests migration...")
         cursor.execute(sql_content)
-        
+
         # Commit the transaction
         connection.commit()
         print("✅ Migration completed successfully!")
-        
+
         # Get row count
         cursor.execute("SELECT COUNT(*) FROM urban_greening.tree_management_requests;")
         count = cursor.fetchone()[0]
         print(f"✅ {count} tree management requests created")
-        
+
         cursor.close()
         connection.close()
-        
+
         return True
         
     except Exception as e:

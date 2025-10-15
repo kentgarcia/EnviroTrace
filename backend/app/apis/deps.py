@@ -18,8 +18,17 @@ reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login" # Or your actual login path
 )
 
-# Create synchronous engine for backward compatibility
-sync_engine = create_engine(settings.DATABASE_URL.replace("+asyncpg", ""))
+# Create synchronous engine for backward compatibility (psycopg v3)
+def _to_sync_psycopg(url: str) -> str:
+    if "+asyncpg" in url:
+        return url.replace("+asyncpg", "+psycopg")
+    if "+psycopg" in url:
+        return url
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+sync_engine = create_engine(_to_sync_psycopg(settings.DATABASE_URL))
 SyncSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
 
 # Synchronous database dependency for backward compatibility with existing CRUD
