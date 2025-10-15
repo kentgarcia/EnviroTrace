@@ -11,6 +11,15 @@ from app.db.base_class import Base
 from app.models import monitoring_request_models
 from app.core.config import settings as app_settings # <--- YOUR APP SETTINGS
 
+def to_sync_psycopg(url: str) -> str:
+    if "+asyncpg" in url:
+        return url.replace("+asyncpg", "+psycopg")
+    if "+psycopg" in url:
+        return url
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
 # This is the Alembic Config object...
 config = context.config
 
@@ -30,7 +39,7 @@ def include_name(name, type_, parent_names):
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     # Use the synchronous URL for offline mode if defined, otherwise construct it
-    db_url = app_settings.DATABASE_URL.replace("+asyncpg", "") # Convert async to sync
+    db_url = to_sync_psycopg(app_settings.DATABASE_URL)
     context.configure(
         url=db_url,  # <--- USE APP SETTINGS URL (made sync)
         target_metadata=target_metadata,
@@ -47,7 +56,7 @@ def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     # Get the SQLAlchemy URL from your application's settings
     # Ensure it's the synchronous version for Alembic's direct engine creation
-    db_url = app_settings.DATABASE_URL.replace("+asyncpg", "") # Convert async to sync
+    db_url = to_sync_psycopg(app_settings.DATABASE_URL)
 
     # Create a new configuration dictionary for engine_from_config
     # that uses the URL from your app's settings.
