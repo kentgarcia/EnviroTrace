@@ -84,10 +84,13 @@ export default function TestingScreen() {
         title="Emission Testing"
         subtitle={`${items.length} Total Tests`}
         statusBarStyle="dark"
-        backgroundColor="#F3F6FB"
-        borderColor="#E2E8F0"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderColor="#E5E7EB"
         rightActionIcon="RefreshCw"
         onRightActionPress={() => syncData()}
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
 
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
@@ -133,7 +136,7 @@ export default function TestingScreen() {
                     style={styles.yearButton}
                     activeOpacity={0.7}
                   >
-                    <Icon name="ChevronLeft" size={18} color="#02339C" />
+                    <Icon name="ChevronLeft" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
                   <View style={styles.yearDisplay}>
                     <Text style={styles.yearText}>{year}</Text>
@@ -143,7 +146,7 @@ export default function TestingScreen() {
                     style={styles.yearButton}
                     activeOpacity={0.7}
                   >
-                    <Icon name="ChevronRight" size={18} color="#02339C" />
+                    <Icon name="ChevronRight" size={18} color="#FFFFFF" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -154,7 +157,7 @@ export default function TestingScreen() {
         {/* Content */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#02339C" />
+            <ActivityIndicator size="large" color="#111827" />
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -179,8 +182,8 @@ export default function TestingScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                colors={["#02339C"]}
-                tintColor="#02339C"
+                colors={["#111827"]}
+                tintColor="#111827"
               />
             }
             style={styles.scrollView}
@@ -197,7 +200,7 @@ export default function TestingScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.officeHeaderLeft}>
-                    <Icon name="Building2" size={20} color="#02339C" />
+                    <Icon name="Building2" size={18} color="#111827" />
                     <Text style={styles.officeName}>{group.name}</Text>
                     <View style={styles.countBadge}>
                       <Text style={styles.countText}>{group.items.length}</Text>
@@ -263,26 +266,31 @@ export default function TestingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   filterWrapper: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 8,
   },
   filterSection: {
     backgroundColor: "#FFFFFF",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    elevation: 0,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   filterTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   periodRow: {
     flexDirection: "row",
@@ -295,36 +303,39 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#374151",
     marginBottom: 6,
+    letterSpacing: -0.2,
   },
   dropdown: {
     height: 44,
     borderColor: "#E5E7EB",
-    borderWidth: 1,
-    borderRadius: 8,
+    borderWidth: 1.5,
+    borderRadius: 10,
     paddingHorizontal: 12,
     backgroundColor: "#FFFFFF",
   },
   dropdownPlaceholder: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#9CA3AF",
-  },
-  dropdownSelectedText: {
-    fontSize: 14,
-    color: "#1F2937",
     fontWeight: "500",
   },
+  dropdownSelectedText: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
+  },
   dropdownContainer: {
-    borderRadius: 8,
+    borderRadius: 10,
     borderColor: "#E5E7EB",
     marginTop: 4,
   },
   dropdownItemText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#1F2937",
+    fontWeight: "500",
   },
   yearRow: {
     flexDirection: "row",
@@ -337,9 +348,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#111827",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   yearDisplay: {
     flex: 1,
@@ -347,8 +363,9 @@ const styles = StyleSheet.create({
   },
   yearText: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#1F2937",
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.3,
   },
   loadingContainer: {
     flex: 1,
@@ -362,46 +379,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 19,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 20,
+    marginBottom: 10,
   },
   emptyText: {
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 28,
+    fontWeight: "500",
   },
   emptyButton: {
-    backgroundColor: "#02339C",
-    borderRadius: 8,
-    elevation: 0,
+    backgroundColor: "#111827",
+    borderRadius: 12,
+    elevation: 2,
+    paddingHorizontal: 8,
   },
   emptyButtonLabel: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     paddingVertical: 6,
+    letterSpacing: -0.2,
   },
   scrollView: {
     flex: 1,
   },
   officeSection: {
     marginHorizontal: 16,
-    marginTop: 16,
+    marginTop: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    elevation: 0,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   officeHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   officeHeaderLeft: {
     flexDirection: "row",
@@ -410,53 +434,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   officeName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
     flex: 1,
+    letterSpacing: -0.2,
   },
   countBadge: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#111827",
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   countText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#02339C",
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   testsList: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingBottom: 8,
   },
   testItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   testInfo: {
     flex: 1,
     marginRight: 12,
   },
   plateNumber: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#02339C",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   vehicleType: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
+    fontWeight: "500",
   },
   statusChip: {
     elevation: 0,
   },
   statusChipText: {
     color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
   },
   divider: {
     backgroundColor: "#E5E7EB",

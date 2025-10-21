@@ -155,8 +155,11 @@ export default function AddVehicleScreen() {
       <StandardHeader
         title="Add Vehicle"
         showBack
-        backgroundColor="#F3F6FB"
-        borderColor="#E2E8F0"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderColor="#E5E7EB"
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <KeyboardAvoidingView
@@ -183,7 +186,7 @@ export default function AddVehicleScreen() {
                   placeholder="Enter plate number"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="Car" size={18} color="#6B7280" />} />}
+                  left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#6B7280" />} />}
                 />
                 <HelperText type="error" visible={!plate.trim()}>
                   Plate number is required
@@ -204,7 +207,7 @@ export default function AddVehicleScreen() {
                   placeholder="Enter driver name"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="User" size={18} color="#6B7280" />} />}
+                  left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#6B7280" />} />}
                 />
                 <HelperText type="error" visible={!driver.trim()}>
                   Driver name is required
@@ -221,7 +224,7 @@ export default function AddVehicleScreen() {
                   placeholder="Enter contact number"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="Phone" size={18} color="#6B7280" />} />}
+                  left={<TextInput.Icon icon={() => <Icon name="Phone" size={16} color="#6B7280" />} />}
                 />
               </View>
             </View>
@@ -277,7 +280,7 @@ export default function AddVehicleScreen() {
                     placeholder="Enter vehicle type"
                     style={styles.input}
                     outlineStyle={styles.inputOutline}
-                    left={<TextInput.Icon icon={() => <Icon name="Car" size={18} color="#6B7280" />} />}
+                    left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#6B7280" />} />}
                   />
                   {existingVehicleTypes.length > 0 && (
                     <View style={styles.vehicleTypeSuggestions}>
@@ -337,7 +340,7 @@ export default function AddVehicleScreen() {
                   placeholder="4"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="CirclePlus" size={18} color="#6B7280" />} />}
+                  left={<TextInput.Icon icon={() => <Icon name="CirclePlus" size={16} color="#6B7280" />} />}
                 />
               </View>
             </View>
@@ -350,7 +353,7 @@ export default function AddVehicleScreen() {
                 disabled={!isValid || saving}
                 loading={saving}
                 style={styles.saveBtn}
-                buttonColor="#02339C"
+                buttonColor="#111827"
                 labelStyle={styles.saveBtnLabel}
               >
                 Save Vehicle
@@ -366,7 +369,7 @@ export default function AddVehicleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -384,24 +387,27 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#111827",
     marginBottom: 16,
+    letterSpacing: -0.3,
   },
   inputWrapper: {
     marginBottom: 12,
   },
   label: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#374151",
-    marginBottom: 6,
+    marginBottom: 8,
+    letterSpacing: -0.2,
   },
   input: {
     backgroundColor: "#FFFFFF",
   },
   inputOutline: {
     borderColor: "#E5E7EB",
-    borderRadius: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
   },
   vehicleTypeContainer: {
     position: "relative",
@@ -412,16 +418,16 @@ const styles = StyleSheet.create({
   suggestionsLabel: {
     fontSize: 12,
     color: "#6B7280",
-    marginBottom: 6,
-    fontWeight: "500",
+    marginBottom: 8,
+    fontWeight: "600",
   },
   dropdown: {
     backgroundColor: "#FFFFFF",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     minHeight: 56,
   },
   dropdownPlaceholder: {
@@ -431,34 +437,39 @@ const styles = StyleSheet.create({
   },
   dropdownSelectedText: {
     fontSize: 14,
-    color: "#1F2937",
-    fontWeight: "500",
+    color: "#111827",
+    fontWeight: "600",
   },
   dropdownContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    elevation: 0,
-    shadowColor: "transparent",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   dropdownItemText: {
     fontSize: 14,
     color: "#4B5563",
+    fontWeight: "500",
   },
   buttonSection: {
     marginTop: 8,
   },
   saveBtn: {
-    borderRadius: 10,
-    paddingVertical: 4,
+    borderRadius: 12,
+    paddingVertical: 6,
   },
   saveBtnLabel: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: -0.2,
   },
 });

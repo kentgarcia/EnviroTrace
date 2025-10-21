@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
-import { Card, Title, Paragraph, Chip, Divider, useTheme } from "react-native-paper";
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from "react-native";
+import { Text, Chip } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
@@ -8,7 +8,6 @@ import { useNavigation } from "@react-navigation/native";
 import { useAirQualityDashboardData } from "../../../hooks/useAirQualityDashboardData";
 import { useNetworkSync } from "../../../hooks/useNetworkSync";
 import { useAuthStore } from "../../../core/stores/authStore";
-import StatsCard from "../../../components/StatsCard";
 import Svg, { Defs, LinearGradient, Stop, Rect, Line } from "react-native-svg";
 import StandardHeader from "../../../components/layout/StandardHeader";
 
@@ -18,8 +17,14 @@ export default function OverviewScreen() {
   const { user } = useAuthStore();
   const { data, loading, refetch } = useAirQualityDashboardData();
   const { syncData, isSyncing, lastSyncTime } = useNetworkSync();
-  const { colors } = useTheme();
   const [headerDims, setHeaderDims] = useState({ width: 0, height: 0 });
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.full_name) return user.full_name;
+    if (user?.username) return user.username;
+    return "User";
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -45,268 +50,398 @@ export default function OverviewScreen() {
   };
 
   return (
-    <>
+    <View style={styles.root}>
+      {/* Background Image */}
+      <View style={styles.backgroundImageWrapper} pointerEvents="none">
+        <Image
+          source={require("../../../../assets/images/bg_login.png")}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+
       <StandardHeader
-        title="Air Quality Dashboard"
-       
+        title="Overview"
+        subtitle="Air Quality Dashboard"
+        statusBarStyle="dark"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderColor="#E5E7EB"
+        rightActionIcon="RefreshCw"
+        onRightActionPress={() => syncData()}
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header Section */}
-        <View
-          style={styles.headerCard}
-          onLayout={(e) => setHeaderDims({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+
+      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#111827"]}
+              tintColor="#111827"
+            />
+          }
         >
-          {/* Gradient background with subtle grid */}
-          <View style={styles.headerBg}>
-            {headerDims.width > 0 && headerDims.height > 0 && (
-              <Svg width={headerDims.width} height={headerDims.height}>
-                <Defs>
-                  <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                    <Stop offset="0" stopColor={colors.primary} stopOpacity={1} />
-                    <Stop offset="1" stopColor={colors.primary} stopOpacity={0.85} />
-                  </LinearGradient>
-                </Defs>
-                <Rect x={0} y={0} width={headerDims.width} height={headerDims.height} fill="url(#grad)" />
-                {/* Grid lines */}
-                {Array.from({ length: Math.ceil(headerDims.width / 20) + 1 }).map((_, i) => (
-                  <Line
-                    key={`v-${i}`}
-                    x1={i * 20}
-                    y1={0}
-                    x2={i * 20}
-                    y2={headerDims.height}
-                    stroke="#FFFFFF"
-                    strokeOpacity={0.08}
-                    strokeWidth={1}
-                  />
-                ))}
-                {Array.from({ length: Math.ceil(headerDims.height / 20) + 1 }).map((_, i) => (
-                  <Line
-                    key={`h-${i}`}
-                    x1={0}
-                    y1={i * 20}
-                    x2={headerDims.width}
-                    y2={i * 20}
-                    stroke="#FFFFFF"
-                    strokeOpacity={0.08}
-                    strokeWidth={1}
-                  />
-                ))}
-              </Svg>
-            )}
-          </View>
-
-          <View style={styles.headerContent}>
-            <View style={styles.welcomeSection}>
-              <Title style={styles.welcomeTitle}>
-                Welcome, {user?.full_name || user?.username || "User"}
-              </Title>
-              <Paragraph style={styles.welcomeSubtitle}>
-                Air Quality Monitoring Dashboard
-              </Paragraph>
+          {/* Header Section */}
+          <View
+            style={styles.headerCard}
+            onLayout={(e) => setHeaderDims({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+          >
+            {/* Gradient background with subtle grid */}
+            <View style={styles.headerBg}>
+              {headerDims.width > 0 && headerDims.height > 0 && (
+                <Svg width={headerDims.width} height={headerDims.height}>
+                  <Defs>
+                    <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#111827" stopOpacity={1} />
+                      <Stop offset="1" stopColor="#111827" stopOpacity={0.85} />
+                    </LinearGradient>
+                  </Defs>
+                  <Rect x={0} y={0} width={headerDims.width} height={headerDims.height} fill="url(#grad)" />
+                  {/* Grid lines */}
+                  {Array.from({ length: Math.ceil(headerDims.width / 20) + 1 }).map((_, i) => (
+                    <Line
+                      key={`v-${i}`}
+                      x1={i * 20}
+                      y1={0}
+                      x2={i * 20}
+                      y2={headerDims.height}
+                      stroke="#FFFFFF"
+                      strokeOpacity={0.08}
+                      strokeWidth={1}
+                    />
+                  ))}
+                  {Array.from({ length: Math.ceil(headerDims.height / 20) + 1 }).map((_, i) => (
+                    <Line
+                      key={`h-${i}`}
+                      x1={0}
+                      y1={i * 20}
+                      x2={headerDims.width}
+                      y2={i * 20}
+                      stroke="#FFFFFF"
+                      strokeOpacity={0.08}
+                      strokeWidth={1}
+                    />
+                  ))}
+                </Svg>
+              )}
             </View>
 
-            <View style={styles.syncSection}>
-              <Chip
-                icon={(props) => (
-                  <Icon
-                    name={isSyncing ? "sync" : "cloud-done"}
-                    color="#FFFFFF"
-                    size={props?.size ?? 18}
-                  />
-                )}
-                style={[styles.syncChip, { backgroundColor: "rgba(255,255,255,0.15)" }]}
-                textStyle={[styles.syncText, { color: "#FFFFFF" }]}
+            <View style={styles.headerContent}>
+              <View style={styles.welcomeSection}>
+                <Text style={styles.welcomeTitle}>
+                  Welcome, {getUserDisplayName()}
+                </Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Air Quality Monitoring Dashboard
+                </Text>
+              </View>
+
+              <View style={styles.syncSection}>
+                <Chip
+                  icon={(props) => (
+                    <Icon
+                      name={isSyncing ? "RefreshCw" : "CheckCircle2"}
+                      color="#FFFFFF"
+                      size={props?.size ?? 18}
+                    />
+                  )}
+                  style={styles.syncChip}
+                  textStyle={styles.syncText}
+                >
+                  {isSyncing ? "Syncing..." : `Last sync: ${formatLastSync()}`}
+                </Chip>
+              </View>
+            </View>
+          </View>
+
+          {/* Statistics Grid */}
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Key Metrics</Text>
+            <View style={styles.statsGrid}>
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("SmokeBelcher" as never)}
+                activeOpacity={0.7}
               >
-                {isSyncing ? "Syncing..." : `Last sync: ${formatLastSync()}`}
-              </Chip>
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#EEF2FF" }]}>
+                    <Icon name="FileText" size={18} color="#111827" />
+                  </View>
+                  <View style={styles.statTrend}>
+                    <Icon name="TrendingUp" size={12} color="#10B981" />
+                    <Text style={styles.statTrendText}>+5%</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{data?.totalRecords || 0}</Text>
+                  <Text style={styles.statLabel}>Total Records</Text>
+                  <Text style={styles.statSubtitle}>All monitoring data</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("SmokeBelcher" as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#FEF3C7" }]}>
+                    <Icon name="AlertTriangle" size={18} color="#D97706" />
+                  </View>
+                  <View style={[styles.statTrend, { backgroundColor: "#FEE2E2" }]}>
+                    <Icon name="TrendingUp" size={12} color="#DC2626" />
+                    <Text style={[styles.statTrendText, { color: "#DC2626" }]}>+8%</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{data?.totalViolations || 0}</Text>
+                  <Text style={styles.statLabel}>Total Violations</Text>
+                  <Text style={styles.statSubtitle}>Reported cases</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
 
-        {/* Statistics Section */}
-        <View style={styles.statsSection}>
-          <Title style={styles.sectionTitle}>Air Quality Statistics</Title>
-          <View style={styles.statsGrid}>
-            <StatsCard
-              title="Total Records"
-              value={data?.totalRecords?.toString() || "0"}
-              icon="clipboard-text"
-              color="#4CAF50"
-              loading={loading}
-            />
-            <StatsCard
-              title="Total Violations"
-              value={data?.totalViolations?.toString() || "0"}
-              icon="alert-circle"
-              color="#FF9800"
-              loading={loading}
-            />
-          </View>
-        </View>
-
-        <Divider style={styles.divider} />
-
-        {/* Quick Actions Section */}
-        <View style={styles.quickActionsSection}>
-          <Title style={styles.sectionTitle}>Quick Actions</Title>
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => navigation.navigate("SmokeBelcher" as never)}
-            >
-              <View style={[styles.actionButton, { borderColor: colors.primary }]}>
-                <Icon name="smoke-detector" size={24} color={colors.primary} />
+          {/* Quick Actions */}
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionsRow}>
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("SmokeBelcher" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="Wind" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Smoke Belcher</Text>
               </View>
-              <Paragraph style={styles.actionLabel}>Smoke Belcher</Paragraph>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => navigation.navigate("FeeControl" as never)}
-            >
-              <View style={[styles.actionButton, { borderColor: colors.primary }]}>
-                <Icon name="currency-usd" size={24} color={colors.primary} />
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("FeeControl" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="DollarSign" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Fee Control</Text>
               </View>
-              <Paragraph style={styles.actionLabel}>Fee Control</Paragraph>
-            </TouchableOpacity>
+
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("SmokeBelcher" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="FileText" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Records</Text>
+              </View>
+
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("FeeControl" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="BarChart3" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Reports</Text>
+              </View>
+            </View>
           </View>
-        </View>
 
-        <Divider style={styles.divider} />
-
-        {/* Recent Activity Section */}
-        <View style={styles.recentSection}>
-          <Title style={styles.sectionTitle}>Recent Activity</Title>
-          {data?.recentViolations && data.recentViolations.length > 0 ? (
-            data.recentViolations.slice(0, 3).map((violation, index) => (
-              <Card key={violation.id} style={styles.recentCard}>
-                <Card.Content>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <View>
-                      <Paragraph style={{ fontWeight: "bold" }}>
-                        Plate: {violation.plate_number || "N/A"}
-                      </Paragraph>
-                      <Paragraph style={{ fontSize: 12, color: "#666" }}>
-                        Location: {violation.place_of_apprehension}
-                      </Paragraph>
-                      <Paragraph style={{ fontSize: 12, color: "#666" }}>
-                        Date: {new Date(violation.date_of_apprehension).toLocaleDateString()}
-                      </Paragraph>
-                    </View>
-                    <Chip
-                      mode="outlined"
-                      textStyle={{ fontSize: 10 }}
-                      style={{ borderColor: "#FF5722" }}
-                    >
-                      Violation
-                    </Chip>
-                  </View>
-                </Card.Content>
-              </Card>
-            ))
-          ) : (
-            <Card style={styles.recentCard}>
-              <Card.Content>
-                <Paragraph style={{ textAlign: "center", color: "#666" }}>
-                  No recent violations
-                </Paragraph>
-              </Card.Content>
-            </Card>
-          )}
-        </View>
-      </ScrollView>
-    </>
+          {/* Bottom spacing for floating navbar */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
+  root: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#FFFFFF",
   },
-  scrollContent: {
-    padding: 16,
-  },
-  headerCard: {
-    borderRadius: 16,
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    overflow: "hidden",
-  },
-  headerBg: {
+  backgroundImageWrapper: {
     position: "absolute",
-    top: 0,
     left: 0,
     right: 0,
+    top: 0,
     bottom: 0,
+  },
+  backgroundImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 28,
+    paddingTop: 12,
+  },
+
+  // Header Section
+  headerCard: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerBg: {
+    ...StyleSheet.absoluteFillObject,
   },
   headerContent: {
     padding: 20,
-    position: "relative",
-    zIndex: 1,
   },
   welcomeSection: {
     marginBottom: 16,
   },
   welcomeTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
+    fontSize: 19,
+    fontWeight: "800",
     color: "#FFFFFF",
     marginBottom: 4,
+    letterSpacing: -0.4,
   },
   welcomeSubtitle: {
-    fontSize: 14,
-    color: "#FFFFFF",
-    opacity: 0.9,
+    fontSize: 13,
+    color: "#E5E7EB",
+    fontWeight: "500",
   },
   syncSection: {
     alignItems: "flex-start",
   },
   syncChip: {
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 16,
+    elevation: 0,
+    backgroundColor: "#111827",
   },
   syncText: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
+
+  // Stats Section
   statsSection: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
+    color: "#1F2937",
+    fontWeight: "700",
+    marginBottom: 16,
+    fontSize: 17,
+    letterSpacing: -0.3,
   },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: "47%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
+  },
+  statCardHeader: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  divider: {
-    marginVertical: 8,
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 0, 0, 0.05)",
   },
+  statTrend: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statTrendText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#10B981",
+    letterSpacing: -0.2,
+  },
+  statBadge: {
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#059669",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  statCardBody: {
+    gap: 3,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -1,
+    lineHeight: 32,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: "#1F2937",
+    fontWeight: "700",
+    letterSpacing: -0.2,
+  },
+  statSubtitle: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+
+  // Quick Actions Section
   quickActionsSection: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
-  actionRow: {
+  actionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -317,29 +452,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
+    borderColor: "#E5E7EB",
   },
-  actionLabel: {
+  actionTitle: {
     marginTop: 8,
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "600",
     textAlign: "center",
+    color: "#1F2937",
+    letterSpacing: -0.2,
   },
-  recentSection: {
-    marginBottom: 16,
-  },
-  recentCard: {
-    borderRadius: 12,
-    marginBottom: 8,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
+  // Bottom Spacer for floating navbar
+  bottomSpacer: {
+    height: 100,
   },
 });

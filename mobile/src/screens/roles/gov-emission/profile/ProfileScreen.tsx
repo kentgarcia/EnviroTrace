@@ -50,8 +50,11 @@ export default function ProfileScreen() {
     <>
       <StandardHeader
         title="Profile & Settings"
-        backgroundColor="#F3F6FB"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
         statusBarStyle="dark"
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         <ScrollView
@@ -74,7 +77,7 @@ export default function ProfileScreen() {
             <Chip
               style={styles.roleChip}
               textStyle={styles.roleChipText}
-              icon={() => <Icon name="Shield" size={14} color="#02339C" />}
+              icon={() => <Icon name="Shield" size={14} color="#111827" />}
             >
               {user?.role || "Government Emission"}
             </Chip>
@@ -92,7 +95,7 @@ export default function ProfileScreen() {
                 onPress={() => setSelectedDashboard(null)}
                 activeOpacity={0.7}
               >
-                <Icon name="LayoutDashboard" size={20} color="#02339C" />
+                <Icon name="LayoutDashboard" size={18} color="#FFFFFF" />
                 <Text style={styles.quickActionText}>Switch Dashboard</Text>
               </TouchableOpacity>
             </View>
@@ -112,7 +115,7 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.menuIconContainer}>
-                  <Icon name={item.icon as any} size={20} color="#02339C" />
+                  <Icon name={item.icon as any} size={18} color="#111827" />
                 </View>
                 <View style={styles.menuContent}>
                   <Text style={styles.menuTitle}>{item.title}</Text>
@@ -146,7 +149,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -158,42 +161,50 @@ const styles = StyleSheet.create({
   // Profile Card
   profileCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     padding: 24,
     alignItems: "center",
     marginBottom: 16,
-    elevation: 0,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   avatarContainer: {
     marginBottom: 16,
   },
   avatar: {
-    backgroundColor: "#02339C",
+    backgroundColor: "#111827",
   },
   avatarLabel: {
     fontSize: 32,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   userName: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 19,
+    fontWeight: "800",
     color: "#1F2937",
     marginBottom: 8,
+    letterSpacing: -0.4,
   },
   roleChip: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
     height: 28,
     marginBottom: 12,
     elevation: 0,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   roleChipText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#02339C",
+    fontWeight: "700",
+    color: "#111827",
     lineHeight: 14,
+    letterSpacing: 0.2,
   },
   emailRow: {
     flexDirection: "row",
@@ -202,8 +213,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
   quickActionsRow: {
     width: "100%",
@@ -213,43 +225,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F3F6FB",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#111827",
     paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   quickActionText: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#02339C",
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.2,
   },
   // Menu Section
   menuSection: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     marginBottom: 16,
-    elevation: 0,
+    elevation: 1,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#6B7280",
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     gap: 12,
     borderBottomWidth: 1,
@@ -259,25 +281,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#EEF2FF",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   menuContent: {
     flex: 1,
   },
   menuTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#1F2937",
     marginBottom: 2,
+    letterSpacing: -0.3,
   },
   menuDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
+    fontWeight: "500",
   },
   // Sign Out
   signOutContainer: {
@@ -288,16 +314,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#FEE2E2",
     paddingVertical: 14,
     gap: 8,
-    elevation: 0,
+    elevation: 1,
+    shadowColor: "#DC2626",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   signOutText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#DC2626",
+    letterSpacing: -0.2,
   },
 });

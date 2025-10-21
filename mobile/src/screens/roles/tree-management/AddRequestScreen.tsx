@@ -5,8 +5,7 @@ import {
     Button,
     HelperText,
     useTheme,
-    Card,
-    Paragraph,
+    Text,
     Chip,
     Portal,
     Modal,
@@ -62,9 +61,9 @@ export default function AddRequestScreen() {
     const [newInspector, setNewInspector] = useState("");
 
     const requestTypes = [
-        { value: "pruning", label: "Tree Pruning", icon: "content-cut" },
-        { value: "cutting", label: "Tree Cutting", icon: "dangerous" },
-        { value: "violation_complaint", label: "Violation/Complaint", icon: "report" },
+        { value: "pruning", label: "Tree Pruning", icon: "Scissors" },
+        { value: "cutting", label: "Tree Cutting", icon: "Axe" },
+        { value: "violation_complaint", label: "Violation/Complaint", icon: "AlertTriangle" },
     ];
 
     const isValid = useMemo(() => {
@@ -146,17 +145,18 @@ export default function AddRequestScreen() {
     };
 
     return (
-        <>
+        <View style={styles.root}>
             <StandardHeader
                 title="Add Request"
+                titleSize={22}
                 showBack
-               
+
             />
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
-                        <Card.Content style={styles.cardContent}>
-                            <Paragraph style={styles.section}>Request Information</Paragraph>
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>Request Information</Text>
 
                             {/* Request Type */}
                             <Button
@@ -165,7 +165,7 @@ export default function AddRequestScreen() {
                                 style={styles.input}
                                 contentStyle={styles.buttonContent}
                                 labelStyle={[styles.buttonLabel, !requestType && { color: '#999' }]}
-                                icon={() => <Icon name="assignment" size={18} color={colors.primary} />}
+                                icon={() => <Icon name="FileText" size={18} color="#111827" />}
                             >
                                 {requestType ? getRequestTypeLabel(requestType) : "Select Request Type"}
                             </Button>
@@ -178,7 +178,7 @@ export default function AddRequestScreen() {
                                 value={requesterName}
                                 onChangeText={setRequesterName}
                                 mode="flat"
-                                left={<TextInput.Icon icon={() => <Icon name="person" size={18} color={colors.primary} />} />}
+                                left={<TextInput.Icon icon={() => <Icon name="User" size={18} color="#111827" />} />}
                                 style={styles.input}
                             />
                             <HelperText type="error" visible={!requesterName.trim()}>
@@ -192,7 +192,7 @@ export default function AddRequestScreen() {
                                 mode="flat"
                                 multiline
                                 numberOfLines={2}
-                                left={<TextInput.Icon icon={() => <Icon name="location-on" size={18} color={colors.primary} />} />}
+                                left={<TextInput.Icon icon={() => <Icon name="MapPin" size={18} color="#111827" />} />}
                                 style={styles.input}
                             />
                             <HelperText type="error" visible={!propertyAddress.trim()}>
@@ -206,22 +206,24 @@ export default function AddRequestScreen() {
                                 mode="flat"
                                 multiline
                                 numberOfLines={3}
-                                left={<TextInput.Icon icon={() => <Icon name="note" size={18} color={colors.primary} />} />}
+                                left={<TextInput.Icon icon={() => <Icon name="FileText" size={18} color="#111827" />} />}
                                 style={styles.input}
                             />
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
 
                     {/* Trees and Quantities */}
-                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
-                        <Card.Content style={styles.cardContent}>
+                    <View style={styles.section}>
+                        <View style={styles.card}>
                             <View style={styles.sectionHeader}>
-                                <Paragraph style={styles.section}>Trees & Quantities</Paragraph>
+                                <Text style={styles.cardTitle}>Trees & Quantities</Text>
                                 <Button
                                     mode="contained-tonal"
                                     onPress={() => setTreeModalVisible(true)}
                                     compact
-                                    icon="add"
+                                    icon={() => <Icon name="Plus" size={16} color="#111827" />}
+                                    labelStyle={styles.addButtonLabel}
+                                    contentStyle={styles.addButtonContent}
                                 >
                                     Add Tree
                                 </Button>
@@ -240,21 +242,23 @@ export default function AddRequestScreen() {
                                     ))}
                                 </View>
                             ) : (
-                                <Paragraph style={styles.emptyText}>No trees added yet</Paragraph>
+                                <Text style={styles.emptyText}>No trees added yet</Text>
                             )}
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
 
                     {/* Inspectors */}
-                    <Card mode="outlined" style={[styles.card, { borderColor: `${colors.primary}26` }]}>
-                        <Card.Content style={styles.cardContent}>
+                    <View style={styles.section}>
+                        <View style={styles.card}>
                             <View style={styles.sectionHeader}>
-                                <Paragraph style={styles.section}>Assigned Inspectors</Paragraph>
+                                <Text style={styles.cardTitle}>Assigned Inspectors</Text>
                                 <Button
                                     mode="contained-tonal"
                                     onPress={() => setInspectorModalVisible(true)}
                                     compact
-                                    icon="add"
+                                    icon={() => <Icon name="Plus" size={16} color="#111827" />}
+                                    labelStyle={styles.addButtonLabel}
+                                    contentStyle={styles.addButtonContent}
                                 >
                                     Add Inspector
                                 </Button>
@@ -267,17 +271,17 @@ export default function AddRequestScreen() {
                                             key={index}
                                             onClose={() => removeInspector(index)}
                                             style={styles.chip}
-                                            icon="person"
+                                            icon={() => <Icon name="User" size={14} color="#111827" />}
                                         >
                                             {inspector}
                                         </Chip>
                                     ))}
                                 </View>
                             ) : (
-                                <Paragraph style={styles.emptyText}>No inspectors assigned yet</Paragraph>
+                                <Text style={styles.emptyText}>No inspectors assigned yet</Text>
                             )}
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
 
                     <Button
                         mode="contained"
@@ -290,108 +294,112 @@ export default function AddRequestScreen() {
                         {saving ? "Submitting..." : "Submit Request"}
                     </Button>
                 </ScrollView>
-
-                {/* Request Type Modal */}
-                <Portal>
-                    <Modal
-                        visible={typeModalVisible}
-                        onDismiss={() => setTypeModalVisible(false)}
-                        contentContainerStyle={styles.modalContainer}
-                    >
-                        <Paragraph style={styles.modalTitle}>Select Request Type</Paragraph>
-                        {requestTypes.map((type) => (
-                            <List.Item
-                                key={type.value}
-                                title={type.label}
-                                left={() => <Icon name={type.icon} size={24} color={colors.primary} />}
-                                onPress={() => {
-                                    setRequestType(type.value);
-                                    setTypeModalVisible(false);
-                                }}
-                                style={styles.listItem}
-                            />
-                        ))}
-                    </Modal>
-                </Portal>
-
-                {/* Tree Entry Modal */}
-                <Portal>
-                    <Modal
-                        visible={treeModalVisible}
-                        onDismiss={() => setTreeModalVisible(false)}
-                        contentContainerStyle={styles.modalContainer}
-                    >
-                        <Paragraph style={styles.modalTitle}>Add Tree & Quantity</Paragraph>
-                        <TextInput
-                            label="Tree type and quantity (e.g., Mango: 2)"
-                            value={newTreeEntry}
-                            onChangeText={setNewTreeEntry}
-                            mode="outlined"
-                            style={styles.modalInput}
-                        />
-                        <View style={styles.modalActions}>
-                            <Button
-                                mode="outlined"
-                                onPress={() => {
-                                    setNewTreeEntry("");
-                                    setTreeModalVisible(false);
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                mode="contained"
-                                onPress={addTreeEntry}
-                                disabled={!newTreeEntry.trim()}
-                            >
-                                Add
-                            </Button>
-                        </View>
-                    </Modal>
-                </Portal>
-
-                {/* Inspector Modal */}
-                <Portal>
-                    <Modal
-                        visible={inspectorModalVisible}
-                        onDismiss={() => setInspectorModalVisible(false)}
-                        contentContainerStyle={styles.modalContainer}
-                    >
-                        <Paragraph style={styles.modalTitle}>Add Inspector</Paragraph>
-                        <TextInput
-                            label="Inspector name"
-                            value={newInspector}
-                            onChangeText={setNewInspector}
-                            mode="outlined"
-                            style={styles.modalInput}
-                        />
-                        <View style={styles.modalActions}>
-                            <Button
-                                mode="outlined"
-                                onPress={() => {
-                                    setNewInspector("");
-                                    setInspectorModalVisible(false);
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                mode="contained"
-                                onPress={addInspector}
-                                disabled={!newInspector.trim()}
-                            >
-                                Add
-                            </Button>
-                        </View>
-                    </Modal>
-                </Portal>
             </SafeAreaView>
-        </>
+
+            {/* Request Type Modal */}
+            <Portal>
+                <Modal
+                    visible={typeModalVisible}
+                    onDismiss={() => setTypeModalVisible(false)}
+                    contentContainerStyle={styles.modalContainer}
+                >
+                    <Text style={styles.modalTitle}>Select Request Type</Text>
+                    {requestTypes.map((type) => (
+                        <List.Item
+                            key={type.value}
+                            title={type.label}
+                            left={() => <Icon name={type.icon} size={24} color="#111827" />}
+                            onPress={() => {
+                                setRequestType(type.value);
+                                setTypeModalVisible(false);
+                            }}
+                            style={styles.listItem}
+                        />
+                    ))}
+                </Modal>
+            </Portal>
+
+            {/* Tree Entry Modal */}
+            <Portal>
+                <Modal
+                    visible={treeModalVisible}
+                    onDismiss={() => setTreeModalVisible(false)}
+                    contentContainerStyle={styles.modalContainer}
+                >
+                    <Text style={styles.modalTitle}>Add Tree & Quantity</Text>
+                    <TextInput
+                        label="Tree type and quantity (e.g., Mango: 2)"
+                        value={newTreeEntry}
+                        onChangeText={setNewTreeEntry}
+                        mode="outlined"
+                        style={styles.modalInput}
+                    />
+                    <View style={styles.modalActions}>
+                        <Button
+                            mode="outlined"
+                            onPress={() => {
+                                setNewTreeEntry("");
+                                setTreeModalVisible(false);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={addTreeEntry}
+                            disabled={!newTreeEntry.trim()}
+                        >
+                            Add
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+
+            {/* Inspector Modal */}
+            <Portal>
+                <Modal
+                    visible={inspectorModalVisible}
+                    onDismiss={() => setInspectorModalVisible(false)}
+                    contentContainerStyle={styles.modalContainer}
+                >
+                    <Text style={styles.modalTitle}>Add Inspector</Text>
+                    <TextInput
+                        label="Inspector name"
+                        value={newInspector}
+                        onChangeText={setNewInspector}
+                        mode="outlined"
+                        style={styles.modalInput}
+                    />
+                    <View style={styles.modalActions}>
+                        <Button
+                            mode="outlined"
+                            onPress={() => {
+                                setNewInspector("");
+                                setInspectorModalVisible(false);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            onPress={addInspector}
+                            disabled={!newInspector.trim()}
+                        >
+                            Add
+                        </Button>
+                    </View>
+                </Modal>
+            </Portal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
+        flex: 1,
+        backgroundColor: "#FAFAFA",
+    },
+    safeArea: {
         flex: 1,
         backgroundColor: "#FAFAFA",
     },
@@ -399,21 +407,25 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
         paddingBottom: 100,
     },
-    card: {
-        marginBottom: 16,
-        borderRadius: 12,
-    },
-    cardContent: {
-        padding: 16,
-    },
     section: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333333",
-        marginBottom: 16,
+        paddingHorizontal: 16,
+        paddingTop: 16,
+    },
+    card: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        padding: 16,
+        elevation: 0,
+    },
+    cardTitle: {
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#111827",
+        letterSpacing: 0.3,
     },
     sectionHeader: {
         flexDirection: "row",
@@ -423,6 +435,7 @@ const styles = StyleSheet.create({
     },
     input: {
         marginBottom: 8,
+        marginTop: 8,
     },
     buttonContent: {
         height: 48,
@@ -431,6 +444,13 @@ const styles = StyleSheet.create({
     buttonLabel: {
         fontSize: 16,
         textAlign: "left",
+    },
+    addButtonLabel: {
+        fontSize: 13,
+        fontWeight: "600",
+    },
+    addButtonContent: {
+        height: 32,
     },
     chipContainer: {
         flexDirection: "row",
@@ -442,12 +462,14 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 14,
-        color: "#999999",
+        color: "#6B7280",
         fontStyle: "italic",
     },
     submitButton: {
         marginTop: 24,
+        marginHorizontal: 16,
         paddingVertical: 8,
+        backgroundColor: "#111827",
     },
     submitButtonContent: {
         height: 48,
@@ -461,9 +483,11 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: "600",
+        fontWeight: "700",
         marginBottom: 16,
         textAlign: "center",
+        color: "#111827",
+        letterSpacing: 0.3,
     },
     modalInput: {
         marginBottom: 16,

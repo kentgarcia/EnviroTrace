@@ -53,13 +53,16 @@ export default function VehicleDetailScreen() {
       <StandardHeader
         title="Vehicle Details"
         showBack
-        backgroundColor="#F3F6FB"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
         statusBarStyle="dark"
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#02339C" />
+            <ActivityIndicator size="large" color="#111827" />
           </View>
         ) : !vehicle ? (
           <View style={styles.emptyContainer}>
@@ -82,39 +85,39 @@ export default function VehicleDetailScreen() {
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon name="User" size={16} color="#6B7280" />
+                    <Icon name="User" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Driver:</Text>
                     <Text style={styles.infoValue}>{vehicle.driver_name}</Text>
                   </View>
 
                   {vehicle.contact_number && (
                     <View style={styles.infoRow}>
-                      <Icon name="Phone" size={16} color="#6B7280" />
+                      <Icon name="Phone" size={14} color="#6B7280" />
                       <Text style={styles.infoLabel}>Contact:</Text>
                       <Text style={styles.infoValue}>{vehicle.contact_number}</Text>
                     </View>
                   )}
 
                   <View style={styles.infoRow}>
-                    <Icon name="Building2" size={16} color="#6B7280" />
+                    <Icon name="Building2" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Office:</Text>
                     <Text style={styles.infoValue}>{vehicle.office_name}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon name="Car" size={16} color="#6B7280" />
+                    <Icon name="Car" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Vehicle Type:</Text>
                     <Text style={styles.infoValue}>{vehicle.vehicle_type}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon name="Fuel" size={16} color="#6B7280" />
+                    <Icon name="Fuel" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Engine:</Text>
                     <Text style={styles.infoValue}>{vehicle.engine_type}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon name="CircleDot" size={16} color="#6B7280" />
+                    <Icon name="CircleDot" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Wheels:</Text>
                     <Text style={styles.infoValue}>{vehicle.wheels}</Text>
                   </View>
@@ -219,7 +222,7 @@ export default function VehicleDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   loadingContainer: {
     flex: 1,
@@ -233,10 +236,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   emptyText: {
-    marginTop: 12,
+    marginTop: 16,
     fontSize: 16,
     color: "#6B7280",
     textAlign: "center",
+    fontWeight: "500",
   },
   scrollView: {
     flex: 1,
@@ -249,18 +253,23 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 12,
+    letterSpacing: -0.3,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    padding: 16,
-    elevation: 0,
+    padding: 14,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   plateContainer: {
     borderBottomWidth: 1,
@@ -269,27 +278,29 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   plateNumber: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#02339C",
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
     textAlign: "center",
+    letterSpacing: 0.3,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 8,
   },
   infoLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
     color: "#374151",
-    width: 100,
+    width: 95,
   },
   infoValue: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#1F2937",
     flex: 1,
+    fontWeight: "500",
   },
   latestTestHeader: {
     flexDirection: "row",
@@ -301,23 +312,25 @@ const styles = StyleSheet.create({
   },
   statusChipText: {
     color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
   },
   testDate: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
   noTestContainer: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 20,
-    gap: 8,
+    gap: 10,
   },
   noTestText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
     textAlign: "center",
+    fontWeight: "500",
   },
   testItem: {
     flexDirection: "row",
@@ -329,14 +342,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   testDateText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1F2937",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
     marginBottom: 4,
   },
   testQuarter: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
+    fontWeight: "500",
   },
   divider: {
     backgroundColor: "#E5E7EB",
@@ -355,7 +369,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
     height: 80,
   },
   bottomBarSafeArea: {
@@ -384,7 +398,8 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
+    letterSpacing: -0.2,
   },
 });

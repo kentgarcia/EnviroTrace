@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { View, StyleSheet, Alert, ScrollView } from "react-native";
 import {
-    Title,
-    Paragraph,
+    Text,
     Button,
-    Divider,
-    useTheme,
-    Card,
     Chip,
-    ActivityIndicator,
-    DataTable
+    ActivityIndicator
 } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -25,7 +21,6 @@ export default function SmokeBelcherDetailsScreen() {
     const [violations, setViolations] = useState<AirQualityViolation[]>([]);
     const [driver, setDriver] = useState<AirQualityDriver | null>(null);
     const [loading, setLoading] = useState(true);
-    const { colors } = useTheme();
     const navigation = useNavigation();
     const route = useRoute();
     const { recordId } = route.params as RouteParams;
@@ -83,15 +78,15 @@ export default function SmokeBelcherDetailsScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={styles.root}>
                 <StandardHeader
                     title="Record Details"
+                    titleSize={22}
                     showBack={true}
-                   
                 />
                 <View style={styles.centered}>
-                    <ActivityIndicator size="large" />
-                    <Paragraph style={styles.loadingText}>Loading record details...</Paragraph>
+                    <ActivityIndicator size="large" color="#111827" />
+                    <Text style={styles.loadingText}>Loading record details...</Text>
                 </View>
             </View>
         );
@@ -99,16 +94,20 @@ export default function SmokeBelcherDetailsScreen() {
 
     if (!record) {
         return (
-            <View style={styles.container}>
+            <View style={styles.root}>
                 <StandardHeader
                     title="Record Details"
+                    titleSize={22}
                     showBack={true}
-                   
                 />
                 <View style={styles.centered}>
-                    <Icon name="alert-circle" size={48} color={colors.error} />
-                    <Title style={styles.errorTitle}>Record Not Found</Title>
-                    <Button mode="contained" onPress={() => navigation.goBack()}>
+                    <Icon name="AlertCircle" size={48} color="#DC2626" />
+                    <Text style={styles.errorTitle}>Record Not Found</Text>
+                    <Button
+                        mode="contained"
+                        onPress={() => navigation.goBack()}
+                        buttonColor="#111827"
+                    >
                         Go Back
                     </Button>
                 </View>
@@ -117,250 +116,304 @@ export default function SmokeBelcherDetailsScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <View style={styles.root}>
             <StandardHeader
                 title="Record Details"
+                titleSize={22}
                 showBack={true}
-               
             />
 
-            <ScrollView style={styles.scrollView}>
-                {/* Vehicle Information */}
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Title style={styles.sectionTitle}>Vehicle Information</Title>
-                        <DataTable>
-                            <DataTable.Row>
-                                <DataTable.Cell>Plate Number</DataTable.Cell>
-                                <DataTable.Cell>{record.plate_number}</DataTable.Cell>
-                            </DataTable.Row>
-                            <DataTable.Row>
-                                <DataTable.Cell>Vehicle Type</DataTable.Cell>
-                                <DataTable.Cell>{record.vehicle_type}</DataTable.Cell>
-                            </DataTable.Row>
+            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                >
+                    {/* Vehicle Information */}
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Vehicle Information</Text>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Plate Number</Text>
+                                <Text style={styles.infoValue}>{record.plate_number}</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Vehicle Type</Text>
+                                <Text style={styles.infoValue}>{record.vehicle_type}</Text>
+                            </View>
+
                             {record.transport_group && (
-                                <DataTable.Row>
-                                    <DataTable.Cell>Transport Group</DataTable.Cell>
-                                    <DataTable.Cell>{record.transport_group}</DataTable.Cell>
-                                </DataTable.Row>
-                            )}
-                            {record.motor_no && (
-                                <DataTable.Row>
-                                    <DataTable.Cell>Motor Number</DataTable.Cell>
-                                    <DataTable.Cell>{record.motor_no}</DataTable.Cell>
-                                </DataTable.Row>
-                            )}
-                            {record.motor_vehicle_name && (
-                                <DataTable.Row>
-                                    <DataTable.Cell>Vehicle Name</DataTable.Cell>
-                                    <DataTable.Cell>{record.motor_vehicle_name}</DataTable.Cell>
-                                </DataTable.Row>
-                            )}
-                        </DataTable>
-                    </Card.Content>
-                </Card>
-
-                {/* Operator Information */}
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Title style={styles.sectionTitle}>Operator Information</Title>
-                        <DataTable>
-                            <DataTable.Row>
-                                <DataTable.Cell>Company Name</DataTable.Cell>
-                                <DataTable.Cell>{record.operator_company_name}</DataTable.Cell>
-                            </DataTable.Row>
-                            {record.operator_address && (
-                                <DataTable.Row>
-                                    <DataTable.Cell>Address</DataTable.Cell>
-                                    <DataTable.Cell>{record.operator_address}</DataTable.Cell>
-                                </DataTable.Row>
-                            )}
-                        </DataTable>
-                    </Card.Content>
-                </Card>
-
-                {/* Owner Information */}
-                {(record.owner_first_name || record.owner_last_name) && (
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Owner Information</Title>
-                            <DataTable>
-                                {record.owner_first_name && (
-                                    <DataTable.Row>
-                                        <DataTable.Cell>First Name</DataTable.Cell>
-                                        <DataTable.Cell>{record.owner_first_name}</DataTable.Cell>
-                                    </DataTable.Row>
-                                )}
-                                {record.owner_middle_name && (
-                                    <DataTable.Row>
-                                        <DataTable.Cell>Middle Name</DataTable.Cell>
-                                        <DataTable.Cell>{record.owner_middle_name}</DataTable.Cell>
-                                    </DataTable.Row>
-                                )}
-                                {record.owner_last_name && (
-                                    <DataTable.Row>
-                                        <DataTable.Cell>Last Name</DataTable.Cell>
-                                        <DataTable.Cell>{record.owner_last_name}</DataTable.Cell>
-                                    </DataTable.Row>
-                                )}
-                            </DataTable>
-                        </Card.Content>
-                    </Card>
-                )}
-
-                {/* Driver Information */}
-                {driver && (
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Driver Information</Title>
-                            <DataTable>
-                                <DataTable.Row>
-                                    <DataTable.Cell>Name</DataTable.Cell>
-                                    <DataTable.Cell>
-                                        {`${driver.first_name} ${driver.middle_name ? driver.middle_name + ' ' : ''}${driver.last_name}`}
-                                    </DataTable.Cell>
-                                </DataTable.Row>
-                                <DataTable.Row>
-                                    <DataTable.Cell>License Number</DataTable.Cell>
-                                    <DataTable.Cell>{driver.license_number}</DataTable.Cell>
-                                </DataTable.Row>
-                                <DataTable.Row>
-                                    <DataTable.Cell>Address</DataTable.Cell>
-                                    <DataTable.Cell>{driver.address}</DataTable.Cell>
-                                </DataTable.Row>
-                            </DataTable>
-                        </Card.Content>
-                    </Card>
-                )}
-
-                {/* Violations */}
-                {violations.length > 0 && (
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Violations ({violations.length})</Title>
-                            {violations.map((violation, index) => (
-                                <View key={violation.id} style={styles.violationItem}>
-                                    <View style={styles.violationHeader}>
-                                        <Chip
-                                            mode="outlined"
-                                            style={styles.violationChip}
-                                            textStyle={styles.violationChipText}
-                                        >
-                                            Violation #{index + 1}
-                                        </Chip>
-                                        <View style={styles.paymentStatus}>
-                                            {violation.paid_driver && (
-                                                <Chip
-                                                    mode="flat"
-                                                    style={[styles.statusChip, { backgroundColor: colors.primary + '20' }]}
-                                                    textStyle={{ color: colors.primary }}
-                                                >
-                                                    Driver Paid
-                                                </Chip>
-                                            )}
-                                            {violation.paid_operator && (
-                                                <Chip
-                                                    mode="flat"
-                                                    style={[styles.statusChip, { backgroundColor: colors.primary + '20' }]}
-                                                    textStyle={{ color: colors.primary }}
-                                                >
-                                                    Operator Paid
-                                                </Chip>
-                                            )}
-                                        </View>
-                                    </View>
-
-                                    <DataTable>
-                                        <DataTable.Row>
-                                            <DataTable.Cell>Date of Apprehension</DataTable.Cell>
-                                            <DataTable.Cell>{formatDate(violation.date_of_apprehension)}</DataTable.Cell>
-                                        </DataTable.Row>
-                                        <DataTable.Row>
-                                            <DataTable.Cell>Place of Apprehension</DataTable.Cell>
-                                            <DataTable.Cell>{violation.place_of_apprehension}</DataTable.Cell>
-                                        </DataTable.Row>
-                                        {violation.ordinance_infraction_report_no && (
-                                            <DataTable.Row>
-                                                <DataTable.Cell>Report Number</DataTable.Cell>
-                                                <DataTable.Cell>{violation.ordinance_infraction_report_no}</DataTable.Cell>
-                                            </DataTable.Row>
-                                        )}
-                                        {violation.smoke_density_test_result_no && (
-                                            <DataTable.Row>
-                                                <DataTable.Cell>Test Result Number</DataTable.Cell>
-                                                <DataTable.Cell>{violation.smoke_density_test_result_no}</DataTable.Cell>
-                                            </DataTable.Row>
-                                        )}
-                                    </DataTable>
-
-                                    {index < violations.length - 1 && <Divider style={styles.violationDivider} />}
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Transport Group</Text>
+                                    <Text style={styles.infoValue}>{record.transport_group}</Text>
                                 </View>
-                            ))}
-                        </Card.Content>
-                    </Card>
-                )}
+                            )}
 
-                {/* Record Metadata */}
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <Title style={styles.sectionTitle}>Record Information</Title>
-                        <DataTable>
-                            <DataTable.Row>
-                                <DataTable.Cell>Record ID</DataTable.Cell>
-                                <DataTable.Cell>{record.id}</DataTable.Cell>
-                            </DataTable.Row>
-                            <DataTable.Row>
-                                <DataTable.Cell>Created</DataTable.Cell>
-                                <DataTable.Cell>{formatDate(record.created_at)}</DataTable.Cell>
-                            </DataTable.Row>
-                            <DataTable.Row>
-                                <DataTable.Cell>Last Updated</DataTable.Cell>
-                                <DataTable.Cell>{formatDate(record.updated_at)}</DataTable.Cell>
-                            </DataTable.Row>
-                        </DataTable>
-                    </Card.Content>
-                </Card>
-            </ScrollView>
+                            {record.motor_no && (
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Motor Number</Text>
+                                    <Text style={styles.infoValue}>{record.motor_no}</Text>
+                                </View>
+                            )}
+
+                            {record.motor_vehicle_name && (
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Vehicle Name</Text>
+                                    <Text style={styles.infoValue}>{record.motor_vehicle_name}</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Operator Information */}
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Operator Information</Text>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Company Name</Text>
+                                <Text style={styles.infoValue}>{record.operator_company_name}</Text>
+                            </View>
+
+                            {record.operator_address && (
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Address</Text>
+                                    <Text style={styles.infoValue}>{record.operator_address}</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Owner Information */}
+                    {(record.owner_first_name || record.owner_last_name) && (
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <Text style={styles.sectionTitle}>Owner Information</Text>
+
+                                {record.owner_first_name && (
+                                    <View style={styles.infoRow}>
+                                        <Text style={styles.infoLabel}>First Name</Text>
+                                        <Text style={styles.infoValue}>{record.owner_first_name}</Text>
+                                    </View>
+                                )}
+
+                                {record.owner_middle_name && (
+                                    <View style={styles.infoRow}>
+                                        <Text style={styles.infoLabel}>Middle Name</Text>
+                                        <Text style={styles.infoValue}>{record.owner_middle_name}</Text>
+                                    </View>
+                                )}
+
+                                {record.owner_last_name && (
+                                    <View style={styles.infoRow}>
+                                        <Text style={styles.infoLabel}>Last Name</Text>
+                                        <Text style={styles.infoValue}>{record.owner_last_name}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Driver Information */}
+                    {driver && (
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <Text style={styles.sectionTitle}>Driver Information</Text>
+
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Name</Text>
+                                    <Text style={styles.infoValue}>
+                                        {`${driver.first_name} ${driver.middle_name ? driver.middle_name + ' ' : ''}${driver.last_name}`}
+                                    </Text>
+                                </View>
+
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>License Number</Text>
+                                    <Text style={styles.infoValue}>{driver.license_number}</Text>
+                                </View>
+
+                                <View style={styles.infoRow}>
+                                    <Text style={styles.infoLabel}>Address</Text>
+                                    <Text style={styles.infoValue}>{driver.address}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Violations */}
+                    {violations.length > 0 && (
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <Text style={styles.sectionTitle}>Violations ({violations.length})</Text>
+
+                                {violations.map((violation, index) => (
+                                    <View key={violation.id} style={styles.violationItem}>
+                                        <View style={styles.violationHeader}>
+                                            <Chip
+                                                icon={() => <Icon name="AlertTriangle" size={12} color="#DC2626" />}
+                                                style={styles.violationChip}
+                                                textStyle={styles.violationChipText}
+                                            >
+                                                Violation #{index + 1}
+                                            </Chip>
+                                            <View style={styles.paymentStatus}>
+                                                {violation.paid_driver && (
+                                                    <Chip
+                                                        icon={() => <Icon name="CheckCircle2" size={12} color="#22C55E" />}
+                                                        style={styles.statusChip}
+                                                        textStyle={styles.statusChipText}
+                                                    >
+                                                        Driver Paid
+                                                    </Chip>
+                                                )}
+                                                {violation.paid_operator && (
+                                                    <Chip
+                                                        icon={() => <Icon name="CheckCircle2" size={12} color="#22C55E" />}
+                                                        style={styles.statusChip}
+                                                        textStyle={styles.statusChipText}
+                                                    >
+                                                        Operator Paid
+                                                    </Chip>
+                                                )}
+                                            </View>
+                                        </View>
+
+                                        <View style={styles.infoRow}>
+                                            <Text style={styles.infoLabel}>Date of Apprehension</Text>
+                                            <Text style={styles.infoValue}>{formatDate(violation.date_of_apprehension)}</Text>
+                                        </View>
+
+                                        <View style={styles.infoRow}>
+                                            <Text style={styles.infoLabel}>Place of Apprehension</Text>
+                                            <Text style={styles.infoValue}>{violation.place_of_apprehension}</Text>
+                                        </View>
+
+                                        {violation.ordinance_infraction_report_no && (
+                                            <View style={styles.infoRow}>
+                                                <Text style={styles.infoLabel}>Report Number</Text>
+                                                <Text style={styles.infoValue}>{violation.ordinance_infraction_report_no}</Text>
+                                            </View>
+                                        )}
+
+                                        {violation.smoke_density_test_result_no && (
+                                            <View style={styles.infoRow}>
+                                                <Text style={styles.infoLabel}>Test Result Number</Text>
+                                                <Text style={styles.infoValue}>{violation.smoke_density_test_result_no}</Text>
+                                            </View>
+                                        )}
+
+                                        {index < violations.length - 1 && <View style={styles.violationDivider} />}
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Record Metadata */}
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Record Information</Text>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Record ID</Text>
+                                <Text style={styles.infoValue}>{record.id}</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Created</Text>
+                                <Text style={styles.infoValue}>{formatDate(record.created_at)}</Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                                <Text style={styles.infoLabel}>Last Updated</Text>
+                                <Text style={styles.infoValue}>{formatDate(record.updated_at)}</Text>
+                            </View>
+                        </View>
+                    </View>
+                </ScrollView>
+            </SafeAreaView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#FFFFFF",
     },
-    loadingContainer: {
+    safeArea: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#FFFFFF",
     },
     scrollView: {
         flex: 1,
-        padding: 16,
+    },
+    scrollContent: {
+        paddingBottom: 100,
     },
     centered: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: 20,
+        padding: 24,
     },
     loadingText: {
         marginTop: 16,
         textAlign: "center",
+        fontSize: 14,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     errorTitle: {
         marginTop: 16,
         marginBottom: 16,
         textAlign: "center",
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#1F2937",
+        letterSpacing: -0.3,
+    },
+    section: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
     card: {
-        marginBottom: 16,
-        elevation: 2,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        padding: 16,
+        elevation: 0,
     },
     sectionTitle: {
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#111827",
         marginBottom: 16,
-        fontSize: 18,
+        letterSpacing: -0.3,
+    },
+    infoRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#F3F4F6",
+    },
+    infoLabel: {
+        fontSize: 13,
         fontWeight: "600",
+        color: "#6B7280",
+        flex: 1,
+        letterSpacing: -0.2,
+    },
+    infoValue: {
+        fontSize: 13,
+        fontWeight: "500",
+        color: "#1F2937",
+        flex: 1.5,
+        textAlign: "right",
     },
     violationItem: {
         marginBottom: 16,
@@ -369,22 +422,38 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 16,
+        flexWrap: "wrap",
+        gap: 8,
     },
     violationChip: {
         alignSelf: "flex-start",
+        backgroundColor: "#FEE2E2",
+        borderRadius: 8,
     },
     violationChipText: {
-        fontSize: 12,
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#DC2626",
     },
     paymentStatus: {
         flexDirection: "row",
         gap: 8,
+        flexWrap: "wrap",
     },
     statusChip: {
         alignSelf: "flex-start",
+        backgroundColor: "#DCFCE7",
+        borderRadius: 8,
+    },
+    statusChipText: {
+        fontSize: 11,
+        fontWeight: "700",
+        color: "#22C55E",
     },
     violationDivider: {
+        height: 1,
+        backgroundColor: "#E5E7EB",
         marginTop: 16,
     },
 });

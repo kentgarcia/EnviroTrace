@@ -332,8 +332,11 @@ export default function AddTestScreen() {
       <StandardHeader
         title="Record Emission Test"
         showBack
-        backgroundColor="#F3F6FB"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
         statusBarStyle="dark"
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         <ScrollView
@@ -376,7 +379,7 @@ export default function AddTestScreen() {
                   disabled={isProcessingPlate}
                 >
                   <View style={styles.secondaryActionIcon}>
-                    <Icon name="Search" size={20} color="#02339C" />
+                    <Icon name="Search" size={20} color="#FFFFFF" />
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.secondaryActionTitle}>Search Manually</Text>
@@ -388,7 +391,7 @@ export default function AddTestScreen() {
                 {/* Processing Indicator */}
                 {isProcessingPlate && (
                   <View style={styles.processingContainer}>
-                    <ActivityIndicator size="small" color="#02339C" />
+                    <ActivityIndicator size="small" color="#111827" />
                     <Text style={styles.processingText}>Processing...</Text>
                   </View>
                 )}
@@ -397,7 +400,7 @@ export default function AddTestScreen() {
               <View style={styles.card}>
                 <View style={styles.selectedVehicleCard}>
                   <View style={styles.vehicleIconContainer}>
-                    <Icon name="Car" size={28} color="#02339C" />
+                    <Icon name="Car" size={28} color="#111827" />
                   </View>
                   <View style={styles.selectedVehicleInfo}>
                     <View style={styles.plateRow}>
@@ -743,7 +746,7 @@ export default function AddTestScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -758,8 +761,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#6B7280",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -769,22 +772,31 @@ const styles = StyleSheet.create({
   // Card Styles
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     padding: 16,
-    elevation: 0,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
 
   // Primary Action Button (Scan Plate)
   primaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#02339C",
-    borderRadius: 10,
+    backgroundColor: "#111827",
+    borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionButtonIcon: {
     width: 48,
@@ -798,14 +810,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtonTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#FFFFFF",
     marginBottom: 2,
+    letterSpacing: -0.2,
   },
   actionButtonSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "500",
   },
 
   // Divider
@@ -821,18 +835,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB",
   },
   dividerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#9CA3AF",
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   // Secondary Action Button (Manual Search)
   secondaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F3F6FB",
-    borderRadius: 10,
-    borderWidth: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     padding: 16,
     gap: 12,
@@ -841,19 +855,21 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#111827",
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryActionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 2,
+    letterSpacing: -0.2,
   },
   secondaryActionSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
+    fontWeight: "500",
   },
 
   // Processing Indicator
@@ -865,8 +881,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   processingText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
 
   // Selected Vehicle Card
@@ -879,9 +896,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(17, 24, 39, 0.15)",
   },
   selectedVehicleInfo: {
     flex: 1,
@@ -893,9 +912,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   plateNumber: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1F2937",
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.3,
   },
   infoRow: {
     flexDirection: "row",
@@ -903,8 +923,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
   changeButton: {
     padding: 8,
@@ -917,9 +938,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   preSelectedText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#16A34A",
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   // Input Styles
@@ -927,17 +948,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#374151",
     marginBottom: 8,
+    letterSpacing: -0.2,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     paddingHorizontal: 12,
     gap: 8,
@@ -946,9 +968,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "transparent",
     fontSize: 14,
-    color: "#1F2937",
+    color: "#111827",
     paddingHorizontal: 0,
     height: 44,
+    fontWeight: "500",
   },
   textarea: {
     height: 100,
@@ -967,8 +990,8 @@ const styles = StyleSheet.create({
   // Dropdown Styles
   dropdownContainer: {
     backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     paddingHorizontal: 12,
     height: 44,
@@ -978,20 +1001,23 @@ const styles = StyleSheet.create({
     height: 44,
   },
   dropdownPlaceholder: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#9CA3AF",
+    fontWeight: "500",
   },
   dropdownSelectedText: {
-    fontSize: 14,
-    color: "#1F2937",
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
   },
   dropdownItemText: {
-    fontSize: 14,
-    color: "#1F2937",
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "500",
   },
   dropdownListContainer: {
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     marginTop: 4,
     elevation: 4,
@@ -1012,8 +1038,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     paddingVertical: 12,
     gap: 6,
@@ -1021,22 +1047,25 @@ const styles = StyleSheet.create({
   resultChipPass: {
     backgroundColor: "#DCFCE7",
     borderColor: "#16A34A",
+    borderWidth: 2,
   },
   resultChipFail: {
     backgroundColor: "#FEE2E2",
     borderColor: "#DC2626",
+    borderWidth: 2,
   },
   resultChipUnknown: {
     backgroundColor: "#FEF3C7",
     borderColor: "#F59E0B",
+    borderWidth: 2,
   },
   resultChipText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#6B7280",
   },
   resultChipTextActive: {
-    color: "#1F2937",
+    color: "#111827",
   },
 
   // Save Button
@@ -1044,20 +1073,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#02339C",
-    borderRadius: 10,
+    backgroundColor: "#111827",
+    borderRadius: 12,
     paddingVertical: 16,
     gap: 8,
     marginTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveButtonDisabled: {
     backgroundColor: "#9CA3AF",
     opacity: 0.6,
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#FFFFFF",
+    letterSpacing: -0.2,
   },
 
   // Modal Styles
@@ -1072,32 +1107,34 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     elevation: 8,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 12,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#111827",
     marginBottom: 20,
     textAlign: "center",
+    letterSpacing: -0.5,
   },
   modalInputContainer: {
     backgroundColor: "#F9FAFB",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
     marginBottom: 20,
     paddingHorizontal: 12,
   },
   modalInput: {
     backgroundColor: "transparent",
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "500",
   },
   modalButtons: {
     flexDirection: "row",
@@ -1106,20 +1143,22 @@ const styles = StyleSheet.create({
   modalCancelButton: {
     flex: 1,
     backgroundColor: "#F3F6FB",
-    borderRadius: 8,
+    borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   modalCancelText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#6B7280",
   },
   modalSearchButton: {
     flex: 1,
-    backgroundColor: "#02339C",
-    borderRadius: 8,
+    backgroundColor: "#111827",
+    borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -1130,15 +1169,16 @@ const styles = StyleSheet.create({
   },
   modalSearchText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
+    letterSpacing: -0.2,
   },
 
   // Suggestions Styles
   suggestionsContainer: {
     maxHeight: 250,
     marginBottom: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: "#F9FAFB",
   },
   suggestionItem: {
@@ -1160,7 +1200,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -1169,13 +1209,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   suggestionPlate: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 2,
+    letterSpacing: -0.2,
   },
   suggestionDriver: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#6B7280",
+    fontWeight: "500",
   },
 });

@@ -8,7 +8,6 @@ import {
   Image,
   StatusBar,
   TouchableOpacity,
-  Linking,
   Dimensions,
   Animated,
   Easing,
@@ -68,76 +67,94 @@ export default function LoginScreen() {
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
 
   const handleLogin = async () => {
+    // Validate form inputs
     if (!isFormValid) {
-      setSnackbarMessage("Enter your email and password to continue.");
+      setSnackbarMessage("Please enter your email and password to continue.");
+      setShowSnackbar(true);
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setSnackbarMessage("Please enter a valid email address.");
       setShowSnackbar(true);
       return;
     }
 
     clearError();
     setSnackbarMessage(null);
+
+    // Clean up any existing transition timeout
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
       transitionTimeoutRef.current = null;
     }
     setShowTransition(false);
 
-    const success = await login(email.trim(), password);
-
-    if (!success) {
-      setSnackbarMessage(error || "Unable to sign in. Please try again.");
-      setShowSnackbar(true);
-      return;
-    }
-
     try {
-      await AsyncStorage.setItem("last_email", email.trim());
-    } catch {
-      // non-critical persistence failure
-    }
+      const success = await login(email.trim(), password);
 
-    setShowTransition(true);
+      if (!success) {
+        // Handle login failure with specific error message
+        const errorMessage = error || "Unable to sign in. Please check your credentials and try again.";
+        setSnackbarMessage(errorMessage);
+        setShowSnackbar(true);
+        return;
+      }
 
-    // Animate: fade out form, fade/scale in overlay
-    Animated.parallel([
-      Animated.timing(formOpacity, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayOpacity, {
-        toValue: 1,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.spring(logosScale, {
-        toValue: 1,
-        damping: 12,
-        stiffness: 140,
-        mass: 0.6,
-        useNativeDriver: true,
-      }),
-    ]).start();
+      // Save email for convenience (non-critical)
+      try {
+        await AsyncStorage.setItem("last_email", email.trim());
+      } catch (storageError) {
+        // Silent failure - email won't be pre-filled next time
+        console.warn("Failed to save email to storage:", storageError);
+      }
 
-    // Finalize after brief delay to let animation be perceived
-    transitionTimeoutRef.current = setTimeout(() => {
-      finalizeLogin();
-    }, 1100);
-  };
+      // Show transition animation
+      setShowTransition(true);
 
-  const handleForgotPassword = () => {
-    const url = "https://eco-dash.local/forgot-password";
-    Linking.openURL(url).catch(() => {
-      setSnackbarMessage("We couldn't open the password recovery page. Please try again shortly.");
+      // Animate: fade out form, fade/scale in overlay
+      Animated.parallel([
+        Animated.timing(formOpacity, {
+          toValue: 0,
+          duration: 300,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 420,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.spring(logosScale, {
+          toValue: 1,
+          damping: 12,
+          stiffness: 140,
+          mass: 0.6,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Finalize login after animation
+      transitionTimeoutRef.current = setTimeout(() => {
+        finalizeLogin();
+      }, 1100);
+
+    } catch (err) {
+      // Catch any unexpected errors during login
+      console.error("Login error:", err);
+      setSnackbarMessage("An unexpected error occurred. Please try again.");
       setShowSnackbar(true);
-    });
+    }
   };
 
   return (
     <View style={styles.root}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+
+      {/* Background Image */}
       <View style={styles.backgroundImageWrapper} pointerEvents="none">
         <Image
           source={require("../../../assets/images/bg_login.png")}
@@ -146,90 +163,119 @@ export default function LoginScreen() {
           accessibilityIgnoresInvertColors
         />
       </View>
-      <View style={styles.backgroundGradient} pointerEvents="none" />
-      <View style={styles.backgroundGlow} pointerEvents="none" />
 
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        {/* Partner Logos at Top */}
+        <View style={styles.topPartnerLogos}>
+          <Image
+            source={require("../../../assets/images/logo_epnro.png")}
+            style={styles.topPartnerLogo}
+            resizeMode="contain"
+            accessibilityLabel="EPNRO"
+          />
+          <View style={styles.topLogoDivider} />
+          <Image
+            source={require("../../../assets/images/logo_munti.png")}
+            style={styles.topPartnerLogo}
+            resizeMode="contain"
+            accessibilityLabel="Muntinlupa"
+          />
+        </View>
+
         <KeyboardAvoidingView
           style={styles.keyboardAvoid}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            contentInsetAdjustmentBehavior="automatic"
-          >
-            <Animated.View style={[styles.heroSection, { opacity: formOpacity }]}>
-              <View style={styles.heroLogosRow}>
+          <View style={styles.content}>
+            {/* Logo Section */}
+            <Animated.View style={[styles.logoSection, { opacity: formOpacity }]}>
+              <View style={styles.appLogoContainer}>
                 <Image
-                  source={require("../../../assets/images/logo_epnro.png")}
-                  style={styles.heroLogo}
+                  source={require("../../../assets/images/logo_app.png")}
+                  style={styles.appLogo}
                   resizeMode="contain"
-                  accessibilityLabel="EPNRO logo"
-                />
-                <Image
-                  source={require("../../../assets/images/logo_munti.png")}
-                  style={styles.heroLogo}
-                  resizeMode="contain"
-                  accessibilityLabel="City partner logo"
+                  accessibilityLabel="EnviroTrace"
                 />
               </View>
-              <Text style={styles.heroTitle} accessibilityRole="header">Welcome back</Text>
-              <Text style={styles.heroSubtitle}>Monitor citywide emissions, track compliance in real time, and take action faster.</Text>
+              <Text style={styles.appName}>EnviroTrace</Text>
             </Animated.View>
 
-            <Animated.View style={[styles.formCard, { opacity: formOpacity }]}>
-              <View style={styles.formHeader}>
-                <Text style={styles.formTitle}>Sign in to continue</Text>
-                <Text style={styles.formCaption}>Use your government-issued credentials</Text>
-              </View>
+            {/* Welcome Section */}
+            <Animated.View style={[styles.welcomeSection, { opacity: formOpacity }]}>
+              <Text style={styles.welcomeTitle} accessibilityRole="header">
+                Welcome Back
+              </Text>
+              <Text style={styles.welcomeSubtitle}>
+                Monitor emissions · Track compliance · Take action
+              </Text>
+            </Animated.View>
 
+            {/* Form Section */}
+            <Animated.View style={[styles.formSection, { opacity: formOpacity }]}>
               <View style={styles.formFields}>
-                <TextInput
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  mode="outlined"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  style={styles.input}
-                  outlineStyle={styles.inputOutline}
-                  disabled={isLoading}
-                  error={!!error && !email.trim()}
-                  textColor="#072341"
-                  placeholder="name@example.com"
-                  placeholderTextColor="rgba(7,35,65,0.38)"
-                  theme={{ colors: { primary: "#3B82F6", onSurfaceVariant: "#072341" } }}
-                />
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    mode="outlined"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    style={styles.input}
+                    outlineStyle={styles.inputOutline}
+                    disabled={isLoading}
+                    error={!!error && !email.trim()}
+                    textColor="#111827"
+                    placeholder="you@example.com"
+                    placeholderTextColor="#9CA3AF"
+                    theme={{
+                      colors: {
+                        primary: "#54779C",
+                        onSurfaceVariant: "#6B7280",
+                        outline: "#E5E7EB"
+                      }
+                    }}
+                  />
+                </View>
 
-                <TextInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  mode="outlined"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="password"
-                  textContentType="password"
-                  style={styles.input}
-                  outlineStyle={styles.inputOutline}
-                  disabled={isLoading}
-                  error={!!error && !password.trim()}
-                  textColor="#072341"
-                  placeholder="••••••••"
-                  placeholderTextColor="rgba(7,35,65,0.38)"
-                  right={
-                    <TextInput.Icon
-                      icon={showPassword ? "eye-off" : "eye"}
-                      onPress={() => setShowPassword((prev) => !prev)}
-                    />
-                  }
-                  theme={{ colors: { primary: "#3B82F6", onSurfaceVariant: "#072341" } }}
-                />
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    mode="outlined"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="password"
+                    textContentType="password"
+                    style={styles.input}
+                    outlineStyle={styles.inputOutline}
+                    disabled={isLoading}
+                    error={!!error && !password.trim()}
+                    textColor="#111827"
+                    placeholder="Enter your password"
+                    placeholderTextColor="#9CA3AF"
+                    right={
+                      <TextInput.Icon
+                        icon={showPassword ? "eye-off" : "eye"}
+                        onPress={() => setShowPassword((prev) => !prev)}
+                        color="#6B7280"
+                      />
+                    }
+                    theme={{
+                      colors: {
+                        primary: "#54779C",
+                        onSurfaceVariant: "#6B7280",
+                        outline: "#E5E7EB"
+                      }
+                    }}
+                  />
+                </View>
 
                 {error && (
                   <HelperText type="error" visible style={styles.errorText}>
@@ -243,27 +289,21 @@ export default function LoginScreen() {
                 onPress={handleLogin}
                 disabled={!isFormValid || isLoading}
                 loading={isLoading}
-                style={styles.primaryButton}
-                contentStyle={styles.primaryButtonContent}
+                style={styles.signInButton}
+                contentStyle={styles.signInButtonContent}
+                labelStyle={styles.signInButtonLabel}
               >
-                {isLoading ? "Signing In..." : "Continue"}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
-
-              <TouchableOpacity
-                style={styles.forgotButton}
-                disabled={isLoading}
-                onPress={handleForgotPassword}
-                accessibilityRole="button"
-                accessibilityHint="Open password recovery"
-              >
-                <Text style={styles.forgotButtonText}>Forgot password?</Text>
-              </TouchableOpacity>
             </Animated.View>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
 
-        <View style={styles.bottomMeta}>
-          <Text style={styles.bottomMetaText}>Secured by EPNRO • v1.0</Text>
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerVersionBadge}>
+            <Text style={styles.footerVersion}>v1.0.0</Text>
+          </View>
         </View>
 
         <Snackbar
@@ -284,10 +324,20 @@ export default function LoginScreen() {
         </Snackbar>
       </SafeAreaView>
 
+      {/* Transition Overlay */}
       {showTransition && (
-        <Animated.View style={[styles.transitionOverlay, { opacity: overlayOpacity }]}
-          accessibilityLabel="Completing sign in" accessible>
+        <Animated.View
+          style={[styles.transitionOverlay, { opacity: overlayOpacity }]}
+          accessibilityLabel="Completing sign in"
+          accessible
+        >
           <Animated.View style={[styles.transitionContent, { transform: [{ scale: logosScale }] }]}>
+            <Image
+              source={require("../../../assets/images/logo_app.png")}
+              style={styles.transitionAppLogo}
+              resizeMode="contain"
+              accessibilityLabel="EnviroTrace"
+            />
             <View style={styles.transitionLogosRow}>
               <Image
                 source={require("../../../assets/images/logo_epnro.png")}
@@ -302,7 +352,7 @@ export default function LoginScreen() {
                 accessibilityLabel="City partner logo"
               />
             </View>
-            <ActivityIndicator size="large" color="#FFFFFF" style={styles.transitionLoader} />
+            <ActivityIndicator size="large" color="#54779C" style={styles.transitionLoader} />
             <Text style={styles.transitionText}>Preparing your dashboards…</Text>
           </Animated.View>
         </Animated.View>
@@ -314,171 +364,218 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#050E1E",
-  },
-  backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
+    backgroundColor: "#FFFFFF",
   },
   backgroundImageWrapper: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
-  backgroundGradient: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5, 14, 30, 0.72)", // lightened to reveal more of the background image
-  },
-  backgroundGlow: {
-    position: "absolute",
-    top: -SCREEN_WIDTH * 0.35,
-    alignSelf: "center",
-    width: SCREEN_WIDTH * 1.4,
-    height: SCREEN_WIDTH * 1.4,
-    borderRadius: SCREEN_WIDTH * 0.7,
-    backgroundColor: "rgba(64, 123, 255, 0.22)",
+  backgroundImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: 24,
+  },
+  topPartnerLogos: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  topPartnerLogo: {
+    width: 32,
+    height: 32,
+    opacity: 0.6,
+  },
+  topLogoDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: "#E5E7EB",
   },
   keyboardAvoid: {
     flex: 1,
   },
-  scroll: {
+  content: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 32,
-    gap: 32,
-  },
-  heroSection: {
+    paddingHorizontal: 28,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 18,
+    paddingBottom: 100,
   },
-  heroLogosRow: {
-    flexDirection: "row",
+  // Logo Section
+  logoSection: {
     alignItems: "center",
-    gap: 28,
+    marginBottom: 24,
+    width: "100%",
   },
-  heroLogo: {
+  appLogoContainer: {
+    marginBottom: 12,
+    padding: 4,
+  },
+  appLogo: {
     width: 80,
     height: 80,
   },
-  heroTitle: {
-    color: "#FFFFFF",
-    fontSize: 32,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-  },
-  heroSubtitle: {
-    color: "rgba(231, 239, 255, 0.84)",
-    textAlign: "center",
-    fontSize: 16,
-    lineHeight: 24,
-    maxWidth: 320,
-  },
-  formCard: {
-    position: "relative",
-    padding: 28,
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.1)", // slightly more transparent
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.22)",
-    gap: 24,
-    shadowColor: "#000000",
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.25,
-    shadowRadius: 32,
-    elevation: 12,
-  },
-  formCardGlow: {
-    position: "absolute",
-    top: -24,
-    left: 32,
-    right: 32,
-    height: 120,
-    borderRadius: 60,
-  },
-  formHeader: {
-    gap: 4,
-  },
-  formTitle: {
-    color: "#FFFFFF",
+  appName: {
     fontSize: 22,
-    fontWeight: "600",
+    fontWeight: "700",
+    color: "#111827",
+    letterSpacing: -0.5,
   },
-  formCaption: {
-    color: "rgba(231, 239, 255, 0.72)",
-    fontSize: 14,
+
+  // Welcome Section
+  welcomeSection: {
+    alignItems: "center",
+    marginBottom: 32,
+    paddingHorizontal: 16,
+    width: "100%",
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 6,
+    textAlign: "center",
+    letterSpacing: -1,
+  },
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: "#54779C",
+    textAlign: "center",
+    fontWeight: "600",
+    letterSpacing: 0.5,
+  },
+
+  // Form Section
+  formSection: {
+    width: "100%",
   },
   formFields: {
-    gap: 12,
+    gap: 18,
+    marginBottom: 16,
+  },
+  inputContainer: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 4,
   },
   input: {
-    backgroundColor: "rgba(246, 248, 255, 0.85)",
+    backgroundColor: "#F9FAFB",
+    fontSize: 15,
   },
   inputOutline: {
-    borderColor: "rgba(164, 189, 255, 0.5)",
+    borderRadius: 14,
+    borderWidth: 1.5,
   },
   errorText: {
-    marginTop: -4,
+    marginTop: -8,
+    fontSize: 13,
   },
-  primaryButton: {
+
+  // Sign In Button
+  signInButton: {
     borderRadius: 14,
-    overflow: "hidden",
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#3A5A7A",
+    marginTop: 8,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  primaryButtonContent: {
-    paddingVertical: 10,
+  signInButtonContent: {
+    paddingVertical: 14,
   },
-  forgotButton: {
-    alignSelf: "center",
+  signInButtonLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    color: "#FFFFFF",
   },
-  forgotButtonText: {
-    color: "#E1EAFF",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  bottomMeta: {
-    paddingVertical: 12,
+
+  // Footer
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: "center",
   },
-  bottomMetaText: {
-    color: "rgba(200, 214, 255, 0.6)",
-    fontSize: 12,
-    letterSpacing: 0.8,
+  footerVersionBadge: {
+    backgroundColor: "rgba(55, 65, 81, 0.9)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(55, 65, 81, 0.6)",
   },
+  footerVersion: {
+    fontSize: 10,
+    color: "#F3F4F6",
+    fontWeight: "600",
+  },
+
+  // Snackbar
   snackbar: {
-    backgroundColor: "rgba(10, 20, 40, 0.92)",
+    backgroundColor: "#1F2937",
     marginBottom: 24,
+    marginHorizontal: 16,
   },
+
+  // Transition Overlay
   transitionOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5, 14, 30, 0.82)",
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
     alignItems: "center",
     justifyContent: "center",
     padding: 32,
   },
   transitionContent: {
     alignItems: "center",
-    gap: 24,
+    gap: 20,
+  },
+  transitionAppLogo: {
+    width: 120,
+    height: 120,
+    marginBottom: 8,
   },
   transitionLogosRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 32,
+    gap: 24,
   },
   transitionLogo: {
-    width: 88,
-    height: 88,
+    width: 64,
+    height: 64,
+    opacity: 0.7,
   },
   transitionLoader: {
-    marginTop: 12,
+    marginTop: 16,
   },
   transitionText: {
-    color: "#F1F5FF",
+    color: "#1F2937",
     fontSize: 16,
-    fontWeight: "500",
-    letterSpacing: 0.4,
+    fontWeight: "600",
+    letterSpacing: 0.3,
     textAlign: "center",
+    marginTop: 8,
   },
 });
+

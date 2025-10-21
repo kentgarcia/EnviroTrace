@@ -293,7 +293,7 @@ export default function VehiclesScreen() {
           mode="contained"
           onPress={handleAddVehicle}
           style={styles.emptyButton}
-          buttonColor="#02339C"
+          buttonColor="#111827"
         >
           Add Vehicle
         </Button>
@@ -307,10 +307,13 @@ export default function VehiclesScreen() {
         title="Vehicles"
         subtitle={`${filteredVehicles.length} Total`}
         statusBarStyle="dark"
-        backgroundColor="#F3F6FB"
-        borderColor="#E2E8F0"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderColor="#E5E7EB"
         rightActionIcon="RefreshCw"
         onRightActionPress={() => syncData()}
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
 
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
@@ -335,7 +338,7 @@ export default function VehiclesScreen() {
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Icon name="Filter" size={18} color="#02339C" />
+            <Icon name="Filter" size={20} color="#FFFFFF" />
             {(filterVehicleType || filterEngineType || filterTestResult || filterOffice) && (
               <View style={styles.filterBadge} />
             )}
@@ -423,7 +426,7 @@ export default function VehiclesScreen() {
             onPress={handleAddVehicle}
             style={styles.addButton}
           >
-            <Icon name="Plus" size={16} color="#02339C" />
+            <Icon name="Plus" size={16} color="#FFFFFF" />
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
@@ -437,8 +440,8 @@ export default function VehiclesScreen() {
             <RefreshControl
               refreshing={refreshing || isSyncing}
               onRefresh={onRefresh}
-              colors={["#02339C"]}
-              tintColor="#02339C"
+              colors={["#111827"]}
+              tintColor="#111827"
             />
           }
           ListEmptyComponent={renderEmptyState}
@@ -522,15 +525,15 @@ const VehicleCard = React.memo(
           {/* Vehicle details in compact grid */}
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
-              <Icon name="Car" size={14} color="#6B7280" />
+              <Icon name="Car" size={12} color="#6B7280" />
               <Text style={styles.detailText}>{vehicle.vehicle_type}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="Settings" size={14} color="#6B7280" />
+              <Icon name="Settings" size={12} color="#6B7280" />
               <Text style={styles.detailText}>{vehicle.engine_type}</Text>
             </View>
             <View style={styles.detailItem}>
-              <Icon name="CirclePlus" size={14} color="#6B7280" />
+              <Icon name="CirclePlus" size={12} color="#6B7280" />
               <Text style={styles.detailText}>{vehicle.wheels}w</Text>
             </View>
           </View>
@@ -538,7 +541,7 @@ const VehicleCard = React.memo(
           {/* Last test date if available */}
           {vehicle.latest_test_date && (
             <View style={styles.lastTestRow}>
-              <Icon name="CalendarDays" size={12} color="#9CA3AF" />
+              <Icon name="CalendarDays" size={11} color="#9CA3AF" />
               <Text style={styles.lastTestText}>
                 {new Date(vehicle.latest_test_date).toLocaleDateString("en-US", {
                   month: "short",
@@ -722,7 +725,7 @@ const FilterDialog = React.memo(
                 mode="contained"
                 onPress={handleApply}
                 style={styles.dialogButtonContained}
-                buttonColor="#02339C"
+                buttonColor="#111827"
               >
                 Apply Filters
               </Button>
@@ -738,59 +741,69 @@ const FilterDialog = React.memo(
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   safeArea: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   searchContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 8,
-    gap: 8,
+    paddingBottom: 12,
+    gap: 10,
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: "#1F2937",
     padding: 0,
+    fontWeight: "500",
   },
   filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: "#111827",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   filterBadge: {
     position: "absolute",
-    top: 8,
-    right: 8,
+    top: 10,
+    right: 10,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#02339C",
+    backgroundColor: "#60A5FA",
   },
   activeFiltersContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
   activeFiltersContent: {
     flexDirection: "row",
@@ -798,23 +811,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeFilterChip: {
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
+    backgroundColor: "#111827",
+    borderWidth: 0,
   },
   activeFilterText: {
     fontSize: 12,
-    color: "#02339C",
-    fontWeight: "500",
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   clearAllButton: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   clearAllText: {
     fontSize: 12,
     color: "#6B7280",
-    fontWeight: "500",
+    fontWeight: "600",
     textDecorationLine: "underline",
   },
   summaryContainer: {
@@ -822,28 +834,31 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   summaryText: {
     fontSize: 13,
     color: "#6B7280",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   addButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#111827",
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   addButtonText: {
     fontSize: 13,
-    color: "#02339C",
-    fontWeight: "600",
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   listContainer: {
     padding: 16,
@@ -856,8 +871,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   cardHeader: {
     flexDirection: "row",
@@ -871,10 +891,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   plateNumber: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#02339C",
-    letterSpacing: 0.5,
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: 0.2,
   },
   syncDot: {
     width: 6,
@@ -887,20 +907,20 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusChipText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
     marginVertical: 0,
     marginHorizontal: 0,
   },
   driverName: {
-    fontSize: 14,
-    color: "#4B5563",
+    fontSize: 13,
+    color: "#374151",
     marginBottom: 8,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   detailsGrid: {
     flexDirection: "row",
-    gap: 12,
+    gap: 10,
     marginBottom: 6,
   },
   detailItem: {
@@ -909,8 +929,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   detailText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#6B7280",
+    fontWeight: "500",
   },
   lastTestRow: {
     flexDirection: "row",
@@ -922,8 +943,9 @@ const styles = StyleSheet.create({
     borderTopColor: "#F3F4F6",
   },
   lastTestText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#9CA3AF",
+    fontWeight: "500",
   },
   emptyState: {
     flex: 1,
@@ -933,25 +955,27 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyTitle: {
-    fontSize: 18,
-    color: "#1F2937",
-    marginTop: 16,
-    marginBottom: 8,
-    fontWeight: "600",
+    fontSize: 19,
+    color: "#111827",
+    marginTop: 20,
+    marginBottom: 10,
+    fontWeight: "700",
   },
   emptyText: {
     fontSize: 14,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 21,
+    marginBottom: 28,
+    fontWeight: "500",
   },
   emptyButton: {
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingHorizontal: 24,
   },
   dialog: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 20,
     maxWidth: 500,
     alignSelf: "center",
     width: "90%",
@@ -960,36 +984,38 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
   },
   dialogTitleText: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1F2937",
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.5,
   },
   dialogContent: {
     maxHeight: 400,
   },
   filterSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   filterLabel: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#374151",
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: -0.2,
   },
   dropdown: {
     backgroundColor: "#F9FAFB",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    minHeight: 44,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 48,
   },
   dropdownPlaceholder: {
     fontSize: 14,
@@ -998,24 +1024,28 @@ const styles = StyleSheet.create({
   },
   dropdownSelectedText: {
     fontSize: 14,
-    color: "#1F2937",
-    fontWeight: "500",
+    color: "#111827",
+    fontWeight: "600",
   },
   dropdownContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    elevation: 0,
-    shadowColor: "transparent",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   dropdownItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
   dropdownItemText: {
     fontSize: 14,
     color: "#4B5563",
+    fontWeight: "500",
   },
   radioOption: {
     flexDirection: "row",
@@ -1032,8 +1062,8 @@ const styles = StyleSheet.create({
     height: 1,
   },
   dialogActions: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     gap: 12,
     paddingBottom: 0,
   },
@@ -1044,11 +1074,12 @@ const styles = StyleSheet.create({
   },
   dialogButtonOutlined: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     borderColor: "#D1D5DB",
+    borderWidth: 1.5,
   },
   dialogButtonContained: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: 12,
   },
 });

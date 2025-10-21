@@ -5,6 +5,8 @@ import {
     StyleSheet,
     RefreshControl,
     FlatList,
+    TouchableOpacity,
+    TextInput,
 } from "react-native";
 import {
     Card,
@@ -19,6 +21,7 @@ import {
     List,
     IconButton,
     useTheme,
+    Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
@@ -230,13 +233,13 @@ export default function TreeRequestsScreen() {
     const renderRequestCard = ({ item: request }: { item: LocalTreeRequest }) => (
         <Card
             mode="outlined"
-            style={[styles.requestCard, { borderColor: `${colors.primary}26` }]}
+            style={styles.requestCard}
             onPress={() => handleRequestPress(request)}
         >
             <Card.Content style={styles.cardContent}>
                 <View style={styles.cardHeader}>
                     <View style={styles.requestInfo}>
-                        <Title style={[styles.requestNumber, { color: colors.primary }]}>
+                        <Title style={styles.requestNumber}>
                             {request.request_number}
                         </Title>
                         <Paragraph style={styles.requesterName}>
@@ -350,38 +353,102 @@ export default function TreeRequestsScreen() {
     const hasActiveFilters = selectedStatus || selectedType;
 
     return (
-        <>
+        <View style={styles.root}>
             <StandardHeader
                 title="Tree Requests"
-               
+                subtitle={`${filteredRequests.length} Total`}
+                backgroundColor="rgba(255, 255, 255, 0.95)"
+                statusBarStyle="dark"
+                borderColor="#E5E7EB"
+                rightActionIcon="RefreshCw"
+                onRightActionPress={() => syncData()}
+                titleSize={22}
+                subtitleSize={12}
+                iconSize={20}
             />
-            <View style={styles.container}>
-                {/* Search and Filter Section */}
-                <View style={styles.searchSection}>
-                    <Searchbar
-                        placeholder="Search requests..."
-                        onChangeText={setSearchQuery}
-                        value={searchQuery}
-                        style={styles.searchBar}
-                        inputStyle={styles.searchInput}
-                    />
-                    <View style={styles.filterRow}>
-                        <IconButton
-                            icon="filter-list"
-                            mode="contained-tonal"
-                            onPress={() => setFilterModalVisible(true)}
-                            style={[
-                                styles.filterButton,
-                                hasActiveFilters && { backgroundColor: colors.primary + "20" },
-                            ]}
-                            iconColor={hasActiveFilters ? colors.primary : undefined}
+
+            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+                {/* Search bar with filter button */}
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchInputContainer}>
+                        <Icon name="Search" size={18} color="#6B7280" />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search requests..."
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholderTextColor="#9CA3AF"
                         />
-                        {hasActiveFilters && (
-                            <Button mode="text" onPress={clearFilters} compact>
-                                Clear Filters
-                            </Button>
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                <Icon name="X" size={18} color="#9CA3AF" />
+                            </TouchableOpacity>
                         )}
                     </View>
+                    <TouchableOpacity
+                        style={styles.filterButton}
+                        onPress={() => setFilterModalVisible(true)}
+                    >
+                        <Icon name="Filter" size={20} color="#FFFFFF" />
+                        {hasActiveFilters && (
+                            <View style={styles.filterBadge} />
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                {/* Active filters */}
+                {hasActiveFilters && (
+                    <View style={styles.activeFiltersContainer}>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.activeFiltersContent}
+                        >
+                            {selectedStatus && (
+                                <Chip
+                                    compact
+                                    mode="flat"
+                                    onClose={() => setSelectedStatus("")}
+                                    style={styles.activeFilterChip}
+                                    textStyle={styles.activeFilterText}
+                                >
+                                    {getStatusLabel(selectedStatus)}
+                                </Chip>
+                            )}
+                            {selectedType && (
+                                <Chip
+                                    compact
+                                    mode="flat"
+                                    onClose={() => setSelectedType("")}
+                                    style={styles.activeFilterChip}
+                                    textStyle={styles.activeFilterText}
+                                >
+                                    {getRequestTypeLabel(selectedType)}
+                                </Chip>
+                            )}
+                            <TouchableOpacity
+                                onPress={clearFilters}
+                                style={styles.clearAllButton}
+                            >
+                                <Text style={styles.clearAllText}>Clear All</Text>
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
+                )}
+
+                {/* Request count summary */}
+                <View style={styles.summaryContainer}>
+                    <Text style={styles.summaryText}>
+                        {filteredRequests.length} request{filteredRequests.length !== 1 ? "s" : ""}
+                        {searchQuery && " found"}
+                    </Text>
+                    <TouchableOpacity
+                        onPress={handleAddRequest}
+                        style={styles.addButton}
+                    >
+                        <Icon name="Plus" size={16} color="#FFFFFF" />
+                        <Text style={styles.addButtonText}>Add</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Requests List */}
@@ -392,22 +459,14 @@ export default function TreeRequestsScreen() {
                     contentContainerStyle={styles.listContainer}
                     refreshControl={
                         <RefreshControl
-                            refreshing={refreshing}
+                            refreshing={refreshing || isSyncing}
                             onRefresh={onRefresh}
-                            colors={[colors.primary]}
-                            tintColor={colors.primary}
+                            colors={["#111827"]}
+                            tintColor="#111827"
                         />
                     }
                     ListEmptyComponent={renderEmptyState}
                     showsVerticalScrollIndicator={false}
-                />
-
-                {/* Floating Action Button */}
-                <FAB
-                    icon="add"
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
-                    onPress={handleAddRequest}
-                    label="Add Request"
                 />
 
                 {/* Filter Modal */}
@@ -472,46 +531,143 @@ export default function TreeRequestsScreen() {
                         </View>
                     </Modal>
                 </Portal>
-            </View>
-        </>
+            </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
         flex: 1,
-        backgroundColor: "#FAFAFA",
-    },
-    searchSection: {
-        padding: 16,
         backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E0E0",
     },
-    searchBar: {
-        marginBottom: 8,
+    safeArea: {
+        flex: 1,
+        backgroundColor: "transparent",
     },
-    searchInput: {
-        fontSize: 16,
-    },
-    filterRow: {
+    searchContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 12,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        backgroundColor: "#FFFFFF",
+    },
+    searchInputContainer: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#111827",
+        paddingVertical: 0,
+        marginLeft: 8,
     },
     filterButton: {
-        margin: 0,
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        backgroundColor: "#111827",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+    },
+    filterBadge: {
+        position: "absolute",
+        top: 8,
+        right: 8,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#60A5FA",
+    },
+    activeFiltersContainer: {
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+        backgroundColor: "#FFFFFF",
+    },
+    activeFiltersContent: {
+        gap: 8,
+        paddingRight: 16,
+    },
+    activeFilterChip: {
+        height: 32,
+        backgroundColor: "#EFF6FF",
+        borderWidth: 1.5,
+        borderColor: "#60A5FA",
+    },
+    activeFilterText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1E40AF",
+    },
+    clearAllButton: {
+        paddingHorizontal: 12,
+    },
+    clearAllText: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#DC2626",
+    },
+    summaryContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: "#FFFFFF",
+        borderBottomWidth: 1,
+        borderBottomColor: "#F3F4F6",
+    },
+    summaryText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#6B7280",
+        letterSpacing: -0.2,
+    },
+    addButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        backgroundColor: "#111827",
+        borderRadius: 10,
+    },
+    addButtonText: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#FFFFFF",
     },
     listContainer: {
         padding: 16,
-        paddingBottom: 100,
+        paddingTop: 8,
     },
     requestCard: {
         marginBottom: 12,
         borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        elevation: 0,
     },
     cardContent: {
-        padding: 16,
+        padding: 14,
     },
     cardHeader: {
         flexDirection: "row",
@@ -523,27 +679,34 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     requestNumber: {
-        fontSize: 16,
-        fontWeight: "600",
+        fontSize: 15,
+        fontWeight: "700",
         marginBottom: 2,
+        color: "#111827",
+        letterSpacing: -0.3,
     },
     requesterName: {
-        fontSize: 14,
-        color: "#666666",
+        fontSize: 13,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     statusContainer: {
         alignItems: "flex-end",
         gap: 4,
     },
     pendingChip: {
-        backgroundColor: "#FFF3E0",
+        backgroundColor: "#FEF3C7",
+        borderWidth: 1.5,
+        borderColor: "#FCD34D",
     },
     statusChip: {
-        height: 28,
+        height: 26,
+        borderWidth: 1.5,
     },
     chipText: {
-        fontSize: 11,
-        fontWeight: "500",
+        fontSize: 10,
+        fontWeight: "700",
+        letterSpacing: 0.2,
     },
     requestDetails: {
         gap: 6,
@@ -554,10 +717,11 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     detailText: {
-        fontSize: 13,
-        color: "#666666",
+        fontSize: 12,
+        color: "#6B7280",
         flex: 1,
         lineHeight: 18,
+        fontWeight: "500",
     },
     emptyState: {
         flex: 1,
@@ -567,40 +731,48 @@ const styles = StyleSheet.create({
         paddingVertical: 64,
     },
     emptyTitle: {
-        fontSize: 20,
-        fontWeight: "600",
-        color: "#666666",
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#1F2937",
         marginTop: 16,
         marginBottom: 8,
+        letterSpacing: -0.3,
     },
     emptyText: {
-        fontSize: 14,
-        color: "#999999",
+        fontSize: 13,
+        color: "#6B7280",
         textAlign: "center",
         lineHeight: 20,
         marginBottom: 24,
+        fontWeight: "500",
     },
     emptyButton: {
         paddingHorizontal: 24,
+        backgroundColor: "#111827",
     },
     fab: {
         position: "absolute",
         margin: 16,
         right: 0,
         bottom: 0,
+        backgroundColor: "#111827",
     },
     modalContainer: {
         backgroundColor: "#FFFFFF",
         margin: 20,
-        borderRadius: 12,
-        padding: 20,
+        borderRadius: 16,
+        padding: 24,
         maxHeight: "80%",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: "600",
+        fontSize: 19,
+        fontWeight: "800",
         marginBottom: 16,
         textAlign: "center",
+        color: "#111827",
+        letterSpacing: -0.4,
     },
     chipContainer: {
         flexDirection: "row",
@@ -610,6 +782,8 @@ const styles = StyleSheet.create({
     },
     filterChip: {
         marginBottom: 8,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
     },
     modalActions: {
         flexDirection: "row",

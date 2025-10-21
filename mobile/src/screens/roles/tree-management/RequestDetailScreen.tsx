@@ -18,6 +18,7 @@ import {
     Portal,
     Modal,
     TextInput,
+    Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
@@ -106,10 +107,10 @@ export default function RequestDetailScreen() {
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case "pruning": return "content-cut";
-            case "cutting": return "dangerous";
-            case "violation_complaint": return "report";
-            default: return "assignment";
+            case "pruning": return "Scissors";
+            case "cutting": return "Axe";
+            case "violation_complaint": return "AlertTriangle";
+            default: return "ClipboardList";
         }
     };
 
@@ -148,13 +149,16 @@ export default function RequestDetailScreen() {
             { value: "payment_pending", label: "Payment Pending" },
         ];
 
+        const buttons = statusOptions.map(option => ({
+            text: option.label,
+            onPress: () => handleEditField("status", option.value),
+        }));
+        buttons.push({ text: "Cancel", onPress: () => { } });
+
         Alert.alert(
             "Change Status",
             "Select new status:",
-            statusOptions.map(option => ({
-                text: option.label,
-                onPress: () => handleEditField("status", option.value),
-            })).concat([{ text: "Cancel", style: "cancel" }])
+            buttons
         );
     };
 
@@ -164,220 +168,244 @@ export default function RequestDetailScreen() {
 
     if (loading && !request) {
         return (
-            <>
+            <View style={styles.root}>
                 <StandardHeader
                     title="Request Details"
+                    titleSize={22}
                     showBack={true}
                     onBack={() => navigation.goBack()}
                 />
-                <SafeAreaView style={styles.container}>
+                <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
                     <View style={styles.loadingContainer}>
-                        <Paragraph>Loading request details...</Paragraph>
+                        <Text style={styles.loadingText}>Loading request details...</Text>
                     </View>
                 </SafeAreaView>
-            </>
+            </View>
         );
     }
 
     return (
-        <>
+        <View style={styles.root}>
             <StandardHeader
                 title="Request Details"
+                titleSize={22}
                 showBack={true}
                 onBack={() => navigation.goBack()}
             />
-            <SafeAreaView style={styles.container}>
-                <ScrollView style={styles.scrollView}>
-                    {/* Header Card */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <View style={styles.headerSection}>
-                                <View style={styles.headerLeft}>
-                                    <Icon
-                                        name={getTypeIcon(request.request_type)}
-                                        size={24}
-                                        color={colors.primary}
-                                        style={styles.headerIcon}
-                                    />
-                                    <View>
-                                        <Title style={styles.requestNumber}>{request.request_number}</Title>
-                                        <Paragraph style={styles.requestType}>
-                                            {getRequestTypeLabel(request.request_type)}
-                                        </Paragraph>
+            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Header Section */}
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <View style={styles.cardContent}>
+                                <View style={styles.headerSection}>
+                                    <View style={styles.headerLeft}>
+                                        <Icon
+                                            name={getTypeIcon(request.request_type)}
+                                            size={18}
+                                            color="#111827"
+                                            style={styles.headerIcon}
+                                        />
+                                        <View>
+                                            <Text style={styles.requestNumber}>{request.request_number}</Text>
+                                            <Text style={styles.requestType}>
+                                                {getRequestTypeLabel(request.request_type)}
+                                            </Text>
+                                        </View>
                                     </View>
+                                    <TouchableOpacity onPress={handleStatusChange}>
+                                        <Chip
+                                            style={[styles.statusChip, { backgroundColor: getStatusColor(request.status) + "20" }]}
+                                            textStyle={[styles.statusChipText, { color: getStatusColor(request.status) }]}
+                                        >
+                                            {getStatusLabel(request.status)}
+                                        </Chip>
+                                    </TouchableOpacity>
                                 </View>
-                                <TouchableOpacity onPress={handleStatusChange}>
-                                    <Chip
-                                        style={[styles.statusChip, { backgroundColor: getStatusColor(request.status) + "20" }]}
-                                        textStyle={[styles.statusChipText, { color: getStatusColor(request.status) }]}
-                                    >
-                                        {getStatusLabel(request.status)}
-                                    </Chip>
-                                </TouchableOpacity>
                             </View>
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
 
                     {/* Requester Information */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <View style={styles.sectionHeader}>
-                                <Title style={styles.sectionTitle}>Requester Information</Title>
-                                <IconButton
-                                    icon="edit"
-                                    size={20}
-                                    onPress={() => handleEditField("requester_name", request.requester_name)}
-                                />
-                            </View>
-                            <View style={styles.infoRow}>
-                                <Icon name="person" size={20} color="#666" />
-                                <View style={styles.infoContent}>
-                                    <Paragraph style={styles.infoLabel}>Name</Paragraph>
-                                    <Paragraph style={styles.infoValue}>{request.requester_name}</Paragraph>
-                                </View>
-                            </View>
-                            <View style={styles.infoRow}>
-                                <Icon name="location-on" size={20} color="#666" />
-                                <View style={styles.infoContent}>
-                                    <Paragraph style={styles.infoLabel}>Property Address</Paragraph>
-                                    <Paragraph style={styles.infoValue}>{request.property_address}</Paragraph>
-                                </View>
-                            </View>
-                            <View style={styles.infoRow}>
-                                <Icon name="event" size={20} color="#666" />
-                                <View style={styles.infoContent}>
-                                    <Paragraph style={styles.infoLabel}>Request Date</Paragraph>
-                                    <Paragraph style={styles.infoValue}>{formatDate(request.request_date)}</Paragraph>
-                                </View>
-                            </View>
-                        </Card.Content>
-                    </Card>
-
-                    {/* Trees and Quantities */}
-                    {request.trees_and_quantities && request.trees_and_quantities.length > 0 && (
-                        <Card style={styles.card}>
-                            <Card.Content>
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <View style={styles.cardContent}>
                                 <View style={styles.sectionHeader}>
-                                    <Title style={styles.sectionTitle}>Trees & Quantities</Title>
+                                    <Text style={styles.sectionTitle}>Requester Information</Text>
                                     <IconButton
-                                        icon="edit"
-                                        size={20}
-                                        onPress={() => handleEditField("trees_and_quantities", request.trees_and_quantities.join(", "))}
+                                        icon="pencil"
+                                        size={16}
+                                        iconColor="#6B7280"
+                                        onPress={() => handleEditField("requester_name", request.requester_name)}
                                     />
                                 </View>
-                                {request.trees_and_quantities.map((tree, index) => (
-                                    <View key={index} style={styles.treeItem}>
-                                        <Icon name="park" size={18} color="#4CAF50" />
-                                        <Paragraph style={styles.treeText}>{tree}</Paragraph>
+                                <View style={styles.infoRow}>
+                                    <Icon name="User" size={14} color="#6B7280" />
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>Name</Text>
+                                        <Text style={styles.infoValue}>{request.requester_name}</Text>
                                     </View>
-                                ))}
-                            </Card.Content>
-                        </Card>
+                                </View>
+                                <View style={styles.infoRow}>
+                                    <Icon name="MapPin" size={14} color="#6B7280" />
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>Property Address</Text>
+                                        <Text style={styles.infoValue}>{request.property_address}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.infoRow}>
+                                    <Icon name="Calendar" size={14} color="#6B7280" />
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>Request Date</Text>
+                                        <Text style={styles.infoValue}>{formatDate(request.request_date)}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                    </View>                    {/* Trees and Quantities */}
+                    {request.trees_and_quantities && request.trees_and_quantities.length > 0 && (
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>Trees & Quantities</Text>
+                                        <IconButton
+                                            icon="pencil"
+                                            size={16}
+                                            iconColor="#6B7280"
+                                            onPress={() => handleEditField("trees_and_quantities", request.trees_and_quantities.join(", "))}
+                                        />
+                                    </View>
+                                    {request.trees_and_quantities.map((tree, index) => (
+                                        <View key={index} style={styles.treeItem}>
+                                            <Icon name="Trees" size={14} color="#22C55E" />
+                                            <Text style={styles.treeText}>{tree}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
                     )}
 
                     {/* Inspection Information */}
                     {request.inspectors && request.inspectors.length > 0 && (
-                        <Card style={styles.card}>
-                            <Card.Content>
-                                <View style={styles.sectionHeader}>
-                                    <Title style={styles.sectionTitle}>Inspection Information</Title>
-                                    <IconButton
-                                        icon="edit"
-                                        size={20}
-                                        onPress={() => handleEditField("inspectors", request.inspectors.join(", "))}
-                                    />
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>Inspection Information</Text>
+                                        <IconButton
+                                            icon="pencil"
+                                            size={16}
+                                            iconColor="#6B7280"
+                                            onPress={() => handleEditField("inspectors", request.inspectors.join(", "))}
+                                        />
+                                    </View>
+                                    <View style={styles.inspectorsContainer}>
+                                        {request.inspectors.map((inspector, index) => (
+                                            <Chip key={index} style={styles.inspectorChip}>
+                                                {inspector}
+                                            </Chip>
+                                        ))}
+                                    </View>
                                 </View>
-                                <View style={styles.inspectorsContainer}>
-                                    {request.inspectors.map((inspector, index) => (
-                                        <Chip key={index} style={styles.inspectorChip}>
-                                            {inspector}
-                                        </Chip>
-                                    ))}
-                                </View>
-                            </Card.Content>
-                        </Card>
+                            </View>
+                        </View>
                     )}
 
                     {/* Pictures */}
                     {request.picture_links && request.picture_links.length > 0 && (
-                        <Card style={styles.card}>
-                            <Card.Content>
-                                <Title style={styles.sectionTitle}>Pictures</Title>
-                                <View style={styles.picturesContainer}>
-                                    {request.picture_links.map((link, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.pictureItem}
-                                            onPress={() => {
-                                                // Handle picture viewing
-                                                Alert.alert("Picture", `View picture ${index + 1}`);
-                                            }}
-                                        >
-                                            <Icon name="image" size={20} color={colors.primary} />
-                                            <Paragraph style={styles.pictureText}>Picture {index + 1}</Paragraph>
-                                        </TouchableOpacity>
-                                    ))}
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <Text style={styles.sectionTitle}>Pictures</Text>
+                                    <View style={styles.picturesContainer}>
+                                        {request.picture_links.map((link, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.pictureItem}
+                                                onPress={() => {
+                                                    // Handle picture viewing
+                                                    Alert.alert("Picture", `View picture ${index + 1}`);
+                                                }}
+                                            >
+                                                <Icon name="Image" size={16} color="#60A5FA" />
+                                                <Text style={styles.pictureText}>Picture {index + 1}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 </View>
-                            </Card.Content>
-                        </Card>
+                            </View>
+                        </View>
                     )}
 
                     {/* Notes */}
                     {request.notes && (
-                        <Card style={styles.card}>
-                            <Card.Content>
-                                <View style={styles.sectionHeader}>
-                                    <Title style={styles.sectionTitle}>Notes</Title>
-                                    <IconButton
-                                        icon="edit"
-                                        size={20}
-                                        onPress={() => handleEditField("notes", request.notes)}
-                                    />
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <View style={styles.sectionHeader}>
+                                        <Text style={styles.sectionTitle}>Notes</Text>
+                                        <IconButton
+                                            icon="pencil"
+                                            size={16}
+                                            iconColor="#6B7280"
+                                            onPress={() => handleEditField("notes", request.notes)}
+                                        />
+                                    </View>
+                                    <View style={styles.notesContainer}>
+                                        <Icon name="FileText" size={14} color="#6B7280" />
+                                        <Text style={styles.notesText}>{request.notes}</Text>
+                                    </View>
                                 </View>
-                                <View style={styles.notesContainer}>
-                                    <Icon name="note" size={20} color="#666" />
-                                    <Paragraph style={styles.notesText}>{request.notes}</Paragraph>
-                                </View>
-                            </Card.Content>
-                        </Card>
+                            </View>
+                        </View>
                     )}
 
                     {/* Fee Information */}
                     {request.fee_record_id && (
-                        <Card style={styles.card}>
-                            <Card.Content>
-                                <Title style={styles.sectionTitle}>Fee Information</Title>
-                                <View style={styles.infoRow}>
-                                    <Icon name="receipt" size={20} color="#666" />
-                                    <View style={styles.infoContent}>
-                                        <Paragraph style={styles.infoLabel}>Fee Record ID</Paragraph>
-                                        <Paragraph style={styles.infoValue}>{request.fee_record_id}</Paragraph>
+                        <View style={styles.section}>
+                            <View style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <Text style={styles.sectionTitle}>Fee Information</Text>
+                                    <View style={styles.infoRow}>
+                                        <Icon name="Receipt" size={14} color="#6B7280" />
+                                        <View style={styles.infoContent}>
+                                            <Text style={styles.infoLabel}>Fee Record ID</Text>
+                                            <Text style={styles.infoValue}>{request.fee_record_id}</Text>
+                                        </View>
                                     </View>
                                 </View>
-                            </Card.Content>
-                        </Card>
+                            </View>
+                        </View>
                     )}
 
                     {/* Metadata */}
-                    <Card style={styles.card}>
-                        <Card.Content>
-                            <Title style={styles.sectionTitle}>Request Information</Title>
-                            <View style={styles.infoRow}>
-                                <Icon name="access-time" size={20} color="#666" />
-                                <View style={styles.infoContent}>
-                                    <Paragraph style={styles.infoLabel}>Created</Paragraph>
-                                    <Paragraph style={styles.infoValue}>{formatDate(request.created_at)}</Paragraph>
+                    <View style={styles.section}>
+                        <View style={styles.card}>
+                            <View style={styles.cardContent}>
+                                <Text style={styles.sectionTitle}>Request Information</Text>
+                                <View style={styles.infoRow}>
+                                    <Icon name="Clock" size={14} color="#6B7280" />
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>Created</Text>
+                                        <Text style={styles.infoValue}>{formatDate(request.created_at)}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.infoRow}>
+                                    <Icon name="RefreshCw" size={14} color="#6B7280" />
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>Last Updated</Text>
+                                        <Text style={styles.infoValue}>{formatDate(request.updated_at)}</Text>
+                                    </View>
                                 </View>
                             </View>
-                            <View style={styles.infoRow}>
-                                <Icon name="update" size={20} color="#666" />
-                                <View style={styles.infoContent}>
-                                    <Paragraph style={styles.infoLabel}>Last Updated</Paragraph>
-                                    <Paragraph style={styles.infoValue}>{formatDate(request.updated_at)}</Paragraph>
-                                </View>
-                            </View>
-                        </Card.Content>
-                    </Card>
+                        </View>
+                    </View>
                 </ScrollView>
 
                 {/* Edit Modal */}
@@ -407,27 +435,49 @@ export default function RequestDetailScreen() {
                     </Modal>
                 </Portal>
             </SafeAreaView>
-        </>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
         flex: 1,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#FFFFFF",
+    },
+    safeArea: {
+        flex: 1,
+        backgroundColor: "transparent",
     },
     scrollView: {
         flex: 1,
-        padding: 16,
+    },
+    scrollContent: {
+        paddingBottom: 100,
+    },
+    section: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+        paddingHorizontal: 32,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     card: {
-        marginBottom: 16,
-        elevation: 2,
+        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        elevation: 0,
+    },
+    cardContent: {
+        padding: 16,
     },
     headerSection: {
         flexDirection: "row",
@@ -443,64 +493,76 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     requestNumber: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#333",
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#111827",
+        letterSpacing: -0.3,
     },
     requestType: {
-        fontSize: 14,
-        color: "#666",
+        fontSize: 13,
+        color: "#6B7280",
         marginTop: 2,
+        fontWeight: "500",
     },
     statusChip: {
-        height: 32,
+        height: 28,
+        borderWidth: 1.5,
     },
     statusChipText: {
-        fontSize: 12,
-        fontWeight: "500",
+        fontSize: 11,
+        fontWeight: "700",
+        letterSpacing: 0.2,
     },
     sectionHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 12,
+        marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#111827",
+        letterSpacing: -0.3,
     },
     infoRow: {
         flexDirection: "row",
         alignItems: "flex-start",
-        marginBottom: 12,
+        marginBottom: 14,
     },
     infoContent: {
         marginLeft: 12,
         flex: 1,
     },
     infoLabel: {
-        fontSize: 12,
-        color: "#666",
-        marginBottom: 2,
+        fontSize: 11,
+        color: "#6B7280",
+        marginBottom: 4,
+        fontWeight: "600",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     infoValue: {
         fontSize: 14,
-        color: "#333",
+        color: "#111827",
         fontWeight: "500",
+        lineHeight: 20,
     },
     treeItem: {
         flexDirection: "row",
         alignItems: "center",
         marginBottom: 8,
-        backgroundColor: "#F8F9FA",
-        padding: 8,
-        borderRadius: 6,
+        backgroundColor: "#F0FDF4",
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: "#86EFAC",
     },
     treeText: {
-        fontSize: 14,
-        color: "#333",
-        marginLeft: 8,
+        fontSize: 13,
+        color: "#111827",
+        marginLeft: 10,
+        fontWeight: "600",
     },
     inspectorsContainer: {
         flexDirection: "row",
@@ -510,6 +572,10 @@ const styles = StyleSheet.create({
     inspectorChip: {
         marginRight: 8,
         marginBottom: 4,
+        backgroundColor: "#EFF6FF",
+        borderWidth: 1.5,
+        borderColor: "#60A5FA",
+        height: 32,
     },
     picturesContainer: {
         flexDirection: "row",
@@ -519,46 +585,61 @@ const styles = StyleSheet.create({
     pictureItem: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#F8F9FA",
-        padding: 8,
-        borderRadius: 6,
+        backgroundColor: "#F0F9FF",
+        padding: 12,
+        borderRadius: 10,
         marginRight: 8,
         marginBottom: 8,
+        borderWidth: 1.5,
+        borderColor: "#60A5FA",
     },
     pictureText: {
         fontSize: 12,
-        color: "#333",
-        marginLeft: 6,
+        color: "#111827",
+        marginLeft: 8,
+        fontWeight: "600",
     },
     notesContainer: {
         flexDirection: "row",
         alignItems: "flex-start",
+        backgroundColor: "#F9FAFB",
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
     },
     notesText: {
-        fontSize: 14,
-        color: "#333",
+        fontSize: 13,
+        color: "#111827",
         marginLeft: 12,
         flex: 1,
         lineHeight: 20,
+        fontWeight: "500",
     },
     modalContent: {
-        backgroundColor: "white",
-        padding: 20,
+        backgroundColor: "#FFFFFF",
+        padding: 24,
         margin: 20,
-        borderRadius: 8,
+        borderRadius: 16,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
     },
     modalTitle: {
-        fontSize: 18,
-        fontWeight: "600",
+        fontSize: 19,
+        fontWeight: "800",
         marginBottom: 16,
         textTransform: "capitalize",
+        color: "#111827",
+        letterSpacing: -0.4,
     },
     textInput: {
         marginBottom: 16,
+        backgroundColor: "#FFFFFF",
     },
     modalActions: {
         flexDirection: "row",
-        justifyContent: "flex-end",
-        gap: 8,
+        justifyContent: "space-between",
+        gap: 12,
+        marginTop: 8,
     },
 });

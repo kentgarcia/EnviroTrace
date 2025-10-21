@@ -2,8 +2,11 @@ import axios, { AxiosInstance, AxiosError } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuthStore } from "../stores/authStore";
 
-// API base URL - update this to your backend URL
-const API_BASE_URL = "http://192.168.1.12:8000/api/v1"; // Development - your backend server IP
+// API base URL - reads from environment variable
+// For production: https://envirotrace.onrender.com/api/v1
+// For local dev: http://192.168.1.12:8000/api/v1 (or your local IP)
+// const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.12:8000/api/v1";
+const API_BASE_URL = "http://192.168.1.28:8000/api/v1";
 
 console.log("Using API URL:", API_BASE_URL);
 
@@ -13,7 +16,7 @@ const apiClient: AxiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000,
+  timeout: Number(process.env.EXPO_PUBLIC_API_TIMEOUT) || 30000,
 });
 
 // Request interceptor to add auth token

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Image } from "react-native";
+import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Image, Platform } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, useTheme, Portal, Dialog, Button, Text } from "react-native-paper";
 import { LinearGradient } from "expo-linear-gradient";
@@ -36,125 +36,122 @@ export default function DashboardSelectorScreen() {
 
     return (
         <>
-            <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-            <LinearGradient
-                colors={["#F8FAFC", "#F1F5F9", "#E2E8F0"]}
-                style={styles.gradientBackground}
-                locations={[0, 0.55, 1]}
-            />
+            <View style={styles.root}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <Text variant="headlineMedium" style={styles.headerTitle}>Dashboard Hub</Text>
-                    </View>
-                    <View style={styles.headerActions}>
-                        <TouchableOpacity onPress={() => (navigation as any).navigate('ProfileHome')} style={styles.headerButton}>
-                            <Icon name="UserCircle" size={24} color="#475569" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setLogoutVisible(true)} style={styles.headerButton}>
-                            <Icon name="LogOut" size={24} color="#475569" />
-                        </TouchableOpacity>
-                    </View>
+                {/* Background Image - same as login */}
+                <View style={styles.backgroundImageWrapper} pointerEvents="none">
+                    <Image
+                        source={require("../../../assets/images/bg_login.png")}
+                        style={styles.backgroundImage}
+                        resizeMode="cover"
+                        accessibilityIgnoresInvertColors
+                    />
                 </View>
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
-                >
-                    <Card style={styles.heroCard}>
-                        <View style={styles.heroContent}>
-                            <View style={styles.heroLogosRow}>
-                                <Image
-                                    source={require("../../../assets/images/logo_epnro.png")}
-                                    style={styles.heroLogo}
-                                    resizeMode="contain"
-                                />
-                                <Image
-                                    source={require("../../../assets/images/logo_munti.png")}
-                                    style={styles.heroLogo}
-                                    resizeMode="contain"
-                                />
-                            </View>
-                            <Text variant="headlineMedium" style={styles.heroTitle}>Select your workflow</Text>
-                            <Text variant="bodyMedium" style={styles.heroSubtitle}>
-                                {roles.length ? `${roles.length} specialized experience${roles.length > 1 ? "s" : ""} ready to launch.` : "No assigned dashboards yet."}
+                <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+                    {/* Header with Profile and Logout */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <Image
+                                source={require("../../../assets/images/logo_app.png")}
+                                style={styles.appLogo}
+                                resizeMode="contain"
+                                accessibilityLabel="EnviroTrace"
+                            />
+                            <Text style={styles.appName}>EnviroTrace</Text>
+                        </View>
+                        <View style={styles.headerActions}>
+                            <TouchableOpacity onPress={() => (navigation as any).navigate('ProfileHome')} style={styles.headerButton}>
+                                <Icon name="UserCircle" size={20} color="#64748B" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => setLogoutVisible(true)} style={styles.headerButton}>
+                                <Icon name="LogOut" size={20} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+                    >
+                        {/* Welcome Section */}
+                        <View style={styles.welcomeSection}>
+                            <Text style={styles.welcomeTitle}>Select Dashboard</Text>
+                            <Text style={styles.welcomeSubtitle}>
+                                Choose your workflow to continue
                             </Text>
-                            <View style={styles.heroMetaRow}>
-                                <View style={styles.heroChipCustom}>
-                                    <Icon name="ShieldCheck" size={14} color="#3B82F6" />
-                                    <Text style={styles.heroChipText}>Secure Access</Text>
+                        </View>
+
+                        {/* AI Assistant Card */}
+                        <TouchableOpacity onPress={() => (navigation as any).navigate('AIAssistant')} activeOpacity={0.8}>
+                            <View style={styles.aiCard}>
+                                <View style={styles.aiIconContainer}>
+                                    <Icon name="Bot" size={24} color="#FFFFFF" />
                                 </View>
-                                <View style={styles.heroChipCustom}>
-                                    <Icon name="Clock" size={14} color="#3B82F6" />
-                                    <Text style={styles.heroChipText}>Real-time data</Text>
+                                <View style={styles.aiTextContainer}>
+                                    <Text style={styles.aiTitle}>AI Assistant</Text>
+                                    <View style={styles.aiStatus}>
+                                        <View style={styles.statusDot} />
+                                        <Text style={styles.statusText}>Online & Ready</Text>
+                                    </View>
                                 </View>
+                                <Icon name="ChevronRight" size={20} color="#3A5A7A" />
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Dashboard Cards */}
+                        <View style={styles.dashboardsSection}>
+                            <Text style={styles.sectionTitle}>Your Dashboards</Text>
+                            <View style={styles.grid}>
+                                {roles.map((r) => {
+                                    const icon = r === "government_emission" ? "Car" :
+                                        r === "tree_management" ? "TreePalm" :
+                                            r === "air_quality" ? "Wind" : "LayoutDashboard";
+
+                                    const description = r === "government_emission"
+                                        ? "Vehicles, testing, and offices"
+                                        : r === "tree_management"
+                                            ? "Urban greening and requests"
+                                            : r === "air_quality"
+                                                ? "Monitoring and AQ metrics"
+                                                : undefined;
+
+                                    const bg = roleImageMap[r];
+                                    return (
+                                        <TouchableOpacity key={r} onPress={() => handleSelect(r)} activeOpacity={0.7}>
+                                            <View style={styles.dashboardCard}>
+                                                <View style={styles.dashboardIconContainer}>
+                                                    <Icon name={icon as any} size={24} color="#FFFFFF" />
+                                                </View>
+                                                <View style={styles.dashboardTextContainer}>
+                                                    <Text style={styles.dashboardTitle}>{roleLabels[r] ?? r}</Text>
+                                                    {!!description && (
+                                                        <Text style={styles.dashboardDesc}>{description}</Text>
+                                                    )}
+                                                </View>
+                                                <Icon name="ChevronRight" size={20} color="#64748B" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                })}
                             </View>
                         </View>
 
-                        {/* AI Assistant Integrated Section */}
-                        <TouchableOpacity onPress={() => (navigation as any).navigate('AIAssistant')} activeOpacity={0.8}>
-                            <LinearGradient
-                                colors={["#3B82F6", "#2563EB"]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.aiIntegratedSection}
-                            >
-                                <View style={styles.aiIntegratedContent}>
-                                    <View style={styles.aiIconContainer}>
-                                        <Icon name="Bot" size={24} color="#FFFFFF" />
-                                    </View>
-                                    <View style={styles.aiTextContainer}>
-                                        <Text style={styles.aiTitle}>AI Assistant</Text>
-                                        <View style={styles.aiStatus}>
-                                            <View style={styles.statusDot} />
-                                            <Text style={styles.statusText}>Online & Ready</Text>
-                                        </View>
-                                    </View>
-                                    <Icon name="ChevronRight" size={20} color="rgba(255, 255, 255, 0.8)" />
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </Card>
+                        {roles.length === 0 && (
+                            <View style={styles.noRolesContainer}>
+                                <Text style={styles.noRoles}>No dashboards assigned to your account.</Text>
+                            </View>
+                        )}
+                    </ScrollView>
 
-                    <View style={styles.grid}>
-                        {roles.map((r) => {
-                            const icon = r === "government_emission" ? "Car" :
-                                r === "tree_management" ? "TreePalm" :
-                                    r === "air_quality" ? "Wind" : "LayoutDashboard";
-
-                            const description = r === "government_emission"
-                                ? "Vehicles, testing, and offices"
-                                : r === "tree_management"
-                                    ? "Urban greening and requests"
-                                    : r === "air_quality"
-                                        ? "Monitoring and AQ metrics"
-                                        : undefined;
-
-                            const bg = roleImageMap[r];
-                            return (
-                                <Card key={r} style={styles.roleCard} mode="contained" onPress={() => handleSelect(r)}>
-                                    <View style={styles.roleCardContent}>
-                                        <View style={styles.roleIconContainer}>
-                                            <Icon name={icon as any} size={24} color="#FFFFFF" />
-                                        </View>
-                                        <View style={styles.roleTextContainer}>
-                                            <Text variant="titleMedium" style={styles.roleTitle}>{roleLabels[r] ?? r}</Text>
-                                            {!!description && (
-                                                <Text variant="bodySmall" style={styles.roleDesc}>{description}</Text>
-                                            )}
-                                        </View>
-                                        <Icon name="ChevronRight" size={20} color="#94A3B8" />
-                                    </View>
-                                </Card>
-                            );
-                        })}
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <View style={styles.footerVersionBadge}>
+                            <Text style={styles.footerVersion}>v1.0.0</Text>
+                        </View>
                     </View>
-
-                    {roles.length === 0 && (
-                        <Text variant="bodyMedium" style={styles.noRoles}>No roles found for this account.</Text>
-                    )}
-                </ScrollView>
+                </SafeAreaView>
 
                 <Portal>
                     <Dialog visible={logoutVisible} onDismiss={() => setLogoutVisible(false)} style={styles.dialog}>
@@ -192,14 +189,31 @@ export default function DashboardSelectorScreen() {
                         </Dialog.Actions>
                     </Dialog>
                 </Portal>
-            </SafeAreaView>
+            </View>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    gradientBackground: {
-        ...StyleSheet.absoluteFillObject,
+    root: {
+        flex: 1,
+        backgroundColor: "#FFFFFF",
+    },
+    backgroundImageWrapper: {
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    },
+    backgroundImage: {
+        width: "100%",
+        height: "100%",
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
     safeArea: {
         flex: 1,
@@ -208,22 +222,24 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 20,
+        paddingHorizontal: 28,
         paddingVertical: 16,
         backgroundColor: "transparent",
     },
     headerLeft: {
-        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
     },
-    headerTitle: {
-        color: "#1E293B",
+    appLogo: {
+        width: 40,
+        height: 40,
+    },
+    appName: {
+        fontSize: 20,
         fontWeight: "700",
-        fontSize: 28,
+        color: "#111827",
         letterSpacing: -0.5,
-    },
-    headerSubtitle: {
-        color: "#64748B",
-        marginTop: 2,
     },
     headerActions: {
         flexDirection: "row",
@@ -231,132 +247,57 @@ const styles = StyleSheet.create({
     },
     headerButton: {
         padding: 8,
-        borderRadius: 12,
-        backgroundColor: "rgba(241, 245, 249, 0.8)",
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        borderWidth: 1,
+        borderColor: "rgba(226, 232, 240, 0.5)",
     },
     scrollContent: {
-        paddingHorizontal: 20,
-        paddingTop: 12,
-        gap: 20,
-    },
-    heroCard: {
-        borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        overflow: "hidden",
-        elevation: 0,
-    },
-    heroContent: {
-        padding: 28,
-        gap: 20,
-    },
-    heroLogosRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
+        paddingHorizontal: 28,
+        paddingTop: 20,
         gap: 24,
     },
-    heroLogo: {
-        width: 64,
-        height: 64,
+    welcomeSection: {
+        alignItems: "center",
+        marginBottom: 8,
+        paddingHorizontal: 16,
+        width: "100%",
     },
-    heroTitle: {
-        color: "#1E293B",
+    welcomeTitle: {
+        fontSize: 28,
+        fontWeight: "800",
+        color: "#111827",
+        marginBottom: 6,
         textAlign: "center",
-        fontSize: 22,
-        fontWeight: "600",
-        letterSpacing: 0.3,
+        letterSpacing: -1,
     },
-    heroSubtitle: {
-        color: "rgba(71, 85, 105, 0.85)",
-        textAlign: "center",
-        fontSize: 14,
-        lineHeight: 22,
-    },
-    heroMetaRow: {
-        flexDirection: "row",
-        justifyContent: "center",
-        gap: 12,
-        flexWrap: "wrap",
-    },
-    heroChipCustom: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        backgroundColor: "#EFF6FF",
-        borderRadius: 20,
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderWidth: 1,
-        borderColor: "#BFDBFE",
-    },
-    heroChipText: {
-        color: "#1E40AF",
-        fontSize: 11,
-        fontWeight: "600",
-    },
-    grid: {
-        flexDirection: "column",
-        gap: 16,
-    },
-    roleCard: {
-        borderRadius: 16,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-        elevation: 0,
-    },
-    roleCardContent: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 20,
-        gap: 16,
-    },
-    roleTextContainer: {
-        flex: 1,
-    },
-    roleIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: "#3B82F6",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    roleTitle: {
-        color: "#0F172A",
-        fontWeight: "600",
-        fontSize: 16,
-        marginBottom: 2,
-    },
-    roleDesc: {
-        color: "#64748B",
+    welcomeSubtitle: {
         fontSize: 13,
-    },
-    roleChevron: {
-        backgroundColor: "transparent",
-    },
-    noRoles: {
+        color: "#54779C",
         textAlign: "center",
-        color: "rgba(100, 116, 139, 0.8)",
-        marginTop: 24,
+        fontWeight: "600",
+        letterSpacing: 0.5,
     },
-    // Integrated AI Assistant
-    aiIntegratedSection: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-    },
-    aiIntegratedContent: {
+    aiCard: {
         flexDirection: "row",
         alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        padding: 18,
         gap: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3.84,
+        elevation: 2,
     },
     aiIconContainer: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: "rgba(255, 255, 255, 0.25)",
+        backgroundColor: "#3A5A7A",
         alignItems: "center",
         justifyContent: "center",
     },
@@ -365,8 +306,8 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     aiTitle: {
-        color: "#FFFFFF",
-        fontSize: 15,
+        color: "#111827",
+        fontSize: 16,
         fontWeight: "700",
     },
     aiStatus: {
@@ -381,9 +322,86 @@ const styles = StyleSheet.create({
         backgroundColor: "#10B981",
     },
     statusText: {
-        color: "rgba(255, 255, 255, 0.95)",
+        color: "#6B7280",
+        fontSize: 12,
+        fontWeight: "600",
+    },
+    dashboardsSection: {
+        gap: 16,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#111827",
+        letterSpacing: -0.3,
+        marginBottom: 4,
+    },
+    grid: {
+        gap: 12,
+    },
+    dashboardCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        padding: 18,
+        gap: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    dashboardIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "#3A5A7A",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    dashboardTextContainer: {
+        flex: 1,
+    },
+    dashboardTitle: {
+        color: "#111827",
+        fontWeight: "700",
+        fontSize: 16,
+        marginBottom: 2,
+        letterSpacing: -0.3,
+    },
+    dashboardDesc: {
+        color: "#6B7280",
+        fontSize: 13,
+    },
+    noRolesContainer: {
+        alignItems: "center",
+        paddingVertical: 32,
+    },
+    noRoles: {
+        textAlign: "center",
+        color: "#9CA3AF",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+    footer: {
+        paddingVertical: 16,
+        paddingHorizontal: 28,
+        alignItems: "center",
+    },
+    footerVersionBadge: {
+        backgroundColor: "rgba(55, 65, 81, 0.9)",
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    footerVersion: {
+        color: "#FFFFFF",
         fontSize: 11,
         fontWeight: "600",
+        letterSpacing: 0.5,
     },
     // Dialog Styles
     dialog: {
@@ -400,7 +418,6 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         gap: 12,
     },
-    // Logout Dialog
     logoutIconContainer: {
         width: 80,
         height: 80,
@@ -429,11 +446,14 @@ const styles = StyleSheet.create({
     cancelButton: {
         flex: 1,
         borderColor: "#E2E8F0",
+        borderRadius: 12,
     },
     cancelButtonText: {
         color: "#64748B",
+        fontWeight: "600",
     },
     logoutButton: {
         flex: 1,
+        borderRadius: 12,
     },
 });

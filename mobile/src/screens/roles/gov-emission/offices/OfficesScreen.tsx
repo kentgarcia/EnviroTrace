@@ -110,12 +110,15 @@ export default function OfficesScreen() {
             ? `${filteredVehicles.length} ${filteredVehicles.length === 1 ? "Vehicle" : "Vehicles"}`
             : `${filteredOffices.length} ${filteredOffices.length === 1 ? "Office" : "Offices"}`
         }
-        backgroundColor="#F3F6FB"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
         statusBarStyle="dark"
         showBack={!!selectedOffice}
         onBack={backToOffices}
         rightActionIcon="RefreshCw"
         onRightActionPress={() => syncData()}
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         {/* Search Bar */}
@@ -137,13 +140,13 @@ export default function OfficesScreen() {
 
         {loading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#02339C" />
+            <ActivityIndicator size="large" color="#111827" />
           </View>
         ) : (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#02339C"]} tintColor="#02339C" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#111827"]} tintColor="#111827" />}
           >
             {!selectedOffice ? (
               // Offices View
@@ -166,7 +169,7 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Building2" size={24} color="#02339C" />
+                      <Icon name="Building2" size={22} color="#111827" />
                     </View>
                     <View style={styles.cardContent}>
                       <Text style={styles.cardTitle}>{office.name}</Text>
@@ -203,7 +206,7 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Car" size={24} color="#02339C" />
+                      <Icon name="Car" size={22} color="#111827" />
                     </View>
                     <View style={styles.cardContent}>
                       <View style={styles.cardHeader}>
@@ -243,20 +246,25 @@ export default function OfficesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
+    backgroundColor: "#FFFFFF",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginHorizontal: 16,
     marginVertical: 12,
-    gap: 8,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,
@@ -279,25 +287,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E5E7EB",
-    padding: 12,
+    padding: 14,
     marginBottom: 12,
-    elevation: 0,
+    elevation: 1,
     gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#EEF2FF",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
   cardContent: {
     flex: 1,
-    gap: 4,
+    gap: 5,
   },
   cardHeader: {
     flexDirection: "row",
@@ -305,22 +319,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
     color: "#1F2937",
+    letterSpacing: -0.3,
   },
   cardSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
+    fontWeight: "500",
   },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
   },
   cardDetail: {
     fontSize: 12,
     color: "#6B7280",
+    fontWeight: "500",
   },
   statusChip: {
     height: 24,
@@ -330,14 +347,19 @@ const styles = StyleSheet.create({
   },
   statusChipPass: {
     backgroundColor: "#DCFCE7",
+    borderWidth: 1.5,
+    borderColor: "#86EFAC",
   },
   statusChipFail: {
     backgroundColor: "#FEE2E2",
+    borderWidth: 1.5,
+    borderColor: "#FCA5A5",
   },
   statusChipText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "700",
     lineHeight: 14,
+    letterSpacing: 0.2,
   },
   emptyState: {
     alignItems: "center",
@@ -346,15 +368,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
     color: "#1F2937",
     marginTop: 16,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
     textAlign: "center",
+    fontWeight: "500",
   },
 });

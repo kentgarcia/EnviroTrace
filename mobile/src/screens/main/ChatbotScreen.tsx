@@ -10,6 +10,7 @@ import {
     Platform,
     ActivityIndicator,
     Alert,
+    Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -252,97 +253,155 @@ export default function ChatbotScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar style="auto" />
-
-            {/* Header */}
-            <View style={styles.header}>
-                <Icon name="bot" size={24} color="#2E7D32" />
-                <Text style={styles.headerTitle}>Environmental Assistant</Text>
-                <View style={styles.headerRight}>
-                    {isLoading && <ActivityIndicator size="small" color="#2E7D32" />}
-                </View>
+        <View style={styles.root}>
+            <StatusBar style="dark" />
+            <View style={styles.backgroundImageWrapper}>
+                <Image
+                    source={require("../../../assets/images/bg_login.png")}
+                    style={styles.backgroundImage}
+                />
             </View>
-
-            <KeyboardAvoidingView
-                style={styles.chatContainer}
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-            >
-                {/* Messages */}
-                <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.messagesContainer}
-                    contentContainerStyle={styles.messagesContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {messages.map(renderMessage)}
-                    {renderSuggestedQuestions()}
-                </ScrollView>
-
-                {/* Input */}
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.textInput}
-                        value={inputText}
-                        onChangeText={setInputText}
-                        placeholder="Ask me about environmental monitoring..."
-                        placeholderTextColor="#999"
-                        multiline
-                        maxLength={1000}
-                        editable={!isLoading}
-                        onSubmitEditing={handleSendMessage}
-                        blurOnSubmit={false}
-                    />
-                    <TouchableOpacity
-                        style={[
-                            styles.sendButton,
-                            (!inputText.trim() || isLoading) && styles.sendButtonDisabled,
-                        ]}
-                        onPress={handleSendMessage}
-                        disabled={!inputText.trim() || isLoading}
-                    >
-                        <Icon
-                            name="send"
-                            size={20}
-                            color={(!inputText.trim() || isLoading) ? "#ccc" : "#fff"}
+            <SafeAreaView style={styles.safeArea}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <View style={styles.headerCenter}>
+                        <Image
+                            source={require("../../../assets/images/logo_app.png")}
+                            style={styles.headerLogo}
+                            resizeMode="contain"
                         />
-                    </TouchableOpacity>
+                        <View style={styles.headerTextContainer}>
+                            <Text style={styles.headerTitle}>Environmental Assistant</Text>
+                            <View style={styles.headerStatus}>
+                                {isLoading && <ActivityIndicator size="small" color="#3A5A7A" />}
+                                {!isLoading && (
+                                    <>
+                                        <View style={styles.headerStatusDot} />
+                                        <Text style={styles.headerStatusText}>Ready</Text>
+                                    </>
+                                )}
+                            </View>
+                        </View>
+                    </View>
                 </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+
+                <KeyboardAvoidingView
+                    style={styles.chatContainer}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+                >
+                    {/* Messages */}
+                    <ScrollView
+                        ref={scrollViewRef}
+                        style={styles.messagesContainer}
+                        contentContainerStyle={styles.messagesContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {messages.map(renderMessage)}
+                        {renderSuggestedQuestions()}
+                    </ScrollView>
+
+                    {/* Input */}
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={styles.textInput}
+                            value={inputText}
+                            onChangeText={setInputText}
+                            placeholder="Ask me about environmental monitoring..."
+                            placeholderTextColor="#999"
+                            multiline
+                            maxLength={1000}
+                            editable={!isLoading}
+                            onSubmitEditing={handleSendMessage}
+                            blurOnSubmit={false}
+                        />
+                        <TouchableOpacity
+                            style={[
+                                styles.sendButton,
+                                (!inputText.trim() || isLoading) && styles.sendButtonDisabled,
+                            ]}
+                            onPress={handleSendMessage}
+                            disabled={!inputText.trim() || isLoading}
+                        >
+                            <Icon
+                                name="send"
+                                size={20}
+                                color={(!inputText.trim() || isLoading) ? "#ccc" : "#fff"}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: "#FFFFFF",
+    },
+    backgroundImageWrapper: {
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    },
+    backgroundImage: {
+        width: "100%",
+        height: "100%",
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    },
+    safeArea: {
+        flex: 1,
     },
     header: {
         flexDirection: "row",
         alignItems: "center",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: "#fff",
-        borderBottomWidth: 1,
-        borderBottomColor: "#e0e0e0",
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        justifyContent: "space-between",
+        paddingHorizontal: 28,
+        paddingVertical: 16,
+        backgroundColor: "transparent",
+    },
+    headerCenter: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+    },
+    headerLogo: {
+        width: 44,
+        height: 44,
+    },
+    headerTextContainer: {
+        gap: 4,
     },
     headerTitle: {
-        flex: 1,
+        color: "#111827",
         fontSize: 18,
-        fontWeight: "600",
-        color: "#333",
-        marginLeft: 12,
+        fontWeight: "700",
     },
-    headerRight: {
-        width: 24,
+    headerStatus: {
+        flexDirection: "row",
         alignItems: "center",
+        gap: 6,
+    },
+    headerStatusDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#10B981",
+    },
+    headerStatusText: {
+        color: "#6B7280",
+        fontSize: 12,
+        fontWeight: "600",
     },
     chatContainer: {
         flex: 1,
@@ -374,54 +433,55 @@ const styles = StyleSheet.create({
         borderRadius: 18,
     },
     userBubble: {
-        backgroundColor: "#2E7D32",
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
         borderBottomRightRadius: 4,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
     },
     assistantBubble: {
-        backgroundColor: "#fff",
+        backgroundColor: "#FFFFFF",
         borderBottomLeftRadius: 4,
-        elevation: 1,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.05,
         shadowRadius: 2,
+        elevation: 1,
     },
     systemBubble: {
-        backgroundColor: "#e3f2fd",
+        backgroundColor: "rgba(226, 232, 240, 0.5)",
         borderRadius: 18,
-        elevation: 1,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
     },
     messageText: {
-        fontSize: 16,
+        fontSize: 15,
         lineHeight: 22,
     },
     userText: {
-        color: "#fff",
+        color: "#0F172A",
     },
     assistantText: {
-        color: "#333",
+        color: "#0F172A",
     },
     systemText: {
-        color: "#1976d2",
+        color: "#64748B",
         fontStyle: "italic",
     },
     timestamp: {
-        fontSize: 12,
+        fontSize: 11,
         marginTop: 4,
     },
     userTimestamp: {
-        color: "rgba(255, 255, 255, 0.7)",
+        color: "#94A3B8",
         textAlign: "right",
     },
     assistantTimestamp: {
-        color: "#999",
+        color: "#94A3B8",
     },
     systemTimestamp: {
-        color: "#1976d2",
+        color: "#94A3B8",
         textAlign: "center",
     },
     suggestionsContainer: {
@@ -430,52 +490,70 @@ const styles = StyleSheet.create({
     suggestionsTitle: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#666",
+        color: "#64748B",
         marginBottom: 12,
     },
     suggestionButton: {
-        backgroundColor: "#fff",
+        backgroundColor: "#FFFFFF",
         paddingHorizontal: 16,
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 12,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: "#e0e0e0",
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     suggestionText: {
         fontSize: 14,
-        color: "#2E7D32",
+        color: "#3A5A7A",
+        fontWeight: "500",
     },
     inputContainer: {
         flexDirection: "row",
         alignItems: "flex-end",
         paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: "#fff",
+        paddingTop: 16,
+        paddingBottom: 16,
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
         borderTopWidth: 1,
-        borderTopColor: "#e0e0e0",
+        borderTopColor: "#E5E7EB",
     },
     textInput: {
         flex: 1,
         borderWidth: 1,
-        borderColor: "#e0e0e0",
+        borderColor: "#E5E7EB",
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 12,
         marginRight: 12,
         maxHeight: 100,
-        fontSize: 16,
-        backgroundColor: "#f9f9f9",
+        fontSize: 15,
+        color: "#111827",
+        backgroundColor: "#FFFFFF",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     sendButton: {
-        backgroundColor: "#2E7D32",
+        backgroundColor: "#3A5A7A",
         width: 44,
         height: 44,
         borderRadius: 22,
         alignItems: "center",
         justifyContent: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 3,
+        elevation: 3,
     },
     sendButtonDisabled: {
-        backgroundColor: "#e0e0e0",
+        backgroundColor: "#CBD5E1",
     },
 });

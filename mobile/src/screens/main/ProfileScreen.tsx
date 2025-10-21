@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity } from "react-native";
+import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, Card, Divider, Portal, Dialog, Button } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
+import { Text, Portal, Dialog, Button } from "react-native-paper";
 import Icon from "../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../../core/stores/authStore";
@@ -35,220 +34,208 @@ export default function ProfileScreen() {
 
     return (
         <>
-            <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-            <LinearGradient
-                colors={["#F8FAFC", "#F1F5F9", "#E2E8F0"]}
-                style={styles.gradientBackground}
-                locations={[0, 0.55, 1]}
-            />
+            <View style={styles.root}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-            <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Icon name="ChevronRight" size={24} color="#475569" style={{ transform: [{ rotate: "180deg" }] }} />
-                    </TouchableOpacity>
-                    <Text variant="headlineSmall" style={styles.headerTitle}>Profile</Text>
-                    <View style={{ width: 40 }} />
+                {/* Background Image - same as login and dashboard selector */}
+                <View style={styles.backgroundImageWrapper} pointerEvents="none">
+                    <Image
+                        source={require("../../../assets/images/bg_login.png")}
+                        style={styles.backgroundImage}
+                        resizeMode="cover"
+                        accessibilityIgnoresInvertColors
+                    />
                 </View>
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
-                >
-                    {/* Profile Header Card with Gradient Background */}
-                    <Card style={styles.profileCard} elevation={0}>
-                        <LinearGradient
-                            colors={["#3B82F6", "#2563EB"]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.profileGradient}
-                        >
-                            <View style={styles.profileHeader}>
+                <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Icon name="ChevronRight" size={20} color="#64748B" style={{ transform: [{ rotate: "180deg" }] }} />
+                        </TouchableOpacity>
+                        <View style={styles.headerCenter}>
+                            <Image
+                                source={require("../../../assets/images/logo_app.png")}
+                                style={styles.appLogo}
+                                resizeMode="contain"
+                                accessibilityLabel="EnviroTrace"
+                            />
+                            <Text style={styles.appName}>EnviroTrace</Text>
+                        </View>
+                        <View style={{ width: 36 }} />
+                    </View>
+
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+                    >
+                        {/* Profile Header Card */}
+                        <View style={styles.profileSection}>
+                            <View style={styles.profileCard}>
                                 <View style={styles.avatarContainer}>
                                     <View style={styles.avatarCircle}>
-                                        <Icon name="UserCircle" size={56} color="#FFFFFF" />
+                                        <Icon name="UserCircle" size={48} color="#3A5A7A" />
                                     </View>
                                 </View>
                                 <View style={styles.profileInfo}>
-                                    <Text variant="headlineMedium" style={styles.profileName}>
+                                    <Text style={styles.profileName}>
                                         {user?.full_name || "User"}
                                     </Text>
                                     {!!user?.email && (
                                         <View style={styles.emailRow}>
-                                            <Icon name="MessageCircle" size={16} color="rgba(255, 255, 255, 0.85)" />
+                                            <Icon name="Mail" size={14} color="#6B7280" />
                                             <Text style={styles.profileEmail}>{user.email}</Text>
                                         </View>
                                     )}
                                     <View style={styles.statusBadge}>
                                         <View style={styles.statusDot} />
-                                        <Text style={styles.statusText}>Active Account</Text>
+                                        <Text style={styles.statusText}>Active</Text>
                                     </View>
                                 </View>
                             </View>
-                        </LinearGradient>
-                    </Card>
-
-                    {/* Quick Stats Row */}
-                    <View style={styles.statsRow}>
-                        <Card style={styles.statCard} elevation={0}>
-                            <View style={styles.statContent}>
-                                <View style={[styles.statIconContainer, { backgroundColor: "#EFF6FF" }]}>
-                                    <Icon name="Shield" size={20} color="#3B82F6" />
-                                </View>
-                                <Text style={styles.statValue}>{allRoles.length}</Text>
-                                <Text style={styles.statLabel}>Active Roles</Text>
-                            </View>
-                        </Card>
-                        <Card style={styles.statCard} elevation={0}>
-                            <View style={styles.statContent}>
-                                <View style={[styles.statIconContainer, { backgroundColor: "#F0FDF4" }]}>
-                                    <Icon name="ShieldCheck" size={20} color="#10B981" />
-                                </View>
-                                <Text style={styles.statValue}>Verified</Text>
-                                <Text style={styles.statLabel}>Account Status</Text>
-                            </View>
-                        </Card>
-                    </View>
-
-                    {/* Assigned Roles Card */}
-                    <Card style={styles.card} elevation={0}>
-                        <View style={styles.cardHeader}>
-                            <View style={styles.cardTitleRow}>
-                                <View style={styles.titleIconContainer}>
-                                    <Icon name="LayoutDashboard" size={20} color="#FFFFFF" />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text variant="titleMedium" style={styles.cardTitle}>Dashboard Access</Text>
-                                    <Text style={styles.cardSubtitle}>Your assigned workflows</Text>
-                                </View>
-                            </View>
                         </View>
-                        <Divider style={styles.divider} />
-                        <View style={styles.cardContent}>
+
+                        {/* Assigned Roles Section */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Icon name="LayoutDashboard" size={18} color="#111827" />
+                                <Text style={styles.sectionTitle}>Dashboard Access</Text>
+                            </View>
                             {allRoles.length > 0 ? (
                                 <View style={styles.rolesContainer}>
-                                    {allRoles.map((role, index) => (
-                                        <View key={role}>
-                                            <View style={styles.roleItem}>
-                                                <View style={styles.roleIconCircle}>
-                                                    <Icon
-                                                        name={roleIcons[role] || "LayoutDashboard"}
-                                                        size={20}
-                                                        color="#3B82F6"
-                                                    />
-                                                </View>
-                                                <View style={styles.roleDetails}>
-                                                    <Text style={styles.roleName}>
-                                                        {roleLabels[role] || role}
-                                                    </Text>
-                                                    <Text style={styles.roleDescription}>
-                                                        Full access granted
-                                                    </Text>
-                                                </View>
-                                                <Icon name="ChevronRight" size={20} color="#CBD5E1" />
+                                    {allRoles.map((role) => (
+                                        <View key={role} style={styles.roleItem}>
+                                            <View style={styles.roleIconCircle}>
+                                                <Icon
+                                                    name={roleIcons[role] || "LayoutDashboard"}
+                                                    size={20}
+                                                    color="#FFFFFF"
+                                                />
                                             </View>
-                                            {index < allRoles.length - 1 && <Divider style={styles.roleDivider} />}
+                                            <View style={styles.roleDetails}>
+                                                <Text style={styles.roleName}>
+                                                    {roleLabels[role] || role}
+                                                </Text>
+                                                <Text style={styles.roleDescription}>
+                                                    Full access granted
+                                                </Text>
+                                            </View>
+                                            <Icon name="CheckCircle" size={18} color="#10B981" />
                                         </View>
                                     ))}
                                 </View>
                             ) : (
-                                <Text style={styles.noRolesText}>No roles assigned yet</Text>
+                                <View style={styles.noRolesContainer}>
+                                    <Text style={styles.noRolesText}>No roles assigned yet</Text>
+                                </View>
                             )}
                         </View>
-                    </Card>
 
-                    {/* Account Settings Card */}
-                    <Card style={styles.card} elevation={0}>
-                        <View style={styles.cardHeader}>
-                            <View style={styles.cardTitleRow}>
-                                <View style={[styles.titleIconContainer, { backgroundColor: "#8B5CF6" }]}>
-                                    <Icon name="Settings" size={20} color="#FFFFFF" />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text variant="titleMedium" style={styles.cardTitle}>Account Settings</Text>
-                                    <Text style={styles.cardSubtitle}>Manage your account</Text>
-                                </View>
+                        {/* Account Settings Section */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Icon name="Settings" size={18} color="#111827" />
+                                <Text style={styles.sectionTitle}>Account Settings</Text>
                             </View>
-                        </View>
-                        <Divider style={styles.divider} />
-                        <View style={styles.cardContent}>
-                            <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                                <View style={styles.settingLeft}>
+                            <View style={styles.settingsContainer}>
+                                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
                                     <View style={styles.settingIconContainer}>
-                                        <Icon name="Lock" size={18} color="#64748B" />
+                                        <Icon name="Lock" size={18} color="#FFFFFF" />
                                     </View>
                                     <Text style={styles.settingText}>Change Password</Text>
-                                </View>
-                                <Icon name="ChevronRight" size={20} color="#CBD5E1" />
-                            </TouchableOpacity>
-                            <Divider style={styles.roleDivider} />
-                            <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                                <View style={styles.settingLeft}>
+                                    <Icon name="ChevronRight" size={18} color="#64748B" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
                                     <View style={styles.settingIconContainer}>
-                                        <Icon name="Bell" size={18} color="#64748B" />
+                                        <Icon name="Bell" size={18} color="#FFFFFF" />
                                     </View>
                                     <Text style={styles.settingText}>Notifications</Text>
-                                </View>
-                                <Icon name="ChevronRight" size={20} color="#CBD5E1" />
-                            </TouchableOpacity>
-                            <Divider style={styles.roleDivider} />
-                            <TouchableOpacity
-                                style={styles.settingItem}
-                                activeOpacity={0.7}
-                                onPress={() => setLogoutVisible(true)}
-                            >
-                                <View style={styles.settingLeft}>
-                                    <View style={[styles.settingIconContainer, { backgroundColor: "#FEE2E2" }]}>
-                                        <Icon name="LogOut" size={18} color="#EF4444" />
+                                    <Icon name="ChevronRight" size={18} color="#64748B" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.settingItem}
+                                    activeOpacity={0.7}
+                                    onPress={() => setLogoutVisible(true)}
+                                >
+                                    <View style={[styles.settingIconContainer, { backgroundColor: "#EF4444" }]}>
+                                        <Icon name="LogOut" size={18} color="#FFFFFF" />
                                     </View>
                                     <Text style={[styles.settingText, { color: "#EF4444" }]}>Sign Out</Text>
-                                </View>
-                                <Icon name="ChevronRight" size={20} color="#EF4444" />
-                            </TouchableOpacity>
+                                    <Icon name="ChevronRight" size={18} color="#EF4444" />
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </Card>
-                </ScrollView>
-            </SafeAreaView>
+                    </ScrollView>
 
-            {/* Logout Confirmation Dialog */}
-            <Portal>
-                <Dialog visible={logoutVisible} onDismiss={() => setLogoutVisible(false)} style={styles.dialog}>
-                    <View style={styles.dialogContent}>
-                        <View style={styles.dialogIconContainer}>
-                            <Icon name="LogOut" size={32} color="#EF4444" />
+                    {/* Footer */}
+                    <View style={styles.footer}>
+                        <View style={styles.footerVersionBadge}>
+                            <Text style={styles.footerVersion}>v1.0.0</Text>
                         </View>
-                        <Dialog.Title style={styles.dialogTitle}>Sign Out</Dialog.Title>
-                        <Dialog.Content>
-                            <Text style={styles.dialogText}>
-                                Are you sure you want to sign out? You'll need to log in again to access your dashboards.
+                    </View>
+                </SafeAreaView>
+
+                {/* Logout Confirmation Dialog */}
+                <Portal>
+                    <Dialog visible={logoutVisible} onDismiss={() => setLogoutVisible(false)} style={styles.dialog}>
+                        <View style={styles.dialogTitle}>
+                            <View style={styles.logoutIconContainer}>
+                                <Icon name="LogOut" size={32} color="#EF4444" />
+                            </View>
+                        </View>
+                        <Dialog.Content style={styles.logoutContent}>
+                            <Text style={styles.logoutTitle}>Sign out of your account?</Text>
+                            <Text style={styles.logoutMessage}>
+                                You'll need to sign in again to access your dashboards and data.
                             </Text>
                         </Dialog.Content>
                         <Dialog.Actions style={styles.dialogActions}>
                             <Button
+                                mode="outlined"
                                 onPress={() => setLogoutVisible(false)}
-                                style={styles.dialogButton}
-                                labelStyle={styles.cancelButtonLabel}
+                                style={styles.cancelButton}
+                                labelStyle={styles.cancelButtonText}
                             >
                                 Cancel
                             </Button>
                             <Button
+                                mode="contained"
+                                buttonColor="#EF4444"
                                 onPress={handleLogout}
-                                style={[styles.dialogButton, styles.logoutButton]}
-                                labelStyle={styles.logoutButtonLabel}
+                                style={styles.logoutButton}
                             >
                                 Sign Out
                             </Button>
                         </Dialog.Actions>
-                    </View>
-                </Dialog>
-            </Portal>
+                    </Dialog>
+                </Portal>
+            </View>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    gradientBackground: {
-        ...StyleSheet.absoluteFillObject,
+    root: {
+        flex: 1,
+        backgroundColor: "#FFFFFF",
+    },
+    backgroundImageWrapper: {
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+    },
+    backgroundImage: {
+        width: "100%",
+        height: "100%",
+        position: "absolute" as const,
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
     safeArea: {
         flex: 1,
@@ -257,267 +244,261 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 28,
+        paddingVertical: 16,
+        backgroundColor: "transparent",
     },
     backButton: {
         padding: 8,
-        borderRadius: 12,
-        backgroundColor: "rgba(241, 245, 249, 0.8)",
-    },
-    headerTitle: {
-        color: "#1E293B",
-        fontWeight: "700",
-    },
-    scrollContent: {
-        paddingHorizontal: 20,
-        paddingTop: 8,
-        gap: 16,
-    },
-
-    // Profile Header Card Styles
-    profileCard: {
-        borderRadius: 20,
-        backgroundColor: "#FFFFFF",
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.7)",
         borderWidth: 1,
-        borderColor: "#BFDBFE",
-        overflow: "hidden",
+        borderColor: "rgba(226, 232, 240, 0.5)",
     },
-    profileGradient: {
-        padding: 24,
-    },
-    profileHeader: {
+    headerCenter: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 20,
+        gap: 12,
+    },
+    appLogo: {
+        width: 40,
+        height: 40,
+    },
+    appName: {
+        fontSize: 20,
+        fontWeight: "700",
+        color: "#111827",
+        letterSpacing: -0.5,
+    },
+    scrollContent: {
+        paddingHorizontal: 28,
+        paddingTop: 20,
+        gap: 24,
+    },
+    // Profile Section
+    profileSection: {
+        marginBottom: 8,
+    },
+    profileCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3.84,
+        elevation: 2,
     },
     avatarContainer: {
-        borderRadius: 60,
-        padding: 4,
-        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        alignItems: "center",
+        marginBottom: 16,
     },
     avatarCircle: {
-        width: 104,
-        height: 104,
-        borderRadius: 52,
-        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "#EFF6FF",
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 3,
-        borderColor: "rgba(255, 255, 255, 0.3)",
+        borderWidth: 2,
+        borderColor: "#BFDBFE",
     },
     profileInfo: {
-        flex: 1,
+        alignItems: "center",
         gap: 8,
     },
     profileName: {
-        color: "#FFFFFF",
+        fontSize: 22,
         fontWeight: "700",
+        color: "#111827",
+        letterSpacing: -0.5,
     },
     emailRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 8,
+        gap: 6,
     },
     profileEmail: {
         fontSize: 14,
-        color: "rgba(255, 255, 255, 0.85)",
+        color: "#6B7280",
+        fontWeight: "500",
     },
     statusBadge: {
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        backgroundColor: "rgba(255, 255, 255, 0.2)",
+        backgroundColor: "#F0FDF4",
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.3)",
-        alignSelf: "flex-start",
+        borderColor: "#BBF7D0",
     },
     statusDot: {
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#10B981",
     },
     statusText: {
-        color: "#FFFFFF",
+        color: "#10B981",
         fontSize: 12,
         fontWeight: "600",
     },
-
-    // Stats Row Styles
-    statsRow: {
+    // Sections
+    section: {
+        gap: 16,
+    },
+    sectionHeader: {
         flexDirection: "row",
-        gap: 12,
-    },
-    statCard: {
-        flex: 1,
-        borderRadius: 16,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    statContent: {
-        padding: 20,
         alignItems: "center",
         gap: 8,
     },
-    statIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    statValue: {
-        fontSize: 20,
+    sectionTitle: {
+        fontSize: 16,
         fontWeight: "700",
-        color: "#0F172A",
+        color: "#111827",
+        letterSpacing: -0.3,
     },
-    statLabel: {
-        fontSize: 12,
-        color: "#64748B",
-        textAlign: "center",
-    },
-
-    // Card Styles
-    card: {
-        borderRadius: 16,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E2E8F0",
-    },
-    cardHeader: {
-        padding: 20,
-        paddingBottom: 16,
-    },
-    cardTitleRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-    titleIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#3B82F6",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    cardTitle: {
-        color: "#0F172A",
-        fontWeight: "700",
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: "#64748B",
-        marginTop: 2,
-    },
-    divider: {
-        backgroundColor: "#E2E8F0",
-    },
-    cardContent: {
-        padding: 20,
-        paddingTop: 16,
-    },
-
-    // Roles List Styles
+    // Roles Container
     rolesContainer: {
-        gap: 0,
+        gap: 12,
     },
     roleItem: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        paddingVertical: 14,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        padding: 16,
+        gap: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     roleIconCircle: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: "#EFF6FF",
+        backgroundColor: "#3A5A7A",
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 1,
-        borderColor: "#BFDBFE",
     },
     roleDetails: {
         flex: 1,
-        gap: 2,
     },
     roleName: {
-        fontSize: 15,
-        color: "#0F172A",
-        fontWeight: "600",
+        fontSize: 16,
+        color: "#111827",
+        fontWeight: "700",
+        marginBottom: 2,
+        letterSpacing: -0.3,
     },
     roleDescription: {
-        fontSize: 12,
-        color: "#64748B",
+        fontSize: 13,
+        color: "#6B7280",
     },
-    roleDivider: {
-        backgroundColor: "#F1F5F9",
+    noRolesContainer: {
+        alignItems: "center",
+        paddingVertical: 24,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
     },
     noRolesText: {
-        fontSize: 14,
-        color: "#94A3B8",
-        fontStyle: "italic",
         textAlign: "center",
-        paddingVertical: 8,
+        color: "#9CA3AF",
+        fontSize: 14,
+        fontWeight: "500",
     },
-
-    // Settings Styles
+    // Settings Container
+    settingsContainer: {
+        gap: 12,
+    },
     settingItem: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        paddingVertical: 14,
-    },
-    settingLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 14,
+        padding: 16,
+        gap: 14,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     settingIconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: "#F8FAFC",
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#3A5A7A",
         alignItems: "center",
         justifyContent: "center",
     },
     settingText: {
-        fontSize: 15,
-        color: "#0F172A",
-        fontWeight: "500",
+        flex: 1,
+        fontSize: 16,
+        color: "#111827",
+        fontWeight: "600",
+        letterSpacing: -0.3,
     },
-
-    // Dialog Styles
-    dialog: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-    },
-    dialogContent: {
+    // Footer
+    footer: {
+        paddingVertical: 16,
+        paddingHorizontal: 28,
         alignItems: "center",
     },
-    dialogIconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
+    footerVersionBadge: {
+        backgroundColor: "rgba(55, 65, 81, 0.9)",
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    footerVersion: {
+        color: "#FFFFFF",
+        fontSize: 11,
+        fontWeight: "600",
+        letterSpacing: 0.5,
+    },
+    // Dialog Styles
+    dialog: {
+        borderRadius: 24,
+        backgroundColor: "#FFFFFF",
+    },
+    dialogTitle: {
+        paddingTop: 28,
+        paddingBottom: 12,
+        alignItems: "center",
+    },
+    logoutIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: "#FEE2E2",
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 24,
-        marginBottom: 16,
     },
-    dialogTitle: {
+    logoutContent: {
+        paddingHorizontal: 24,
+        gap: 12,
+        paddingBottom: 8,
+    },
+    logoutTitle: {
         fontSize: 20,
         fontWeight: "700",
         color: "#0F172A",
         textAlign: "center",
     },
-    dialogText: {
+    logoutMessage: {
         fontSize: 14,
         color: "#64748B",
         textAlign: "center",
@@ -528,19 +509,17 @@ const styles = StyleSheet.create({
         paddingBottom: 24,
         gap: 12,
     },
-    dialogButton: {
+    cancelButton: {
+        flex: 1,
+        borderColor: "#E2E8F0",
         borderRadius: 12,
-        paddingVertical: 4,
     },
-    cancelButtonLabel: {
+    cancelButtonText: {
         color: "#64748B",
         fontWeight: "600",
     },
     logoutButton: {
-        backgroundColor: "#EF4444",
-    },
-    logoutButtonLabel: {
-        color: "#FFFFFF",
-        fontWeight: "600",
+        flex: 1,
+        borderRadius: 12,
     },
 });

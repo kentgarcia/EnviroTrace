@@ -1,17 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, StyleSheet, Alert, ScrollView, RefreshControl } from "react-native";
+import { View, StyleSheet, Alert, ScrollView, RefreshControl, TouchableOpacity, TextInput } from "react-native";
 import {
-    Title,
-    Paragraph,
-    Button,
-    Divider,
-    useTheme,
+    Text,
     FAB,
-    Card,
     Chip,
-    Searchbar,
     ActivityIndicator
 } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
@@ -24,7 +19,6 @@ export default function SmokeBelcherScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredRecords, setFilteredRecords] = useState<AirQualityRecord[]>([]);
-    const { colors } = useTheme();
     const navigation = useNavigation();
 
     const loadData = async () => {
@@ -86,89 +80,97 @@ export default function SmokeBelcherScreen() {
         const hasViolations = recordViolations.length > 0;
 
         return (
-            <Card
+            <TouchableOpacity
                 key={record.id}
                 style={styles.recordCard}
                 onPress={() => handleRecordPress(record)}
+                activeOpacity={0.7}
             >
-                <Card.Content>
-                    <View style={styles.recordHeader}>
-                        <View style={styles.recordInfo}>
-                            <Title style={styles.plateNumber}>{record.plate_number}</Title>
-                            <Paragraph style={styles.vehicleType}>{record.vehicle_type}</Paragraph>
-                        </View>
-                        {hasViolations && (
-                            <Chip
-                                icon="alert-circle"
-                                style={[styles.violationChip, { backgroundColor: "#FFE5E5" }]}
-                                textStyle={{ color: "#D32F2F" }}
-                            >
-                                {recordViolations.length} Violation{recordViolations.length > 1 ? 's' : ''}
-                            </Chip>
-                        )}
+                <View style={styles.recordHeader}>
+                    <View style={styles.recordInfo}>
+                        <Text style={styles.plateNumber}>{record.plate_number}</Text>
+                        <Text style={styles.vehicleType}>{record.vehicle_type}</Text>
+                    </View>
+                    {hasViolations && (
+                        <Chip
+                            icon={() => <Icon name="AlertTriangle" size={12} color="#DC2626" />}
+                            style={styles.violationChip}
+                            textStyle={styles.violationChipText}
+                        >
+                            {recordViolations.length} Violation{recordViolations.length > 1 ? 's' : ''}
+                        </Chip>
+                    )}
+                </View>
+
+                <View style={styles.divider} />
+
+                <View style={styles.recordDetails}>
+                    <View style={styles.detailRow}>
+                        <Icon name="Building2" size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>{record.operator_company_name}</Text>
                     </View>
 
-                    <Divider style={styles.divider} />
-
-                    <View style={styles.recordDetails}>
+                    {record.owner_first_name && (
                         <View style={styles.detailRow}>
-                            <Icon name="business" size={16} color="#666" />
-                            <Paragraph style={styles.detailText}>{record.operator_company_name}</Paragraph>
+                            <Icon name="User" size={14} color="#6B7280" />
+                            <Text style={styles.detailText}>
+                                {`${record.owner_first_name} ${record.owner_middle_name || ''} ${record.owner_last_name || ''}`.trim()}
+                            </Text>
                         </View>
+                    )}
 
-                        {record.owner_first_name && (
-                            <View style={styles.detailRow}>
-                                <Icon name="person" size={16} color="#666" />
-                                <Paragraph style={styles.detailText}>
-                                    {`${record.owner_first_name} ${record.owner_middle_name || ''} ${record.owner_last_name || ''}`.trim()}
-                                </Paragraph>
-                            </View>
-                        )}
-
-                        <View style={styles.detailRow}>
-                            <Icon name="calendar" size={16} color="#666" />
-                            <Paragraph style={styles.detailText}>
-                                {new Date(record.created_at).toLocaleDateString()}
-                            </Paragraph>
-                        </View>
+                    <View style={styles.detailRow}>
+                        <Icon name="Calendar" size={14} color="#6B7280" />
+                        <Text style={styles.detailText}>
+                            {new Date(record.created_at).toLocaleDateString()}
+                        </Text>
                     </View>
-                </Card.Content>
-            </Card>
+                </View>
+            </TouchableOpacity>
         );
     };
 
     if (loading) {
         return (
-            <>
+            <View style={styles.root}>
                 <StandardHeader
                     title="Smoke Belcher Records"
+                    titleSize={22}
                     showBack={true}
                 />
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Paragraph style={styles.loadingText}>Loading records...</Paragraph>
+                    <ActivityIndicator size="large" color="#111827" />
+                    <Text style={styles.loadingText}>Loading records...</Text>
                 </View>
-            </>
+            </View>
         );
     }
 
     return (
-        <>
+        <View style={styles.root}>
             <StandardHeader
                 title="Smoke Belcher Records"
+                titleSize={22}
                 showBack={true}
-               
             />
 
-            <View style={styles.container}>
+            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
                 <View style={styles.searchContainer}>
-                    <Searchbar
-                        placeholder="Search by plate number, operator, or vehicle type"
-                        onChangeText={setSearchQuery}
-                        value={searchQuery}
-                        style={styles.searchbar}
-                        iconColor={colors.primary}
-                    />
+                    <View style={styles.searchInputWrapper}>
+                        <Icon name="Search" size={18} color="#6B7280" />
+                        <TextInput
+                            placeholder="Search by plate number, operator, or vehicle type"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            style={styles.searchInput}
+                            placeholderTextColor="#9CA3AF"
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery("")}>
+                                <Icon name="X" size={18} color="#6B7280" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 <ScrollView
@@ -178,103 +180,130 @@ export default function SmokeBelcherScreen() {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
-                            colors={[colors.primary]}
-                            tintColor={colors.primary}
+                            colors={["#111827"]}
+                            tintColor="#111827"
                         />
                     }
                     showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.statsContainer}>
-                        <Card style={styles.statsCard}>
-                            <Card.Content>
-                                <View style={styles.statsRow}>
-                                    <View style={styles.statItem}>
-                                        <Title style={styles.statNumber}>{records.length}</Title>
-                                        <Paragraph style={styles.statLabel}>Total Records</Paragraph>
-                                    </View>
-                                    <Divider style={styles.verticalDivider} />
-                                    <View style={styles.statItem}>
-                                        <Title style={[styles.statNumber, { color: "#D32F2F" }]}>
-                                            {violations.length}
-                                        </Title>
-                                        <Paragraph style={styles.statLabel}>Violations</Paragraph>
-                                    </View>
-                                    <Divider style={styles.verticalDivider} />
-                                    <View style={styles.statItem}>
-                                        <Title style={[styles.statNumber, { color: "#1976D2" }]}>
-                                            {new Set(violations.map(v => v.record_id)).size}
-                                        </Title>
-                                        <Paragraph style={styles.statLabel}>Vehicles with Violations</Paragraph>
-                                    </View>
+                        <View style={styles.statsCard}>
+                            <View style={styles.statsRow}>
+                                <View style={styles.statItem}>
+                                    <Text style={styles.statNumber}>{records.length}</Text>
+                                    <Text style={styles.statLabel}>Total Records</Text>
                                 </View>
-                            </Card.Content>
-                        </Card>
+                                <View style={styles.verticalDivider} />
+                                <View style={styles.statItem}>
+                                    <Text style={[styles.statNumber, styles.statNumberDanger]}>
+                                        {violations.length}
+                                    </Text>
+                                    <Text style={styles.statLabel}>Violations</Text>
+                                </View>
+                                <View style={styles.verticalDivider} />
+                                <View style={styles.statItem}>
+                                    <Text style={[styles.statNumber, styles.statNumberInfo]}>
+                                        {new Set(violations.map(v => v.record_id)).size}
+                                    </Text>
+                                    <Text style={styles.statLabel}>Vehicles with Violations</Text>
+                                </View>
+                            </View>
+                        </View>
                     </View>
 
                     <View style={styles.recordsList}>
                         {filteredRecords.length > 0 ? (
                             filteredRecords.map(renderRecord)
                         ) : (
-                            <Card style={styles.emptyCard}>
-                                <Card.Content style={styles.emptyContent}>
-                                    <Icon name="search-off" size={48} color="#666" />
-                                    <Title style={styles.emptyTitle}>No Records Found</Title>
-                                    <Paragraph style={styles.emptyText}>
+                            <View style={styles.emptyCard}>
+                                <View style={styles.emptyContent}>
+                                    <Icon name="SearchX" size={48} color="#9CA3AF" />
+                                    <Text style={styles.emptyTitle}>No Records Found</Text>
+                                    <Text style={styles.emptyText}>
                                         {searchQuery ? "No records match your search criteria" : "No smoke belcher records available"}
-                                    </Paragraph>
-                                </Card.Content>
-                            </Card>
+                                    </Text>
+                                </View>
+                            </View>
                         )}
                     </View>
                 </ScrollView>
 
                 <FAB
-                    icon="plus"
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
+                    icon={() => <Icon name="Plus" size={24} color="#FFFFFF" />}
+                    style={styles.fab}
                     onPress={handleAddRecord}
                     label="Add Record"
                 />
-            </View>
-        </>
+            </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    root: {
         flex: 1,
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "#FFFFFF",
+    },
+    safeArea: {
+        flex: 1,
+        backgroundColor: "#FFFFFF",
     },
     searchContainer: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingTop: 12,
         paddingBottom: 8,
     },
-    searchbar: {
-        elevation: 2,
+    searchInputWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
         backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        gap: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: "#1F2937",
+        padding: 0,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
         paddingHorizontal: 16,
-        paddingBottom: 80,
+        paddingBottom: 100,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "#FFFFFF",
     },
     loadingText: {
         marginTop: 16,
-        color: "#666",
+        fontSize: 14,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     statsContainer: {
         marginBottom: 16,
     },
     statsCard: {
+        backgroundColor: "#FFFFFF",
         borderRadius: 12,
-        elevation: 2,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        padding: 16,
+        elevation: 0,
     },
     statsRow: {
         flexDirection: "row",
@@ -286,50 +315,74 @@ const styles = StyleSheet.create({
     },
     statNumber: {
         fontSize: 24,
-        fontWeight: "bold",
-        color: "#1976D2",
+        fontWeight: "800",
+        color: "#111827",
+        letterSpacing: -0.5,
+    },
+    statNumberDanger: {
+        color: "#DC2626",
+    },
+    statNumberInfo: {
+        color: "#60A5FA",
     },
     statLabel: {
-        fontSize: 12,
-        color: "#666",
+        fontSize: 11,
+        color: "#6B7280",
         textAlign: "center",
+        fontWeight: "600",
+        marginTop: 4,
     },
     verticalDivider: {
         width: 1,
         height: 40,
-        backgroundColor: "#E0E0E0",
+        backgroundColor: "#E5E7EB",
     },
     recordsList: {
         gap: 12,
     },
     recordCard: {
         borderRadius: 12,
-        elevation: 2,
         backgroundColor: "#FFFFFF",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        padding: 14,
+        elevation: 0,
     },
     recordHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "flex-start",
+        marginBottom: 12,
     },
     recordInfo: {
         flex: 1,
     },
     plateNumber: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#333",
+        fontSize: 17,
+        fontWeight: "700",
+        color: "#111827",
         marginBottom: 4,
+        letterSpacing: -0.3,
     },
     vehicleType: {
-        fontSize: 14,
-        color: "#666",
+        fontSize: 13,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     violationChip: {
         marginLeft: 8,
+        backgroundColor: "#FEE2E2",
+        borderRadius: 8,
+    },
+    violationChipText: {
+        color: "#DC2626",
+        fontSize: 11,
+        fontWeight: "700",
     },
     divider: {
-        marginVertical: 12,
+        height: 1,
+        backgroundColor: "#E5E7EB",
+        marginBottom: 12,
     },
     recordDetails: {
         gap: 8,
@@ -340,35 +393,44 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     detailText: {
-        fontSize: 14,
-        color: "#333",
+        fontSize: 13,
+        color: "#374151",
         flex: 1,
+        fontWeight: "500",
     },
     emptyCard: {
         borderRadius: 12,
-        elevation: 1,
         backgroundColor: "#FFFFFF",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        elevation: 0,
     },
     emptyContent: {
         alignItems: "center",
-        paddingVertical: 40,
+        paddingVertical: 48,
+        paddingHorizontal: 24,
     },
     emptyTitle: {
         marginTop: 16,
-        fontSize: 18,
-        color: "#666",
+        fontSize: 17,
+        color: "#1F2937",
+        fontWeight: "700",
+        letterSpacing: -0.3,
     },
     emptyText: {
         marginTop: 8,
         textAlign: "center",
-        color: "#999",
+        color: "#6B7280",
         lineHeight: 20,
+        fontSize: 13,
+        fontWeight: "500",
     },
     fab: {
         position: "absolute",
         margin: 16,
         right: 0,
         bottom: 0,
-        elevation: 8,
+        backgroundColor: "#111827",
+        borderRadius: 16,
     },
 });

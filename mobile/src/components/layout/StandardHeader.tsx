@@ -19,6 +19,9 @@ export interface StandardHeaderProps {
     backgroundColor?: string;
     borderColor?: string;
     showChangeDashboardAction?: boolean;
+    titleSize?: number;
+    subtitleSize?: number;
+    iconSize?: number;
 }
 
 export default function StandardHeader({
@@ -33,6 +36,9 @@ export default function StandardHeader({
     backgroundColor = "transparent",
     borderColor = "transparent",
     showChangeDashboardAction = true,
+    titleSize = 28,
+    subtitleSize = 14,
+    iconSize = 24,
 }: StandardHeaderProps) {
     const { colors } = useTheme();
     const navigation = useNavigation();
@@ -56,7 +62,7 @@ export default function StandardHeader({
                         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                             <Icon
                                 name="ChevronRight"
-                                size={24}
+                                size={iconSize}
                                 color="#475569"
                                 style={{ transform: [{ rotate: "180deg" }] }}
                             />
@@ -64,11 +70,11 @@ export default function StandardHeader({
                     )}
                     {!showBack && title && (
                         <View>
-                            <Text variant="headlineMedium" style={styles.headerTitle}>
+                            <Text variant="headlineMedium" style={[styles.headerTitle, { fontSize: titleSize }]}>
                                 {title}
                             </Text>
                             {subtitle && (
-                                <Text variant="bodySmall" style={styles.headerSubtitle}>
+                                <Text variant="bodySmall" style={[styles.headerSubtitle, { fontSize: subtitleSize }]}>
                                     {subtitle}
                                 </Text>
                             )}
@@ -76,11 +82,11 @@ export default function StandardHeader({
                     )}
                     {showBack && title && (
                         <View style={styles.titleWithBack}>
-                            <Text variant="titleLarge" style={styles.titleText}>
+                            <Text variant="titleLarge" style={[styles.titleText, { fontSize: titleSize }]}>
                                 {title}
                             </Text>
                             {subtitle && (
-                                <Text variant="bodySmall" style={styles.subtitleText}>
+                                <Text variant="bodySmall" style={[styles.subtitleText, { fontSize: subtitleSize }]}>
                                     {subtitle}
                                 </Text>
                             )}
@@ -94,7 +100,7 @@ export default function StandardHeader({
 
                     {rightActionIcon && (
                         <TouchableOpacity onPress={onRightActionPress} style={styles.actionButton}>
-                            <Icon name={rightActionIcon} size={24} color="#475569" />
+                            <Icon name={rightActionIcon} size={iconSize} color="#475569" />
                         </TouchableOpacity>
                     )}
 
@@ -103,7 +109,7 @@ export default function StandardHeader({
                             onPress={() => setSelectedDashboard(null)}
                             style={styles.actionButton}
                         >
-                            <Icon name="LayoutDashboard" size={24} color="#475569" />
+                            <Icon name="LayoutDashboard" size={iconSize} color="#475569" />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -121,7 +127,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 20,
+        paddingHorizontal: 28,
         paddingVertical: 16,
         backgroundColor: "transparent",
     },
@@ -133,8 +139,10 @@ const styles = StyleSheet.create({
     },
     backButton: {
         padding: 8,
-        borderRadius: 12,
-        backgroundColor: "rgba(241, 245, 249, 0.8)",
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        borderWidth: 1,
+        borderColor: "rgba(226, 232, 240, 0.5)",
     },
     headerTitle: {
         color: "#1E293B",
@@ -167,7 +175,9 @@ const styles = StyleSheet.create({
     },
     actionButton: {
         padding: 8,
-        borderRadius: 12,
-        backgroundColor: "rgba(241, 245, 249, 0.8)",
+        borderRadius: 10,
+        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        borderWidth: 1,
+        borderColor: "rgba(226, 232, 240, 0.5)",
     },
 });
