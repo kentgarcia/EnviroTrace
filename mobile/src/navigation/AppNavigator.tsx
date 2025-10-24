@@ -8,6 +8,7 @@ import AirQualityNavigator from "./AirQualityNavigator";
 import DashboardSelectorScreen from "../screens/main/DashboardSelectorScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
 import AIAssistantScreen from "../screens/main/AIAssistantScreen";
+import NetworkDiagnosticsScreen from "../screens/NetworkDiagnosticsScreen";
 
 const Stack = createNativeStackNavigator();
 const SelectorStack = createNativeStackNavigator();
@@ -23,6 +24,7 @@ function DashboardSelectorNavigator() {
       <SelectorStack.Screen name="DashboardSelectorMain" component={DashboardSelectorScreen} />
       <SelectorStack.Screen name="ProfileHome" component={ProfileScreen} />
       <SelectorStack.Screen name="AIAssistant" component={AIAssistantScreen} />
+      <SelectorStack.Screen name="NetworkDiagnostics" component={NetworkDiagnosticsScreen} />
     </SelectorStack.Navigator>
   );
 }

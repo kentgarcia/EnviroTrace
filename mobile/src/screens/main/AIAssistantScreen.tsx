@@ -11,14 +11,25 @@ import {
     ActivityIndicator,
     StatusBar,
     Image,
+    Modal,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
+import { vehicleService } from "../../core/api/vehicle-service";
+import { treeManagementService } from "../../core/api/tree-management-service";
 import DataDisplay, { ActionButtons } from "../../components/chatbot/DataDisplay";
 import Icon from "../../components/icons/Icon";
 import MarkdownText from "../../components/MarkdownText";
 import { useNavigation } from "@react-navigation/native";
+
+interface CommandOption {
+    id: string;
+    label: string;
+    icon: string;
+    description?: string;
+    action: () => Promise<void>;
+}
 
 export default function AIAssistantScreen() {
     const navigation = useNavigation();
@@ -32,7 +43,98 @@ export default function AIAssistantScreen() {
     ]);
     const [inputText, setInputText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showCommandMenu, setShowCommandMenu] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    const executeGeminiCommand = async (query: string) => {
+        try {
+            const response = await enhancedChatbotService.sendMessage(query);
+            const assistantMessage: ChatMessage = {
+                role: "assistant",
+                content: response.response,
+                timestamp: new Date(),
+                actions: response.actions,
+                data: response.data,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+        } catch (error: any) {
+            throw new Error(`Failed to process request: ${error.message}`);
+        }
+    };
+
+    const executeVehiclesCommand = async () => {
+        try {
+            const vehicles = await vehicleService.getRecentVehicles({ limit: 10 });
+            const stats = await vehicleService.getVehicleStats();
+
+            const message: ChatMessage = {
+                role: "assistant",
+                content: `**Government Vehicle Records**\n\n📊 **Statistics:**\n- Total Vehicles: ${stats.total_vehicles}\n- Total Offices: ${stats.total_offices}\n- Total Tests: ${stats.total_tests}\n- Pass Rate: ${stats.pass_rate.toFixed(1)}%`,
+                timestamp: new Date(),
+                data: {
+                    type: "table",
+                    title: "Recent Vehicles",
+                    data: vehicles.slice(0, 5),
+                    metadata: {
+                        totalRecords: stats.total_vehicles,
+                        source: "Government Vehicles",
+                    },
+                },
+            };
+            setMessages((prev) => [...prev, message]);
+        } catch (error: any) {
+            throw new Error(`Failed to fetch vehicle data: ${error.message}`);
+        }
+    };
+
+    const executeTreesCommand = async () => {
+        try {
+            const requests = await treeManagementService.getRecentRequests({ limit: 10 });
+            const stats = await treeManagementService.getTreeStats();
+
+            const message: ChatMessage = {
+                role: "assistant",
+                content: `**Tree Management Overview**\n\n🌳 **Statistics:**\n- Total Requests: ${stats.total_requests}\n- Filed: ${stats.filed}\n- On Hold: ${stats.on_hold}\n- Pruning: ${stats.by_type.pruning}\n- Cutting: ${stats.by_type.cutting}`,
+                timestamp: new Date(),
+                data: {
+                    type: "table",
+                    title: "Recent Tree Management Requests",
+                    data: requests.slice(0, 5),
+                    metadata: {
+                        totalRecords: stats.total_requests,
+                        source: "Tree Management",
+                    },
+                },
+            };
+            setMessages((prev) => [...prev, message]);
+        } catch (error: any) {
+            throw new Error(`Failed to fetch tree management data: ${error.message}`);
+        }
+    };
+
+    const commandOptions: CommandOption[] = [
+        {
+            id: "vehicles",
+            label: "Vehicle Records",
+            icon: "Car",
+            description: "View government vehicles",
+            action: executeVehiclesCommand,
+        },
+        {
+            id: "trees",
+            label: "Tree Management",
+            icon: "TreePalm",
+            description: "View tree management requests",
+            action: executeTreesCommand,
+        },
+        {
+            id: "report",
+            label: "Generate Report",
+            icon: "FileText",
+            description: "Create environmental report",
+            action: () => executeGeminiCommand("generate environmental report"),
+        },
+    ];
 
     useEffect(() => {
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
@@ -95,6 +197,36 @@ export default function AIAssistantScreen() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCommandSelect = async (command: CommandOption) => {
+        setShowCommandMenu(false);
+        setIsLoading(true);
+
+        // Add a user message indicating which command was selected
+        const userMessage: ChatMessage = {
+            role: "user",
+            content: command.label,
+            timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+
+        try {
+            await command.action();
+        } catch (error: any) {
+            const errorMessage: ChatMessage = {
+                role: "assistant",
+                content: `Sorry, I encountered an error: ${error.message || "Unknown error"}`,
+                timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const toggleCommandMenu = () => {
+        setShowCommandMenu(!showCommandMenu);
     };
 
     return (
@@ -208,6 +340,18 @@ export default function AIAssistantScreen() {
                         {/* Input Area */}
                         <View style={[styles.inputContainer, { paddingBottom: insets.bottom || 16 }]}>
                             <View style={styles.inputWrapper}>
+                                <TouchableOpacity
+                                    style={styles.commandButton}
+                                    onPress={toggleCommandMenu}
+                                    disabled={isLoading}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon
+                                        name="Slash"
+                                        size={22}
+                                        color={isLoading ? "rgba(255, 255, 255, 0.3)" : "#FFFFFF"}
+                                    />
+                                </TouchableOpacity>
                                 <TextInput
                                     style={styles.input}
                                     value={inputText}
@@ -238,6 +382,57 @@ export default function AIAssistantScreen() {
                         </View>
                     </KeyboardAvoidingView>
                 </SafeAreaView>
+
+                {/* Command Menu Modal */}
+                <Modal
+                    visible={showCommandMenu}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setShowCommandMenu(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowCommandMenu(false)}
+                    >
+                        <View style={styles.commandMenuContainer}>
+                            <View style={styles.commandMenuHeader}>
+                                <Icon name="Slash" size={20} color="#3A5A7A" />
+                                <Text style={styles.commandMenuTitle}>Quick Commands</Text>
+                                <TouchableOpacity onPress={() => setShowCommandMenu(false)}>
+                                    <Icon name="X" size={20} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView
+                                style={styles.commandMenuScroll}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {commandOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.id}
+                                        style={styles.commandOption}
+                                        onPress={() => handleCommandSelect(option)}
+                                    >
+                                        <View style={styles.commandOptionIcon}>
+                                            <Icon name={option.icon} size={20} color="#3A5A7A" />
+                                        </View>
+                                        <View style={styles.commandOptionContent}>
+                                            <Text style={styles.commandOptionLabel}>
+                                                {option.label}
+                                            </Text>
+                                            {option.description && (
+                                                <Text style={styles.commandOptionDescription}>
+                                                    {option.description}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <Icon name="ChevronRight" size={16} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
             </View>
         </>
     );
@@ -418,24 +613,31 @@ const styles = StyleSheet.create({
     },
     inputWrapper: {
         flexDirection: "row",
-        alignItems: "flex-end",
-        gap: 12,
+        alignItems: "center",
+        gap: 8,
         backgroundColor: "#FFFFFF",
         borderRadius: 24,
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+    },
+    commandButton: {
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "rgba(59, 130, 246, 0.3)",
+        flexShrink: 0,
     },
     input: {
         flex: 1,
         fontSize: 15,
         color: "#111827",
+        minHeight: 40,
         maxHeight: 100,
         paddingVertical: 0,
     },
@@ -446,13 +648,75 @@ const styles = StyleSheet.create({
         backgroundColor: "#3A5A7A",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 3,
+        flexShrink: 0,
     },
     sendButtonDisabled: {
         backgroundColor: "#CBD5E1",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    commandMenuContainer: {
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: "70%",
+        paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    },
+    commandMenuHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E5E7EB",
+        gap: 12,
+    },
+    commandMenuTitle: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#111827",
+    },
+    commandMenuScroll: {
+        paddingHorizontal: 20,
+        paddingTop: 12,
+    },
+    commandOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        marginBottom: 12,
+        gap: 12,
+    },
+    commandOptionIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#F0F9FF",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    commandOptionContent: {
+        flex: 1,
+    },
+    commandOptionLabel: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#111827",
+        marginBottom: 4,
+    },
+    commandOptionDescription: {
+        fontSize: 13,
+        color: "#6B7280",
     },
 });

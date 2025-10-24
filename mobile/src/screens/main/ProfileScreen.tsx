@@ -157,6 +157,18 @@ export default function ProfileScreen() {
                                 <TouchableOpacity
                                     style={styles.settingItem}
                                     activeOpacity={0.7}
+                                    onPress={() => (navigation as any).navigate("NetworkDiagnostics")}
+                                >
+                                    <View style={[styles.settingIconContainer, { backgroundColor: "#3B82F6" }]}>
+                                        <Icon name="Activity" size={18} color="#FFFFFF" />
+                                    </View>
+                                    <Text style={styles.settingText}>Network Diagnostics</Text>
+                                    <Icon name="ChevronRight" size={18} color="#64748B" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.settingItem}
+                                    activeOpacity={0.7}
                                     onPress={() => setLogoutVisible(true)}
                                 >
                                     <View style={[styles.settingIconContainer, { backgroundColor: "#EF4444" }]}>

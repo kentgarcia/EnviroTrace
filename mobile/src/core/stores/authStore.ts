@@ -77,20 +77,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
+      console.log("🔐 Attempting login for user:", username);
+      console.log("📍 API Base URL:", apiClient.defaults.baseURL);
+
       // Create form data for login
       const formData = new FormData();
       formData.append("username", username);
       formData.append("password", password);
 
-      console.log("Attempting login for user:", username);
+      console.log("📤 Sending login request...");
 
       const response = await apiClient.post("/auth/login", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 30000, // 30 second timeout for login
       });
 
-      console.log("Raw login response:", response.data);
+      console.log("✅ Login response received:", response.status);
 
       const { access_token } = response.data;
 
@@ -120,10 +124,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("Login completed successfully");
       return true;
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("❌ Login error:", {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
 
       let message = "Login failed";
-      if (error.response?.data?.detail) {
+
+      // Prioritize user-friendly messages
+      if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+        message =
+          "Connection timeout. Please check your internet connection and try again.";
+      } else if (
+        error.code === "ERR_NETWORK" ||
+        error.message.includes("Network request failed")
+      ) {
+        message =
+          "Network error - Unable to reach the server. Please check your internet connection.";
+      } else if (
+        error.response?.status === 401 ||
+        error.response?.status === 422
+      ) {
+        // Authentication errors from server
+        message =
+          error.response?.data?.detail || "Invalid username or password";
+      } else if (error.response?.data?.detail) {
         message = error.response.data.detail;
       } else if (error.message) {
         message = error.message;

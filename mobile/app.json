@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.epnro.govemission"
@@ -25,9 +23,15 @@
       },
       "permissions": [
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_WIFI_STATE"
       ],
-      "package": "com.epnro.govemission"
+      "package": "com.epnro.govemission",
+      "versionCode": 1,
+      "minSdkVersion": 23,
+      "targetSdkVersion": 34,
+      "compileSdkVersion": 34,
+      "usesCleartextTraffic": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,8 +44,15 @@
         }
       ],
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withNetworkSecurityConfig.js"
     ],
-    "scheme": "gov-emission"
+    "scheme": "gov-emission",
+    "extra": {
+      "eas": {
+        "projectId": "966ce2df-01f4-4e40-a136-4e2c63429daa"
+      },
+      "apiUrl": "https://envirotrace.onrender.com/api/v1"
+    }
   }
 }

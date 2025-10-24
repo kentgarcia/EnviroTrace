@@ -68,6 +68,8 @@ import {
     CameraOff,
     SwitchCamera,
     Hourglass,
+    Slash,
+    Activity,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -136,6 +138,8 @@ const ICONS = {
     CameraOff,
     SwitchCamera,
     Hourglass,
+    Slash,
+    Activity,
     CheckCircle: CheckCircle2, // Alias
 } as const;
 
@@ -221,6 +225,7 @@ const nameMap: Record<string, keyof typeof ICONS> = {
     "flip-camera-ios": "SwitchCamera",
     "switch-camera": "SwitchCamera",
     "hourglass-empty": "Hourglass",
+    slash: "Slash",
 };
 
 export type IconName = keyof typeof nameMap | keyof typeof ICONS;

@@ -236,16 +236,17 @@ class CRUDAirQualityRecord(CRUDBase[AirQualityRecord, AirQualityRecordCreate, Ai
         
         # Monthly violation trends (last 6 months)
         six_months_ago = datetime.now() - timedelta(days=180)
+        month_col = func.date_trunc('month', AirQualityViolation.date_of_apprehension).label('month')
         monthly_violations = db.query(
-            func.date_trunc('month', AirQualityViolation.date_of_apprehension).label('month'),
+            month_col,
             func.count(AirQualityViolation.id).label('violation_count'),
             func.sum(case((AirQualityViolation.paid_driver == True, 1), else_=0)).label('paid_driver_count'),
             func.sum(case((AirQualityViolation.paid_operator == True, 1), else_=0)).label('paid_operator_count')
         ).filter(
             AirQualityViolation.date_of_apprehension >= six_months_ago
         ).group_by(
-            func.date_trunc('month', AirQualityViolation.date_of_apprehension)
-        ).order_by('month').all()
+            month_col
+        ).order_by(month_col).all()
         
         monthly_trends = []
         for mv in monthly_violations:

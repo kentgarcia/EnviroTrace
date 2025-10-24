@@ -11,12 +11,21 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
 import DataDisplay, { ActionButtons } from "../../components/chatbot/DataDisplay";
 import Icon from "../../components/icons/Icon";
+
+interface CommandOption {
+    id: string;
+    label: string;
+    command: string;
+    icon: string;
+    description?: string;
+}
 
 export default function ChatbotScreen() {
     const [messages, setMessages] = useState<ChatMessage[]>([
@@ -28,7 +37,53 @@ export default function ChatbotScreen() {
     ]);
     const [inputText, setInputText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [showCommandMenu, setShowCommandMenu] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    const commandOptions: CommandOption[] = [
+        {
+            id: "air-quality",
+            label: "Air Quality Data",
+            command: "show air quality data",
+            icon: "Wind",
+            description: "View current air quality readings",
+        },
+        {
+            id: "vehicles",
+            label: "Vehicle Data",
+            command: "show vehicles",
+            icon: "Car",
+            description: "View registered vehicles",
+        },
+        {
+            id: "trees",
+            label: "Tree Management",
+            command: "show tree management",
+            icon: "TreePalm",
+            description: "View tree inventory and health",
+        },
+        {
+            id: "trends",
+            label: "Analyze Trends",
+            command: "analyze air quality trends",
+            icon: "BarChart3",
+            description: "Analyze environmental trends",
+        },
+        {
+            id: "violations",
+            label: "Violations",
+            command: "show air quality violations",
+            icon: "AlertCircle",
+            description: "View compliance violations",
+        },
+        {
+            id: "report",
+            label: "Generate Report",
+            command: "generate air quality report",
+            icon: "FileText",
+            description: "Create environmental report",
+        },
+    ];
 
     const suggestedQuestions = enhancedChatbotService.getSuggestedQuestions();
 
@@ -170,6 +225,15 @@ export default function ChatbotScreen() {
         setInputText(question);
     };
 
+    const handleCommandSelect = (command: CommandOption) => {
+        setInputText(command.command);
+        setShowCommandMenu(false);
+    };
+
+    const toggleCommandMenu = () => {
+        setShowCommandMenu(!showCommandMenu);
+    };
+
     const renderMessage = (message: ChatMessage, index: number) => {
         const isUser = message.role === "user";
         const isSystem = message.role === "system";
@@ -303,6 +367,18 @@ export default function ChatbotScreen() {
 
                     {/* Input */}
                     <View style={styles.inputContainer}>
+                        <TouchableOpacity
+                            style={styles.commandButton}
+                            onPress={toggleCommandMenu}
+                            disabled={isLoading}
+                            activeOpacity={0.7}
+                        >
+                            <Icon
+                                name="Slash"
+                                size={22}
+                                color={isLoading ? "#ccc" : "#3A5A7A"}
+                            />
+                        </TouchableOpacity>
                         <TextInput
                             style={styles.textInput}
                             value={inputText}
@@ -324,13 +400,64 @@ export default function ChatbotScreen() {
                             disabled={!inputText.trim() || isLoading}
                         >
                             <Icon
-                                name="send"
+                                name="Send"
                                 size={20}
                                 color={(!inputText.trim() || isLoading) ? "#ccc" : "#fff"}
                             />
                         </TouchableOpacity>
                     </View>
                 </KeyboardAvoidingView>
+
+                {/* Command Menu Modal */}
+                <Modal
+                    visible={showCommandMenu}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setShowCommandMenu(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowCommandMenu(false)}
+                    >
+                        <View style={styles.commandMenuContainer}>
+                            <View style={styles.commandMenuHeader}>
+                                <Icon name="Slash" size={20} color="#3A5A7A" />
+                                <Text style={styles.commandMenuTitle}>Quick Commands</Text>
+                                <TouchableOpacity onPress={() => setShowCommandMenu(false)}>
+                                    <Icon name="X" size={20} color="#6B7280" />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView
+                                style={styles.commandMenuScroll}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {commandOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.id}
+                                        style={styles.commandOption}
+                                        onPress={() => handleCommandSelect(option)}
+                                    >
+                                        <View style={styles.commandOptionIcon}>
+                                            <Icon name={option.icon} size={20} color="#3A5A7A" />
+                                        </View>
+                                        <View style={styles.commandOptionContent}>
+                                            <Text style={styles.commandOptionLabel}>
+                                                {option.label}
+                                            </Text>
+                                            {option.description && (
+                                                <Text style={styles.commandOptionDescription}>
+                                                    {option.description}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <Icon name="ChevronRight" size={16} color="#9CA3AF" />
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
             </SafeAreaView>
         </View>
     );
@@ -443,11 +570,6 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 4,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     systemBubble: {
         backgroundColor: "rgba(226, 232, 240, 0.5)",
@@ -501,11 +623,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     suggestionText: {
         fontSize: 14,
@@ -514,31 +631,38 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         flexDirection: "row",
-        alignItems: "flex-end",
+        alignItems: "center",
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 16,
         backgroundColor: "rgba(255, 255, 255, 0.95)",
         borderTopWidth: 1,
         borderTopColor: "#E5E7EB",
+        gap: 8,
+    },
+    commandButton: {
+        backgroundColor: "#F0F9FF",
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "#3A5A7A",
+        flexShrink: 0,
     },
     textInput: {
         flex: 1,
+        minHeight: 44,
         borderWidth: 1,
         borderColor: "#E5E7EB",
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        marginRight: 12,
         maxHeight: 100,
         fontSize: 15,
         color: "#111827",
         backgroundColor: "#FFFFFF",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     sendButton: {
         backgroundColor: "#3A5A7A",
@@ -547,13 +671,75 @@ const styles = StyleSheet.create({
         borderRadius: 22,
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 3,
-        elevation: 3,
+        flexShrink: 0,
     },
     sendButtonDisabled: {
         backgroundColor: "#CBD5E1",
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "flex-end",
+    },
+    commandMenuContainer: {
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: "70%",
+        paddingBottom: Platform.OS === "ios" ? 34 : 16,
+    },
+    commandMenuHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E5E7EB",
+        gap: 12,
+    },
+    commandMenuTitle: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#111827",
+    },
+    commandMenuScroll: {
+        paddingHorizontal: 20,
+        paddingTop: 12,
+    },
+    commandOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E5E7EB",
+        marginBottom: 12,
+        gap: 12,
+    },
+    commandOptionIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#F0F9FF",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    commandOptionContent: {
+        flex: 1,
+    },
+    commandOptionLabel: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#111827",
+        marginBottom: 4,
+    },
+    commandOptionDescription: {
+        fontSize: 13,
+        color: "#6B7280",
     },
 });
