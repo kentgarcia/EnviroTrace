@@ -241,7 +241,7 @@ export default function FeeControlScreen() {
                     <View style={styles.feeMetaRow}>
                         <Chip
                             style={[styles.levelChip, { backgroundColor: `${getLevelColor(fee.level)}15` }]}
-                            textStyle={{ color: getLevelColor(fee.level), fontSize: 11, fontWeight: '700' }}
+                            textStyle={[styles.levelChipText, { color: getLevelColor(fee.level) }]}
                         >
                             {getLevelLabel(fee.level)}
                         </Chip>
@@ -250,27 +250,12 @@ export default function FeeControlScreen() {
                         </Text>
                     </View>
                 </View>
-                <View style={styles.feeActions}>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => handleEditFee(fee)}
-                    >
-                        <Icon name="Pencil" size={18} color="#6B7280" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.actionButton}
-                        onPress={() => handleDeleteFee(fee)}
-                    >
-                        <Icon name="Trash2" size={18} color="#DC2626" />
-                    </TouchableOpacity>
-                </View>
             </View>
 
             <View style={styles.divider} />
 
             <View style={styles.amountSection}>
                 <View style={styles.amountRow}>
-                    <Icon name="DollarSign" size={20} color="#111827" />
                     <Text style={styles.amountValue}>
                         {formatCurrency(fee.amount)}
                     </Text>
@@ -563,22 +548,19 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
     },
     levelChip: {
-        height: 24,
-        borderRadius: 8,
+        height: 22,
+        borderRadius: 6,
+    },
+    levelChipText: {
+        fontSize: 10,
+        fontWeight: '700',
+        marginVertical: 0,
+        marginHorizontal: 0,
     },
     effectiveDate: {
         fontSize: 11,
         color: "#6B7280",
         fontWeight: "500",
-    },
-    feeActions: {
-        flexDirection: "row",
-        gap: 4,
-    },
-    actionButton: {
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: "#F3F4F6",
     },
     divider: {
         height: 1,
@@ -594,9 +576,7 @@ const styles = StyleSheet.create({
         borderColor: "#E5E7EB",
     },
     amountRow: {
-        flexDirection: "row",
         alignItems: "center",
-        gap: 8,
         justifyContent: "center",
     },
     amountValue: {

@@ -9,8 +9,8 @@ import VehiclesScreen from "../screens/roles/gov-emission/vehicles/VehiclesScree
 import TestingScreen from "../screens/roles/gov-emission/test/TestingScreen";
 import OfficesScreen from "../screens/roles/gov-emission/offices/OfficesScreen";
 import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
-import OfflineDataScreen from "../screens/roles/gov-emission/profile/OfflineDataScreen";
-import SyncSettingsScreen from "../screens/roles/gov-emission/profile/SyncSettingsScreen";
+import AboutScreen from "../screens/roles/gov-emission/profile/AboutScreen";
+import HelpScreen from "../screens/roles/gov-emission/profile/HelpScreen";
 import VehicleDetailScreen from "../screens/roles/gov-emission/vehicles/VehicleDetailScreen";
 import AddVehicleScreen from "../screens/roles/gov-emission/vehicles/AddVehicleScreen";
 import AddTestScreen from "../screens/roles/gov-emission/test/AddTestScreen";
@@ -81,8 +81,8 @@ function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="ProfileHome" component={ProfileScreen} />
-      <Stack.Screen name="OfflineData" component={OfflineDataScreen} />
-      <Stack.Screen name="SyncSettings" component={SyncSettingsScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Help" component={HelpScreen} />
     </Stack.Navigator>
   );
 }

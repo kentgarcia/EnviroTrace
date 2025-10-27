@@ -17,32 +17,18 @@ export default function ProfileScreen() {
 
   const menuItems = [
     {
-      id: "offline-data",
-      icon: "Database",
-      title: "Offline Data",
-      description: "View and manage offline data",
-      onPress: () => (navigation as any).navigate("OfflineData"),
-    },
-    {
-      id: "sync-settings",
-      icon: "RefreshCw",
-      title: "Sync Settings",
-      description: "Configure data synchronization",
-      onPress: () => (navigation as any).navigate("SyncSettings"),
-    },
-    {
       id: "about",
       icon: "Info",
       title: "About",
       description: "App version and information",
-      onPress: () => { },
+      onPress: () => (navigation as any).navigate("About"),
     },
     {
       id: "help",
       icon: "HelpCircle",
       title: "Help & Support",
       description: "Get help and support",
-      onPress: () => { },
+      onPress: () => (navigation as any).navigate("Help"),
     },
   ];
 

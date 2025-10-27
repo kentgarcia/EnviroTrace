@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
+    RefreshControl,
 } from "react-native";
 import {
     Card,
@@ -20,52 +21,130 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
-
-// Mock data for tree management statistics
-const mockStatistics = {
-    total_requests: 156,
-    pending_requests: 23,
-    completed_requests: 98,
-    in_progress_requests: 35,
-    monthly_data: [
-        { month: "Jan", requests: 12, completed: 8 },
-        { month: "Feb", requests: 18, completed: 15 },
-        { month: "Mar", requests: 25, completed: 20 },
-        { month: "Apr", requests: 22, completed: 18 },
-        { month: "May", requests: 30, completed: 25 },
-        { month: "Jun", requests: 28, completed: 22 },
-    ],
-    request_types: {
-        pruning: 89,
-        cutting: 45,
-        violation_complaint: 22,
-    },
-    tree_species_processed: {
-        acacia: 45,
-        mahogany: 32,
-        mango: 28,
-        narra: 15,
-        balete: 12,
-        others: 24,
-    },
-    inspector_workload: [
-        { name: "Inspector Rodriguez", assigned: 12, completed: 8 },
-        { name: "Inspector Santos", assigned: 15, completed: 12 },
-        { name: "Inspector Dela Cruz", assigned: 10, completed: 9 },
-        { name: "Inspector Martinez", assigned: 8, completed: 6 },
-    ],
-    status_breakdown: {
-        filed: 23,
-        on_hold: 8,
-        for_signature: 12,
-        payment_pending: 15,
-    },
-};
+import { treeManagementService, TreeManagementRequest } from "../../../core/api/tree-management-service";
 
 export default function StatisticsScreen() {
     const navigation = useNavigation();
     const { colors } = useTheme();
     const [selectedPeriod, setSelectedPeriod] = useState("monthly");
+    const [requests, setRequests] = useState<TreeManagementRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    useEffect(() => {
+        loadStatistics();
+    }, []);
+
+    const loadStatistics = async () => {
+        try {
+            setLoading(true);
+            const data = await treeManagementService.getRequests({ limit: 1000 });
+            setRequests(data);
+        } catch (error) {
+            console.error("Error loading statistics:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await loadStatistics();
+        setRefreshing(false);
+    };
+
+    // Calculate statistics from actual data
+    const statistics = React.useMemo(() => {
+        const total_requests = requests.length;
+        const pending_requests = requests.filter(r => r.status === "filed").length;
+        const in_progress_requests = requests.filter(r =>
+            r.status === "on_hold" || r.status === "for_signature"
+        ).length;
+        const completed_requests = requests.filter(r => r.status === "payment_pending").length;
+
+        // Request types breakdown
+        const request_types = {
+            pruning: requests.filter(r => r.request_type === "pruning").length,
+            cutting: requests.filter(r => r.request_type === "cutting").length,
+            violation_complaint: requests.filter(r => r.request_type === "violation_complaint").length,
+        };
+
+        // Status breakdown
+        const status_breakdown = {
+            filed: requests.filter(r => r.status === "filed").length,
+            on_hold: requests.filter(r => r.status === "on_hold").length,
+            for_signature: requests.filter(r => r.status === "for_signature").length,
+            payment_pending: requests.filter(r => r.status === "payment_pending").length,
+        };
+
+        // Monthly data (last 6 months)
+        const monthly_data = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthRequests = requests.filter(r => {
+                const requestDate = new Date(r.request_date);
+                return requestDate.getMonth() === monthDate.getMonth() &&
+                    requestDate.getFullYear() === monthDate.getFullYear();
+            });
+            monthly_data.push({
+                month: monthDate.toLocaleString('default', { month: 'short' }),
+                requests: monthRequests.length,
+                completed: monthRequests.filter(r => r.status === "payment_pending").length,
+            });
+        }
+
+        // Inspector workload
+        const inspectorMap = new Map<string, { assigned: number; completed: number }>();
+        requests.forEach(r => {
+            if (r.inspectors && r.inspectors.length > 0) {
+                r.inspectors.forEach(inspector => {
+                    if (!inspectorMap.has(inspector)) {
+                        inspectorMap.set(inspector, { assigned: 0, completed: 0 });
+                    }
+                    const stats = inspectorMap.get(inspector)!;
+                    stats.assigned++;
+                    if (r.status === "payment_pending") {
+                        stats.completed++;
+                    }
+                });
+            }
+        });
+
+        const inspector_workload = Array.from(inspectorMap.entries())
+            .map(([name, stats]) => ({ name, ...stats }))
+            .sort((a, b) => b.assigned - a.assigned)
+            .slice(0, 4);
+
+        // Tree species processed
+        const treeSpeciesMap = new Map<string, number>();
+        requests.forEach(r => {
+            if (r.trees_and_quantities && r.trees_and_quantities.length > 0) {
+                r.trees_and_quantities.forEach(treeInfo => {
+                    const treeName = treeInfo.split(':')[0].trim().toLowerCase();
+                    treeSpeciesMap.set(treeName, (treeSpeciesMap.get(treeName) || 0) + 1);
+                });
+            }
+        });
+
+        const tree_species_processed = Object.fromEntries(
+            Array.from(treeSpeciesMap.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6)
+        );
+
+        return {
+            total_requests,
+            pending_requests,
+            completed_requests,
+            in_progress_requests,
+            monthly_data,
+            request_types,
+            tree_species_processed,
+            inspector_workload,
+            status_breakdown,
+        };
+    }, [requests]);
 
     const calculatePercentage = (value: number, total: number) => {
         return ((value / total) * 100).toFixed(1);
@@ -103,272 +182,265 @@ export default function StatisticsScreen() {
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={["#111827"]}
+                            tintColor="#111827"
+                        />
+                    }
                 >
-                    {/* Overall Summary */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Overall Summary</Text>
-                                <View style={styles.summaryGrid}>
-                                    <View style={styles.summaryItem}>
-                                        <Text style={styles.summaryValue}>
-                                            {mockStatistics.total_requests}
-                                        </Text>
-                                        <Text style={styles.summaryLabel}>Total Requests</Text>
-                                    </View>
-                                    <View style={styles.summaryItem}>
-                                        <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>
-                                            {mockStatistics.pending_requests}
-                                        </Text>
-                                        <Text style={styles.summaryLabel}>Pending</Text>
-                                    </View>
-                                    <View style={styles.summaryItem}>
-                                        <Text style={[styles.summaryValue, { color: "#22C55E" }]}>
-                                            {mockStatistics.completed_requests}
-                                        </Text>
-                                        <Text style={styles.summaryLabel}>Completed</Text>
-                                    </View>
-                                    <View style={styles.summaryItem}>
-                                        <Text style={[styles.summaryValue, { color: "#60A5FA" }]}>
-                                            {mockStatistics.in_progress_requests}
-                                        </Text>
-                                        <Text style={styles.summaryLabel}>In Progress</Text>
+                    {loading && requests.length === 0 ? (
+                        <View style={styles.loadingContainer}>
+                            <Text style={styles.loadingText}>Loading statistics...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            {/* Overall Summary */}
+                            <View style={styles.section}>
+                                <View style={styles.card}>
+                                    <View style={styles.cardContent}>
+                                        <Text style={styles.cardTitle}>Overall Summary</Text>
+                                        <View style={styles.summaryGrid}>
+                                            <View style={styles.summaryItem}>
+                                                <Text style={styles.summaryValue}>
+                                                    {statistics.total_requests}
+                                                </Text>
+                                                <Text style={styles.summaryLabel}>Total Requests</Text>
+                                            </View>
+                                            <View style={styles.summaryItem}>
+                                                <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>
+                                                    {statistics.pending_requests}
+                                                </Text>
+                                                <Text style={styles.summaryLabel}>Pending</Text>
+                                            </View>
+                                            <View style={styles.summaryItem}>
+                                                <Text style={[styles.summaryValue, { color: "#22C55E" }]}>
+                                                    {statistics.completed_requests}
+                                                </Text>
+                                                <Text style={styles.summaryLabel}>Completed</Text>
+                                            </View>
+                                            <View style={styles.summaryItem}>
+                                                <Text style={[styles.summaryValue, { color: "#60A5FA" }]}>
+                                                    {statistics.in_progress_requests}
+                                                </Text>
+                                                <Text style={styles.summaryLabel}>In Progress</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
                             </View>
-                        </View>
-                    </View>
 
-                    {/* Request Types Breakdown */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Request Types</Text>
-                                <View style={styles.breakdownContainer}>
-                                    {Object.entries(mockStatistics.request_types).map(([type, count]) => (
-                                        <View key={type} style={styles.breakdownItem}>
-                                            <View style={styles.breakdownHeader}>
-                                                <View style={styles.breakdownLabelContainer}>
-                                                    <View
-                                                        style={[
-                                                            styles.colorIndicator,
-                                                            { backgroundColor: getTypeColor(type) }
-                                                        ]}
+                            {/* Request Types Breakdown */}
+                            <View style={styles.section}>
+                                <View style={styles.card}>
+                                    <View style={styles.cardContent}>
+                                        <Text style={styles.cardTitle}>Request Types</Text>
+                                        <View style={styles.breakdownContainer}>
+                                            {Object.entries(statistics.request_types).map(([type, count]) => (
+                                                <View key={type} style={styles.breakdownItem}>
+                                                    <View style={styles.breakdownHeader}>
+                                                        <View style={styles.breakdownLabelContainer}>
+                                                            <View
+                                                                style={[
+                                                                    styles.colorIndicator,
+                                                                    { backgroundColor: getTypeColor(type) }
+                                                                ]}
+                                                            />
+                                                            <Paragraph style={styles.breakdownLabel}>
+                                                                {type === "pruning" ? "Pruning" :
+                                                                    type === "cutting" ? "Tree Cutting" :
+                                                                        "Violations/Complaints"}
+                                                            </Paragraph>
+                                                        </View>
+                                                        <Paragraph style={styles.breakdownValue}>{count}</Paragraph>
+                                                    </View>
+                                                    <ProgressBar
+                                                        progress={statistics.total_requests > 0 ? count / statistics.total_requests : 0}
+                                                        color={getTypeColor(type)}
+                                                        style={styles.progressBar}
                                                     />
-                                                    <Paragraph style={styles.breakdownLabel}>
-                                                        {type === "pruning" ? "Pruning" :
-                                                            type === "cutting" ? "Tree Cutting" :
-                                                                "Violations/Complaints"}
+                                                    <Paragraph style={styles.percentageText}>
+                                                        {calculatePercentage(count, statistics.total_requests)}% of total
                                                     </Paragraph>
                                                 </View>
-                                                <Paragraph style={styles.breakdownValue}>{count}</Paragraph>
-                                            </View>
-                                            <ProgressBar
-                                                progress={count / mockStatistics.total_requests}
-                                                color={getTypeColor(type)}
-                                                style={styles.progressBar}
-                                            />
-                                            <Paragraph style={styles.percentageText}>
-                                                {calculatePercentage(count, mockStatistics.total_requests)}% of total
-                                            </Paragraph>
+                                            ))}
                                         </View>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Status Breakdown */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Request Status</Text>
-                                <View style={styles.statusGrid}>
-                                    {Object.entries(mockStatistics.status_breakdown).map(([status, count]) => (
-                                        <View key={status} style={styles.statusItem}>
-                                            <View style={styles.statusHeader}>
-                                                <Icon
-                                                    name={
-                                                        status === "filed" ? "FileText" :
-                                                            status === "on_hold" ? "PauseCircle" :
-                                                                status === "for_signature" ? "PenTool" : "CreditCard"
-                                                    }
-                                                    size={18}
-                                                    color={getStatusColor(status)}
-                                                />
-                                                <Text style={styles.statusValue}>{count}</Text>
-                                            </View>
-                                            <Text style={styles.statusLabel}>
-                                                {status === "filed" ? "Filed" :
-                                                    status === "on_hold" ? "On Hold" :
-                                                        status === "for_signature" ? "For Signature" :
-                                                            "Payment Pending"}
-                                            </Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Tree Species Processed */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Tree Species Processed</Text>
-                                <View style={styles.speciesContainer}>
-                                    {Object.entries(mockStatistics.tree_species_processed)
-                                        .sort(([, a], [, b]) => b - a)
-                                        .map(([species, count]) => (
-                                            <View key={species} style={styles.speciesItem}>
-                                                <View style={styles.speciesHeader}>
-                                                    <Icon name="Trees" size={16} color="#22C55E" />
-                                                    <Text style={styles.speciesName}>
-                                                        {species.charAt(0).toUpperCase() + species.slice(1)}
-                                                    </Text>
-                                                    <Text style={styles.speciesCount}>{count}</Text>
-                                                </View>
-                                                <ProgressBar
-                                                    progress={count / Math.max(...Object.values(mockStatistics.tree_species_processed))}
-                                                    color="#22C55E"
-                                                    style={styles.speciesProgressBar}
-                                                />
-                                            </View>
-                                        ))}
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Inspector Workload */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Inspector Workload</Text>
-                                <View style={styles.inspectorContainer}>
-                                    {mockStatistics.inspector_workload.map((inspector) => (
-                                        <View key={inspector.name} style={styles.inspectorItem}>
-                                            <View style={styles.inspectorHeader}>
-                                                <Icon name="User" size={16} color="#111827" />
-                                                <Text style={styles.inspectorName}>{inspector.name}</Text>
-                                            </View>
-                                            <View style={styles.inspectorStats}>
-                                                <View style={styles.inspectorStatItem}>
-                                                    <Text style={styles.inspectorStatValue}>
-                                                        {inspector.assigned}
-                                                    </Text>
-                                                    <Text style={styles.inspectorStatLabel}>Assigned</Text>
-                                                </View>
-                                                <View style={styles.inspectorStatItem}>
-                                                    <Text style={[styles.inspectorStatValue, { color: "#22C55E" }]}>
-                                                        {inspector.completed}
-                                                    </Text>
-                                                    <Text style={styles.inspectorStatLabel}>Completed</Text>
-                                                </View>
-                                                <View style={styles.inspectorStatItem}>
-                                                    <Text style={[styles.inspectorStatValue, { color: "#F59E0B" }]}>
-                                                        {inspector.assigned - inspector.completed}
-                                                    </Text>
-                                                    <Text style={styles.inspectorStatLabel}>Pending</Text>
-                                                </View>
-                                            </View>
-                                            <ProgressBar
-                                                progress={inspector.completed / inspector.assigned}
-                                                color="#22C55E"
-                                                style={styles.inspectorProgressBar}
-                                            />
-                                            <Text style={styles.completionRate}>
-                                                {calculatePercentage(inspector.completed, inspector.assigned)}% completed
-                                            </Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Monthly Trends */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Monthly Trends</Text>
-                                <View style={styles.trendsContainer}>
-                                    {mockStatistics.monthly_data.map((month) => (
-                                        <View key={month.month} style={styles.monthItem}>
-                                            <Text style={styles.monthLabel}>{month.month}</Text>
-                                            <View style={styles.monthBars}>
-                                                <View style={styles.monthBarContainer}>
-                                                    <View
-                                                        style={[
-                                                            styles.monthBar,
-                                                            {
-                                                                height: (month.requests / 30) * 60,
-                                                                backgroundColor: "#111827"
-                                                            }
-                                                        ]}
-                                                    />
-                                                    <Text style={styles.monthBarValue}>{month.requests}</Text>
-                                                </View>
-                                                <View style={styles.monthBarContainer}>
-                                                    <View
-                                                        style={[
-                                                            styles.monthBar,
-                                                            {
-                                                                height: (month.completed / 30) * 60,
-                                                                backgroundColor: "#22C55E"
-                                                            }
-                                                        ]}
-                                                    />
-                                                    <Text style={styles.monthBarValue}>{month.completed}</Text>
-                                                </View>
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-                                <View style={styles.legendContainer}>
-                                    <View style={styles.legendItem}>
-                                        <View style={[styles.legendColor, { backgroundColor: "#111827" }]} />
-                                        <Text style={styles.legendText}>Requests</Text>
-                                    </View>
-                                    <View style={styles.legendItem}>
-                                        <View style={[styles.legendColor, { backgroundColor: "#22C55E" }]} />
-                                        <Text style={styles.legendText}>Completed</Text>
                                     </View>
                                 </View>
                             </View>
-                        </View>
-                    </View>
 
-                    {/* Export/Action Buttons */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.cardContent}>
-                                <Text style={styles.cardTitle}>Actions</Text>
-                                <View style={styles.actionButtonsContainer}>
-                                    <Button
-                                        mode="outlined"
-                                        icon="download"
-                                        onPress={() => {
-                                            // Handle export functionality
-                                        }}
-                                        style={styles.actionButton}
-                                    >
-                                        Export Report
-                                    </Button>
-                                    <Button
-                                        mode="outlined"
-                                        icon="refresh"
-                                        onPress={() => {
-                                            // Handle refresh functionality
-                                        }}
-                                        style={styles.actionButton}
-                                    >
-                                        Refresh Data
-                                    </Button>
+                            {/* Status Breakdown */}
+                            <View style={styles.section}>
+                                <View style={styles.card}>
+                                    <View style={styles.cardContent}>
+                                        <Text style={styles.cardTitle}>Request Status</Text>
+                                        <View style={styles.statusGrid}>
+                                            {Object.entries(statistics.status_breakdown).map(([status, count]) => (
+                                                <View key={status} style={styles.statusItem}>
+                                                    <View style={styles.statusHeader}>
+                                                        <Icon
+                                                            name={
+                                                                status === "filed" ? "FileText" :
+                                                                    status === "on_hold" ? "Clock" :
+                                                                        status === "for_signature" ? "Edit" : "DollarSign"
+                                                            }
+                                                            size={18}
+                                                            color={getStatusColor(status)}
+                                                        />
+                                                        <Text style={styles.statusValue}>{count}</Text>
+                                                    </View>
+                                                    <Text style={styles.statusLabel}>
+                                                        {status === "filed" ? "Filed" :
+                                                            status === "on_hold" ? "On Hold" :
+                                                                status === "for_signature" ? "For Signature" :
+                                                                    "Payment Pending"}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
                                 </View>
                             </View>
-                        </View>
-                    </View>
+
+                            {/* Tree Species Processed */}
+                            <View style={styles.section}>
+                                <View style={styles.card}>
+                                    <View style={styles.cardContent}>
+                                        <Text style={styles.cardTitle}>Tree Species Processed</Text>
+                                        <View style={styles.speciesContainer}>
+                                            {Object.entries(statistics.tree_species_processed)
+                                                .sort(([, a], [, b]) => b - a)
+                                                .map(([species, count]) => (
+                                                    <View key={species} style={styles.speciesItem}>
+                                                        <View style={styles.speciesHeader}>
+                                                            <Icon name="TreeDeciduous" size={16} color="#22C55E" />
+                                                            <Text style={styles.speciesName}>
+                                                                {species.charAt(0).toUpperCase() + species.slice(1)}
+                                                            </Text>
+                                                            <Text style={styles.speciesCount}>{count}</Text>
+                                                        </View>
+                                                        <ProgressBar
+                                                            progress={
+                                                                Object.keys(statistics.tree_species_processed).length > 0
+                                                                    ? count / Math.max(...Object.values(statistics.tree_species_processed))
+                                                                    : 0
+                                                            }
+                                                            color="#22C55E"
+                                                            style={styles.speciesProgressBar}
+                                                        />
+                                                    </View>
+                                                ))}
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Inspector Workload */}
+                            {statistics.inspector_workload.length > 0 && (
+                                <View style={styles.section}>
+                                    <View style={styles.card}>
+                                        <View style={styles.cardContent}>
+                                            <Text style={styles.cardTitle}>Inspector Workload</Text>
+                                            <View style={styles.inspectorContainer}>
+                                                {statistics.inspector_workload.map((inspector) => (
+                                                    <View key={inspector.name} style={styles.inspectorItem}>
+                                                        <View style={styles.inspectorHeader}>
+                                                            <Icon name="User" size={16} color="#111827" />
+                                                            <Text style={styles.inspectorName}>{inspector.name}</Text>
+                                                        </View>
+                                                        <View style={styles.inspectorStats}>
+                                                            <View style={styles.inspectorStatItem}>
+                                                                <Text style={styles.inspectorStatValue}>
+                                                                    {inspector.assigned}
+                                                                </Text>
+                                                                <Text style={styles.inspectorStatLabel}>Assigned</Text>
+                                                            </View>
+                                                            <View style={styles.inspectorStatItem}>
+                                                                <Text style={[styles.inspectorStatValue, { color: "#22C55E" }]}>
+                                                                    {inspector.completed}
+                                                                </Text>
+                                                                <Text style={styles.inspectorStatLabel}>Completed</Text>
+                                                            </View>
+                                                            <View style={styles.inspectorStatItem}>
+                                                                <Text style={[styles.inspectorStatValue, { color: "#F59E0B" }]}>
+                                                                    {inspector.assigned - inspector.completed}
+                                                                </Text>
+                                                                <Text style={styles.inspectorStatLabel}>Pending</Text>
+                                                            </View>
+                                                        </View>
+                                                        <ProgressBar
+                                                            progress={inspector.assigned > 0 ? inspector.completed / inspector.assigned : 0}
+                                                            color="#22C55E"
+                                                            style={styles.inspectorProgressBar}
+                                                        />
+                                                        <Text style={styles.completionRate}>
+                                                            {calculatePercentage(inspector.completed, inspector.assigned)}% completed
+                                                        </Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Monthly Trends */}
+                            <View style={styles.section}>
+                                <View style={styles.card}>
+                                    <View style={styles.cardContent}>
+                                        <Text style={styles.cardTitle}>Monthly Trends</Text>
+                                        <View style={styles.trendsContainer}>
+                                            {statistics.monthly_data.map((month) => {
+                                                const maxRequests = Math.max(...statistics.monthly_data.map(m => m.requests), 1);
+                                                return (
+                                                    <View key={month.month} style={styles.monthItem}>
+                                                        <Text style={styles.monthLabel}>{month.month}</Text>
+                                                        <View style={styles.monthBars}>
+                                                            <View style={styles.monthBarContainer}>
+                                                                <View
+                                                                    style={[
+                                                                        styles.monthBar,
+                                                                        {
+                                                                            height: (month.requests / maxRequests) * 60,
+                                                                            backgroundColor: "#111827"
+                                                                        }
+                                                                    ]}
+                                                                />
+                                                            </View>
+                                                            <View style={styles.monthBarContainer}>
+                                                                <View
+                                                                    style={[
+                                                                        styles.monthBar,
+                                                                        {
+                                                                            height: (month.completed / maxRequests) * 60,
+                                                                            backgroundColor: "#22C55E"
+                                                                        }
+                                                                    ]}
+                                                                />
+                                                            </View>
+                                                        </View>
+                                                        <Text style={styles.monthBarValue}>{month.requests}</Text>
+                                                    </View>
+                                                );
+                                            })}
+                                        </View>
+                                        <View style={styles.legendContainer}>
+                                            <View style={styles.legendItem}>
+                                                <View style={[styles.legendColor, { backgroundColor: "#111827" }]} />
+                                                <Text style={styles.legendText}>Total Requests</Text>
+                                            </View>
+                                            <View style={styles.legendItem}>
+                                                <View style={[styles.legendColor, { backgroundColor: "#22C55E" }]} />
+                                                <Text style={styles.legendText}>Completed</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+                        </>
+                    )}
                 </ScrollView>
             </SafeAreaView>
         </View>
@@ -389,6 +461,17 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingBottom: 100,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        paddingVertical: 64,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: "#6B7280",
+        fontWeight: "500",
     },
     section: {
         paddingHorizontal: 16,

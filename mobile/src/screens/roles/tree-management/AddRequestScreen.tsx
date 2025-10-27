@@ -1,45 +1,18 @@
 import React, { useMemo, useState } from "react";
-import { View, StyleSheet, Alert, ScrollView } from "react-native";
+import { View, StyleSheet, Alert, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity } from "react-native";
 import {
     TextInput,
     Button,
     HelperText,
     useTheme,
     Text,
-    Chip,
-    Portal,
-    Modal,
-    List,
 } from "react-native-paper";
+import { Dropdown } from "react-native-element-dropdown";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import Icon from "../../../components/icons/Icon";
-
-function randomId() {
-    // RFC4122-ish simple UUID v4 generator (sufficient for local IDs)
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-        const r = (Math.random() * 16) | 0,
-            v = c === "x" ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    });
-}
-
-interface LocalTreeRequest {
-    id: string;
-    request_number: string;
-    request_type: string;
-    requester_name: string;
-    property_address: string;
-    status: string;
-    request_date: string;
-    trees_and_quantities: string[];
-    inspectors: string[];
-    notes: string;
-    sync_status?: string;
-    created_at: string;
-    updated_at: string;
-}
+import { treeManagementService, TreeManagementRequestCreate } from "../../../core/api/tree-management-service";
 
 export default function AddRequestScreen() {
     const { colors } = useTheme();
@@ -53,46 +26,21 @@ export default function AddRequestScreen() {
     const [inspectors, setInspectors] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
 
-    // Modal states
-    const [typeModalVisible, setTypeModalVisible] = useState(false);
-    const [treeModalVisible, setTreeModalVisible] = useState(false);
-    const [inspectorModalVisible, setInspectorModalVisible] = useState(false);
-    const [newTreeEntry, setNewTreeEntry] = useState("");
-    const [newInspector, setNewInspector] = useState("");
+    // Internal structured state for Trees & Quantities
+    const [treeEntries, setTreeEntries] = useState<{ name: string; quantity: string }[]>([]);
 
     const requestTypes = [
-        { value: "pruning", label: "Tree Pruning", icon: "Scissors" },
-        { value: "cutting", label: "Tree Cutting", icon: "Axe" },
-        { value: "violation_complaint", label: "Violation/Complaint", icon: "AlertTriangle" },
+        { value: "pruning", label: "Tree Pruning" },
+        { value: "cutting", label: "Tree Cutting" },
+        { value: "violation_complaint", label: "Violation/Complaint" },
     ];
 
     const isValid = useMemo(() => {
         return requestType.trim() && requesterName.trim() && propertyAddress.trim();
     }, [requestType, requesterName, propertyAddress]);
 
-    const getRequestTypeLabel = (type: string) => {
-        const requestTypeObj = requestTypes.find(rt => rt.value === type);
-        return requestTypeObj ? requestTypeObj.label : type;
-    };
-
-    const addTreeEntry = () => {
-        if (newTreeEntry.trim()) {
-            setTreesAndQuantities([...treesAndQuantities, newTreeEntry.trim()]);
-            setNewTreeEntry("");
-            setTreeModalVisible(false);
-        }
-    };
-
     const removeTreeEntry = (index: number) => {
-        setTreesAndQuantities(treesAndQuantities.filter((_, i) => i !== index));
-    };
-
-    const addInspector = () => {
-        if (newInspector.trim()) {
-            setInspectors([...inspectors, newInspector.trim()]);
-            setNewInspector("");
-            setInspectorModalVisible(false);
-        }
+        setTreeEntries(treeEntries.filter((_, i) => i !== index));
     };
 
     const removeInspector = (index: number) => {
@@ -103,33 +51,28 @@ export default function AddRequestScreen() {
         if (!isValid) return;
         try {
             setSaving(true);
-            const now = new Date().toISOString();
 
-            // Generate request number
-            const requestNumber = `TM-${requestType.substring(0, 2).toUpperCase()}-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
+            // Compose trees_and_quantities from structured entries
+            const composedTrees = treeEntries
+                .filter(e => e.name.trim() !== "")
+                .map(e => `${e.name.trim()}: ${e.quantity && !isNaN(Number(e.quantity)) ? e.quantity : 0}`);
 
-            const request: LocalTreeRequest = {
-                id: randomId(),
-                request_number: requestNumber,
-                request_type: requestType.trim(),
+            const requestData: TreeManagementRequestCreate = {
+                request_type: requestType.trim() as "pruning" | "cutting" | "violation_complaint",
                 requester_name: requesterName.trim(),
                 property_address: propertyAddress.trim(),
                 status: "filed",
-                request_date: now.split('T')[0],
-                trees_and_quantities: treesAndQuantities,
-                inspectors: inspectors,
-                notes: notes.trim(),
-                sync_status: "pending",
-                created_at: now,
-                updated_at: now,
+                request_date: new Date().toISOString().split('T')[0],
+                trees_and_quantities: composedTrees,
+                inspectors: inspectors.filter(i => i.trim() !== ""),
+                notes: notes.trim() || null,
             };
 
-            // TODO: Replace with actual database save when available
-            // await database.saveTreeRequest(request);
+            const createdRequest = await treeManagementService.createRequest(requestData);
 
             Alert.alert(
                 "Success",
-                `Tree management request ${requestNumber} has been submitted successfully`,
+                `Tree management request ${createdRequest.request_number} has been submitted successfully`,
                 [
                     {
                         text: "OK",
@@ -138,294 +81,281 @@ export default function AddRequestScreen() {
                 ]
             );
         } catch (e: any) {
-            Alert.alert("Save failed", e?.message || "Could not save request.");
+            console.error("Save error:", e);
+            Alert.alert(
+                "Save failed",
+                e?.response?.data?.detail || e?.message || "Could not save request. Please try again."
+            );
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <View style={styles.root}>
+        <>
             <StandardHeader
                 title="Add Request"
                 titleSize={22}
                 showBack
-
+                backgroundColor="rgba(255, 255, 255, 0.95)"
+                borderColor="#E5E7EB"
             />
             <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <Text style={styles.cardTitle}>Request Information</Text>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.keyboardAvoidingView}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+                >
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* Request Information Section */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Request Information</Text>
 
-                            {/* Request Type */}
-                            <Button
-                                mode="outlined"
-                                onPress={() => setTypeModalVisible(true)}
-                                style={styles.input}
-                                contentStyle={styles.buttonContent}
-                                labelStyle={[styles.buttonLabel, !requestType && { color: '#999' }]}
-                                icon={() => <Icon name="FileText" size={18} color="#111827" />}
-                            >
-                                {requestType ? getRequestTypeLabel(requestType) : "Select Request Type"}
-                            </Button>
-                            <HelperText type="error" visible={!requestType.trim()}>
-                                Request type is required
-                            </HelperText>
-
-                            <TextInput
-                                label="Requester Name"
-                                value={requesterName}
-                                onChangeText={setRequesterName}
-                                mode="flat"
-                                left={<TextInput.Icon icon={() => <Icon name="User" size={18} color="#111827" />} />}
-                                style={styles.input}
-                            />
-                            <HelperText type="error" visible={!requesterName.trim()}>
-                                Requester name is required
-                            </HelperText>
-
-                            <TextInput
-                                label="Property Address"
-                                value={propertyAddress}
-                                onChangeText={setPropertyAddress}
-                                mode="flat"
-                                multiline
-                                numberOfLines={2}
-                                left={<TextInput.Icon icon={() => <Icon name="MapPin" size={18} color="#111827" />} />}
-                                style={styles.input}
-                            />
-                            <HelperText type="error" visible={!propertyAddress.trim()}>
-                                Property address is required
-                            </HelperText>
-
-                            <TextInput
-                                label="Notes (Optional)"
-                                value={notes}
-                                onChangeText={setNotes}
-                                mode="flat"
-                                multiline
-                                numberOfLines={3}
-                                left={<TextInput.Icon icon={() => <Icon name="FileText" size={18} color="#111827" />} />}
-                                style={styles.input}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Trees and Quantities */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
-                            <View style={styles.sectionHeader}>
-                                <Text style={styles.cardTitle}>Trees & Quantities</Text>
-                                <Button
-                                    mode="contained-tonal"
-                                    onPress={() => setTreeModalVisible(true)}
-                                    compact
-                                    icon={() => <Icon name="Plus" size={16} color="#111827" />}
-                                    labelStyle={styles.addButtonLabel}
-                                    contentStyle={styles.addButtonContent}
-                                >
-                                    Add Tree
-                                </Button>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>Request Type *</Text>
+                                <Dropdown
+                                    data={requestTypes}
+                                    value={requestType}
+                                    onChange={(item) => setRequestType(item.value)}
+                                    labelField="label"
+                                    valueField="value"
+                                    placeholder="Select request type"
+                                    style={styles.dropdown}
+                                    selectedTextStyle={styles.dropdownSelectedText}
+                                    placeholderStyle={styles.dropdownPlaceholder}
+                                    containerStyle={styles.dropdownContainer}
+                                    itemTextStyle={styles.dropdownItemText}
+                                    itemContainerStyle={styles.dropdownItem}
+                                    renderLeftIcon={() => (
+                                        <Icon name="FileText" size={16} color="#6B7280" style={{ marginRight: 8 }} />
+                                    )}
+                                />
+                                <HelperText type="error" visible={!requestType.trim()}>
+                                    Request type is required
+                                </HelperText>
                             </View>
 
-                            {treesAndQuantities.length > 0 ? (
-                                <View style={styles.chipContainer}>
-                                    {treesAndQuantities.map((tree, index) => (
-                                        <Chip
-                                            key={index}
-                                            onClose={() => removeTreeEntry(index)}
-                                            style={styles.chip}
-                                        >
-                                            {tree}
-                                        </Chip>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>Requester Name *</Text>
+                                <TextInput
+                                    value={requesterName}
+                                    onChangeText={setRequesterName}
+                                    mode="outlined"
+                                    placeholder="Enter requester name"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#6B7280" />} />}
+                                />
+                                <HelperText type="error" visible={!requesterName.trim()}>
+                                    Requester name is required
+                                </HelperText>
+                            </View>
+
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>Property Address *</Text>
+                                <TextInput
+                                    value={propertyAddress}
+                                    onChangeText={setPropertyAddress}
+                                    mode="outlined"
+                                    placeholder="Enter property address"
+                                    multiline
+                                    numberOfLines={2}
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    left={<TextInput.Icon icon={() => <Icon name="MapPin" size={16} color="#6B7280" />} />}
+                                />
+                                <HelperText type="error" visible={!propertyAddress.trim()}>
+                                    Property address is required
+                                </HelperText>
+                            </View>
+
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.label}>Notes (Optional)</Text>
+                                <TextInput
+                                    value={notes}
+                                    onChangeText={setNotes}
+                                    mode="outlined"
+                                    placeholder="Enter additional notes"
+                                    multiline
+                                    numberOfLines={3}
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    left={<TextInput.Icon icon={() => <Icon name="FileText" size={16} color="#6B7280" />} />}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Trees and Quantities */}
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Trees & Quantities</Text>
+                            </View>
+
+                            {treeEntries.length > 0 ? (
+                                <View style={styles.treeEntriesContainer}>
+                                    {treeEntries.map((entry, index) => (
+                                        <View key={index} style={styles.treeEntryRow}>
+                                            <View style={styles.treeNameInput}>
+                                                <TextInput
+                                                    value={entry.name}
+                                                    onChangeText={(text) => {
+                                                        const updated = [...treeEntries];
+                                                        updated[index] = { ...updated[index], name: text };
+                                                        setTreeEntries(updated);
+                                                    }}
+                                                    mode="outlined"
+                                                    placeholder="Tree species (e.g., Narra, Mahogany)"
+                                                    style={styles.input}
+                                                    outlineStyle={styles.inputOutline}
+                                                />
+                                            </View>
+                                            <View style={styles.treeQuantityInput}>
+                                                <TextInput
+                                                    value={entry.quantity}
+                                                    onChangeText={(text) => {
+                                                        const val = text.replace(/[^0-9]/g, "");
+                                                        const updated = [...treeEntries];
+                                                        updated[index] = { ...updated[index], quantity: val };
+                                                        setTreeEntries(updated);
+                                                    }}
+                                                    mode="outlined"
+                                                    placeholder="Qty"
+                                                    keyboardType="number-pad"
+                                                    style={styles.input}
+                                                    outlineStyle={styles.inputOutline}
+                                                />
+                                            </View>
+                                            <TouchableOpacity
+                                                onPress={() => removeTreeEntry(index)}
+                                                style={styles.removeButton}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Icon name="X" size={18} color="#DC2626" />
+                                            </TouchableOpacity>
+                                        </View>
                                     ))}
                                 </View>
                             ) : (
-                                <Text style={styles.emptyText}>No trees added yet</Text>
+                                <View style={styles.emptyState}>
+                                    <Icon name="TreePalm" size={24} color="#9CA3AF" />
+                                    <Text style={styles.emptyText}>No trees added yet</Text>
+                                </View>
                             )}
-                        </View>
-                    </View>
 
-                    {/* Inspectors */}
-                    <View style={styles.section}>
-                        <View style={styles.card}>
+                            <Button
+                                mode="outlined"
+                                onPress={() => setTreeEntries([...treeEntries, { name: "", quantity: "" }])}
+                                style={styles.addButton}
+                                icon={() => <Icon name="Plus" size={16} color="#111827" />}
+                                textColor="#111827"
+                            >
+                                Add Tree Species
+                            </Button>
+                        </View>
+
+                        {/* Inspectors */}
+                        <View style={styles.section}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.cardTitle}>Assigned Inspectors</Text>
-                                <Button
-                                    mode="contained-tonal"
-                                    onPress={() => setInspectorModalVisible(true)}
-                                    compact
-                                    icon={() => <Icon name="Plus" size={16} color="#111827" />}
-                                    labelStyle={styles.addButtonLabel}
-                                    contentStyle={styles.addButtonContent}
-                                >
-                                    Add Inspector
-                                </Button>
+                                <Text style={styles.sectionTitle}>Assigned Inspectors</Text>
                             </View>
 
                             {inspectors.length > 0 ? (
-                                <View style={styles.chipContainer}>
+                                <View style={styles.inspectorContainer}>
                                     {inspectors.map((inspector, index) => (
-                                        <Chip
-                                            key={index}
-                                            onClose={() => removeInspector(index)}
-                                            style={styles.chip}
-                                            icon={() => <Icon name="User" size={14} color="#111827" />}
-                                        >
-                                            {inspector}
-                                        </Chip>
+                                        <View key={index} style={styles.inspectorRow}>
+                                            <View style={styles.inspectorNameInput}>
+                                                <TextInput
+                                                    value={inspector}
+                                                    onChangeText={(text) => {
+                                                        const newInspectors = [...inspectors];
+                                                        newInspectors[index] = text;
+                                                        setInspectors(newInspectors);
+                                                    }}
+                                                    mode="outlined"
+                                                    placeholder="Enter inspector name"
+                                                    style={styles.input}
+                                                    outlineStyle={styles.inputOutline}
+                                                    left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#6B7280" />} />}
+                                                />
+                                            </View>
+                                            <TouchableOpacity
+                                                onPress={() => removeInspector(index)}
+                                                style={styles.removeButton}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Icon name="X" size={18} color="#DC2626" />
+                                            </TouchableOpacity>
+                                        </View>
                                     ))}
                                 </View>
                             ) : (
-                                <Text style={styles.emptyText}>No inspectors assigned yet</Text>
+                                <View style={styles.emptyState}>
+                                    <Icon name="User" size={24} color="#9CA3AF" />
+                                    <Text style={styles.emptyText}>No inspectors assigned yet</Text>
+                                </View>
                             )}
+
+                            <Button
+                                mode="outlined"
+                                onPress={() => setInspectors([...inspectors, ""])}
+                                style={styles.addButton}
+                                icon={() => <Icon name="Plus" size={16} color="#111827" />}
+                                textColor="#111827"
+                            >
+                                Add Inspector
+                            </Button>
                         </View>
-                    </View>
 
-                    <Button
-                        mode="contained"
-                        onPress={onSave}
-                        loading={saving}
-                        disabled={!isValid || saving}
-                        style={styles.submitButton}
-                        contentStyle={styles.submitButtonContent}
-                    >
-                        {saving ? "Submitting..." : "Submit Request"}
-                    </Button>
-                </ScrollView>
+                        {/* Save Button */}
+                        <View style={styles.buttonSection}>
+                            <Button
+                                mode="contained"
+                                onPress={onSave}
+                                loading={saving}
+                                disabled={!isValid || saving}
+                                style={styles.saveBtn}
+                                buttonColor="#111827"
+                                labelStyle={styles.saveBtnLabel}
+                            >
+                                {saving ? "Submitting..." : "Submit Request"}
+                            </Button>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </SafeAreaView>
-
-            {/* Request Type Modal */}
-            <Portal>
-                <Modal
-                    visible={typeModalVisible}
-                    onDismiss={() => setTypeModalVisible(false)}
-                    contentContainerStyle={styles.modalContainer}
-                >
-                    <Text style={styles.modalTitle}>Select Request Type</Text>
-                    {requestTypes.map((type) => (
-                        <List.Item
-                            key={type.value}
-                            title={type.label}
-                            left={() => <Icon name={type.icon} size={24} color="#111827" />}
-                            onPress={() => {
-                                setRequestType(type.value);
-                                setTypeModalVisible(false);
-                            }}
-                            style={styles.listItem}
-                        />
-                    ))}
-                </Modal>
-            </Portal>
-
-            {/* Tree Entry Modal */}
-            <Portal>
-                <Modal
-                    visible={treeModalVisible}
-                    onDismiss={() => setTreeModalVisible(false)}
-                    contentContainerStyle={styles.modalContainer}
-                >
-                    <Text style={styles.modalTitle}>Add Tree & Quantity</Text>
-                    <TextInput
-                        label="Tree type and quantity (e.g., Mango: 2)"
-                        value={newTreeEntry}
-                        onChangeText={setNewTreeEntry}
-                        mode="outlined"
-                        style={styles.modalInput}
-                    />
-                    <View style={styles.modalActions}>
-                        <Button
-                            mode="outlined"
-                            onPress={() => {
-                                setNewTreeEntry("");
-                                setTreeModalVisible(false);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            mode="contained"
-                            onPress={addTreeEntry}
-                            disabled={!newTreeEntry.trim()}
-                        >
-                            Add
-                        </Button>
-                    </View>
-                </Modal>
-            </Portal>
-
-            {/* Inspector Modal */}
-            <Portal>
-                <Modal
-                    visible={inspectorModalVisible}
-                    onDismiss={() => setInspectorModalVisible(false)}
-                    contentContainerStyle={styles.modalContainer}
-                >
-                    <Text style={styles.modalTitle}>Add Inspector</Text>
-                    <TextInput
-                        label="Inspector name"
-                        value={newInspector}
-                        onChangeText={setNewInspector}
-                        mode="outlined"
-                        style={styles.modalInput}
-                    />
-                    <View style={styles.modalActions}>
-                        <Button
-                            mode="outlined"
-                            onPress={() => {
-                                setNewInspector("");
-                                setInspectorModalVisible(false);
-                            }}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            mode="contained"
-                            onPress={addInspector}
-                            disabled={!newInspector.trim()}
-                        >
-                            Add
-                        </Button>
-                    </View>
-                </Modal>
-            </Portal>
-        </View>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FAFAFA",
-    },
     safeArea: {
         flex: 1,
-        backgroundColor: "#FAFAFA",
+        backgroundColor: "#FFFFFF",
+    },
+    keyboardAvoidingView: {
+        flex: 1,
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 100,
+        padding: 16,
+        paddingBottom: 32,
     },
     section: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
+        marginBottom: 24,
     },
-    card: {
-        backgroundColor: "#FFFFFF",
-        borderRadius: 12,
-        borderWidth: 1.5,
-        borderColor: "#E5E7EB",
-        padding: 16,
-        elevation: 0,
-    },
-    cardTitle: {
-        fontSize: 17,
+    sectionTitle: {
+        fontSize: 16,
         fontWeight: "700",
         color: "#111827",
-        letterSpacing: 0.3,
+        marginBottom: 16,
+        letterSpacing: -0.3,
     },
     sectionHeader: {
         flexDirection: "row",
@@ -433,71 +363,128 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: 16,
     },
-    input: {
-        marginBottom: 8,
-        marginTop: 8,
+    inputWrapper: {
+        marginBottom: 12,
     },
-    buttonContent: {
-        height: 48,
-        justifyContent: "flex-start",
-    },
-    buttonLabel: {
-        fontSize: 16,
-        textAlign: "left",
-    },
-    addButtonLabel: {
+    label: {
         fontSize: 13,
+        fontWeight: "700",
+        color: "#374151",
+        marginBottom: 8,
+        letterSpacing: -0.2,
+    },
+    input: {
+        backgroundColor: "#FFFFFF",
+    },
+    inputOutline: {
+        borderColor: "#E5E7EB",
+        borderRadius: 12,
+        borderWidth: 1.5,
+    },
+    dropdown: {
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        minHeight: 56,
+    },
+    dropdownPlaceholder: {
+        fontSize: 14,
+        color: "#9CA3AF",
+        fontWeight: "500",
+    },
+    dropdownSelectedText: {
+        fontSize: 14,
+        color: "#111827",
         fontWeight: "600",
     },
-    addButtonContent: {
-        height: 32,
+    dropdownContainer: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        elevation: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        marginTop: 4,
     },
-    chipContainer: {
+    dropdownItem: {
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        color: "#4B5563",
+        fontWeight: "500",
+    },
+    treeEntriesContainer: {
+        marginBottom: 16,
+    },
+    treeEntryRow: {
         flexDirection: "row",
-        flexWrap: "wrap",
+        alignItems: "center",
         gap: 8,
+        marginBottom: 12,
     },
-    chip: {
-        marginBottom: 8,
+    treeNameInput: {
+        flex: 1,
+    },
+    treeQuantityInput: {
+        width: 80,
+    },
+    inspectorContainer: {
+        marginBottom: 16,
+    },
+    inspectorRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginBottom: 12,
+    },
+    inspectorNameInput: {
+        flex: 1,
+    },
+    removeButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        backgroundColor: "#FEF2F2",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    addButton: {
+        borderRadius: 8,
+        borderColor: "#E5E7EB",
+        borderWidth: 1.5,
+        borderStyle: "dashed",
+    },
+    emptyState: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        gap: 12,
+        marginBottom: 16,
     },
     emptyText: {
         fontSize: 14,
-        color: "#6B7280",
-        fontStyle: "italic",
+        color: "#9CA3AF",
+        fontWeight: "500",
     },
-    submitButton: {
-        marginTop: 24,
-        marginHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: "#111827",
+    buttonSection: {
+        marginTop: 8,
     },
-    submitButtonContent: {
-        height: 48,
-    },
-    modalContainer: {
-        backgroundColor: "#FFFFFF",
-        margin: 20,
+    saveBtn: {
         borderRadius: 12,
-        padding: 20,
-        maxHeight: "80%",
+        paddingVertical: 6,
     },
-    modalTitle: {
-        fontSize: 18,
+    saveBtnLabel: {
+        fontSize: 15,
         fontWeight: "700",
-        marginBottom: 16,
-        textAlign: "center",
-        color: "#111827",
-        letterSpacing: 0.3,
-    },
-    modalInput: {
-        marginBottom: 16,
-    },
-    modalActions: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        gap: 12,
-    },
-    listItem: {
-        paddingVertical: 8,
+        letterSpacing: -0.2,
     },
 });

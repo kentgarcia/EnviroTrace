@@ -70,6 +70,9 @@ import {
     Hourglass,
     Slash,
     Activity,
+    TrendingUp,
+    TrendingDown,
+    TreeDeciduous,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -140,6 +143,9 @@ const ICONS = {
     Hourglass,
     Slash,
     Activity,
+    TrendingUp,
+    TrendingDown,
+    TreeDeciduous,
     CheckCircle: CheckCircle2, // Alias
 } as const;
 

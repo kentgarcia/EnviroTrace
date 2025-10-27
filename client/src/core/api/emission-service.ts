@@ -175,6 +175,9 @@ export function useVehicles(filters?: VehicleFilters, skip = 0, limit = 100) {
       if (skip) params.append("skip", skip.toString());
       if (limit) params.append("limit", limit.toString());
 
+      // Include test data to show status badges
+      params.append("include_test_data", "true");
+
       if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
           if (value !== undefined && value !== null && value !== "") {

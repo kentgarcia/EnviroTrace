@@ -19,6 +19,36 @@ export interface TreeManagementRequest {
   updated_at: string;
 }
 
+export interface TreeManagementRequestCreate {
+  request_number?: string; // Optional for auto-generation
+  request_type: "pruning" | "cutting" | "violation_complaint";
+  requester_name: string;
+  property_address: string;
+  status?: "filed" | "on_hold" | "for_signature" | "payment_pending";
+  request_date: string;
+  fee_record_id?: string | null;
+  inspectors?: string[];
+  trees_and_quantities?: string[];
+  picture_links?: string[];
+  notes?: string | null;
+  monitoring_request_id?: string | null;
+}
+
+export interface TreeManagementRequestUpdate {
+  request_number?: string;
+  request_type?: "pruning" | "cutting" | "violation_complaint";
+  requester_name?: string;
+  property_address?: string;
+  status?: "filed" | "on_hold" | "for_signature" | "payment_pending";
+  request_date?: string;
+  fee_record_id?: string | null;
+  inspectors?: string[];
+  trees_and_quantities?: string[];
+  picture_links?: string[];
+  notes?: string | null;
+  monitoring_request_id?: string | null;
+}
+
 export interface TreeManagementFilters {
   request_type?: string;
   status?: string;
@@ -95,6 +125,25 @@ class TreeManagementService {
       limit,
       filters: { search: searchTerm },
     });
+  }
+
+  async createRequest(
+    requestData: TreeManagementRequestCreate
+  ): Promise<TreeManagementRequest> {
+    const response = await apiClient.post(this.baseUrl, requestData);
+    return response.data;
+  }
+
+  async updateRequest(
+    id: string,
+    requestData: TreeManagementRequestUpdate
+  ): Promise<TreeManagementRequest> {
+    const response = await apiClient.put(`${this.baseUrl}/${id}`, requestData);
+    return response.data;
+  }
+
+  async deleteRequest(id: string): Promise<void> {
+    await apiClient.delete(`${this.baseUrl}/${id}`);
   }
 
   // Statistics

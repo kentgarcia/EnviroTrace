@@ -260,7 +260,7 @@ export default function OverviewScreen() {
               <View style={styles.actionItem}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => navigation.navigate("AddVehicle" as never)}
+                  onPress={() => (navigation as any).navigate("Vehicles", { screen: "AddVehicle" })}
                   activeOpacity={0.7}
                 >
                   <Icon name="Car" size={20} color="#111827" />
@@ -271,7 +271,7 @@ export default function OverviewScreen() {
               <View style={styles.actionItem}>
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => navigation.navigate("AddTest" as never)}
+                  onPress={() => (navigation as any).navigate("Testing", { screen: "AddTest", params: {} })}
                   activeOpacity={0.7}
                 >
                   <Icon name="ClipboardPlus" size={20} color="#111827" />

@@ -107,9 +107,9 @@ export default function RequestDetailScreen() {
 
     const getTypeIcon = (type: string) => {
         switch (type) {
-            case "pruning": return "Scissors";
-            case "cutting": return "Axe";
-            case "violation_complaint": return "AlertTriangle";
+            case "pruning": return "TreeDeciduous";
+            case "cutting": return "TreeDeciduous";
+            case "violation_complaint": return "AlertCircle";
             default: return "ClipboardList";
         }
     };
@@ -217,14 +217,12 @@ export default function RequestDetailScreen() {
                                             </Text>
                                         </View>
                                     </View>
-                                    <TouchableOpacity onPress={handleStatusChange}>
-                                        <Chip
-                                            style={[styles.statusChip, { backgroundColor: getStatusColor(request.status) + "20" }]}
-                                            textStyle={[styles.statusChipText, { color: getStatusColor(request.status) }]}
-                                        >
-                                            {getStatusLabel(request.status)}
-                                        </Chip>
-                                    </TouchableOpacity>
+                                    <Chip
+                                        style={[styles.statusChip, { backgroundColor: getStatusColor(request.status) + "20" }]}
+                                        textStyle={[styles.statusChipText, { color: getStatusColor(request.status) }]}
+                                    >
+                                        {getStatusLabel(request.status)}
+                                    </Chip>
                                 </View>
                             </View>
                         </View>
@@ -234,15 +232,7 @@ export default function RequestDetailScreen() {
                     <View style={styles.section}>
                         <View style={styles.card}>
                             <View style={styles.cardContent}>
-                                <View style={styles.sectionHeader}>
-                                    <Text style={styles.sectionTitle}>Requester Information</Text>
-                                    <IconButton
-                                        icon="pencil"
-                                        size={16}
-                                        iconColor="#6B7280"
-                                        onPress={() => handleEditField("requester_name", request.requester_name)}
-                                    />
-                                </View>
+                                <Text style={styles.sectionTitle}>Requester Information</Text>
                                 <View style={styles.infoRow}>
                                     <Icon name="User" size={14} color="#6B7280" />
                                     <View style={styles.infoContent}>
@@ -271,18 +261,10 @@ export default function RequestDetailScreen() {
                         <View style={styles.section}>
                             <View style={styles.card}>
                                 <View style={styles.cardContent}>
-                                    <View style={styles.sectionHeader}>
-                                        <Text style={styles.sectionTitle}>Trees & Quantities</Text>
-                                        <IconButton
-                                            icon="pencil"
-                                            size={16}
-                                            iconColor="#6B7280"
-                                            onPress={() => handleEditField("trees_and_quantities", request.trees_and_quantities.join(", "))}
-                                        />
-                                    </View>
+                                    <Text style={styles.sectionTitle}>Trees & Quantities</Text>
                                     {request.trees_and_quantities.map((tree, index) => (
                                         <View key={index} style={styles.treeItem}>
-                                            <Icon name="Trees" size={14} color="#22C55E" />
+                                            <Icon name="TreeDeciduous" size={14} color="#22C55E" />
                                             <Text style={styles.treeText}>{tree}</Text>
                                         </View>
                                     ))}
@@ -296,46 +278,12 @@ export default function RequestDetailScreen() {
                         <View style={styles.section}>
                             <View style={styles.card}>
                                 <View style={styles.cardContent}>
-                                    <View style={styles.sectionHeader}>
-                                        <Text style={styles.sectionTitle}>Inspection Information</Text>
-                                        <IconButton
-                                            icon="pencil"
-                                            size={16}
-                                            iconColor="#6B7280"
-                                            onPress={() => handleEditField("inspectors", request.inspectors.join(", "))}
-                                        />
-                                    </View>
+                                    <Text style={styles.sectionTitle}>Inspection Information</Text>
                                     <View style={styles.inspectorsContainer}>
                                         {request.inspectors.map((inspector, index) => (
-                                            <Chip key={index} style={styles.inspectorChip}>
+                                            <Chip key={index} style={styles.inspectorChip} textStyle={styles.inspectorChipText}>
                                                 {inspector}
                                             </Chip>
-                                        ))}
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Pictures */}
-                    {request.picture_links && request.picture_links.length > 0 && (
-                        <View style={styles.section}>
-                            <View style={styles.card}>
-                                <View style={styles.cardContent}>
-                                    <Text style={styles.sectionTitle}>Pictures</Text>
-                                    <View style={styles.picturesContainer}>
-                                        {request.picture_links.map((link, index) => (
-                                            <TouchableOpacity
-                                                key={index}
-                                                style={styles.pictureItem}
-                                                onPress={() => {
-                                                    // Handle picture viewing
-                                                    Alert.alert("Picture", `View picture ${index + 1}`);
-                                                }}
-                                            >
-                                                <Icon name="Image" size={16} color="#60A5FA" />
-                                                <Text style={styles.pictureText}>Picture {index + 1}</Text>
-                                            </TouchableOpacity>
                                         ))}
                                     </View>
                                 </View>
@@ -348,15 +296,7 @@ export default function RequestDetailScreen() {
                         <View style={styles.section}>
                             <View style={styles.card}>
                                 <View style={styles.cardContent}>
-                                    <View style={styles.sectionHeader}>
-                                        <Text style={styles.sectionTitle}>Notes</Text>
-                                        <IconButton
-                                            icon="pencil"
-                                            size={16}
-                                            iconColor="#6B7280"
-                                            onPress={() => handleEditField("notes", request.notes)}
-                                        />
-                                    </View>
+                                    <Text style={styles.sectionTitle}>Notes</Text>
                                     <View style={styles.notesContainer}>
                                         <Icon name="FileText" size={14} color="#6B7280" />
                                         <Text style={styles.notesText}>{request.notes}</Text>
@@ -452,7 +392,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 100,
+        paddingBottom: 24,
     },
     section: {
         paddingHorizontal: 16,
@@ -505,25 +445,23 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     statusChip: {
-        height: 28,
+        height: 22,
         borderWidth: 1.5,
+        borderRadius: 6,
     },
     statusChipText: {
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: "700",
         letterSpacing: 0.2,
-    },
-    sectionHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 16,
+        marginVertical: 0,
+        marginHorizontal: 0,
     },
     sectionTitle: {
         fontSize: 15,
         fontWeight: "700",
         color: "#111827",
         letterSpacing: -0.3,
+        marginBottom: 16,
     },
     infoRow: {
         flexDirection: "row",
@@ -575,7 +513,13 @@ const styles = StyleSheet.create({
         backgroundColor: "#EFF6FF",
         borderWidth: 1.5,
         borderColor: "#60A5FA",
-        height: 32,
+        height: 28,
+    },
+    inspectorChipText: {
+        fontSize: 12,
+        fontWeight: "600",
+        marginVertical: 0,
+        marginHorizontal: 0,
     },
     picturesContainer: {
         flexDirection: "row",

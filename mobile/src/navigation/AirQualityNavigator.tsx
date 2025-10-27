@@ -141,7 +141,7 @@ export default function AirQualityNavigator() {
                     tabBarLabel: "Profile",
                     headerShown: false,
                     tabBarIcon: ({ color, size }) => (
-                        <Icon name="account" size={size} color={color} />
+                        <Icon name="User" size={size} color={color} />
                     ),
                 }}
             />

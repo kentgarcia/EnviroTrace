@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -24,8 +24,13 @@ import Icon from "../../../../components/icons/Icon";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import StandardHeader from "../../../../components/layout/StandardHeader";
 
-import { database, LocalVehicle } from "../../../../core/database/database";
-import { useNetworkSync } from "../../../../hooks/useNetworkSync";
+import {
+  useVehicles,
+  useFilterOptions,
+  useOffices,
+  Vehicle,
+  VehicleFilters,
+} from "../../../../core/api/emission-service";
 
 type FilterValues = {
   vehicleType: string;
@@ -56,77 +61,78 @@ type FilterDialogProps = {
 
 export default function VehiclesScreen() {
   const { colors } = useTheme();
-  const [vehicles, setVehicles] = useState<LocalVehicle[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const navigation = useNavigation();
 
-  // Actual filter states (applied filters)
+  // Search and filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterVehicleType, setFilterVehicleType] = useState<string>("");
   const [filterEngineType, setFilterEngineType] = useState<string>("");
   const [filterTestResult, setFilterTestResult] = useState<string>("");
   const [filterOffice, setFilterOffice] = useState<string>("");
 
-  // Temporary filter states (in modal, before applying)
-  const filterDialogInitialValues = useMemo(
-    () => ({
-      vehicleType: filterVehicleType,
-      engineType: filterEngineType,
-      testResult: filterTestResult,
-      office: filterOffice,
-    }),
-    [filterVehicleType, filterEngineType, filterTestResult, filterOffice]
-  );
+  // Build filters object for API
+  const filters: VehicleFilters = useMemo(() => {
+    const result: VehicleFilters = {};
 
-  const navigation = useNavigation();
-  const { syncData, isSyncing } = useNetworkSync();
+    if (searchQuery) result.search = searchQuery;
+    if (filterOffice) result.office_name = filterOffice;
+    if (filterVehicleType) result.vehicle_type = filterVehicleType;
+    if (filterEngineType) result.engine_type = filterEngineType;
 
-  // Load vehicles from database
-  const loadVehicles = async () => {
-    try {
-      setLoading(true);
-      const vehicleList = await database.getVehicles({
-        limit: 100,
-        offset: 0,
-      });
-      setVehicles(vehicleList);
-    } catch (error) {
-      console.error("Error loading vehicles:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return result;
+  }, [searchQuery, filterOffice, filterVehicleType, filterEngineType]);
 
-  // Extract unique filter options from vehicles data
-  const filterOptions = useMemo(() => {
-    const vehicleTypes = new Set<string>();
-    const engineTypes = new Set<string>();
-    const offices = new Set<string>();
+  // Fetch data from API
+  const {
+    data: vehiclesData,
+    isLoading,
+    error,
+    refetch,
+  } = useVehicles(filters, 0, 1000);
+
+  const {
+    data: filterOptions,
+    isLoading: isLoadingOptions,
+  } = useFilterOptions();
+
+  const { data: officesData } = useOffices();
+
+  // Get vehicles array
+  const vehicles = useMemo(() => {
+    return vehiclesData?.vehicles || [];
+  }, [vehiclesData]);
+
+  // Get offices list
+  const officesList = useMemo(() => {
+    return officesData?.offices || [];
+  }, [officesData]);
+
+  // Extract unique filter options from API filter options
+  const dropdownFilterOptions = useMemo(() => {
+    const vehicleTypes = filterOptions?.vehicle_types || [];
+    const engineTypes = filterOptions?.engine_types || [];
+    const offices = filterOptions?.offices || [];
+
+    // For test results, we need to determine from actual vehicles
     const testResults = new Set<string>();
-
     vehicles.forEach((vehicle) => {
-      if (vehicle.vehicle_type) vehicleTypes.add(vehicle.vehicle_type);
-      if (vehicle.engine_type) engineTypes.add(vehicle.engine_type);
-      if (vehicle.office_name) offices.add(vehicle.office_name);
-
-      // Determine test result status
       if (vehicle.latest_test_result === true) {
         testResults.add("passed");
       } else if (vehicle.latest_test_result === false) {
         testResults.add("failed");
-      } else if (vehicle.latest_test_result === null || vehicle.latest_test_result === undefined) {
+      } else {
         testResults.add("not-tested");
       }
     });
 
     return {
-      vehicleTypes: Array.from(vehicleTypes).sort(),
-      engineTypes: Array.from(engineTypes).sort(),
-      offices: Array.from(offices).sort(),
+      vehicleTypes,
+      engineTypes,
+      offices,
       testResults: Array.from(testResults).sort(),
     };
-  }, [vehicles]);
+  }, [filterOptions, vehicles]);
 
   // Format data for Dropdown component
   const dropdownData = useMemo(() => {
@@ -139,56 +145,31 @@ export default function VehiclesScreen() {
     return {
       vehicleTypes: [
         { label: "All Types", value: "" },
-        ...filterOptions.vehicleTypes.map((type) => ({ label: type, value: type })),
+        ...dropdownFilterOptions.vehicleTypes.map((type) => ({ label: type, value: type })),
       ],
       engineTypes: [
         { label: "All Engines", value: "" },
-        ...filterOptions.engineTypes.map((type) => ({ label: type, value: type })),
+        ...dropdownFilterOptions.engineTypes.map((type) => ({ label: type, value: type })),
       ],
       offices: [
         { label: "All Offices", value: "" },
-        ...filterOptions.offices.map((office) => ({ label: office, value: office })),
+        ...dropdownFilterOptions.offices.map((office) => ({ label: office, value: office })),
       ],
       testResults: [
         { label: "All Results", value: "" },
-        ...filterOptions.testResults.map((result) => ({
+        ...dropdownFilterOptions.testResults.map((result) => ({
           label: testResultLabels[result] || result,
           value: result,
         })),
       ],
     };
-  }, [filterOptions]);
+  }, [dropdownFilterOptions]);
 
-  // Filter vehicles based on search and filters - using useMemo for performance
+  // Filter vehicles based on test result (client-side filtering since API doesn't support it)
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles;
 
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (vehicle) =>
-          vehicle.driver_name.toLowerCase().includes(query) ||
-          vehicle.plate_number.toLowerCase().includes(query) ||
-          vehicle.vehicle_type.toLowerCase().includes(query)
-      );
-    }
-
-    // Apply vehicle type filter
-    if (filterVehicleType) {
-      filtered = filtered.filter(
-        (vehicle) => vehicle.vehicle_type === filterVehicleType
-      );
-    }
-
-    // Apply engine type filter
-    if (filterEngineType) {
-      filtered = filtered.filter(
-        (vehicle) => vehicle.engine_type === filterEngineType
-      );
-    }
-
-    // Apply test result filter
+    // Apply test result filter (client-side)
     if (filterTestResult) {
       if (filterTestResult === "passed") {
         filtered = filtered.filter(
@@ -205,15 +186,15 @@ export default function VehiclesScreen() {
       }
     }
 
-    // Apply office filter
-    if (filterOffice) {
+    // Apply office filter if not already in API filters
+    if (filterOffice && !filters.office_name) {
       filtered = filtered.filter(
-        (vehicle) => vehicle.office_name === filterOffice
+        (vehicle) => vehicle.office?.name === filterOffice
       );
     }
 
     return filtered;
-  }, [vehicles, searchQuery, filterVehicleType, filterEngineType, filterTestResult, filterOffice]);
+  }, [vehicles, filterTestResult, filterOffice, filters.office_name]);
 
   // Optimized handlers using useCallback to prevent recreation on every render
   const handleApplyFilters = useCallback(
@@ -242,27 +223,23 @@ export default function VehiclesScreen() {
     []
   );
 
-  // Load data on mount
-  useEffect(() => {
-    loadVehicles();
-  }, []);
-
-  // Reload when returning to this screen
-  useFocusEffect(
-    React.useCallback(() => {
-      loadVehicles();
-      return () => { };
-    }, [])
+  // Temporary filter states (in modal, before applying)
+  const filterDialogInitialValues = useMemo(
+    () => ({
+      vehicleType: filterVehicleType,
+      engineType: filterEngineType,
+      testResult: filterTestResult,
+      office: filterOffice,
+    }),
+    [filterVehicleType, filterEngineType, filterTestResult, filterOffice]
   );
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([loadVehicles(), syncData()]);
-    setRefreshing(false);
-  };
+  const onRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const handleVehiclePress = useCallback(
-    (vehicle: LocalVehicle) => {
+    (vehicle: Vehicle) => {
       (navigation as any).navigate("VehicleDetail", { vehicleId: vehicle.id });
     },
     [navigation]
@@ -273,7 +250,7 @@ export default function VehiclesScreen() {
   };
 
   const renderVehicleCard = useCallback(
-    ({ item }: { item: LocalVehicle }) => (
+    ({ item }: { item: Vehicle }) => (
       <VehicleCard vehicle={item} onPress={handleVehiclePress} />
     ),
     [handleVehiclePress]
@@ -310,7 +287,7 @@ export default function VehiclesScreen() {
         backgroundColor="rgba(255, 255, 255, 0.95)"
         borderColor="#E5E7EB"
         rightActionIcon="RefreshCw"
-        onRightActionPress={() => syncData()}
+        onRightActionPress={() => refetch()}
         titleSize={22}
         subtitleSize={12}
         iconSize={20}
@@ -438,7 +415,7 @@ export default function VehiclesScreen() {
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing || isSyncing}
+              refreshing={isLoading}
               onRefresh={onRefresh}
               colors={["#111827"]}
               tintColor="#111827"
@@ -473,10 +450,19 @@ const VehicleCard = React.memo(
     vehicle,
     onPress,
   }: {
-    vehicle: LocalVehicle;
-    onPress: (vehicle: LocalVehicle) => void;
+    vehicle: Vehicle;
+    onPress: (vehicle: Vehicle) => void;
   }) => {
     const handlePress = useCallback(() => onPress(vehicle), [onPress, vehicle]);
+
+    // Calculate quarter and year from latest test date
+    const testInfo = useMemo(() => {
+      if (!vehicle.latest_test_date) return null;
+      const date = new Date(vehicle.latest_test_date);
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      const year = date.getFullYear();
+      return { quarter, year };
+    }, [vehicle.latest_test_date]);
 
     return (
       <TouchableOpacity activeOpacity={0.7} onPress={handlePress}>
@@ -485,11 +471,8 @@ const VehicleCard = React.memo(
           <View style={styles.cardHeader}>
             <View style={styles.plateNumberContainer}>
               <Text style={styles.plateNumber}>{vehicle.plate_number}</Text>
-              {vehicle.sync_status === "pending" && (
-                <View style={styles.syncDot} />
-              )}
             </View>
-            {vehicle.latest_test_result !== undefined && (
+            {vehicle.latest_test_result !== undefined && vehicle.latest_test_result !== null && (
               <Chip
                 compact
                 icon={() => (
@@ -515,6 +498,7 @@ const VehicleCard = React.memo(
                 ]}
               >
                 {vehicle.latest_test_result ? "Pass" : "Fail"}
+                {testInfo && ` • Q${testInfo.quarter} ${testInfo.year}`}
               </Chip>
             )}
           </View>
@@ -565,8 +549,7 @@ const VehicleCard = React.memo(
       prevProps.vehicle.engine_type === nextProps.vehicle.engine_type &&
       prevProps.vehicle.wheels === nextProps.vehicle.wheels &&
       prevProps.vehicle.latest_test_result === nextProps.vehicle.latest_test_result &&
-      prevProps.vehicle.latest_test_date === nextProps.vehicle.latest_test_date &&
-      prevProps.vehicle.sync_status === nextProps.vehicle.sync_status
+      prevProps.vehicle.latest_test_date === nextProps.vehicle.latest_test_date
     );
   }
 );
@@ -583,7 +566,7 @@ const FilterDialog = React.memo(
   }: FilterDialogProps) => {
     const [filters, setFilters] = useState<FilterValues>(initialValues);
 
-    useEffect(() => {
+    React.useEffect(() => {
       if (visible) {
         setFilters(initialValues);
       }

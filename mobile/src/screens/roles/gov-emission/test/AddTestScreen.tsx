@@ -6,18 +6,16 @@ import { Dropdown } from "react-native-element-dropdown";
 import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { database, LocalEmissionTest, LocalVehicle } from "../../../../core/database/database";
 import { useAuthStore } from "../../../../core/stores/authStore";
 import PlateCaptureCameraComponent from "../../../../components/camera/PlateCaptureCameraComponent";
 import { PlateRecognitionService, VehicleSearchResponse, PlateRecognitionResponse } from "../../../../core/api/plate-recognition-service";
-
-function randomId() {
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0,
-      v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import {
+  useVehicle,
+  useVehicles,
+  useAddEmissionTest,
+  EmissionTestInput,
+  Vehicle,
+} from "../../../../core/api/emission-service";
 
 export default function AddTestScreen() {
   const navigation = useNavigation();
@@ -30,7 +28,6 @@ export default function AddTestScreen() {
   const [year, setYear] = useState("" + new Date().getFullYear());
   const [result, setResult] = useState<"pass" | "fail" | "unknown">("pass");
   const [remarks, setRemarks] = useState("");
-  const [saving, setSaving] = useState(false);
 
   // Plate recognition states
   const [showCamera, setShowCamera] = useState(false);
@@ -40,11 +37,17 @@ export default function AddTestScreen() {
   const [plateSearchManual, setPlateSearchManual] = useState(false);
 
   // Vehicle suggestions for autocomplete
-  const [vehicleSuggestions, setVehicleSuggestions] = useState<LocalVehicle[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Pre-selected vehicle state
-  const [preSelectedVehicle, setPreSelectedVehicle] = useState<LocalVehicle | null>(null);
+  // Fetch vehicles for suggestions
+  const { data: vehiclesData } = useVehicles({ search: plateNumber }, 0, 5);
+  const vehicleSuggestions = useMemo(() => vehiclesData?.vehicles || [], [vehiclesData]);
+
+  // Fetch pre-selected vehicle if vehicleId is provided
+  const { data: preSelectedVehicle } = useVehicle(vehicleId || "");
+
+  // Add test mutation
+  const addTestMutation = useAddEmissionTest();
 
   // Quarter dropdown data
   const quarterData = [
@@ -54,36 +57,14 @@ export default function AddTestScreen() {
     { label: "Q4 (Oct-Dec)", value: "4" },
   ];
 
-  // Load pre-selected vehicle if vehicleId is provided
-  useEffect(() => {
-    if (vehicleId) {
-      database.getVehicleById(vehicleId).then((vehicle) => {
-        if (vehicle) {
-          setPreSelectedVehicle(vehicle);
-        }
-      });
-    }
-  }, [vehicleId]);
-
   // Update vehicle suggestions when plate number changes
   useEffect(() => {
-    const searchVehicles = async () => {
-      if (plateNumber.trim().length >= 2) {
-        const vehicles = await database.getVehicles({
-          search: plateNumber.trim(),
-          limit: 5,
-        });
-        setVehicleSuggestions(vehicles);
-        setShowSuggestions(vehicles.length > 0);
-      } else {
-        setVehicleSuggestions([]);
-        setShowSuggestions(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(searchVehicles, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [plateNumber]);
+    if (plateNumber.trim().length >= 2) {
+      setShowSuggestions(vehicleSuggestions.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  }, [plateNumber, vehicleSuggestions]);
 
   // Determine the effective vehicle ID (from route param or recognized vehicle)
   const effectiveVehicleId = vehicleId || recognizedVehicle?.id;
@@ -94,28 +75,27 @@ export default function AddTestScreen() {
 
   const onSave = async () => {
     if (!isValid) return;
+
     try {
-      setSaving(true);
-      const now = new Date().toISOString();
-      const test: LocalEmissionTest = {
-        id: randomId(),
+      const testData: EmissionTestInput = {
         vehicle_id: effectiveVehicleId!,
         test_date: new Date(date).toISOString(),
         quarter: parseInt(quarter, 10),
         year: parseInt(year, 10),
         result: result === "unknown" ? null : result === "pass",
         remarks: remarks || undefined,
-        created_by: user?.id || "local",
-        created_at: now,
-        updated_at: now,
-        sync_status: "pending",
       };
-      await database.saveEmissionTest(test);
-      (navigation as any).goBack();
+
+      await addTestMutation.mutateAsync(testData);
+
+      Alert.alert("Success", "Test record saved successfully", [
+        {
+          text: "OK",
+          onPress: () => (navigation as any).goBack(),
+        },
+      ]);
     } catch (e: any) {
-      Alert.alert("Save failed", e?.message || "Could not save test.");
-    } finally {
-      setSaving(false);
+      Alert.alert("Save failed", e?.response?.data?.detail || e?.message || "Could not save test.");
     }
   };
 
@@ -304,8 +284,8 @@ export default function AddTestScreen() {
     setPlateNumber("");
   };
 
-  const handleSelectSuggestion = (vehicle: LocalVehicle) => {
-    // Map LocalVehicle to VehicleSearchResponse
+  const handleSelectSuggestion = (vehicle: Vehicle) => {
+    // Map Vehicle to VehicleSearchResponse
     const vehicleResponse: VehicleSearchResponse = {
       id: vehicle.id,
       plate_number: vehicle.plate_number,
@@ -315,9 +295,9 @@ export default function AddTestScreen() {
       vehicle_type: vehicle.vehicle_type,
       wheels: vehicle.wheels,
       office_id: vehicle.office_id,
-      office_name: vehicle.office_name,
+      office_name: vehicle.office?.name,
       latest_test_result: vehicle.latest_test_result,
-      latest_test_date: vehicle.latest_test_date,
+      latest_test_date: vehicle.latest_test_date || undefined,
       created_at: vehicle.created_at,
       updated_at: vehicle.updated_at,
     };
@@ -621,19 +601,19 @@ export default function AddTestScreen() {
           <TouchableOpacity
             style={[
               styles.saveButton,
-              (!isValid || saving) && styles.saveButtonDisabled,
+              (!isValid || addTestMutation.isPending) && styles.saveButtonDisabled,
             ]}
             onPress={onSave}
-            disabled={!isValid || saving}
+            disabled={!isValid || addTestMutation.isPending}
             activeOpacity={0.7}
           >
-            {saving ? (
+            {addTestMutation.isPending ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <Icon name="Save" size={20} color="#FFFFFF" />
             )}
             <Text style={styles.saveButtonText}>
-              {saving ? "Saving..." : "Save Test Record"}
+              {addTestMutation.isPending ? "Saving..." : "Save Test Record"}
             </Text>
           </TouchableOpacity>
 

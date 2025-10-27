@@ -93,7 +93,6 @@ export default function SmokeBelcherScreen() {
                     </View>
                     {hasViolations && (
                         <Chip
-                            icon={() => <Icon name="AlertTriangle" size={12} color="#DC2626" />}
                             style={styles.violationChip}
                             textStyle={styles.violationChipText}
                         >

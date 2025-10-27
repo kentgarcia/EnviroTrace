@@ -5,15 +5,18 @@ import { Dropdown } from "react-native-element-dropdown";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
-import { database, LocalEmissionTest, LocalVehicle } from "../../../../core/database/database";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { useNetworkSync } from "../../../../hooks/useNetworkSync";
+import {
+  useEmissionTests,
+  useVehicles,
+  EmissionTest,
+  Vehicle,
+} from "../../../../core/api/emission-service";
 
-type TestWithVehicle = { test: LocalEmissionTest; vehicle: LocalVehicle | null };
+type TestWithVehicle = { test: EmissionTest; vehicle: Vehicle | null };
 
 export default function TestingScreen() {
   const navigation = useNavigation();
-  const { syncData, isSyncing } = useNetworkSync();
 
   const now = new Date();
   const defaultQuarter = useMemo(() => Math.floor(now.getMonth() / 3) + 1, [now]);
@@ -21,47 +24,47 @@ export default function TestingScreen() {
   const [quarter, setQuarter] = useState<number>(defaultQuarter);
   const [year, setYear] = useState<number>(defaultYear);
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [items, setItems] = useState<TestWithVehicle[]>([]);
   const [expandedByOffice, setExpandedByOffice] = useState<Record<string, boolean>>({});
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      const tests = await database.getEmissionTests({ quarter, year, limit: 500 });
-      const vehicles = await Promise.all(
-        tests.map(async (t) => ({ test: t, vehicle: await database.getVehicleById(t.vehicle_id) }))
-      );
-      setItems(vehicles);
-    } finally {
-      setLoading(false);
+  // Fetch tests and vehicles from API
+  const {
+    data: tests = [],
+    isLoading: loadingTests,
+    refetch: refetchTests,
+  } = useEmissionTests(
+    { quarter, year },
+    {
+      enabled: true, // Always enabled
+      refetchOnMount: true, // Refetch when component mounts
+      staleTime: 0, // Consider data stale immediately so it refetches on param change
     }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quarter, year]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      load();
-      return () => { };
-    }, [])
   );
 
+  const {
+    data: vehiclesData,
+    isLoading: loadingVehicles,
+  } = useVehicles({}, 0, 1000);
+
+  const vehicles = useMemo(() => vehiclesData?.vehicles || [], [vehiclesData]);
+
+  const loading = loadingTests || loadingVehicles;
+
+  // Combine tests with vehicle data
+  const items = useMemo<TestWithVehicle[]>(() => {
+    return tests.map((test) => ({
+      test,
+      vehicle: vehicles.find((v) => v.id === test.vehicle_id) || null,
+    }));
+  }, [tests, vehicles]);
+
   const onRefresh = async () => {
-    setRefreshing(true);
-    await syncData();
-    await load();
-    setRefreshing(false);
+    await refetchTests();
   };
 
   const groups = useMemo(() => {
     const map = new Map<string, { key: string; name: string; items: typeof items }>();
     for (const it of items) {
-      const officeName = it.vehicle?.office_name || "Unknown Office";
+      const officeName = it.vehicle?.office?.name || "Unknown Office";
       const officeId = it.vehicle?.office_id || `unknown:${officeName}`;
       const key = officeId;
       if (!map.has(key)) map.set(key, { key, name: officeName, items: [] as any });
@@ -72,8 +75,11 @@ export default function TestingScreen() {
 
   useEffect(() => {
     setExpandedByOffice((prev) => {
+      const newKeys = groups.filter(g => prev[g.key] === undefined);
+      if (newKeys.length === 0) return prev; // No changes, return same reference
+
       const next = { ...prev };
-      for (const g of groups) if (next[g.key] === undefined) next[g.key] = true;
+      for (const g of newKeys) next[g.key] = true;
       return next;
     });
   }, [groups]);
@@ -87,7 +93,7 @@ export default function TestingScreen() {
         backgroundColor="rgba(255, 255, 255, 0.95)"
         borderColor="#E5E7EB"
         rightActionIcon="RefreshCw"
-        onRightActionPress={() => syncData()}
+        onRightActionPress={() => refetchTests()}
         titleSize={22}
         subtitleSize={12}
         iconSize={20}
@@ -180,7 +186,7 @@ export default function TestingScreen() {
           <ScrollView
             refreshControl={
               <RefreshControl
-                refreshing={refreshing}
+                refreshing={loading}
                 onRefresh={onRefresh}
                 colors={["#111827"]}
                 tintColor="#111827"

@@ -7,49 +7,32 @@ import {
     FlatList,
     TouchableOpacity,
     TextInput,
+    KeyboardAvoidingView,
+    Platform,
 } from "react-native";
 import {
     Card,
     Title,
     Paragraph,
     Button,
-    Searchbar,
     Chip,
-    FAB,
     Portal,
-    Modal,
-    List,
-    IconButton,
+    Dialog,
+    Divider,
     useTheme,
     Text,
 } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
+import { Dropdown } from "react-native-element-dropdown";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import StandardHeader from "../../../components/layout/StandardHeader";
-
-import { useNetworkSync } from "../../../hooks/useNetworkSync";
-
-// Mock data structure for tree requests
-interface LocalTreeRequest {
-    id: string;
-    request_number: string;
-    request_type: string;
-    requester_name: string;
-    property_address: string;
-    status: string;
-    request_date: string;
-    trees_and_quantities: string[];
-    inspectors: string[];
-    notes: string;
-    sync_status?: string;
-    latest_update_date?: string;
-}
+import { treeManagementService, TreeManagementRequest } from "../../../core/api/tree-management-service";
 
 export default function TreeRequestsScreen() {
     const { colors } = useTheme();
-    const [requests, setRequests] = useState<LocalTreeRequest[]>([]);
-    const [filteredRequests, setFilteredRequests] = useState<LocalTreeRequest[]>([]);
+    const [requests, setRequests] = useState<TreeManagementRequest[]>([]);
+    const [filteredRequests, setFilteredRequests] = useState<TreeManagementRequest[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -58,76 +41,14 @@ export default function TreeRequestsScreen() {
     const [selectedType, setSelectedType] = useState<string>("");
 
     const navigation = useNavigation();
-    const { syncData, isSyncing } = useNetworkSync();
 
-    // Mock data - replace with actual database/API calls
-    const mockRequests: LocalTreeRequest[] = [
-        {
-            id: "1",
-            request_number: "TM-PR-2025-001",
-            request_type: "pruning",
-            requester_name: "Maria Santos",
-            property_address: "123 Rizal Ave., Manila",
-            status: "filed",
-            request_date: "2025-01-15",
-            trees_and_quantities: ["Acacia: 2", "Mahogany: 1"],
-            inspectors: ["Inspector Rodriguez"],
-            notes: "Trees blocking power lines",
-            sync_status: "synced",
-            latest_update_date: "2025-01-15",
-        },
-        {
-            id: "2",
-            request_number: "TM-CT-2025-002",
-            request_type: "cutting",
-            requester_name: "Juan Cruz",
-            property_address: "456 Mabini Ave., Manila",
-            status: "payment_pending",
-            request_date: "2025-01-14",
-            trees_and_quantities: ["Narra: 1"],
-            inspectors: ["Inspector Santos"],
-            notes: "Dead tree posing safety risk",
-            sync_status: "pending",
-            latest_update_date: "2025-01-14",
-        },
-        {
-            id: "3",
-            request_number: "TM-VC-2025-003",
-            request_type: "violation_complaint",
-            requester_name: "Lisa Garcia",
-            property_address: "789 Del Pilar St., Makati",
-            status: "for_signature",
-            request_date: "2025-01-13",
-            trees_and_quantities: ["Mango: 3"],
-            inspectors: ["Inspector Dela Cruz", "Inspector Martinez"],
-            notes: "Unauthorized tree cutting complaint",
-            sync_status: "synced",
-            latest_update_date: "2025-01-13",
-        },
-        {
-            id: "4",
-            request_number: "TM-PR-2025-004",
-            request_type: "pruning",
-            requester_name: "Robert Tan",
-            property_address: "321 Quezon Blvd., Quezon City",
-            status: "on_hold",
-            request_date: "2025-01-12",
-            trees_and_quantities: ["Balete: 1", "Acacia: 2"],
-            inspectors: [],
-            notes: "Waiting for property owner consent",
-            sync_status: "synced",
-            latest_update_date: "2025-01-12",
-        },
-    ];
-
-    // Load requests from database
+    // Load requests from API
     const loadRequests = async () => {
         try {
             setLoading(true);
-            // Replace with actual database call when available
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-            setRequests(mockRequests);
-            setFilteredRequests(mockRequests);
+            const data = await treeManagementService.getRequests({ limit: 1000 });
+            setRequests(data);
+            setFilteredRequests(data);
         } catch (error) {
             console.error("Error loading tree requests:", error);
         } finally {
@@ -187,11 +108,11 @@ export default function TreeRequestsScreen() {
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([loadRequests(), syncData()]);
+        await loadRequests();
         setRefreshing(false);
     };
 
-    const handleRequestPress = (request: LocalTreeRequest) => {
+    const handleRequestPress = (request: TreeManagementRequest) => {
         (navigation as any).navigate("RequestDetail", { requestId: request.id });
     };
 
@@ -230,7 +151,7 @@ export default function TreeRequestsScreen() {
         }
     };
 
-    const renderRequestCard = ({ item: request }: { item: LocalTreeRequest }) => (
+    const renderRequestCard = ({ item: request }: { item: TreeManagementRequest }) => (
         <Card
             mode="outlined"
             style={styles.requestCard}
@@ -247,22 +168,8 @@ export default function TreeRequestsScreen() {
                         </Paragraph>
                     </View>
                     <View style={styles.statusContainer}>
-                        {request.sync_status === "pending" && (
-                            <Chip
-                                compact
-                                icon="sync"
-                                style={styles.pendingChip}
-                                textStyle={styles.chipText}
-                            >
-                                Pending
-                            </Chip>
-                        )}
                         <Chip
                             compact
-                            icon={
-                                request.status === "completed" ? "check-circle" :
-                                    request.status === "on_hold" ? "pause-circle" : "schedule"
-                            }
                             style={[
                                 styles.statusChip,
                                 {
@@ -281,38 +188,38 @@ export default function TreeRequestsScreen() {
 
                 <View style={styles.requestDetails}>
                     <View style={styles.detailRow}>
-                        <Icon name="location-on" size={16} color="#757575" />
+                        <Icon name="MapPin" size={16} color="#757575" />
                         <Paragraph style={styles.detailText}>
                             {request.property_address}
                         </Paragraph>
                     </View>
                     <View style={styles.detailRow}>
-                        <Icon name="park" size={16} color="#757575" />
+                        <Icon name="TreeDeciduous" size={16} color="#757575" />
                         <Paragraph style={styles.detailText}>
-                            {getRequestTypeLabel(request.request_type)} • {request.trees_and_quantities.join(", ")}
+                            {getRequestTypeLabel(request.request_type)} • {request.trees_and_quantities ? request.trees_and_quantities.join(", ") : "No trees specified"}
                         </Paragraph>
                     </View>
                     <View style={styles.detailRow}>
-                        <Icon name="people" size={16} color="#757575" />
+                        <Icon name="User" size={16} color="#757575" />
                         <Paragraph style={styles.detailText}>
-                            {request.inspectors.length > 0
+                            {(request.inspectors && request.inspectors.length > 0)
                                 ? `Inspectors: ${request.inspectors.join(", ")}`
                                 : "No inspectors assigned"
                             }
                         </Paragraph>
                     </View>
-                    {request.latest_update_date && (
+                    {request.updated_at && (
                         <View style={styles.detailRow}>
-                            <Icon name="event" size={16} color="#757575" />
+                            <Icon name="Calendar" size={16} color="#757575" />
                             <Paragraph style={styles.detailText}>
                                 Last updated:{" "}
-                                {new Date(request.latest_update_date).toLocaleDateString()}
+                                {new Date(request.updated_at).toLocaleDateString()}
                             </Paragraph>
                         </View>
                     )}
                     {request.notes && (
                         <View style={styles.detailRow}>
-                            <Icon name="note" size={16} color="#757575" />
+                            <Icon name="FileText" size={16} color="#757575" />
                             <Paragraph style={styles.detailText} numberOfLines={2}>
                                 {request.notes}
                             </Paragraph>
@@ -325,7 +232,7 @@ export default function TreeRequestsScreen() {
 
     const renderEmptyState = () => (
         <View style={styles.emptyState}>
-            <Icon name="assignment" size={64} color="#BDBDBD" />
+            <Icon name="ClipboardList" size={64} color="#BDBDBD" />
             <Title style={styles.emptyTitle}>No requests found</Title>
             <Paragraph style={styles.emptyText}>
                 {searchQuery || selectedStatus || selectedType
@@ -360,8 +267,6 @@ export default function TreeRequestsScreen() {
                 backgroundColor="rgba(255, 255, 255, 0.95)"
                 statusBarStyle="dark"
                 borderColor="#E5E7EB"
-                rightActionIcon="RefreshCw"
-                onRightActionPress={() => syncData()}
                 titleSize={22}
                 subtitleSize={12}
                 iconSize={20}
@@ -459,7 +364,7 @@ export default function TreeRequestsScreen() {
                     contentContainerStyle={styles.listContainer}
                     refreshControl={
                         <RefreshControl
-                            refreshing={refreshing || isSyncing}
+                            refreshing={refreshing}
                             onRefresh={onRefresh}
                             colors={["#111827"]}
                             tintColor="#111827"
@@ -467,69 +372,121 @@ export default function TreeRequestsScreen() {
                     }
                     ListEmptyComponent={renderEmptyState}
                     showsVerticalScrollIndicator={false}
+                    ListFooterComponent={<View style={{ height: 20 }} />}
                 />
 
                 {/* Filter Modal */}
                 <Portal>
-                    <Modal
+                    <Dialog
                         visible={filterModalVisible}
                         onDismiss={() => setFilterModalVisible(false)}
-                        contentContainerStyle={styles.modalContainer}
+                        style={styles.dialog}
+                        dismissable
                     >
-                        <Title style={styles.modalTitle}>Filter Requests</Title>
+                        <View style={styles.dialogHeader}>
+                            <Text style={styles.dialogTitleText}>Filter Requests</Text>
+                            <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                                <Icon name="X" size={24} color="#6B7280" />
+                            </TouchableOpacity>
+                        </View>
 
-                        {/* Status Filter */}
-                        <List.Subheader>Status</List.Subheader>
-                        <View style={styles.chipContainer}>
-                            {["filed", "on_hold", "for_signature", "payment_pending", "completed"].map((status) => (
-                                <Chip
-                                    key={status}
-                                    selected={selectedStatus === status}
-                                    onPress={() =>
-                                        setSelectedStatus(selectedStatus === status ? "" : status)
-                                    }
-                                    style={styles.filterChip}
+                        <View style={styles.dialogContent}>
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                {/* Status Filter */}
+                                <View style={styles.filterSection}>
+                                    <Text style={styles.filterLabel}>Status</Text>
+                                    <Dropdown
+                                        data={[
+                                            { label: "All Statuses", value: "" },
+                                            { label: "Filed", value: "filed" },
+                                            { label: "On Hold", value: "on_hold" },
+                                            { label: "For Signature", value: "for_signature" },
+                                            { label: "Payment Pending", value: "payment_pending" },
+                                        ]}
+                                        labelField="label"
+                                        valueField="value"
+                                        placeholder="Select status"
+                                        value={selectedStatus}
+                                        onChange={(item) => setSelectedStatus(item.value)}
+                                        style={styles.dropdown}
+                                        placeholderStyle={styles.dropdownPlaceholder}
+                                        selectedTextStyle={styles.dropdownSelectedText}
+                                        containerStyle={styles.dropdownContainer}
+                                        maxHeight={300}
+                                        renderRightIcon={() => (
+                                            <Icon name="ChevronDown" size={20} color="#6B7280" />
+                                        )}
+                                        renderItem={(item) => (
+                                            <View style={styles.dropdownItem}>
+                                                <Text style={styles.dropdownItemText}>
+                                                    {item.label}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    />
+                                </View>
+
+                                <Divider style={styles.divider} />
+
+                                {/* Type Filter */}
+                                <View style={styles.filterSection}>
+                                    <Text style={styles.filterLabel}>Request Type</Text>
+                                    <Dropdown
+                                        data={[
+                                            { label: "All Types", value: "" },
+                                            { label: "Pruning", value: "pruning" },
+                                            { label: "Cutting", value: "cutting" },
+                                            { label: "Violation Complaint", value: "violation_complaint" },
+                                        ]}
+                                        labelField="label"
+                                        valueField="value"
+                                        placeholder="Select request type"
+                                        value={selectedType}
+                                        onChange={(item) => setSelectedType(item.value)}
+                                        style={styles.dropdown}
+                                        placeholderStyle={styles.dropdownPlaceholder}
+                                        selectedTextStyle={styles.dropdownSelectedText}
+                                        containerStyle={styles.dropdownContainer}
+                                        maxHeight={300}
+                                        renderRightIcon={() => (
+                                            <Icon name="ChevronDown" size={20} color="#6B7280" />
+                                        )}
+                                        renderItem={(item) => (
+                                            <View style={styles.dropdownItem}>
+                                                <Text style={styles.dropdownItemText}>
+                                                    {item.label}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    />
+                                </View>
+                            </ScrollView>
+                        </View>
+
+                        <Dialog.Actions style={styles.dialogActions}>
+                            <SafeAreaView edges={["bottom"]} style={styles.dialogActionsContent}>
+                                <Button
+                                    mode="outlined"
+                                    onPress={() => {
+                                        clearFilters();
+                                        setFilterModalVisible(false);
+                                    }}
+                                    style={styles.dialogButtonOutlined}
+                                    textColor="#6B7280"
                                 >
-                                    {getStatusLabel(status)}
-                                </Chip>
-                            ))}
-                        </View>
-
-                        {/* Type Filter */}
-                        <List.Subheader>Request Type</List.Subheader>
-                        <View style={styles.chipContainer}>
-                            {["pruning", "cutting", "violation_complaint"].map((type) => (
-                                <Chip
-                                    key={type}
-                                    selected={selectedType === type}
-                                    onPress={() =>
-                                        setSelectedType(selectedType === type ? "" : type)
-                                    }
-                                    style={styles.filterChip}
+                                    Reset
+                                </Button>
+                                <Button
+                                    mode="contained"
+                                    onPress={() => setFilterModalVisible(false)}
+                                    style={styles.dialogButtonContained}
+                                    buttonColor="#111827"
                                 >
-                                    {getRequestTypeLabel(type)}
-                                </Chip>
-                            ))}
-                        </View>
-
-                        <View style={styles.modalActions}>
-                            <Button
-                                mode="outlined"
-                                onPress={() => {
-                                    clearFilters();
-                                    setFilterModalVisible(false);
-                                }}
-                            >
-                                Clear All
-                            </Button>
-                            <Button
-                                mode="contained"
-                                onPress={() => setFilterModalVisible(false)}
-                            >
-                                Apply
-                            </Button>
-                        </View>
-                    </Modal>
+                                    Apply Filters
+                                </Button>
+                            </SafeAreaView>
+                        </Dialog.Actions>
+                    </Dialog>
                 </Portal>
             </SafeAreaView>
         </View>
@@ -644,15 +601,24 @@ const styles = StyleSheet.create({
         letterSpacing: -0.2,
     },
     addButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
         paddingHorizontal: 16,
         paddingVertical: 8,
         backgroundColor: "#111827",
         borderRadius: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
     },
     addButtonText: {
         fontSize: 13,
-        fontWeight: "600",
+        fontWeight: "700",
         color: "#FFFFFF",
+        letterSpacing: -0.2,
     },
     listContainer: {
         padding: 16,
@@ -700,13 +666,16 @@ const styles = StyleSheet.create({
         borderColor: "#FCD34D",
     },
     statusChip: {
-        height: 26,
+        height: 22,
         borderWidth: 1.5,
+        borderRadius: 6,
     },
     chipText: {
         fontSize: 10,
         fontWeight: "700",
         letterSpacing: 0.2,
+        marginVertical: 0,
+        marginHorizontal: 0,
     },
     requestDetails: {
         gap: 6,
@@ -750,45 +719,103 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         backgroundColor: "#111827",
     },
-    fab: {
-        position: "absolute",
-        margin: 16,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "#111827",
-    },
-    modalContainer: {
+    dialog: {
         backgroundColor: "#FFFFFF",
-        margin: 20,
         borderRadius: 16,
-        padding: 24,
-        maxHeight: "80%",
-        borderWidth: 1.5,
-        borderColor: "#E5E7EB",
+        maxWidth: 500,
+        alignSelf: "center",
+        width: "90%",
     },
-    modalTitle: {
-        fontSize: 19,
-        fontWeight: "800",
-        marginBottom: 16,
-        textAlign: "center",
-        color: "#111827",
-        letterSpacing: -0.4,
-    },
-    chipContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
-        marginBottom: 16,
-    },
-    filterChip: {
-        marginBottom: 8,
-        borderWidth: 1.5,
-        borderColor: "#E5E7EB",
-    },
-    modalActions: {
+    dialogHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 16,
+    },
+    dialogTitleText: {
+        fontSize: 22,
+        fontWeight: "800",
+        color: "#111827",
+        letterSpacing: -0.5,
+    },
+    dialogContent: {
+        maxHeight: 400,
+    },
+    filterSection: {
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+    },
+    filterLabel: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#374151",
+        marginBottom: 10,
+        letterSpacing: -0.2,
+    },
+    dropdown: {
+        backgroundColor: "#F9FAFB",
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        minHeight: 48,
+    },
+    dropdownPlaceholder: {
+        fontSize: 14,
+        color: "#9CA3AF",
+        fontWeight: "500",
+    },
+    dropdownSelectedText: {
+        fontSize: 14,
+        color: "#111827",
+        fontWeight: "600",
+    },
+    dropdownContainer: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: "#E5E7EB",
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    dropdownItem: {
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        color: "#4B5563",
+        fontWeight: "500",
+    },
+    divider: {
+        backgroundColor: "#E5E7EB",
+        height: 1,
+    },
+    dialogActions: {
+        paddingHorizontal: 24,
+        paddingVertical: 20,
         gap: 12,
-        marginTop: 24,
+        paddingBottom: 0,
+    },
+    dialogActionsContent: {
+        flexDirection: "row",
+        gap: 12,
+        width: "100%",
+    },
+    dialogButtonOutlined: {
+        flex: 1,
+        borderRadius: 12,
+        borderColor: "#D1D5DB",
+        borderWidth: 1.5,
+    },
+    dialogButtonContained: {
+        flex: 1,
+        borderRadius: 12,
     },
 });

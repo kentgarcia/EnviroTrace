@@ -6,16 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import StandardHeader from "../../../../components/layout/StandardHeader";
 import Icon from "../../../../components/icons/Icon";
-import { database, LocalVehicle, LocalOffice } from "../../../../core/database/database";
-
-function randomId() {
-  // RFC4122-ish simple UUID v4 generator (sufficient for local IDs)
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0,
-      v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
+import {
+  useOffices,
+  useAddVehicle,
+  useFilterOptions,
+  VehicleInput,
+} from "../../../../core/api/emission-service";
 
 export default function AddVehicleScreen() {
   const { colors } = useTheme();
@@ -28,25 +24,24 @@ export default function AddVehicleScreen() {
   const [plate, setPlate] = useState("");
   const [driver, setDriver] = useState("");
   const [contact, setContact] = useState("");
-  const [officeName, setOfficeName] = useState("");
   const [officeId, setOfficeId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [engineType, setEngineType] = useState("");
   const [wheels, setWheels] = useState("4");
-  const [saving, setSaving] = useState(false);
 
-  // Offices list
-  const [offices, setOffices] = useState<LocalOffice[]>([]);
-  const [loadingOffices, setLoadingOffices] = useState(false);
+  // Fetch data from API
+  const { data: officesData, isLoading: loadingOffices } = useOffices();
+  const { data: filterOptions } = useFilterOptions();
+  const addVehicleMutation = useAddVehicle();
 
-  // Existing vehicle types from database
-  const [existingVehicleTypes, setExistingVehicleTypes] = useState<string[]>([]);
+  // Get offices and vehicle types
+  const offices = useMemo(() => {
+    return officesData?.offices || [];
+  }, [officesData]);
 
-  // Load offices and existing vehicle types
-  useEffect(() => {
-    loadOffices();
-    loadExistingVehicleTypes();
-  }, []);
+  const existingVehicleTypes = useMemo(() => {
+    return filterOptions?.vehicle_types || [];
+  }, [filterOptions]);
 
   // Pre-fill plate number if coming from plate recognition
   useEffect(() => {
@@ -54,31 +49,6 @@ export default function AddVehicleScreen() {
       setPlate(params.plateNumber);
     }
   }, [params?.plateNumber]);
-
-  const loadOffices = async () => {
-    try {
-      setLoadingOffices(true);
-      const officesList = await database.getOffices();
-      setOffices(officesList);
-    } catch (error) {
-      console.error("Error loading offices:", error);
-    } finally {
-      setLoadingOffices(false);
-    }
-  };
-
-  const loadExistingVehicleTypes = async () => {
-    try {
-      const vehicles = await database.getVehicles({ limit: 1000, offset: 0 });
-      const types = new Set<string>();
-      vehicles.forEach(v => {
-        if (v.vehicle_type) types.add(v.vehicle_type);
-      });
-      setExistingVehicleTypes(Array.from(types).sort());
-    } catch (error) {
-      console.error("Error loading vehicle types:", error);
-    }
-  };
 
   const isValid = useMemo(() => {
     return plate.trim() && driver.trim() && engineType.trim() && officeId.trim() && vehicleType.trim();
@@ -121,32 +91,28 @@ export default function AddVehicleScreen() {
 
   const onSave = async () => {
     if (!isValid) return;
+
     try {
-      setSaving(true);
-      const now = new Date().toISOString();
-      const v: LocalVehicle = {
-        id: randomId(),
+      const vehicleData: VehicleInput = {
         driver_name: driver.trim(),
         contact_number: contact.trim() || undefined,
         engine_type: engineType.trim(),
         office_id: officeId.trim(),
-        office_name: officeName.trim() || undefined,
         plate_number: plate.trim(),
         vehicle_type: vehicleType.trim(),
         wheels: parseInt(wheels || "4", 10) || 4,
-        created_at: now,
-        updated_at: now,
-        latest_test_result: null,
-        latest_test_date: undefined,
-        sync_status: "pending",
       };
-      await database.saveVehicle(v);
-      // Go back to list; VehiclesScreen will reload on pull-to-refresh, but we can also alert
-      (navigation as any).goBack();
+
+      await addVehicleMutation.mutateAsync(vehicleData);
+
+      Alert.alert("Success", "Vehicle added successfully", [
+        {
+          text: "OK",
+          onPress: () => (navigation as any).goBack(),
+        },
+      ]);
     } catch (e: any) {
-      Alert.alert("Save failed", e?.message || "Could not save vehicle.");
-    } finally {
-      setSaving(false);
+      Alert.alert("Save failed", e?.response?.data?.detail || e?.message || "Could not save vehicle.");
     }
   };
 
@@ -243,8 +209,6 @@ export default function AddVehicleScreen() {
                   value={officeId}
                   onChange={(item) => {
                     setOfficeId(item.value);
-                    const selectedOffice = offices.find((o) => o.id === item.value);
-                    if (selectedOffice) setOfficeName(selectedOffice.name);
                   }}
                   style={styles.dropdown}
                   placeholderStyle={styles.dropdownPlaceholder}
@@ -350,8 +314,8 @@ export default function AddVehicleScreen() {
               <Button
                 mode="contained"
                 onPress={onSave}
-                disabled={!isValid || saving}
-                loading={saving}
+                disabled={!isValid || addVehicleMutation.isPending}
+                loading={addVehicleMutation.isPending}
                 style={styles.saveBtn}
                 buttonColor="#111827"
                 labelStyle={styles.saveBtnLabel}

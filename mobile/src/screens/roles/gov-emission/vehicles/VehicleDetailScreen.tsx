@@ -5,7 +5,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
-import { database, LocalVehicle, LocalEmissionTest } from "../../../../core/database/database";
+import {
+  useVehicle,
+  useEmissionTests,
+  Vehicle,
+  EmissionTest,
+} from "../../../../core/api/emission-service";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -22,31 +27,22 @@ export default function VehicleDetailScreen() {
   const route = useRoute<any>();
   const vehicleId: string | undefined = route?.params?.vehicleId;
 
-  const [loading, setLoading] = useState(true);
-  const [vehicle, setVehicle] = useState<LocalVehicle | null>(null);
-  const [tests, setTests] = useState<LocalEmissionTest[]>([]);
+  // Fetch vehicle and tests from API
+  const {
+    data: vehicle,
+    isLoading: loadingVehicle,
+    error: vehicleError,
+  } = useVehicle(vehicleId || "");
 
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        setLoading(true);
-        const v = vehicleId ? await database.getVehicleById(vehicleId) : null;
-        const t = vehicleId
-          ? await database.getEmissionTests({ vehicle_id: vehicleId, limit: 10 })
-          : [];
-        if (!mounted) return;
-        setVehicle(v);
-        setTests(t);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [vehicleId]);
+  const {
+    data: tests = [],
+    isLoading: loadingTests,
+  } = useEmissionTests(
+    { vehicleId: vehicleId || "" },
+    { enabled: !!vehicleId }
+  );
+
+  const loading = loadingVehicle || loadingTests;
 
   return (
     <>
@@ -101,7 +97,7 @@ export default function VehicleDetailScreen() {
                   <View style={styles.infoRow}>
                     <Icon name="Building2" size={14} color="#6B7280" />
                     <Text style={styles.infoLabel}>Office:</Text>
-                    <Text style={styles.infoValue}>{vehicle.office_name}</Text>
+                    <Text style={styles.infoValue}>{vehicle.office?.name || "Unknown"}</Text>
                   </View>
 
                   <View style={styles.infoRow}>

@@ -429,16 +429,25 @@ def get_tests(
     skip: int = 0,
     limit: int = 100,
     vehicle_id: Optional[UUID] = None,
+    quarter: Optional[int] = None,
+    year: Optional[int] = None,
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get all tests or tests for a specific vehicle.
+    Get all tests or tests for a specific vehicle, optionally filtered by quarter and year.
     """
     if vehicle_id:
         return crud_emission.test.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
     
     # Query directly to avoid nested dictionary issues
     query = db.query(TestModel)
+    
+    # Apply quarter and year filters if provided
+    if quarter is not None:
+        query = query.filter(TestModel.quarter == quarter)
+    if year is not None:
+        query = query.filter(TestModel.year == year)
+    
     total = query.count()
     tests = query.order_by(desc(TestModel.test_date)).offset(skip).limit(limit).all()
     return {"tests": tests, "total": total}
