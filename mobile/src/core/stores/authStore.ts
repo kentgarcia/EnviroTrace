@@ -80,6 +80,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log("🔐 Attempting login for user:", username);
       console.log("📍 API Base URL:", apiClient.defaults.baseURL);
 
+      // Get device information
+      const deviceName = `${
+        require("expo-constants").default.deviceName || "Unknown Device"
+      }`;
+
       // Create form data for login
       const formData = new FormData();
       formData.append("username", username);
@@ -90,6 +95,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await apiClient.post("/auth/login", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          "X-Device-Type": "mobile",
+          "X-Device-Name": deviceName,
         },
         timeout: 30000, // 30 second timeout for login
       });

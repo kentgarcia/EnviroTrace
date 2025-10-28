@@ -5,6 +5,7 @@ import {
     RefreshCw,
     Activity,
     Users,
+    Monitor,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 
@@ -62,6 +63,13 @@ export const AdminQuickActions: React.FC = () => {
             color: "bg-green-100",
         },
         {
+            title: "Session Management",
+            description: "Monitor and control user login sessions",
+            icon: <Monitor className="w-6 h-6 text-orange-600" />,
+            onClick: () => window.location.href = "/admin/session-management",
+            color: "bg-orange-100",
+        },
+        {
             title: "View System Health",
             description: "Monitor system performance and health metrics",
             icon: <Activity className="w-6 h-6 text-purple-600" />,
@@ -73,16 +81,6 @@ export const AdminQuickActions: React.FC = () => {
                 }
             },
             color: "bg-purple-100",
-        },
-        {
-            title: "System Refresh",
-            description: "Refresh system cache and data",
-            icon: <RefreshCw className="w-6 h-6 text-emerald-600" />,
-            onClick: () => {
-                // Add refresh logic here
-                window.location.reload();
-            },
-            color: "bg-emerald-100",
         },
     ];
 

@@ -16,6 +16,7 @@ import {
   UserCircle,
   Receipt,
   TreePine,
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -79,6 +80,11 @@ function getMenuItems(
         icon: <Users className="w-4 h-4 mr-1" />,
         path: `${basePath}/user-management`,
       },
+      {
+        label: "Session Management",
+        icon: <Monitor className="w-4 h-4 mr-1" />,
+        path: `${basePath}/session-management`,
+      },
     ];
   } else if (dashboardType === "government-emission") {
     return [
@@ -101,6 +107,11 @@ function getMenuItems(
         label: "Offices",
         icon: <Building className="w-4 h-4 mr-1" />,
         path: `${basePath}/offices`,
+      },
+      {
+        label: "Reports",
+        icon: <FileStack className="w-4 h-4 mr-1" />,
+        path: `${basePath}/reports`,
       },
     ];
   } else if (dashboardType === "urban-greening") {

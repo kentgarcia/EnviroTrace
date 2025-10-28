@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
 import uuid
+from datetime import datetime
 
 from app.core import security
 from app.core.config import settings
@@ -13,6 +14,7 @@ from app.db.database import get_db_session # Async session
 from app.models.auth_models import User, UserRoleEnum # SQLAlchemy model
 from app.schemas.token_schemas import TokenPayload # Pydantic schema for token payload
 from app.crud.crud_user import user as crud_user # CRUD operations for user
+from app.crud.crud_session import session_crud
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login" # Or your actual login path
@@ -83,6 +85,20 @@ async def get_current_user_async(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    # First check if the session exists and is active
+    session = await session_crud.get_active_session_by_token(db, token=token)
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or terminated. Please log in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Update last activity timestamp
+    await session_crud.update_activity(db, session_id=session.id)
+    
+    # Decode the token to get user info
     payload = security.decode_token(token)
     if payload is None:
         raise credentials_exception

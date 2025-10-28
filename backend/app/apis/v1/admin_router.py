@@ -9,7 +9,7 @@ from app.apis.deps import get_current_user_async, get_db_session, require_roles
 from app.models.auth_models import User, UserRoleMapping, Profile, UserRoleEnum
 from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
-    UserRoleMappingCreate
+    UserRoleMappingCreate, UserFullPublic
 )
 from app.services.auth_service import auth_service
 from app.services.system_health_service import SystemHealthService
@@ -68,7 +68,7 @@ async def get_system_health_data(
 
 # User Management Endpoints
 
-@router.get("/users", response_model=List[UserWithRoles])
+@router.get("/users", response_model=List[UserFullPublic])
 async def get_all_users(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles([UserRoleEnum.admin])),
@@ -92,15 +92,13 @@ async def get_all_users(
     result = await db.execute(query)
     users = result.scalars().all()
     
-    # Fetch users with their profiles and roles
-    users_with_details = []
-    for user in users:
-        user_details = await auth_service.get_user_details(db=db, user_id=user.id)
-        users_with_details.append(user_details)
+    # Fetch users with their profiles and roles in batch queries (optimized)
+    user_ids = [user.id for user in users]
+    users_with_details = await auth_service.get_users_with_details(db=db, user_ids=user_ids)
     
     return users_with_details
 
-@router.post("/users", response_model=UserWithRoles, status_code=status.HTTP_201_CREATED)
+@router.post("/users", response_model=UserFullPublic, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db_session),
@@ -110,7 +108,7 @@ async def create_user(
     
     return await auth_service.register_user(db=db, user_in=user_in)
 
-@router.get("/users/{user_id}", response_model=UserWithRoles)
+@router.get("/users/{user_id}", response_model=UserFullPublic)
 async def get_user_by_id(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
@@ -127,7 +125,7 @@ async def get_user_by_id(
     
     return user_details
 
-@router.put("/users/{user_id}", response_model=UserWithRoles)
+@router.put("/users/{user_id}", response_model=UserFullPublic)
 async def update_user(
     user_id: uuid.UUID,
     user_update: UserUpdate,

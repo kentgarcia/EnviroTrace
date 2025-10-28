@@ -69,22 +69,36 @@ class Profile(Base):
     user = relationship("User", back_populates="profile")
 
 
+class DeviceTypeEnum(str, enum.Enum):
+    mobile = "mobile"
+    desktop = "desktop"
+    tablet = "tablet"
+    unknown = "unknown"
+
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
     __table_args__ = (
         Index("idx_auth_user_sessions_user_id", "user_id"),
         Index("idx_auth_user_sessions_created_at", "created_at"),
+        Index("idx_auth_user_sessions_device_type", "device_type"),
+        Index("idx_auth_user_sessions_is_active", "is_active"),
         {"schema": "auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
     session_token = Column(String(255), unique=True, nullable=False)
+    device_type = Column(SAEnum(DeviceTypeEnum, name="device_type", schema="auth"), nullable=False, server_default="unknown")
+    device_name = Column(String(255), nullable=True)  # Device model/name
     ip_address = Column(INET, nullable=True)
     user_agent = Column(String(500), nullable=True)
+    is_active = Column(Boolean, default=True, server_default='true', nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     expires_at = Column(DateTime(timezone=True), nullable=False)
     ended_at = Column(DateTime(timezone=True), nullable=True)
+    termination_reason = Column(String(255), nullable=True)  # 'user_logout', 'admin_terminated', 'expired', 'blocked'
 
     user = relationship("User")
 

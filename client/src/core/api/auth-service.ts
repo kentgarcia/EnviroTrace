@@ -33,6 +33,12 @@ const loginUser = async (
   formData.append("username", credentials.email); // FastAPI OAuth2 expects 'username'
   formData.append("password", credentials.password);
 
+  // Detect device type
+  const deviceType = "desktop";
+  const deviceName = navigator.userAgent.includes("Electron")
+    ? "Electron Desktop App"
+    : `${navigator.platform} - ${navigator.userAgent.split(" ")[0]}`;
+
   try {
     const { data } = await apiClient.post<TokenResponse>(
       "/auth/login",
@@ -40,6 +46,8 @@ const loginUser = async (
       {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
+          "X-Device-Type": deviceType,
+          "X-Device-Name": deviceName,
         },
       }
     );

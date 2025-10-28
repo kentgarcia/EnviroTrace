@@ -8,6 +8,7 @@ import VehiclesDetailPage from "@/presentation/roles/emission/pages/VehiclesDeta
 import TestedVehiclesDetailPage from "@/presentation/roles/emission/pages/TestedVehiclesDetailPage";
 import ComplianceDetailPage from "@/presentation/roles/emission/pages/ComplianceDetailPage";
 import DepartmentsDetailPage from "@/presentation/roles/emission/pages/DepartmentsDetailPage";
+import EmissionReports from "@/presentation/roles/emission/pages/reports/EmissionReports";
 
 const createGovEmissionRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -29,7 +30,7 @@ export const govEmissionRoute = [
     QuarterlyTestingPage
   ),
   createGovEmissionRoute("/government-emission/offices", OfficesPage),
-  createGovEmissionRoute("/government-emission/reports", EmissionOverview),
+  createGovEmissionRoute("/government-emission/reports", EmissionReports),
   createGovEmissionRoute("/government-emission/settings", EmissionOverview),
   // Detail pages for stat card navigation
   createGovEmissionRoute("/government-emission/vehicles-detail", VehiclesDetailPage),
