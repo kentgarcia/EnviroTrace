@@ -3,7 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text
 from app.db.database import Base
-# Make sure User is accessible for ForeignKey, or use string reference: "auth.users.id"
+# Make sure User is accessible for ForeignKey, or use string reference: "app_auth.users.id"
 # from app.models.auth_models import User # This creates a circular dependency if imported directly for type hint
                                      # Use string for ForeignKey and define relationships carefully
 
@@ -52,7 +52,7 @@ class VehicleDriverHistory(Base):
     vehicle_id = Column(UUID(as_uuid=True), ForeignKey("emission.vehicles.id", ondelete="CASCADE"), nullable=False)
     driver_name = Column(String(255), nullable=False)
     changed_at = Column(DateTime(timezone=True), server_default=func.now())
-    changed_by_id = Column("changed_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True) # Mapped from changedBy
+    changed_by_id = Column("changed_by", UUID(as_uuid=True), ForeignKey("app_auth.users.id"), nullable=True) # Mapped from changedBy
 
     vehicle = relationship("Vehicle", back_populates="driver_history")
     changed_by_user = relationship("User", back_populates="changed_driver_histories", foreign_keys=[changed_by_id])
@@ -70,7 +70,7 @@ class VehicleRemarks(Base):
     remarks = Column(String(1000), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True)
+    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("app_auth.users.id"), nullable=True)
 
     vehicle = relationship("Vehicle", back_populates="remarks")
 
@@ -105,7 +105,7 @@ class Test(Base):
     year = Column(Integer, nullable=False)
     result = Column(Boolean, nullable=False)  # Simple pass/fail
     remarks = Column(String(500), nullable=True)  # Optional remarks
-    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("auth.users.id"), nullable=True)
+    created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("app_auth.users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

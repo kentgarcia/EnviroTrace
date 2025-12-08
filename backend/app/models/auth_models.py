@@ -13,7 +13,7 @@ class UserRoleEnum(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {"schema": "auth"}
+    __table_args__ = {"schema": "app_auth"}
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     email = Column(String(255), unique=True, index=True, nullable=False)
@@ -37,12 +37,12 @@ class UserRoleMapping(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "role", name="uq_user_roles_user_id_role"),
         Index("idx_auth_user_roles_user_id", "user_id"),
-        {"schema": "auth"}
+        {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
-    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="auth"), nullable=False) # Use the enum name that exists in DB
+    user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), nullable=False)
+    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="app_auth"), nullable=False) # Use the enum name that exists in DB
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="roles")
@@ -52,11 +52,11 @@ class Profile(Base):
     __tablename__ = "profiles"
     __table_args__ = (
         Index("idx_auth_profiles_user_id", "user_id"),
-        {"schema": "auth"}
+        {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), unique=True, nullable=False)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
     bio = Column(String, nullable=True)
@@ -83,13 +83,13 @@ class UserSession(Base):
         Index("idx_auth_user_sessions_created_at", "created_at"),
         Index("idx_auth_user_sessions_device_type", "device_type"),
         Index("idx_auth_user_sessions_is_active", "is_active"),
-        {"schema": "auth"}
+        {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), nullable=False)
     session_token = Column(String(255), unique=True, nullable=False)
-    device_type = Column(SAEnum(DeviceTypeEnum, name="device_type", schema="auth"), nullable=False, server_default="unknown")
+    device_type = Column(SAEnum(DeviceTypeEnum, name="device_type", schema="app_auth"), nullable=False, server_default="unknown")
     device_name = Column(String(255), nullable=True)  # Device model/name
     ip_address = Column(INET, nullable=True)
     user_agent = Column(String(500), nullable=True)
@@ -109,7 +109,7 @@ class FailedLogin(Base):
         Index("idx_auth_failed_logins_email", "email"),
         Index("idx_auth_failed_logins_created_at", "created_at"),
         Index("idx_auth_failed_logins_ip_address", "ip_address"),
-        {"schema": "auth"}
+        {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
@@ -126,11 +126,11 @@ class ActivityLog(Base):
         Index("idx_auth_activity_logs_user_id", "user_id"),
         Index("idx_auth_activity_logs_created_at", "created_at"),
         Index("idx_auth_activity_logs_activity_type", "activity_type"),
-        {"schema": "auth"}
+        {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="SET NULL"), nullable=True)
     activity_type = Column(String(100), nullable=False)  # 'login', 'logout', 'user_created', 'role_assigned', etc.
     description = Column(Text, nullable=False)
     extra_data = Column(Text, nullable=True)  # JSON string for additional data
