@@ -21,7 +21,8 @@ import {
     AlertTriangle,
     TreePine,
     Users,
-    FileText
+    FileText,
+    RefreshCw
 } from "lucide-react";
 import TreeRequestForm from "./components/TreeRequestForm";
 import SaplingRecommendationEngine from "../../components/SaplingRecommendationEngine";
@@ -278,14 +279,32 @@ const TreeManagement: React.FC = () => {
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavBarContainer dashboardType="urban-greening" />
-                <div className="flex-1 p-6 bg-[#F9FBFC] overflow-hidden">
-
+                
+                {/* Header Section */}
+                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                    <div className="px-6 py-4 flex items-center justify-between">
+                        <div>
+                            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Management</h1>
+                            <p className="text-xs text-muted-foreground mt-0.5">Manage tree requests and sapling recommendations</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => refetch()}
+                                disabled={isLoading}
+                                className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                            >
+                                <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+                            </Button>
+                        </div>
+                    </div>
                     {/* Tab Navigation */}
-                    <div className="border-b border-gray-200 mb-6">
-                        <nav className="-mb-px flex space-x-8">
+                    <div className="px-6">
+                        <nav className="flex space-x-8 -mb-px">
                             <button
                                 onClick={() => setActiveTab("requests")}
-                                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "requests"
+                                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === "requests"
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -295,7 +314,7 @@ const TreeManagement: React.FC = () => {
                             </button>
                             <button
                                 onClick={() => setActiveTab("recommendations")}
-                                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${activeTab === "recommendations"
+                                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${activeTab === "recommendations"
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -305,6 +324,9 @@ const TreeManagement: React.FC = () => {
                             </button>
                         </nav>
                     </div>
+                </div>
+
+                <div className="flex-1 p-6 bg-[#F9FBFC] overflow-hidden">
 
                     {error && (
                         <div className="mt-6">

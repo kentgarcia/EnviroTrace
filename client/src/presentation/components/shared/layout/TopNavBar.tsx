@@ -15,7 +15,6 @@ interface TopNavBarProps {
 }
 
 export default function TopNavBar({ items, className }: TopNavBarProps) {
-  // Dropdown state for only one open at a time
   const [openDropdownIdx, setOpenDropdownIdx] = useState<number | null>(null);
   const closeTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -31,84 +30,79 @@ export default function TopNavBar({ items, className }: TopNavBarProps) {
     if (closeTimeout.current) clearTimeout(closeTimeout.current);
     closeTimeout.current = setTimeout(() => {
       setOpenDropdownIdx(null);
-    }, 100);
+    }, 150);
   };
 
   return (
     <nav
       className={cn(
-        "w-full bg-main px-8 py-5 flex items-center gap-2 shadow text-white min-h-[64px]",
+        "flex items-center gap-1 px-4",
         className
       )}
     >
       {items.map((item, idx) => (
-        <React.Fragment key={idx}>
-          {idx !== 0 && (
-            <span className="mx-2 h-5 w-px bg-white/30 inline-block align-middle" />
-          )}
-          <div
-            className="relative group"
-            onMouseEnter={() => handleDropdownEnter(idx)}
-            onMouseLeave={handleDropdownLeave}
-            onFocus={() => handleDropdownEnter(idx)}
-            onBlur={handleDropdownLeave}
+        <div
+          key={idx}
+          className="relative"
+          onMouseEnter={() => handleDropdownEnter(idx)}
+          onMouseLeave={handleDropdownLeave}
+        >
+          <button
+            className={cn(
+              "relative flex items-center gap-1.5 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 focus:outline-none uppercase tracking-wider min-h-[48px]",
+              item.active
+                ? "text-white bg-white/20"
+                : "text-white hover:text-white hover:bg-white/10"
+            )}
+            onClick={item.onClick}
+            type="button"
           >
-            <button
-              className={cn(
-                "font-bold text-sm px-2 transition-colors focus:outline-none uppercase",
-                item.active
-                  ? "text-yellow-400"
-                  : "text-white hover:text-yellow-300"
-              )}
-              onClick={item.onClick}
-              type="button"
-            >
-              <div className="flex items-center">
-                {item.label}
-                {item.children && <ChevronDown className="w-4 h-4 ml-1" />}
-              </div>
-            </button>
+            {item.label}
             {item.children && (
-              <div
+              <ChevronDown 
                 className={cn(
-                  "absolute left-0 top-full z-[9999] bg-main text-white border-none min-w-[180px] shadow-none transition-all duration-200 opacity-0 scale-y-95 pointer-events-none",
-                  openDropdownIdx === idx &&
-                  "opacity-100 scale-y-100 pointer-events-auto"
-                )}
-                style={{ transformOrigin: "top" }}
-                onMouseEnter={() => handleDropdownEnter(idx)}
-                onMouseLeave={handleDropdownLeave}
-              >
+                  "w-4 h-4 transition-transform duration-200",
+                  openDropdownIdx === idx ? "rotate-180 text-white" : "opacity-70"
+                )} 
+              />
+            )}
+            {item.active && (
+              <div
+                className="absolute bottom-1.5 left-6 right-6 h-1 bg-secondary rounded-full"
+              />
+            )}
+          </button>
+
+          {item.children && openDropdownIdx === idx && (
+            <div
+              className="absolute left-0 top-full pt-2 z-20 min-w-[220px]"
+            >
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden py-1.5">
                 {React.Children.map(item.children, (child, childIdx) =>
                   React.isValidElement(child)
                     ? React.cloneElement(
                       child as React.ReactElement<any, any>,
                       {
-                        onClick: (...args: any[]) => {
+                        onClick: (e: any) => {
                           setOpenDropdownIdx(null);
-                          if (
-                            (child as React.ReactElement<any, any>).props
-                              .onClick
-                          )
-                            (
-                              child as React.ReactElement<any, any>
-                            ).props.onClick(...args);
+                          if ((child as React.ReactElement<any, any>).props.onClick) {
+                            (child as React.ReactElement<any, any>).props.onClick(e);
+                          }
                         },
                         className: cn(
-                          (child as React.ReactElement<any, any>).props
-                            .className,
-                          "block w-full text-left px-4 py-2 uppercase bg-main text-white border-0",
-                          childIdx !== 0 ? "border-t border-white/30" : ""
+                          (child as React.ReactElement<any, any>).props.className,
+                          "flex items-center w-full text-left px-5 py-3.5 text-[13px] font-black uppercase tracking-widest text-slate-800 hover:text-main hover:bg-slate-50 transition-all border-0"
                         ),
                       }
                     )
                     : child
                 )}
               </div>
-            )}
-          </div>
-        </React.Fragment>
+            </div>
+          )}
+        </div>
       ))}
     </nav>
   );
 }
+

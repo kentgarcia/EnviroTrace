@@ -7,7 +7,7 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
-import { Plus, Sprout, TreePine } from "lucide-react";
+import { Plus, Sprout, TreePine, RefreshCw } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
 import {
@@ -137,14 +137,37 @@ const SaplingManagement: React.FC = () => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 <TopNavBarContainer dashboardType="urban-greening" />
 
-                <div className="p-6 space-y-6">
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="saplings" className="text-sm">Sapling Requests</TabsTrigger>
-                            <TabsTrigger value="urban-greening" className="text-sm">Urban Greening</TabsTrigger>
-                        </TabsList>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+                    {/* Header Section */}
+                    <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                        <div className="px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Planting Records</h1>
+                                <p className="text-xs text-muted-foreground mt-0.5">Manage sapling requests and urban greening plantings</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => {
+                                        window.location.reload();
+                                    }}
+                                    className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                >
+                                    <RefreshCw className="h-4 w-4 text-slate-600" />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="px-6">
+                            <TabsList className="mb-0">
+                                <TabsTrigger value="saplings" className="text-sm">Sapling Requests</TabsTrigger>
+                                <TabsTrigger value="urban-greening" className="text-sm">Urban Greening</TabsTrigger>
+                            </TabsList>
+                        </div>
+                    </div>
 
-                        <TabsContent value="saplings" className="mt-4">
+                    <div className="p-6 space-y-6">
+                        <TabsContent value="saplings" className="mt-0">
                             {/* Sapling Requests Section */}
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -314,8 +337,8 @@ const SaplingManagement: React.FC = () => {
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                    </Tabs>
-                </div>
+                    </div>
+                </Tabs>
 
                 <Dialog open={srOpen} onOpenChange={setSrOpen}>
                     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">

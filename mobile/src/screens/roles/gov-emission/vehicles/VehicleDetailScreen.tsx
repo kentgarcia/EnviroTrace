@@ -77,8 +77,43 @@ export default function VehicleDetailScreen() {
                 <Text style={styles.sectionTitle}>Vehicle Information</Text>
                 <View style={styles.card}>
                   <View style={styles.plateContainer}>
-                    <Text style={styles.plateNumber}>{vehicle.plate_number}</Text>
+                    <Text style={styles.plateNumber}>
+                      {vehicle.plate_number ||
+                        vehicle.chassis_number ||
+                        vehicle.registration_number ||
+                        "N/A"}
+                    </Text>
+                    {!vehicle.plate_number && vehicle.chassis_number && (
+                      <Text style={styles.plateLabel}>(Chassis Number)</Text>
+                    )}
+                    {!vehicle.plate_number && !vehicle.chassis_number && vehicle.registration_number && (
+                      <Text style={styles.plateLabel}>(Registration Number)</Text>
+                    )}
                   </View>
+
+                  {vehicle.plate_number && (
+                    <View style={styles.infoRow}>
+                      <Icon name="Hash" size={14} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Plate Number:</Text>
+                      <Text style={styles.infoValue}>{vehicle.plate_number}</Text>
+                    </View>
+                  )}
+
+                  {vehicle.chassis_number && (
+                    <View style={styles.infoRow}>
+                      <Icon name="Hash" size={14} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Chassis Number:</Text>
+                      <Text style={styles.infoValue}>{vehicle.chassis_number}</Text>
+                    </View>
+                  )}
+
+                  {vehicle.registration_number && (
+                    <View style={styles.infoRow}>
+                      <Icon name="Hash" size={14} color="#6B7280" />
+                      <Text style={styles.infoLabel}>Registration Number:</Text>
+                      <Text style={styles.infoValue}>{vehicle.registration_number}</Text>
+                    </View>
+                  )}
 
                   <View style={styles.infoRow}>
                     <Icon name="User" size={14} color="#6B7280" />
@@ -279,6 +314,13 @@ const styles = StyleSheet.create({
     color: "#111827",
     textAlign: "center",
     letterSpacing: 0.3,
+  },
+  plateLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 4,
   },
   infoRow: {
     flexDirection: "row",

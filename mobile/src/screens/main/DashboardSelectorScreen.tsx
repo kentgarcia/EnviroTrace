@@ -10,7 +10,6 @@ import { useNavigation } from "@react-navigation/native";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
-    air_quality: "Air Quality",
     tree_management: "Tree Management",
 };
 
@@ -19,14 +18,13 @@ export default function DashboardSelectorScreen() {
     const { user, getUserRoles, setSelectedDashboard, logout } = useAuthStore();
     const allRoles = useMemo(() => getUserRoles(), [getUserRoles]);
     // Filter out admin role for mobile app
-    const roles = useMemo(() => allRoles.filter(role => role !== 'admin'), [allRoles]);
+    const roles = useMemo(() => allRoles.filter(role => role !== 'admin' && role !== 'air_quality'), [allRoles]);
     const { colors } = useTheme();
     const [logoutVisible, setLogoutVisible] = useState(false);
     const insets = useSafeAreaInsets();
 
     const roleImageMap: Record<string, any> = {
         government_emission: require("../../../assets/images/bg_govemissions.jpg"),
-        air_quality: require("../../../assets/images/bg_asbu.jpg"),
         tree_management: require("../../../assets/images/bg_envicompliance.jpg"),
     };
 
@@ -106,16 +104,13 @@ export default function DashboardSelectorScreen() {
                             <View style={styles.grid}>
                                 {roles.map((r) => {
                                     const icon = r === "government_emission" ? "Car" :
-                                        r === "tree_management" ? "TreePalm" :
-                                            r === "air_quality" ? "Wind" : "LayoutDashboard";
+                                        r === "tree_management" ? "TreePalm" : "LayoutDashboard";
 
                                     const description = r === "government_emission"
                                         ? "Vehicles, testing, and offices"
                                         : r === "tree_management"
                                             ? "Urban greening and requests"
-                                            : r === "air_quality"
-                                                ? "Monitoring and AQ metrics"
-                                                : undefined;
+                                            : undefined;
 
                                     const bg = roleImageMap[r];
                                     return (

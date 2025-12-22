@@ -18,7 +18,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
 import { vehicleService } from "../../core/api/vehicle-service";
 import { treeManagementService } from "../../core/api/tree-management-service";
-import { airQualityService } from "../../core/api/air-quality-service";
 import DataDisplay, { ActionButtons } from "../../components/chatbot/DataDisplay";
 import Icon from "../../components/icons/Icon";
 import MarkdownText from "../../components/MarkdownText";
@@ -38,7 +37,7 @@ export default function AIAssistantScreen() {
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             role: "assistant",
-            content: "Hi! I'm your environmental monitoring assistant. I can help you access and control your environmental data. Try asking me about air quality, vehicles, or tree management!",
+            content: "Hi! I'm your environmental monitoring assistant. I can help you access and control your environmental data. Try asking me about vehicles or tree management!",
             timestamp: new Date(),
         },
     ]);
@@ -113,90 +112,20 @@ export default function AIAssistantScreen() {
         }
     };
 
-    const executeAirQualityCommand = async () => {
-        try {
-            const records = await airQualityService.fetchRecentRecords({ limit: 10 });
-            const violations = await airQualityService.fetchViolations({ limit: 10 });
-            const fees = await airQualityService.fetchFees();
+    // Air Quality commands removed per client request
 
-            const message: ChatMessage = {
-                role: "assistant",
-                content: `**Air Quality Overview**\n\n🌫️ **Statistics:**\n- Total Records: ${records.length}\n- Total Violations: ${violations.length}\n- Active Fee Categories: ${fees.length}\n\nMonitoring air quality and violations across the city.`,
-                timestamp: new Date(),
-                data: {
-                    type: "table",
-                    title: "Recent Air Quality Records",
-                    data: records.slice(0, 5),
-                    metadata: {
-                        totalRecords: records.length,
-                        source: "Air Quality Monitoring",
-                    },
-                },
-            };
-            setMessages((prev) => [...prev, message]);
-        } catch (error: any) {
-            throw new Error(`Failed to fetch air quality data: ${error.message}`);
-        }
-    };
+    // Air Quality violations command removed
 
-    const executeViolationsCommand = async () => {
-        try {
-            const violations = await airQualityService.fetchViolations({ limit: 10 });
-
-            const message: ChatMessage = {
-                role: "assistant",
-                content: `**Air Quality Violations**\n\n⚠️ Found ${violations.length} violation records.\n\nThese are violations reported by the environmental monitoring team.`,
-                timestamp: new Date(),
-                data: {
-                    type: "table",
-                    title: "Air Quality Violations",
-                    data: violations.slice(0, 5),
-                    metadata: {
-                        totalRecords: violations.length,
-                        source: "Violations Database",
-                    },
-                },
-            };
-            setMessages((prev) => [...prev, message]);
-        } catch (error: any) {
-            throw new Error(`Failed to fetch violations: ${error.message}`);
-        }
-    };
-
-    const executeFeesCommand = async () => {
-        try {
-            const fees = await airQualityService.fetchFees();
-            const totalAmount = fees.reduce((sum, fee) => sum + Number(fee.amount), 0);
-
-            const message: ChatMessage = {
-                role: "assistant",
-                content: `**Fee Control Overview**\n\n💰 **Summary:**\n- Total Fee Categories: ${fees.length}\n- Total Amount: ₱${totalAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}\n\nCurrent fee structure for air quality violations.`,
-                timestamp: new Date(),
-                data: {
-                    type: "table",
-                    title: "Fee Categories",
-                    data: fees,
-                    metadata: {
-                        totalRecords: fees.length,
-                        source: "Fee Control System",
-                    },
-                },
-            };
-            setMessages((prev) => [...prev, message]);
-        } catch (error: any) {
-            throw new Error(`Failed to fetch fees: ${error.message}`);
-        }
-    };
+    // Air Quality fee command removed
 
     const executeStatsCommand = async () => {
         try {
             const vehicleStats = await vehicleService.getVehicleStats();
             const treeStats = await treeManagementService.getTreeStats();
-            const airQualityRecords = await airQualityService.fetchRecentRecords({ limit: 1 });
 
             const message: ChatMessage = {
                 role: "assistant",
-                content: `**System Statistics Overview**\n\n📊 **Government Vehicles:**\n- Total Vehicles: ${vehicleStats.total_vehicles}\n- Total Tests: ${vehicleStats.total_tests}\n- Pass Rate: ${vehicleStats.pass_rate.toFixed(1)}%\n\n🌳 **Tree Management:**\n- Total Requests: ${treeStats.total_requests}\n- Filed: ${treeStats.filed}\n- On Hold: ${treeStats.on_hold}\n\n🌫️ **Air Quality:**\n- Active Records: ${airQualityRecords.length > 0 ? 'Available' : 'No data'}\n- Violations: Active monitoring\n\nAll systems operational and collecting data.`,
+                content: `**System Statistics Overview**\n\n📊 **Government Vehicles:**\n- Total Vehicles: ${vehicleStats.total_vehicles}\n- Total Tests: ${vehicleStats.total_tests}\n- Pass Rate: ${vehicleStats.pass_rate.toFixed(1)}%\n\n🌳 **Tree Management:**\n- Total Requests: ${treeStats.total_requests}\n- Filed: ${treeStats.filed}\n- On Hold: ${treeStats.on_hold}\n\nAll systems operational and collecting data.`,
                 timestamp: new Date(),
             };
             setMessages((prev) => [...prev, message]);
@@ -220,27 +149,7 @@ export default function AIAssistantScreen() {
             description: "View tree management requests",
             action: executeTreesCommand,
         },
-        {
-            id: "air-quality",
-            label: "Air Quality",
-            icon: "Wind",
-            description: "View smoke belcher reports",
-            action: executeAirQualityCommand,
-        },
-        {
-            id: "violations",
-            label: "Violations",
-            icon: "AlertTriangle",
-            description: "View air quality violations",
-            action: executeViolationsCommand,
-        },
-        {
-            id: "fees",
-            label: "Fee Control",
-            icon: "DollarSign",
-            description: "View fee categories",
-            action: executeFeesCommand,
-        },
+        // Air Quality-related actions removed per client request
         {
             id: "stats",
             label: "System Statistics",

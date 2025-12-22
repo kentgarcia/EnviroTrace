@@ -8,14 +8,12 @@ import { useAuthStore } from "../../core/stores/authStore";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
-    air_quality: "Air Quality",
     tree_management: "Tree Management",
     admin: "Administrator",
 };
 
 const roleIcons: Record<string, string> = {
     government_emission: "Car",
-    air_quality: "Wind",
     tree_management: "TreePalm",
     admin: "ShieldCheck",
 };
@@ -24,7 +22,7 @@ export default function ProfileScreen() {
     const navigation = useNavigation();
     const { user, getUserRoles, logout } = useAuthStore();
     const insets = useSafeAreaInsets();
-    const allRoles = getUserRoles();
+    const allRoles = getUserRoles().filter(r => r !== "air_quality");
     const [logoutVisible, setLogoutVisible] = useState(false);
 
     const handleLogout = async () => {

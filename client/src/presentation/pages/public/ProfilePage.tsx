@@ -25,11 +25,14 @@ import {
   Save,
   Briefcase,
   Phone,
+  ArrowLeft,
+  Building2,
 } from "lucide-react";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Separator } from "@/presentation/components/shared/ui/separator";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { useMyProfile, useUpdateProfile } from "@/core/api/profile-service";
+import { motion } from "framer-motion";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -55,13 +58,8 @@ export default function ProfilePage() {
 
   // Update profile data when the profile is loaded
   useEffect(() => {
-    console.log("Profile data in component:", profile);
-    // Debug log to see the user object structure
-    console.log("User data in component:", user);
-
     if (profile) {
       setProfileData({
-        // Handle both camelCase and snake_case field names from backend
         firstName: profile.firstName || profile.first_name || "",
         lastName: profile.lastName || profile.last_name || "",
         email: user?.email || "",
@@ -70,8 +68,6 @@ export default function ProfilePage() {
         department: profile.department || "",
         phoneNumber: profile.phoneNumber || profile.phone_number || "",
       });
-
-      console.log("Profile data updated in state");
     } else if (user) {
       setProfileData(prev => ({
         ...prev,
@@ -79,51 +75,17 @@ export default function ProfilePage() {
       }));
     }
   }, [profile, user]);
-  // Check for roles specifically
-  useEffect(() => {
-    if (user) {
-      console.log("Full user object:", user);
-      console.log("User roles property:", user.roles);
-      console.log("User assigned_roles property:", user.assigned_roles);
-
-      const userRoles = user.assigned_roles || user.roles || [];
-      console.log("Combined user roles:", userRoles);
-      console.log("Is array?", Array.isArray(userRoles));
-
-      // Also check the auth store directly
-      const { roles } = useAuthStore.getState();
-      console.log("Roles in auth store:", roles);
-    }
-  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate({ to: "/" });
     }
   }, [user, authLoading, navigate]);
-  // Show error toast if profile fetch fails
-  useEffect(() => {
-    if (profileError) {
-      toast.error("Failed to load profile data. You may need to create a profile first.");
-      console.error("Error fetching profile data:", profileError);
 
-      // Even if there's an error, we can still populate with user data
-      if (user) {
-        setProfileData(prev => ({
-          ...prev,
-          email: user.email || "",
-          // Initialize other fields as empty so the form still works
-          firstName: prev.firstName || "",
-          lastName: prev.lastName || "",
-        }));
-      }
-    }
-  }, [profileError, user]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // Ensure we pass data in the format expected by our mutation hook
       await updateProfileMutation.mutateAsync({
         firstName: profileData.firstName,
         lastName: profileData.lastName,
@@ -144,15 +106,13 @@ export default function ProfilePage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-100 text-red-800 border-red-300";
-      case "air_quality":
-        return "bg-blue-100 text-blue-800 border-blue-300";
-      case "tree_management":
-        return "bg-green-100 text-green-800 border-green-300";
+        return "bg-red-50 text-red-700 border-red-200";
+      case "urban_greening":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
       case "government_emission":
-        return "bg-orange-100 text-orange-800 border-orange-300";
+        return "bg-amber-50 text-amber-700 border-amber-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
+        return "bg-slate-50 text-slate-700 border-slate-200";
     }
   };
 
@@ -160,281 +120,286 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground animate-pulse">Loading profile...</p>
+        </div>
       </div>
     );
   }
 
-  // Get initial for avatar
   const getInitials = () => {
     if (profileData.firstName && profileData.lastName) {
-      return `${profileData.firstName.charAt(0)}${profileData.lastName.charAt(
-        0
-      )}`.toUpperCase();
-    } else if (profileData.firstName) {
-      return profileData.firstName.charAt(0).toUpperCase();
-    } else if (profileData.lastName) {
-      return profileData.lastName.charAt(0).toUpperCase();
-    } else if (user?.email) {
-      return user.email.charAt(0).toUpperCase();
+      return `${profileData.firstName.charAt(0)}${profileData.lastName.charAt(0)}`.toUpperCase();
     }
-    return "U";
+    return user?.email?.charAt(0).toUpperCase() || "U";
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, staggerChildren: 0.1 }
+    }
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-ems-green-50 to-ems-blue-50">
-      <header className="border-b bg-white py-4 px-6 shadow-xs">
-        <div className="max-w-(--breakpoint-xl) mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/logo_munti.png"
-              alt="Logo 1"
-              className="h-16 w-16 rounded-md"
-            />
-            <img
-              src="/images/logo_epnro.png"
-              alt="Logo 2"
-              className="h-16 w-16 rounded-md"
-            />
-            <h1 className="text-xl font-semibold">
-              Environmental Management System
-            </h1>
+    <div className="min-h-screen bg-slate-50/50 flex flex-col">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md py-3 px-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              <img
+                src="/images/logo_munti.png"
+                alt="Muntinlupa Logo"
+                className="h-10 w-10 rounded-full border-2 border-white"
+              />
+              <img
+                src="/images/logo_epnro.png"
+                alt="EPNRO Logo"
+                className="h-10 w-10 rounded-full border-2 border-white"
+              />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-base font-bold text-slate-900 leading-tight">
+                EnviroTrace
+              </h1>
+            </div>
           </div>
 
           <Button
-            variant="outline"
-            onClick={() => navigate({ to: "/dashboard-selection" })}
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2 text-slate-600 hover:text-primary hover:bg-primary/5"
+            onClick={() => window.history.back()}
           >
-            Back to Dashboard
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
           </Button>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto py-12 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">User Profile</h1>
-          <p className="text-muted-foreground">
-            View and manage your profile information
-          </p>
-        </div>
+      <div className="relative h-32 md:h-48 bg-slate-900 overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-40"
+          style={{ 
+            backgroundImage: "url('/images/bg_login.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/50" />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Picture</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center gap-4">
-                <Avatar className="h-32 w-32">
-                  <AvatarFallback className="text-3xl bg-primary text-primary-foreground">
-                    {getInitials()}
-                  </AvatarFallback>
-                </Avatar>
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 -mt-16 md:-mt-24 pb-20 relative z-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+        >
+          <div className="lg:col-span-4 space-y-6">
+            <Card className="border-slate-200 overflow-hidden">
+              <div className="h-24 bg-slate-100 relative">
+                <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
+                  <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">
+                      {getInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </div>
+              <CardContent className="pt-16 pb-6 text-center">
+                <h3 className="font-bold text-xl text-slate-900">
+                  {profileData.firstName || profileData.lastName
+                    ? `${profileData.firstName} ${profileData.lastName}`
+                    : "User Account"}
+                </h3>
+                <p className="text-slate-500 text-sm mb-4">{user?.email}</p>
+                
+                <div className="flex flex-wrap justify-center gap-2 mb-6">
+                  {(() => {
+                    const userRoles = user?.assigned_roles || user?.roles || [];
+                    if (Array.isArray(userRoles) && userRoles.length > 0) {
+                      return userRoles.map((role, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className={`${getRoleColor(role)} font-medium px-2.5 py-0.5`}
+                        >
+                          {role.replace('_', ' ')}
+                        </Badge>
+                      ));
+                    }
+                    return <Badge variant="outline" className="text-slate-400">No Roles</Badge>;
+                  })()}
+                </div>
 
-                <div className="text-center">
-                  <h3 className="font-medium text-xl">
-                    {profileData.firstName || profileData.lastName
-                      ? `${profileData.firstName} ${profileData.lastName}`
-                      : "User"}
-                  </h3>
-                  <p className="text-muted-foreground">{user?.email}</p>
-                  {profileData.jobTitle && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {profileData.jobTitle}
-                    </p>
-                  )}
-                </div>                <div className="w-full">                  <Separator className="my-4" />
-                  <h4 className="font-semibold mb-2 flex items-center">
-                    <ShieldCheck className="h-4 w-4 mr-1" /> Roles
-                  </h4>                  <div className="flex flex-wrap gap-2 mt-1">
-                    {(() => {
-                      // Determine which roles array to use
-                      const userRoles = user?.assigned_roles || user?.roles || [];
-
-                      if (Array.isArray(userRoles) && userRoles.length > 0) {
-                        return userRoles.map((role, index) => (
-                          <Badge
-                            key={index}
-                            variant="outline"
-                            className={getRoleColor(role)}
-                          >
-                            {role}
-                          </Badge>
-                        ));
-                      } else {
-                        // Fallback to auth store roles if needed
-                        const { roles } = useAuthStore.getState();
-                        if (Array.isArray(roles) && roles.length > 0) {
-                          return roles.map((role, index) => (
-                            <Badge
-                              key={index}
-                              variant="outline"
-                              className={getRoleColor(role)}
-                            >
-                              {role}
-                            </Badge>
-                          ));
-                        } else {
-                          return <p className="text-sm text-muted-foreground">No roles assigned</p>;
-                        }
-                      }
-                    })()}
+                <Separator className="my-4 opacity-50" />
+                
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Briefcase className="h-4 w-4 text-slate-400" />
+                    <span>{profileData.jobTitle || "No job title set"}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                    <span>{profileData.department || "No department set"}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="border-slate-200 p-6">
+              <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                Account Security
+              </h4>
+              <p className="text-xs text-slate-500 mb-4">
+                Your account is protected with standard authentication. Contact IT for password resets.
+              </p>
+              <Button variant="outline" size="sm" className="w-full text-xs" disabled>
+                Change Password
+              </Button>
+            </Card>
           </div>
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Update your personal details</CardDescription>
+
+          <div className="lg:col-span-8">
+            <Card className="border-slate-200">
+              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="text-xl font-bold text-slate-900">Profile Settings</CardTitle>
+                <CardDescription>Manage your personal information and how it appears to others.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="flex items-center">
-                        <User className="h-4 w-4 mr-2" /> First Name
-                      </Label>
-                      <Input
-                        id="firstName"
-                        value={profileData.firstName}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            firstName: e.target.value,
-                          })
-                        }
-                        placeholder="Enter your first name"
-                      />
+                      <Label htmlFor="firstName" className="text-slate-700 font-medium">First Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="firstName"
+                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          value={profileData.firstName}
+                          onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                          placeholder="John"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="lastName" className="flex items-center">
-                        <User className="h-4 w-4 mr-2" /> Last Name
-                      </Label>
-                      <Input
-                        id="lastName"
-                        value={profileData.lastName}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            lastName: e.target.value,
-                          })
-                        }
-                        placeholder="Enter your last name"
-                      />
+                      <Label htmlFor="lastName" className="text-slate-700 font-medium">Last Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="lastName"
+                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          value={profileData.lastName}
+                          onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                          placeholder="Doe"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="flex items-center">
-                      <Mail className="h-4 w-4 mr-2" /> Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      value={profileData.email}
-                      disabled
-                      className="bg-gray-50"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Email address cannot be changed
-                    </p>
+                    <Label htmlFor="email" className="text-slate-700 font-medium">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="email"
+                        value={profileData.email}
+                        disabled
+                        className="pl-10 bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-400 italic">Email address is managed by the system administrator.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bio" className="flex items-center">
-                      <User className="h-4 w-4 mr-2" /> Bio
-                    </Label>
+                    <Label htmlFor="bio" className="text-slate-700 font-medium">Professional Bio</Label>
                     <Textarea
                       id="bio"
+                      className="min-h-[120px] border-slate-200 focus:border-primary focus:ring-primary/10 resize-none"
                       value={profileData.bio}
-                      onChange={(e) =>
-                        setProfileData({ ...profileData, bio: e.target.value })
-                      }
-                      placeholder="Tell us about yourself"
-                      className="min-h-[100px]"
+                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                      placeholder="Briefly describe your role and responsibilities..."
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Separator className="opacity-50" />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="jobTitle" className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2" /> Job Title
-                      </Label>
-                      <Input
-                        id="jobTitle"
-                        value={profileData.jobTitle}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            jobTitle: e.target.value,
-                          })
-                        }
-                        placeholder="Your job title"
-                      />
+                      <Label htmlFor="jobTitle" className="text-slate-700 font-medium">Job Title</Label>
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="jobTitle"
+                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          value={profileData.jobTitle}
+                          onChange={(e) => setProfileData({ ...profileData, jobTitle: e.target.value })}
+                          placeholder="Environmental Officer"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="department" className="flex items-center">
-                        <Briefcase className="h-4 w-4 mr-2" /> Department
-                      </Label>
-                      <Input
-                        id="department"
-                        value={profileData.department}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            department: e.target.value,
-                          })
-                        }
-                        placeholder="Your department"
-                      />
+                      <Label htmlFor="department" className="text-slate-700 font-medium">Department</Label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="department"
+                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          value={profileData.department}
+                          onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
+                          placeholder="EPNRO"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="flex items-center">
-                      <Phone className="h-4 w-4 mr-2" /> Phone Number
-                    </Label>
-                    <Input
-                      id="phoneNumber"
-                      value={profileData.phoneNumber}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          phoneNumber: e.target.value,
-                        })
-                      }
-                      placeholder="Your phone number"
-                    />
+                    <Label htmlFor="phoneNumber" className="text-slate-700 font-medium">Phone Number</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="phoneNumber"
+                        className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                        value={profileData.phoneNumber}
+                        onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
+                        placeholder="+63 900 000 0000"
+                      />
+                    </div>
                   </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={updateProfileMutation.isPending}
-                  >
-                    {updateProfileMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Updating...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        Save Changes
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex justify-end pt-4">
+                    <Button
+                      type="submit"
+                      className="px-8 font-semibold"
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving Changes...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Profile
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 }

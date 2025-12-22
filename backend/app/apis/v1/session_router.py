@@ -126,7 +126,7 @@ async def terminate_all_user_sessions(
 @router.get("/sessions/me", response_model=List[SessionPublic])
 async def get_my_sessions(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin, UserRoleEnum.air_quality, UserRoleEnum.tree_management, UserRoleEnum.government_emission]))
+    current_user: User = Depends(require_roles([UserRoleEnum.admin, UserRoleEnum.tree_management, UserRoleEnum.government_emission]))
 ):
     """Get current user's sessions"""
     sessions = await session_crud.get_user_sessions(

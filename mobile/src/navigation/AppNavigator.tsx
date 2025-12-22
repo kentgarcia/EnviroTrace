@@ -4,7 +4,6 @@ import { useAuthStore } from "../core/stores/authStore";
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
 import TreeManagementNavigator from "./TreeManagementNavigator";
-import AirQualityNavigator from "./AirQualityNavigator";
 import DashboardSelectorScreen from "../screens/main/DashboardSelectorScreen";
 import ProfileScreen from "../screens/main/ProfileScreen";
 import AIAssistantScreen from "../screens/main/AIAssistantScreen";
@@ -67,14 +66,6 @@ export default function AppNavigator() {
         <Stack.Screen
           name="TreeManagement"
           component={TreeManagementNavigator}
-          options={{
-            gestureEnabled: false, // Prevent going back to selector
-          }}
-        />
-      ) : selectedDashboard === "air_quality" ? (
-        <Stack.Screen
-          name="AirQuality"
-          component={AirQualityNavigator}
           options={{
             gestureEnabled: false, // Prevent going back to selector
           }}

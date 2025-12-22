@@ -1,12 +1,12 @@
 import React from "react";
+import { Filter } from "lucide-react";
+import { Button } from "@/presentation/components/shared/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/presentation/components/shared/ui/select";
-import { Label } from "@/presentation/components/shared/ui/label";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/presentation/components/shared/ui/dropdown-menu";
 
 interface YearSelectorProps {
   selectedYear: number;
@@ -23,42 +23,81 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
   selectedQuarter,
   onQuarterChange,
 }) => {
-  return (
-    <div className="flex flex-wrap gap-4 items-center">
-      <div className="grid gap-1.5">
-        <Label htmlFor="year">Year</Label>
-        <Select value={selectedYear.toString()} onValueChange={onYearChange}>
-          <SelectTrigger id="year" className="w-32">
-            <SelectValue placeholder="Select Year" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableYears.map((year) => (
-              <SelectItem key={year} value={year.toString()}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+  const getQuarterLabel = () => {
+    if (!selectedQuarter) return "All Quarters";
+    return `Q${selectedQuarter}`;
+  };
 
-      <div className="grid gap-1.5">
-        <Label htmlFor="quarter">Quarter</Label>
-        <Select
-          value={selectedQuarter?.toString() || "all"}
-          onValueChange={onQuarterChange}
-        >
-          <SelectTrigger id="quarter" className="w-32">
-            <SelectValue placeholder="Select Quarter" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Quarters</SelectItem>
-            <SelectItem value="1">Q1</SelectItem>
-            <SelectItem value="2">Q2</SelectItem>
-            <SelectItem value="3">Q3</SelectItem>
-            <SelectItem value="4">Q4</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+  return (
+    <div className="flex flex-wrap gap-2 items-center">
+      {/* Year Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[110px]"
+          >
+            <span className="truncate">{selectedYear}</span>
+            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-32 p-1">
+          {availableYears.map((year) => (
+            <DropdownMenuItem 
+              key={year} 
+              onClick={() => onYearChange(year.toString())} 
+              className="rounded-md cursor-pointer"
+            >
+              {year}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Quarter Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+          >
+            <span className="truncate">{getQuarterLabel()}</span>
+            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40 p-1">
+          <DropdownMenuItem 
+            onClick={() => onQuarterChange("all")} 
+            className="rounded-md cursor-pointer"
+          >
+            All Quarters
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => onQuarterChange("1")} 
+            className="rounded-md cursor-pointer"
+          >
+            Q1
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => onQuarterChange("2")} 
+            className="rounded-md cursor-pointer"
+          >
+            Q2
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => onQuarterChange("3")} 
+            className="rounded-md cursor-pointer"
+          >
+            Q3
+          </DropdownMenuItem>
+          <DropdownMenuItem 
+            onClick={() => onQuarterChange("4")} 
+            className="rounded-md cursor-pointer"
+          >
+            Q4
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

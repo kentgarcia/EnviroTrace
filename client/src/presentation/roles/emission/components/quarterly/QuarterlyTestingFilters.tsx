@@ -1,16 +1,15 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, Filter, X, Check } from "lucide-react";
 import { Input } from "@/presentation/components/shared/ui/input";
+import { Button } from "@/presentation/components/shared/ui/button";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/presentation/components/shared/ui/select";
-import { MultiSelect, MultiSelectItem } from "@/presentation/components/shared/ui/multi-select";
-import { Label } from "@/presentation/components/shared/ui/label";
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/presentation/components/shared/ui/dropdown-menu";
 import { Office } from "@/core/api/emission-service";
+import { cn } from "@/core/utils/utils";
 
 interface QuarterlyTestingFiltersProps {
     search: string;
@@ -21,6 +20,7 @@ interface QuarterlyTestingFiltersProps {
     selectedOffices: string[];
     offices: Office[];
     onOfficeChange: (officeIds: string[]) => void;
+    compact?: boolean;
 }
 
 export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = ({
@@ -32,65 +32,149 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
     selectedOffices,
     offices,
     onOfficeChange,
+    compact = false,
 }) => {
-    // Convert offices to MultiSelect items
-    const officeItems: MultiSelectItem[] = [
-        { value: "all", label: "All Offices" },
-        ...offices.map((office) => ({
-            value: office.id,
-            label: office.name,
-        })),
-    ];
+    const hasFilters = search || selectedOffices.length > 0 && !selectedOffices.includes("all");
+    
+    const clearFilters = () => {
+        onSearchChange("");
+        onOfficeChange(["all"]);
+    };
+
+    const getOfficeLabel = () => {
+        if (selectedOffices.includes("all") || selectedOffices.length === 0) {
+            return "All Offices";
+        }
+        if (selectedOffices.length === 1) {
+            const office = offices.find(o => o.id === selectedOffices[0]);
+            return office?.name || "1 Office";
+        }
+        // Show first office name + count
+        const firstOffice = offices.find(o => o.id === selectedOffices[0]);
+        return `${firstOffice?.name || "Office"} +${selectedOffices.length - 1}`;
+    };
+
+    const isOfficeSelected = (officeId: string) => {
+        if (officeId === "all") {
+            return selectedOffices.includes("all") || selectedOffices.length === 0;
+        }
+        return selectedOffices.includes(officeId);
+    };
+
+    const handleOfficeSelect = (officeId: string) => {
+        if (officeId === "all") {
+            onOfficeChange(["all"]);
+        } else {
+            const newSelection = selectedOffices.includes("all") 
+                ? [officeId]
+                : selectedOffices.includes(officeId)
+                    ? selectedOffices.filter(id => id !== officeId)
+                    : [...selectedOffices, officeId];
+            
+            if (newSelection.length === 0) {
+                onOfficeChange(["all"]);
+            } else {
+                onOfficeChange(newSelection);
+            }
+        }
+    };
+
     return (
-        <div className="flex flex-col gap-4 mb-6">
-            {/* Filters Row */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                {/* Search (left) */}
-                <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
-                    <Search className="absolute left-2 h-4 w-4 text-gray-400 pointer-events-none" />
-                    <Input
-                        placeholder="Search by plate, driver, or office..."
-                        value={search}
-                        onChange={(e) => onSearchChange(e.target.value)}
-                        className="pl-8 max-w-xs w-[320px] bg-white"
-                    />
-                </div>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Search (left) */}
+            <div className="relative flex items-center w-full lg:w-96">
+                <Input
+                    placeholder="Search by plate, driver, or office..."
+                    value={search}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                />
+                <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+                {search && (
+                    <button
+                        onClick={() => onSearchChange("")}
+                        className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                )}
+            </div>
 
-                {/* Filters (right) */}
-                <div className="flex items-end gap-4">
-                    {/* Year Filter */}
-                    <div className="space-y-1">
-                        <Label htmlFor="year-select" className="text-sm font-medium">
-                            Year <span className="text-red-500">*</span>
-                        </Label>
-                        <Select value={selectedYear?.toString() || ""} onValueChange={onYearChange}>
-                            <SelectTrigger id="year-select" className="w-32 bg-white">
-                                <SelectValue placeholder="Select year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableYears.map((year) => (
-                                    <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+            {/* Filters (right) */}
+            <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+                {hasFilters && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearFilters}
+                        className="text-slate-500 hover:text-slate-900 text-xs font-medium h-8 px-2"
+                    >
+                        Clear all
+                    </Button>
+                )}
 
-                    {/* Office Filter */}
-                    <div className="space-y-1">
-                        <Label htmlFor="office-select" className="text-sm font-medium">
-                            Offices
-                        </Label>
-                        <MultiSelect
-                            items={officeItems}
-                            selectedValues={selectedOffices}
-                            onChange={onOfficeChange}
-                            placeholder="Select offices..."
-                            className="w-64 bg-white"
-                        />
-                    </div>
-                </div>
+                {/* Year Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[110px]"
+                        >
+                            <span className="truncate">{selectedYear}</span>
+                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-32 p-1">
+                        {availableYears.map((year) => (
+                            <DropdownMenuItem 
+                                key={year} 
+                                onClick={() => onYearChange(year.toString())} 
+                                className="rounded-md cursor-pointer"
+                            >
+                                {year}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Offices Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[180px]"
+                        >
+                            <span className="truncate">{getOfficeLabel()}</span>
+                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 p-1 max-h-[300px] overflow-y-auto">
+                        <DropdownMenuItem 
+                            onClick={() => handleOfficeSelect("all")} 
+                            className="rounded-md cursor-pointer flex items-center justify-between"
+                        >
+                            <span>All Offices</span>
+                            {isOfficeSelected("all") && (
+                                <Check className="h-4 w-4 text-[#0033a0]" />
+                            )}
+                        </DropdownMenuItem>
+                        {offices.map((office) => (
+                            <DropdownMenuItem 
+                                key={office.id} 
+                                onClick={() => handleOfficeSelect(office.id)} 
+                                className={cn(
+                                    "rounded-md cursor-pointer flex items-center justify-between",
+                                    isOfficeSelected(office.id) && "bg-blue-50"
+                                )}
+                            >
+                                <span className="truncate">{office.name}</span>
+                                {isOfficeSelected(office.id) && (
+                                    <Check className="h-4 w-4 text-[#0033a0] flex-shrink-0 ml-2" />
+                                )}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </div>
     );

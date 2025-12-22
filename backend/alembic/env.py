@@ -32,8 +32,8 @@ target_metadata = Base.metadata
 def include_name(name, type_, parent_names):
     # Ensure Alembic considers our domain schemas, including urban_greening
     if type_ == "schema":
-        # Include all domain schemas that we manage via Alembic
-        return name in ["auth", "belching", "emission", "urban_greening", "air_quality"]
+        # Include managed domain schemas (ASBT/air_quality removed)
+        return name in ["auth", "emission", "urban_greening"]
     return True
 
 def run_migrations_offline() -> None:
@@ -78,7 +78,7 @@ def run_migrations_online() -> None:
             compare_type=True,
         )
         # Create schemas if they don't exist
-        for schema_name in ["auth", "belching", "emission", "urban_greening", "air_quality"]:
+        for schema_name in ["auth", "emission", "urban_greening"]:
             connection.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema_name}"))
         connection.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;'))
         connection.commit()  # Commit schema and extension creation

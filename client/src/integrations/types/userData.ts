@@ -1,6 +1,5 @@
 export type UserRole =
   | "admin"
-  | "air_quality"
   | "urban_greening"
   | "government_emission";
 

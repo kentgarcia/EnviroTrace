@@ -3,6 +3,7 @@ import { CalendarIcon, UserIcon, MapPinIcon, EditIcon } from "lucide-react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
@@ -13,6 +14,7 @@ import { Label } from "@/presentation/components/shared/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Separator } from "@/presentation/components/shared/ui/separator";
+import { cn } from "@/core/utils/utils";
 import {
     TestSchedule,
     TestScheduleCreate,
@@ -117,108 +119,132 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
         const hasData = !!schedule;
 
         return (
-            <Card className="relative">
-                <CardHeader className="pb-3">
+            <Card className="relative overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3 pt-4">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">
-                            {getQuarterName(quarter)} Quarter {selectedYear}
+                        <CardTitle className="text-base font-bold">
+                            {getQuarterName(quarter)} Quarter
                         </CardTitle>
-                        <Badge variant={hasData ? "default" : "secondary"}>
+                        <Badge 
+                            variant={hasData ? "default" : "secondary"}
+                            className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider",
+                                hasData ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-50 text-slate-500 border-slate-200"
+                            )}
+                        >
                             {hasData ? "Configured" : "Not Set"}
                         </Badge>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-sm">
-                            <UserIcon className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">Personnel:</span>
-                            <span className={hasData ? "text-gray-900" : "text-gray-500"}>
-                                {schedule?.assigned_personnel || "Not assigned"}
-                            </span>
+                <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                                <UserIcon className="h-4 w-4 text-slate-400" />
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Personnel</div>
+                                <div className={cn("font-semibold", hasData ? "text-slate-900" : "text-slate-400")}>
+                                    {schedule?.assigned_personnel || "Not assigned"}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center space-x-2 text-sm">
-                            <CalendarIcon className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">Test Date:</span>
-                            <span className={hasData ? "text-gray-900" : "text-gray-500"}>
-                                {schedule ? formatDate(schedule.conducted_on) : "Not scheduled"}
-                            </span>
+                        <div className="flex items-center gap-3 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                                <CalendarIcon className="h-4 w-4 text-slate-400" />
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Test Date</div>
+                                <div className={cn("font-semibold", hasData ? "text-slate-900" : "text-slate-400")}>
+                                    {schedule ? formatDate(schedule.conducted_on) : "Not scheduled"}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex items-center space-x-2 text-sm">
-                            <MapPinIcon className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">Location:</span>
-                            <span className={hasData ? "text-gray-900" : "text-gray-500"}>
-                                {schedule?.location || "Not specified"}
-                            </span>
+                        <div className="flex items-center gap-3 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+                                <MapPinIcon className="h-4 w-4 text-slate-400" />
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Location</div>
+                                <div className={cn("font-semibold", hasData ? "text-slate-900" : "text-slate-400")}>
+                                    {schedule?.location || "Not specified"}
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <Separator />
 
                     <Dialog open={editingQuarter === quarter} onOpenChange={(open) => !open && setEditingQuarter(null)}>
                         <DialogTrigger asChild>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                className="w-full"
+                                className="w-full border-slate-200 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider"
                                 onClick={() => handleEdit(quarter)}
                             >
-                                <EditIcon className="h-4 w-4 mr-2" />
-                                {hasData ? "Edit" : "Set Up"} Q{quarter}
+                                <EditIcon className="h-3.5 w-3.5 mr-2" />
+                                {hasData ? "Edit Configuration" : "Set Up Quarter"}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>
+                        <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
+                            <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
+                                <DialogTitle className="text-xl font-bold text-white">
                                     {hasData ? "Edit" : "Set Up"} {getQuarterName(quarter)} Quarter {selectedYear}
                                 </DialogTitle>
+                                <DialogDescription className="text-blue-100/80">
+                                    Configure the testing schedule and personnel for this quarter.
+                                </DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4">
+                            <div className="p-6 bg-white space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="personnel">Assigned Personnel</Label>
+                                    <Label htmlFor="personnel" className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Personnel</Label>
                                     <Input
                                         id="personnel"
                                         value={formData.assigned_personnel}
                                         onChange={(e) => setFormData(prev => ({ ...prev, assigned_personnel: e.target.value }))}
                                         placeholder="Enter personnel name"
+                                        className="h-11"
                                     />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="date">Test Date</Label>
+                                    <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Date</Label>
                                     <Input
                                         id="date"
                                         type="date"
                                         value={formData.conducted_on}
                                         onChange={(e) => setFormData(prev => ({ ...prev, conducted_on: e.target.value }))}
+                                        className="h-11"
                                     />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="location">Location</Label>
+                                    <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-500">Location</Label>
                                     <Input
                                         id="location"
                                         value={formData.location}
                                         onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                                         placeholder="Enter test location"
+                                        className="h-11"
                                     />
                                 </div>
 
-                                <div className="flex justify-end space-x-2 pt-4">
+                                <div className="flex justify-end gap-3 pt-6">
                                     <Button
-                                        variant="outline"
+                                        variant="ghost"
                                         onClick={() => setEditingQuarter(null)}
                                         disabled={isSubmitting}
+                                        className="font-bold text-xs uppercase tracking-wider"
                                     >
                                         Cancel
                                     </Button>
                                     <Button
                                         onClick={handleSubmit}
                                         disabled={isSubmitting || !formData.assigned_personnel || !formData.conducted_on || !formData.location}
+                                        className="bg-[#0033a0] hover:bg-[#002a80] font-bold text-xs uppercase tracking-wider px-8"
                                     >
-                                        {isSubmitting ? "Saving..." : "Save"}
+                                        {isSubmitting ? "Saving..." : "Save Configuration"}
                                     </Button>
                                 </div>
                             </div>
@@ -231,39 +257,40 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
 
     if (!selectedYear) {
         return (
-            <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                <div className="p-8 text-center">
-                    <div className="text-gray-500 text-lg">
-                        Please select a year to manage quarter information
-                    </div>
+            <div className="p-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+                    <CalendarIcon className="h-8 w-8 text-slate-300" />
                 </div>
-            </Card>
+                <h3 className="text-lg font-semibold text-slate-900">No Year Selected</h3>
+                <p className="text-slate-500 max-w-xs mx-auto mt-2">
+                    Please select a year from the filter above to manage quarter information.
+                </p>
+            </div>
         );
     }
 
     return (
-        <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-            <CardHeader>
-                <CardTitle className="text-xl">Quarter Information for {selectedYear}</CardTitle>
-                <p className="text-gray-600 text-sm">
-                    Configure testing schedules, personnel assignments, and locations for each quarter.
+        <div className="space-y-6">
+            <div>
+                <h2 className="text-lg font-bold text-slate-900">Quarter Configuration</h2>
+                <p className="text-sm text-slate-500">
+                    Configure testing schedules, personnel assignments, and locations for {selectedYear}.
                 </p>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(quarter => (
-                            <div key={quarter} className="h-48 bg-gray-100 animate-pulse rounded-lg"></div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(quarter => (
-                            <QuarterCard key={quarter} quarter={quarter} />
-                        ))}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+            </div>
+
+            {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(quarter => (
+                        <div key={quarter} className="h-64 bg-slate-50 animate-pulse rounded-xl border border-slate-100"></div>
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(quarter => (
+                        <QuarterCard key={quarter} quarter={quarter} />
+                    ))}
+                </div>
+            )}
+        </div>
     );
 };

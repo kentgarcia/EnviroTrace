@@ -1,9 +1,10 @@
 import { DashboardCard } from "@/presentation/components/shared/dashboard/DashboardCard";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronDown, Loader2, LogOut, User } from "lucide-react";
+import { ChevronDown, Loader2, LogOut, User, LayoutDashboard, ShieldCheck, TreePine, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/core/api/auth";
+import { motion } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -26,8 +27,6 @@ export default function DashboardSelection() {
 
   // Debug logging for user data
   console.log("User data in DashboardSelection:", user);
-  console.log("User roles:", user?.roles);
-  console.log("User assigned_roles:", user?.assigned_roles);
 
   const handleDashboardSelect = (dashboardType: string) => {
     navigate({ to: `/${dashboardType}/overview` });
@@ -43,8 +42,8 @@ export default function DashboardSelection() {
       toast.error("Failed to sign out");
     }
   };
+
   const hasRole = (role: UserRole) => {
-    // Check both assigned_roles and roles properties of the user object
     const hasDirectRole =
       user?.assigned_roles?.includes(role) ||
       user?.assigned_roles?.includes("admin") ||
@@ -55,108 +54,114 @@ export default function DashboardSelection() {
       return true;
     }
 
-    // Fall back to checking the auth store if no roles directly on user object
     const { roles } = useAuthStore.getState();
     return roles.includes(role) || roles.includes("admin");
   };
-  // Get user display name
+
   const getDisplayName = () => {
-    if (profile?.fullName) {
-      return profile.fullName;
-    } else if (profile?.firstName && profile?.lastName) {
-      return `${profile.firstName} ${profile.lastName}`;
-    } else if (profile?.firstName) {
-      return profile.firstName;
-    } else if (profile?.lastName) {
-      return profile.lastName;
-    }
+    if (profile?.fullName) return profile.fullName;
+    if (profile?.firstName && profile?.lastName) return `${profile.firstName} ${profile.lastName}`;
     return user?.email || "User";
   };
 
-  // Get initials for avatar
   const getInitials = () => {
     if (profile?.firstName && profile?.lastName) {
-      return `${profile.firstName.charAt(0)}${profile.lastName.charAt(
-        0
-      )}`.toUpperCase();
-    } else if (profile?.firstName) {
-      return profile.firstName.charAt(0).toUpperCase();
-    } else if (profile?.lastName) {
-      return profile.lastName.charAt(0).toUpperCase();
+      return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
     }
     return user?.email?.charAt(0).toUpperCase() || "U";
   };
 
   if (loading || profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground animate-pulse">Loading your workspace...</p>
+        </div>
       </div>
     );
   }
-  // Debug log to see what roles we have right before rendering
-  const storeRoles = useAuthStore.getState().roles;
-  console.log("Auth store roles:", storeRoles);
-  console.log("Admin role check:", hasRole("admin"));
-  console.log("Air quality role check:", hasRole("air_quality"));
-  console.log("Urban greening role check:", hasRole("urban_greening"));
-  console.log(
-    "Government emission role check:",
-    hasRole("government_emission")
-  );
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { type: "spring", stiffness: 300, damping: 24 }
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-linear-to-b from-ems-green-50 to-ems-blue-50">
-      <header className="border-b bg-white py-4 px-6">
-        <div className="max-w-(--breakpoint-xl) mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/logo_munti.png"
-              alt="Logo 1"
-              className="h-16 w-16 rounded-md"
-            />
-            <img
-              src="/images/logo_epnro.png"
-              alt="Logo 2"
-              className="h-16 w-16 rounded-md"
-            />
-            <h1 className="text-xl font-semibold">
-              Environmental Management System
-            </h1>
+    <div className="min-h-screen flex flex-col bg-slate-50/50">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md py-3 px-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2">
+              <img
+                src="/images/logo_munti.png"
+                alt="Muntinlupa Logo"
+                className="h-12 w-12 rounded-full border-2 border-white shadow-sm"
+              />
+              <img
+                src="/images/logo_epnro.png"
+                alt="EPNRO Logo"
+                className="h-12 w-12 rounded-full border-2 border-white shadow-sm"
+              />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-bold text-slate-900 leading-tight">
+                EnviroTrace
+              </h1>
+              <p className="text-xs text-slate-500 font-medium">
+                Environmental Management System
+              </p>
+            </div>
           </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-3 px-2 hover:bg-slate-100 rounded-full transition-colors"
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                <Avatar className="h-9 w-9 border-2 border-primary/10">
+                  <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-sm text-left hidden md:block">
-                  <div className="font-medium">{getDisplayName()}</div>
-                  <div className="text-xs text-muted-foreground">
-                    User Profile
-                  </div>
+                  <div className="font-semibold text-slate-900">{getDisplayName()}</div>
+                  <div className="text-xs text-slate-500">Account Settings</div>
                 </div>
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 text-slate-400" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-64 p-2">
+              <div className="px-2 py-1.5 mb-1">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Signed in as</p>
+                <p className="text-sm font-semibold truncate">{user?.email}</p>
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer"
+                className="cursor-pointer rounded-md py-2"
                 onClick={() => navigate({ to: "/profile" })}
               >
-                <User className="mr-2 h-4 w-4" />
+                <User className="mr-2 h-4 w-4 text-slate-500" />
                 <span>My Profile</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                className="cursor-pointer"
+                className="cursor-pointer rounded-md py-2 text-red-600 focus:text-red-600 focus:bg-red-50"
                 onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
@@ -167,78 +172,117 @@ export default function DashboardSelection() {
         </div>
       </header>
 
-      <div
-        className="py-16 px-6 bg-cover bg-center text-white"
-        style={{ backgroundImage: "url('/images/bg_login.png')" }}
-      >
-        <div className="max-w-(--breakpoint-xl) mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Welcome, {getDisplayName()}!
-          </h2>
-          <p className="text-xl max-w-2xl">
-            Select a dashboard to access environmental data and management tools
-            for sustainable development
-          </p>
+      <div className="relative overflow-hidden">
+        <div 
+          className="absolute inset-0 z-0"
+          style={{ 
+            backgroundImage: "url('/images/bg_login.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-transparent" />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-16">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="max-w-2xl"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary-foreground text-xs font-bold uppercase tracking-widest mb-4">
+              <LayoutDashboard className="h-3 w-3" />
+              Workspace Selection
+            </div>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
+              Welcome back, <span className="text-primary-foreground">{getDisplayName().split(' ')[0]}</span>!
+            </h2>
+            <p className="text-base md:text-lg text-slate-200 leading-relaxed">
+              Access your specialized environmental management tools and real-time data monitoring dashboards.
+            </p>
+          </motion.div>
         </div>
       </div>
 
-      <main className="flex-1 px-4 sm:px-6 lg:px-10 py-10">
-        {/* Full-width container (no max width) but with responsive horizontal padding */}
-        <div className="w-full">
-          {/* Single-row, centered dashboard cards. Expands with viewport and keeps consistent padding. */}
-          <div className="flex justify-center items-stretch gap-8 w-full overflow-x-auto py-2">
-            {hasRole("admin") && (
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
+        <div className="flex flex-col items-center mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Available Dashboards</h3>
+          <div className="h-1 w-16 bg-primary rounded-full" />
+        </div>
+
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
+        >
+          {hasRole("admin") && (
+            <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
-                title="Admin Dashboard"
-                description="Manage system settings and configurations"
+                title="System Administration"
+                description="Full access to system configurations, user management, and audit logs."
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("admin")}
-                className="flex-none w-72 md:w-80 border-ems-red-200 hover:border-ems-red-400"
-                contentClassName="h-full"
+                className="h-full border-slate-200 hover:border-primary transition-all duration-300"
               />
-            )}
+            </motion.div>
+          )}
 
-            {hasRole("air_quality") && (
-              <DashboardCard
-                title="Anti-Smoke Belching Testing"
-                description="Monitor and evaluate smoke emissions from vehicles"
-                icon="/images/bg_asbu.jpg"
-                onClick={() => handleDashboardSelect("air-quality")}
-                className="flex-none w-72 md:w-80 border-ems-blue-200 hover:border-ems-blue-400"
-                contentClassName="h-full"
-              />
-            )}
-
-            {hasRole("urban_greening") && (
+          {hasRole("urban_greening") && (
+            <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="Urban Greening"
-                description="Track afforestation efforts, tree health data, and forest coverage"
+                description="Monitor tree health, track afforestation projects, and manage green spaces."
                 icon="/images/bg_envicompliance.jpg"
                 onClick={() => handleDashboardSelect("urban-greening")}
-                className="flex-none w-72 md:w-80 border-ems-green-200 hover:border-ems-green-400"
-                contentClassName="h-full"
+                className="h-full border-slate-200 hover:border-ems-green-500 transition-all duration-300"
               />
-            )}
+            </motion.div>
+          )}
 
-            {hasRole("government_emission") && (
+          {hasRole("government_emission") && (
+            <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
-                title="Government Fleet Emmission Testing"
-                description="Evaluate and optimize emissions from government-operated vehicles"
+                title="Fleet Emissions"
+                description="Manage government vehicle emission testing and environmental compliance."
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("government-emission")}
-                className="flex-none w-72 md:w-80 border-ems-gray-200 hover:border-ems-gray-400"
-                contentClassName="h-full"
+                className="h-full border-slate-200 hover:border-ems-blue-500 transition-all duration-300"
               />
-            )}
+            </motion.div>
+          )}
+        </motion.div>
+
+        {!hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
+          <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <ShieldCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+            <h4 className="text-lg font-semibold text-slate-900">No Dashboards Available</h4>
+            <p className="text-slate-500 max-w-xs mx-auto mt-2">
+              Your account doesn't have any assigned dashboard roles. Please contact your administrator.
+            </p>
           </div>
-        </div>
+        )}
       </main>
 
-      <footer className="border-t bg-white py-4 px-6">
-        <div className="max-w-(--breakpoint-xl) mx-auto text-center text-sm text-muted-foreground">
-          Environmental Management System &copy; 2025
+      <footer className="border-t bg-white py-8 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-primary/10 rounded flex items-center justify-center">
+              <div className="h-4 w-4 bg-primary rounded-sm" />
+            </div>
+            <span className="font-bold text-slate-900">EnviroTrace</span>
+          </div>
+          <div className="text-sm text-slate-500">
+            &copy; {new Date().getFullYear()} Environmental Management System. All rights reserved.
+          </div>
+          <div className="flex gap-6 text-sm font-medium text-slate-400">
+            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+          </div>
         </div>
       </footer>
     </div>
   );
 }
+

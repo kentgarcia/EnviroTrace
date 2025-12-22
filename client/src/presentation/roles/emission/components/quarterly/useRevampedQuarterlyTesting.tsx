@@ -75,7 +75,9 @@ export const useRevampedQuarterlyTesting = () => {
         if (search) {
             const searchLower = search.toLowerCase();
             filteredVehicles = filteredVehicles.filter(v =>
-                v.plate_number.toLowerCase().includes(searchLower) ||
+                (v.plate_number?.toLowerCase().includes(searchLower) || false) ||
+                (v.chassis_number?.toLowerCase().includes(searchLower) || false) ||
+                (v.registration_number?.toLowerCase().includes(searchLower) || false) ||
                 v.driver_name.toLowerCase().includes(searchLower) ||
                 v.office?.name?.toLowerCase().includes(searchLower)
             );
@@ -116,7 +118,11 @@ export const useRevampedQuarterlyTesting = () => {
             .map(([officeId, vehicles]) => ({
                 office_id: officeId,
                 office_name: vehicles[0]?.office?.name || "Unknown Office",
-                vehicles: vehicles.sort((a, b) => a.plate_number.localeCompare(b.plate_number)),
+                vehicles: vehicles.sort((a, b) => {
+                    const idA = a.plate_number || a.chassis_number || a.registration_number || "";
+                    const idB = b.plate_number || b.chassis_number || b.registration_number || "";
+                    return idA.localeCompare(idB);
+                }),
             }))
             .sort((a, b) => a.office_name.localeCompare(b.office_name));
     }, [vehicles, tests, selectedOffices, search, selectedYear]);
@@ -446,5 +452,6 @@ export const useRevampedQuarterlyTesting = () => {
         handleBatchUpdateTests,
         handleExportData,
         setIsQuickTestOpen,
+        refetchTests,
     };
 };

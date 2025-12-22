@@ -1,15 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import {
-  SortingState,
-  PaginationState,
-  VisibilityState,
-  ColumnFilter,
-  ColumnFiltersState,
-  OnChangeFn,
-  RowSelectionState,
-} from "@tanstack/react-table";
 import { NetworkStatus } from "@/presentation/components/shared/layout/NetworkStatus";
 import { formatDate } from "@/core/utils/dateUtils";
 import {
@@ -31,7 +22,7 @@ import {
 } from "@/presentation/roles/emission/components/vehicles/VehicleTable";
 import { VehicleModals } from "@/presentation/roles/emission/components/vehicles/VehicleModals";
 import { VehicleDetails } from "@/presentation/roles/emission/components/vehicles/VehicleDetails";
-import { FileDown, Plus, AlertTriangle, Search, Filter, X } from "lucide-react";
+import { FileDown, Plus, AlertTriangle, Search, Filter, X, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -114,6 +105,7 @@ export default function Vehicles() {
     data: vehiclesData,
     isLoading,
     error,
+    refetch,
   } = useVehicles(
     filters,
     pagination.pageIndex * pagination.pageSize,
@@ -158,6 +150,10 @@ export default function Vehicles() {
     filterOptions,
   ]);
   const wheelCounts = useMemo(() => filterOptions?.wheels || [], [filterOptions]);
+
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   // Row selection state
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
@@ -276,12 +272,12 @@ export default function Vehicles() {
 
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent +=
-      "Plate Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact\n";
+      "Plate Number,Chassis Number,Registration Number,Office,Driver,Vehicle Type,Engine Type,Wheels,Contact\n";
 
     vehicles.forEach((vehicle) => {
       const officeName = vehicle.office?.name || "Unknown Office";
 
-      csvContent += `"${vehicle.plate_number}","${officeName}","${vehicle.driver_name
+      csvContent += `"${vehicle.plate_number || ""}","${vehicle.chassis_number || ""}","${vehicle.registration_number || ""}","${officeName}","${vehicle.driver_name
         }","${vehicle.vehicle_type}","${vehicle.engine_type}","${vehicle.wheels
         }","${vehicle.contact_number || ""}"\n`;
     });
@@ -328,161 +324,160 @@ export default function Vehicles() {
           <TopNavBarContainer dashboardType="government-emission" />
 
           {/* Header Section */}
-          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200 shadow-none">
-            <h1 className="text-2xl font-semibold text-gray-900">Vehicles</h1>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setAddModalOpen(true)}
-                className="hidden md:inline-flex text-white border-none shadow-none rounded-none"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Vehicle
-              </Button>
-              <Button
-                onClick={handleExportToCSV}
-                variant="outline"
-                size="icon"
-                disabled={vehicles.length === 0 || isLoading}
-                className="border border-gray-200 bg-white shadow-none rounded-none"
-              >
-                <FileDown className="h-5 w-5" />
-              </Button>
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+              <div className="shrink-0">
+                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                  Vehicles
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Manage and monitor the vehicle fleet across all offices
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setAddModalOpen(true)}
+                  className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Vehicle
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                  <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+                </Button>
+                <Button
+                  onClick={handleExportToCSV}
+                  variant="outline"
+                  size="icon"
+                  disabled={vehicles.length === 0 || isLoading}
+                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                  <FileDown className="h-4 w-4 text-slate-600" />
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-            {/* Controls Row: Search left, Filters right */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">              {/* Search (left) */}
-              <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
-                <Input
-                  placeholder="Search by plate, driver, or office..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 max-w-xs w-[320px] bg-white"
-                />
-                <span className="absolute left-3 text-gray-400">
-                  {search && search !== debouncedSearch ? (
-                    <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full" />
-                  ) : (
-                    <Search className="h-4 w-4" />
+          <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+            <div className="p-8">
+              {/* Controls Row: Search left, Filters right */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                {/* Search (left) */}
+                <div className="relative flex items-center w-full lg:w-96">
+                  <Input
+                    placeholder="Search by plate, driver, or office..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                  />
+                  <span className="absolute left-3 text-slate-400">
+                    {search && search !== debouncedSearch ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </span>
+                  {search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
-                </span>
-                {search && (
-                  <button
-                    onClick={() => setSearch("")}
-                    className="absolute right-3 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                </div>
+
+                {/* Filters (right) */}
+                <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+                  {(office || vehicleType || engineType || search) && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={resetFilters}
+                      className="text-slate-500 hover:text-slate-900 text-xs font-medium h-8 px-2"
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                  
+                  {/* Office Filter Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[140px]"
+                      >
+                        <span className="truncate">{office ? office : "All Offices"}</span>
+                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 p-1">
+                      <DropdownMenuItem onClick={() => setOffice("")} className="rounded-md cursor-pointer">
+                        All Offices
+                      </DropdownMenuItem>
+                      {offices.map((o) => (
+                        <DropdownMenuItem key={o} onClick={() => setOffice(o)} className="rounded-md cursor-pointer">
+                          {o}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Vehicle Type Filter Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                      >
+                        <span className="truncate">{vehicleType ? vehicleType : "All Types"}</span>
+                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 p-1">
+                      <DropdownMenuItem onClick={() => setVehicleType("")} className="rounded-md cursor-pointer">
+                        All Types
+                      </DropdownMenuItem>
+                      {vehicleTypes.map((t) => (
+                        <DropdownMenuItem key={t} onClick={() => setVehicleType(t)} className="rounded-md cursor-pointer">
+                          {t}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Engine Type Filter Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                      >
+                        <span className="truncate">{engineType ? engineType : "All Engines"}</span>
+                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 p-1">
+                      <DropdownMenuItem onClick={() => setEngineType("")} className="rounded-md cursor-pointer">
+                        All Engines
+                      </DropdownMenuItem>
+                      {engineTypes.map((e) => (
+                        <DropdownMenuItem key={e} onClick={() => setEngineType(e)} className="rounded-md cursor-pointer">
+                          {e}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-              {/* Filters (right) */}
-              <div className="flex flex-wrap gap-2 items-center justify-end">
-                {/* Office Filter Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[140px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
-                    >
-                      {office ? office : "All Offices"}
-                      <span className="ml-2 text-gray-400 flex items-center">
-                        <Filter className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="bg-white border border-gray-200 shadow-none rounded-none"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => setOffice("")}
-                      className="rounded-none"
-                    >
-                      All Offices
-                    </DropdownMenuItem>
-                    {offices.map((o) => (
-                      <DropdownMenuItem
-                        key={o}
-                        onClick={() => setOffice(o)}
-                        className="rounded-none"
-                      >
-                        {o}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* Vehicle Type Filter Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
-                    >
-                      {vehicleType ? vehicleType : "All Types"}
-                      <span className="ml-2 text-gray-400 flex items-center">
-                        <Filter className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="bg-white border border-gray-200 shadow-none rounded-none"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => setVehicleType("")}
-                      className="rounded-none"
-                    >
-                      All Types
-                    </DropdownMenuItem>
-                    {vehicleTypes.map((t) => (
-                      <DropdownMenuItem
-                        key={t}
-                        onClick={() => setVehicleType(t)}
-                        className="rounded-none"
-                      >
-                        {t}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* Engine Type Filter Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="min-w-[120px] justify-between bg-white border border-gray-200 shadow-none rounded-none"
-                    >
-                      {engineType ? engineType : "All Engines"}
-                      <span className="ml-2 text-gray-400 flex items-center">
-                        <Filter className="h-4 w-4" />
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    className="bg-white border border-gray-200 shadow-none rounded-none"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => setEngineType("")}
-                      className="rounded-none"
-                    >
-                      All Engines
-                    </DropdownMenuItem>
-                    {engineTypes.map((e) => (
-                      <DropdownMenuItem
-                        key={e}
-                        onClick={() => setEngineType(e)}
-                        className="rounded-none"
-                      >
-                        {e}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
 
             {/* Error Notice */}
             {error && (
@@ -530,60 +525,51 @@ export default function Vehicles() {
             )}
 
             {/* Vehicles Table */}
-            <Card className="mt-6 border border-gray-200 shadow-none rounded-none bg-white">
+            <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
               <div className="p-6">
-                {/* Status Tabs - Removed since test data is no longer fetched for performance */}
-                <div className="flex gap-2 mb-6">
-                  <div className="flex items-center px-4 py-2 rounded-none text-sm font-medium bg-primary text-white border border-gray-200 shadow-none">
-                    All Vehicles
-                    <span className="ml-2 px-2 py-0.5 rounded-none text-xs font-semibold bg-primary text-white">
-                      {stats.all}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-500 px-4 py-2">
-                    Test status filtering is available in the Quarterly Testing section
-                  </div>
-                </div>                {isLoading ? (
-                  <VehicleTableSkeleton />
-                ) : (<VehicleTable
-                  vehicles={vehicles}
-                  isLoading={isLoading}
-                  onView={handleViewVehicle}
-                  onEdit={handleEditVehicle}
-                  onDelete={handleDeleteConfirm}
-                  onEditVehicle={async (id: string, data: VehicleFormInput) => {
-                    // Find the office ID by office name
-                    const officeId = getOfficeIdByName(data.officeName);
-                    if (!officeId) {
-                      toast.error(`Office "${data.officeName}" not found`);
-                      return;
-                    }
+                {isLoading ? (
+                    <VehicleTableSkeleton />
+                  ) : (
+                    <VehicleTable
+                      vehicles={vehicles}
+                      isLoading={isLoading}
+                      onView={handleViewVehicle}
+                      onEdit={handleEditVehicle}
+                      onDelete={handleDeleteConfirm}
+                      onEditVehicle={async (id: string, data: VehicleFormInput) => {
+                        // Find the office ID by office name
+                        const officeId = getOfficeIdByName(data.officeName);
+                        if (!officeId) {
+                          toast.error(`Office "${data.officeName}" not found`);
+                          return;
+                        }
 
-                    // Convert from UI VehicleFormInput to API VehicleInput
-                    const apiVehicleData = {
-                      driver_name: data.driverName,
-                      contact_number: data.contactNumber,
-                      engine_type: data.engineType,
-                      office_id: officeId,
-                      plate_number: data.plateNumber,
-                      vehicle_type: data.vehicleType,
-                      wheels: data.wheels
-                    };
+                        // Convert from UI VehicleFormInput to API VehicleInput
+                        const apiVehicleData = {
+                          driver_name: data.driverName,
+                          contact_number: data.contactNumber,
+                          engine_type: data.engineType,
+                          office_id: officeId,
+                          plate_number: data.plateNumber,
+                          vehicle_type: data.vehicleType,
+                          wheels: data.wheels
+                        };
 
-                    await updateVehicleMutation.mutateAsync({
-                      id,
-                      vehicleData: apiVehicleData,
-                    });
+                        await updateVehicleMutation.mutateAsync({
+                          id,
+                          vehicleData: apiVehicleData,
+                        });
 
-                    toast.success("Vehicle updated successfully");
-                  }}
-                />)}
-              </div>
-
+                        toast.success("Vehicle updated successfully");
+                      }}
+                    />
+                  )}
+                </div>
             </Card>
           </div>
         </div>
-      </div>      {/* Modals and Dialogs */}
+      </div>
+    </div>      {/* Modals and Dialogs */}
       <VehicleModals
         isAddModalOpen={addModalOpen}
         onAddModalClose={() => setAddModalOpen(false)}
@@ -615,7 +601,7 @@ export default function Vehicles() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>            <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
               vehicle
-              {selectedVehicle && ` (${selectedVehicle.plate_number})`} and
+              {selectedVehicle && ` (${selectedVehicle.plate_number || selectedVehicle.chassis_number || selectedVehicle.registration_number})`} and
               remove its data from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>

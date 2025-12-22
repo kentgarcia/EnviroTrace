@@ -197,18 +197,6 @@ export function OfficeManagementTable({
 
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold">Office Management</h3>
-                    <p className="text-sm text-muted-foreground">
-                        Manage government offices and their information
-                    </p>
-                </div>        <Button className="gap-2" onClick={handleAddOffice}>
-                    <Plus className="h-4 w-4" />
-                    Add Office
-                </Button>
-            </div>
-
             <DataTable
                 columns={columns}
                 data={officesResponse?.offices || []}
@@ -217,7 +205,8 @@ export function OfficeManagementTable({
                 showColumnVisibility={true}
                 showPagination={true}
                 defaultPageSize={10}
-                loadingMessage="Loading offices..." emptyMessage="No offices found for the selected filters."
+                loadingMessage="Loading offices..." 
+                emptyMessage="No offices found for the selected filters."
                 onRowClick={handleRowClick}
                 defaultDensity="normal"
             />

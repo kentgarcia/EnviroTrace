@@ -19,7 +19,9 @@ export interface Vehicle {
   engine_type: string;
   office_id: string;
   office?: Office;
-  plate_number: string;
+  plate_number?: string;
+  chassis_number?: string;
+  registration_number?: string;
   vehicle_type: string;
   wheels: number;
   created_at: string;
@@ -33,7 +35,9 @@ export interface VehicleInput {
   contact_number?: string;
   engine_type: string;
   office_id: string;
-  plate_number: string;
+  plate_number?: string;
+  chassis_number?: string;
+  registration_number?: string;
   vehicle_type: string;
   wheels: number;
 }

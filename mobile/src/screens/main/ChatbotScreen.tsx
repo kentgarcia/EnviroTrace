@@ -31,7 +31,7 @@ export default function ChatbotScreen() {
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             role: "assistant",
-            content: "Hi! I'm your environmental monitoring assistant. I can help you access and control your environmental data. Try asking me about air quality, vehicles, or tree management!",
+            content: "Hi! I'm your environmental monitoring assistant. I can help you access and control your environmental data. Try asking me about vehicles or tree management!",
             timestamp: new Date(),
         },
     ]);
@@ -41,13 +41,6 @@ export default function ChatbotScreen() {
     const scrollViewRef = useRef<ScrollView>(null);
 
     const commandOptions: CommandOption[] = [
-        {
-            id: "air-quality",
-            label: "Air Quality Data",
-            command: "show air quality data",
-            icon: "Wind",
-            description: "View current air quality readings",
-        },
         {
             id: "vehicles",
             label: "Vehicle Data",
@@ -62,27 +55,7 @@ export default function ChatbotScreen() {
             icon: "TreePalm",
             description: "View tree inventory and health",
         },
-        {
-            id: "trends",
-            label: "Analyze Trends",
-            command: "analyze air quality trends",
-            icon: "BarChart3",
-            description: "Analyze environmental trends",
-        },
-        {
-            id: "violations",
-            label: "Violations",
-            command: "show air quality violations",
-            icon: "AlertCircle",
-            description: "View compliance violations",
-        },
-        {
-            id: "report",
-            label: "Generate Report",
-            command: "generate air quality report",
-            icon: "FileText",
-            description: "Create environmental report",
-        },
+        // Removed Air Quality-related commands per client request
     ];
 
     const suggestedQuestions = enhancedChatbotService.getSuggestedQuestions();

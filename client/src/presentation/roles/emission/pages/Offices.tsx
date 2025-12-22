@@ -8,7 +8,7 @@ import {
 } from "@/presentation/components/shared/ui/tabs";
 import { Card } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
-import { Search, RefreshCw, FileSpreadsheet, Plus } from "lucide-react";
+import { Search, RefreshCw, FileSpreadsheet, Plus, Building2, Car, CheckCircle2, BarChart3 } from "lucide-react";
 import { YearSelector } from "@/presentation/roles/emission/components/offices/YearSelector";
 import { OfficeComplianceTable } from "@/presentation/roles/emission/components/offices/OfficeComplianceTable";
 import { OfficeManagementTable } from "@/presentation/roles/emission/components/offices/OfficeManagementTable";
@@ -18,11 +18,18 @@ import { useOffices } from "@/hooks/offices/useOffices";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
-  ({ title, value }: { title: string; value: string | number }) => (
-    <Card className="p-6">
-      <div className="flex flex-col gap-1">
-        <span className="text-sm text-muted-foreground">{title}</span>
-        <span className="text-2xl font-bold">{value}</span>
+  ({ title, value, icon: Icon }: { title: string; value: string | number; icon?: any }) => (
+    <Card className="p-6 border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden relative">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{title}</span>
+          <span className="text-2xl font-bold text-slate-900">{value}</span>
+        </div>
+        {Icon && (
+          <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Icon className="h-5 w-5 text-slate-400" />
+          </div>
+        )}
       </div>
     </Card>
   )
@@ -92,130 +99,142 @@ export default function OfficesPage() {
       <div className="flex min-h-screen w-full">
         <div className="flex-1 flex flex-col overflow-hidden">
           <TopNavBarContainer dashboardType="government-emission" />
+          
           {/* Header Section */}
-          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Government Offices
-            </h1>            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleRefresh}
-                size="icon"
-                disabled={isLoading}
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-                />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleAddOffice}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Office
-              </Button>
-              <Button variant="outline" size="icon">
-                <FileSpreadsheet className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Body Section */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-            {/* Controls Row: Search left, Filters right */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-              {/* Search (left) */}
-              <div className="relative flex items-center w-full md:w-auto justify-start bg-white rounded-md">
-                <Search className="absolute left-3 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search offices..."
-                  className="pl-8 max-w-xs w-[320px] bg-white"
-                  value={filters.searchTerm || ""}
-                  onChange={handleSearchChange}
-                />
-              </div>
-              {/* Filters (right) */}
-              <div className="flex flex-wrap gap-2 items-center justify-end">
-                <YearSelector
-                  selectedYear={filters.year ?? new Date().getFullYear()}
-                  availableYears={availableYears}
-                  onYearChange={handleYearChange}
-                  selectedQuarter={filters.quarter}
-                  onQuarterChange={handleQuarterChange}
-                />
-              </div>
-            </div>
-
-            {/* Main Content */}            <Tabs
-              defaultValue="overview"
-              value={activeTab}
-              onValueChange={setActiveTab}
-            >
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="management">Office Management</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                <TabsTrigger value="reports">Reports</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatCard
-                    title="Total Offices"
-                    value={summaryStats.totalOffices}
-                  />
-                  <StatCard
-                    title="Total Vehicles"
-                    value={summaryStats.totalVehicles}
-                  />
-                  <StatCard
-                    title="Compliant Offices"
-                    value={summaryStats.totalCompliant}
-                  />
-                  <StatCard
-                    title="Overall Compliance"
-                    value={`${summaryStats.overallComplianceRate}%`}
-                  />
+          <Tabs
+            defaultValue="overview"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full flex flex-col flex-1 overflow-hidden"
+          >
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+              <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+                <div className="shrink-0">
+                  <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                    Government Offices
+                  </h1>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Manage and monitor compliance across all government agencies
+                  </p>
                 </div>
+                
+                <div className="flex items-center gap-3">
+                  <Button
+                    onClick={handleAddOffice}
+                    className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Office
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isLoading}
+                    className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  >
+                    <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  >
+                    <FileSpreadsheet className="h-4 w-4 text-slate-600" />
+                  </Button>
+                </div>
+              </div>
 
-                <Card className="mt-6">
-                  <div className="p-6">
-                    <h2 className="text-xl font-semibold mb-4">
-                      Office Compliance
-                    </h2>
-                    <OfficeComplianceTable
-                      officeData={officeData}
-                      errorMessage={errorMessage || undefined}
+              <div className="px-6 pb-0">
+                <TabsList className="bg-transparent p-0 gap-8 h-12 w-full justify-start border-b-0 rounded-none">
+                  <TabsTrigger 
+                    value="overview"
+                    className="rounded-none border-b-2 border-transparent px-0 h-12 data-[state=active]:bg-transparent data-[state=active]:text-[#0033a0] data-[state=active]:border-[#0033a0] data-[state=active]:shadow-none font-semibold transition-all text-sm"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="management"
+                    className="rounded-none border-b-2 border-transparent px-0 h-12 data-[state=active]:bg-transparent data-[state=active]:text-[#0033a0] data-[state=active]:border-[#0033a0] data-[state=active]:shadow-none font-semibold transition-all text-sm"
+                  >
+                    Office Management
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
+
+            {/* Body Section */}
+            <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+              <div className="p-8">
+                {/* Controls Row: Search left, Filters right */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                  {/* Search (left) */}
+                  <div className="relative flex items-center w-full lg:w-96">
+                    <Input
+                      placeholder="Search offices by name or location..."
+                      value={filters.searchTerm || ""}
+                      onChange={handleSearchChange}
+                      className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                    />
+                    <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+                  </div>
+                  
+                  {/* Filters (right) */}
+                  <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+                    <YearSelector
+                      selectedYear={filters.year ?? new Date().getFullYear()}
+                      availableYears={availableYears}
+                      onYearChange={handleYearChange}
+                      selectedQuarter={filters.quarter}
+                      onQuarterChange={handleQuarterChange}
                     />
                   </div>
-                </Card>
-              </TabsContent>
+                </div>
 
-              <TabsContent value="management">
-                <Card className="p-6">
-                  <OfficeManagementTable searchTerm={filters.searchTerm} />
-                </Card>
-              </TabsContent>
+                <TabsContent value="overview" className="space-y-8 mt-0 outline-none">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard
+                      title="Total Offices"
+                      value={summaryStats.totalOffices}
+                      icon={Building2}
+                    />
+                    <StatCard
+                      title="Total Vehicles"
+                      value={summaryStats.totalVehicles}
+                      icon={Car}
+                    />
+                    <StatCard
+                      title="Compliant Offices"
+                      value={summaryStats.totalCompliant}
+                      icon={CheckCircle2}
+                    />
+                    <StatCard
+                      title="Overall Compliance"
+                      value={`${summaryStats.overallComplianceRate}%`}
+                      icon={BarChart3}
+                    />
+                  </div>
 
-              <TabsContent value="analytics">
-                <Card className="p-6">
-                  <h3 className="text-lg font-medium">Analytics Dashboard</h3>
-                  <p className="text-muted-foreground">
-                    Detailed analytics coming soon.
-                  </p>
-                </Card>
-              </TabsContent>
+                  <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
+                    <div className="p-6">
+                      <OfficeComplianceTable
+                        officeData={officeData}
+                        errorMessage={errorMessage || undefined}
+                      />
+                    </div>
+                  </Card>
+                </TabsContent>
 
-              <TabsContent value="reports">
-                <Card className="p-6">
-                  <h3 className="text-lg font-medium">Compliance Reports</h3>
-                  <p className="text-muted-foreground">
-                    Reports will be available soon.
-                  </p>
-                </Card>
-              </TabsContent>            </Tabs>
-          </div>
+                <TabsContent value="management" className="mt-0 outline-none">
+                  <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
+                    <div className="p-6">
+                      <OfficeManagementTable searchTerm={filters.searchTerm} />
+                    </div>
+                  </Card>
+                </TabsContent>
+              </div>
+            </div>
+          </Tabs>
         </div>
       </div>
 

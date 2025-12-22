@@ -230,7 +230,10 @@ export default function TestingScreen() {
                         <View style={styles.testItem}>
                           <View style={styles.testInfo}>
                             <Text style={styles.plateNumber}>
-                              {item.vehicle?.plate_number || "Unknown"}
+                              {item.vehicle?.plate_number ||
+                                item.vehicle?.chassis_number ||
+                                item.vehicle?.registration_number ||
+                                "Unknown"}
                             </Text>
                             <Text style={styles.vehicleType}>
                               {item.vehicle?.vehicle_type || "N/A"} • {item.vehicle?.engine_type || "N/A"}

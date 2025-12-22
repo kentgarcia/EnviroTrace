@@ -28,7 +28,6 @@ export default function RoleNavBar({
 
     const roleLabelMap: Record<string, string> = {
         government_emission: "Gov. Emission",
-        air_quality: "Air Quality",
         tree_management: "Tree Management",
     };
 
@@ -71,9 +70,7 @@ export default function RoleNavBar({
                                         ? "car"
                                         : selectedDashboard === "tree_management"
                                             ? "tree"
-                                            : selectedDashboard === "air_quality"
-                                                ? "weather-windy"
-                                                : "shield"
+                                            : "shield"
                                 }
                                 size={14}
                                 color={colors.primary}

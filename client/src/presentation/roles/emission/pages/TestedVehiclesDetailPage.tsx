@@ -32,8 +32,9 @@ const TestedVehiclesDetailPage: React.FC = () => {
 
     // Filter tests based on search and result filter
     const filteredTests = (tests || []).filter(test => {
+        const vehicleId = test.vehicle?.plate_number || test.vehicle?.chassis_number || test.vehicle?.registration_number || "";
         const matchesSearch = !searchTerm ||
-            test.vehicle?.plate_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            vehicleId.toLowerCase().includes(searchTerm.toLowerCase()) ||
             test.vehicle?.driver_name.toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesResult = !resultFilter ||
@@ -176,7 +177,7 @@ const TestedVehiclesDetailPage: React.FC = () => {
                                         <div className="flex justify-between items-start mb-3">
                                             <div>
                                                 <h3 className="font-semibold text-gray-900">
-                                                    {test.vehicle?.plate_number || "Unknown Vehicle"}
+                                                    {test.vehicle?.plate_number || test.vehicle?.chassis_number || test.vehicle?.registration_number || "Unknown Vehicle"}
                                                 </h3>
                                                 <p className="text-sm text-gray-600">
                                                     {test.vehicle?.driver_name || "Unknown Driver"}

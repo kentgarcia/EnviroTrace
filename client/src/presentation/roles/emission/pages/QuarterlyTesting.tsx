@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { FileDown, BarChart3, Settings, Table } from "lucide-react";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import { Card } from "@/presentation/components/shared/ui/card";
+import { BarChart3, Settings, Table, Users, RefreshCw } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
+import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
+import { cn } from "@/core/utils/utils";
+import { Card } from "@/presentation/components/shared/ui/card";
 import {
   Tabs,
   TabsContent,
@@ -13,7 +14,6 @@ import {
 import { QuarterlyTestingFilters } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingFilters";
 import VehicleTestingSpreadsheet from "@/presentation/roles/emission/components/quarterly/VehicleTestingSpreadsheet";
 import { QuickTestForm } from "@/presentation/roles/emission/components/quarterly/QuickTestForm";
-import { QuarterlyTestingSummary } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingSummary";
 import { QuarterlyOverview } from "@/presentation/roles/emission/components/quarterly/QuarterlyOverview";
 import { QuarterInfoEditor } from "@/presentation/roles/emission/components/quarterly/QuarterInfoEditor";
 import { useRevampedQuarterlyTesting } from "@/presentation/roles/emission/components/quarterly/useRevampedQuarterlyTesting";
@@ -55,7 +55,12 @@ export default function QuarterlyTesting() {
     handleBatchUpdateTests,
     handleExportData,
     setIsQuickTestOpen,
+    refetchTests,
   } = useRevampedQuarterlyTesting();
+
+  const handleRefresh = () => {
+    refetchTests();
+  };
 
   return (
     <>
@@ -64,104 +69,137 @@ export default function QuarterlyTesting() {
           <TopNavBarContainer dashboardType="government-emission" />
 
           {/* Header Section */}
-          <div className="flex items-center justify-between bg-white px-6 py-4 border-b border-gray-200">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Quarterly Testing
-            </h1>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleExportData}
-                variant="outline"
-                size="sm"
-                disabled={officeGroups.length === 0}
-              >
-                <FileDown className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+              <div className="shrink-0">
+                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                  Quarterly Testing
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Monitor and manage vehicle emission testing progress for {selectedYear}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRefresh}
+                  disabled={isLoading}
+                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                  <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Toolbar / Tabs */}
+            <div className="px-6 pb-0 flex flex-col gap-4 w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="bg-transparent p-0 h-auto gap-8">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="testing" 
+                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
+                    disabled={selectedOffices.length === 0 || (!selectedOffices.includes("all") && selectedOffices.length === 0)}
+                  >
+                    <Table className="h-4 w-4 mr-2" />
+                    Vehicle Testing
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="quarters" 
+                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
-            {/* Filters */}
-            <QuarterlyTestingFilters
-              search={search}
-              onSearchChange={setSearch}
-              selectedYear={selectedYear}
-              availableYears={availableYears}
-              onYearChange={handleYearChange}
-              selectedOffices={selectedOffices}
-              offices={offices}
-              onOfficeChange={handleOfficeChange}
-            />
-
-            {/* Tabs Content */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="overview" className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="quarters" className="flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  Manage Quarters
-                </TabsTrigger>
-                <TabsTrigger value="testing" className="flex items-center gap-2" disabled={selectedOffices.length === 0 || !selectedOffices.includes("all") && selectedOffices.length === 0}>
-                  <Table className="h-4 w-4" />
-                  Vehicle Testing
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
-                <QuarterlyOverview
-                  stats={summaryStats}
+          <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+            <div className={cn(
+              "w-full transition-all duration-300",
+              activeTab === "testing" ? "p-4" : "p-8"
+            )}>
+              {/* Search and Filters */}
+              <div className="mb-6">
+                <QuarterlyTestingFilters
+                  search={search}
+                  onSearchChange={setSearch}
                   selectedYear={selectedYear}
-                  officeGroups={officeGroups}
+                  availableYears={availableYears}
+                  onYearChange={handleYearChange}
                   selectedOffices={selectedOffices}
+                  offices={offices}
+                  onOfficeChange={handleOfficeChange}
+                  compact={false}
                 />
-              </TabsContent>
+              </div>
 
-              {/* Manage Quarters Tab */}
-              <TabsContent value="quarters">
-                <QuarterInfoEditor selectedYear={selectedYear} />
-              </TabsContent>
+              <Tabs value={activeTab} className="w-full">
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
+                  <QuarterlyOverview
+                    stats={summaryStats}
+                    selectedYear={selectedYear}
+                    officeGroups={officeGroups}
+                    selectedOffices={selectedOffices}
+                  />
+                </TabsContent>
 
-              {/* Vehicle Testing Tab */}
-              <TabsContent value="testing">
-                {(!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
-                  <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                    <div className="p-8 text-center">
-                      <div className="text-gray-500 text-lg">
-                        Please select one or more offices to view vehicle testing data
-                      </div>
-                      <div className="text-gray-400 text-sm mt-2">
-                        Use the office filter above to continue, or select "All Offices" to view all data
-                      </div>
-                    </div>
+                {/* Manage Quarters Tab */}
+                <TabsContent value="quarters" className="mt-0 focus-visible:outline-none">
+                  <Card className="border border-slate-200 shadow-none bg-white p-6">
+                    <QuarterInfoEditor selectedYear={selectedYear} />
                   </Card>
-                ) : (
-                  <Card className="border border-gray-200 shadow-none rounded-none bg-white">
-                    <div className="p-6">
-                      <VehicleTestingSpreadsheet
-                        officeGroups={officeGroups}
-                        selectedYear={selectedYear}
-                        isLoading={isLoading}
-                        onUpdateTest={handleUpdateTest}
-                        onAddRemarks={handleAddRemarks}
-                        onLaunchQuickTest={(vehicleId, quarter, existingTest) => {
-                          if (existingTest) {
-                            handleEditTest(existingTest);
-                          } else {
-                            handleAddTest(vehicleId, quarter);
-                          }
-                        }}
-                      />
-                    </div>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+
+                {/* Vehicle Testing Tab */}
+                <TabsContent value="testing" className="mt-0 focus-visible:outline-none">
+                  {(!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
+                    <Card className="border border-slate-200 shadow-none bg-white">
+                      <div className="p-12 text-center">
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
+                          <Users className="h-8 w-8 text-slate-400" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-slate-900">No Offices Selected</h3>
+                        <p className="text-slate-500 max-w-xs mx-auto mt-2">
+                          Please select one or more offices from the filter above to view vehicle testing data.
+                        </p>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="border border-slate-200 shadow-none bg-white overflow-hidden">
+                      <div className="p-0">
+                        <VehicleTestingSpreadsheet
+                          officeGroups={officeGroups}
+                          selectedYear={selectedYear}
+                          isLoading={isLoading}
+                          onUpdateTest={handleUpdateTest}
+                          onAddRemarks={handleAddRemarks}
+                          onLaunchQuickTest={(vehicleId, quarter, existingTest) => {
+                            if (existingTest) {
+                              handleEditTest(existingTest);
+                            } else {
+                              handleAddTest(vehicleId, quarter);
+                            }
+                          }}
+                        />
+                      </div>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
       </div>

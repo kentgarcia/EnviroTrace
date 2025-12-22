@@ -26,7 +26,7 @@ export function StatCard({
   return (
     <Card
       className={cn(
-        "rounded-xl shadow-md bg-white p-4 flex items-center",
+        "rounded-xl border bg-white p-4 flex items-center",
         className
       )}
     >

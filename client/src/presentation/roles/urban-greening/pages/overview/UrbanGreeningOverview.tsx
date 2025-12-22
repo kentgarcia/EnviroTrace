@@ -1,4 +1,7 @@
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { RefreshCw } from "lucide-react";
+import { Button } from "@/presentation/components/shared/ui/button";
 import { useOverviewData } from "./logic/useOverviewData";
 import { PlantingSummary } from "./components/PlantingSummary";
 import { FeeManagement } from "./components/FeeManagement";
@@ -8,6 +11,7 @@ import UGKeyStatsCards from "./components/UGKeyStatsCards";
 import UGVisualDashboard from "./components/UGVisualDashboard";
 
 export const UrbanGreeningOverview: React.FC = () => {
+    const queryClient = useQueryClient();
     const {
         // Data hooks
         urbanGreeningStatistics,
@@ -37,6 +41,15 @@ export const UrbanGreeningOverview: React.FC = () => {
 
     const isChartsLoading = isTreeRequestsLoading || isPlantingLoading || isSaplingRecordsLoading;
 
+    const handleRefresh = () => {
+        queryClient.invalidateQueries({ queryKey: ["urban-greening-statistics"] });
+        queryClient.invalidateQueries({ queryKey: ["sapling-statistics"] });
+        queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["urban-greening-plantings"] });
+        queryClient.invalidateQueries({ queryKey: ["sapling-records"] });
+        queryClient.invalidateQueries({ queryKey: ["fee-records"] });
+    };
+
     return (
         <div className="flex min-h-screen w-full">
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -45,7 +58,18 @@ export const UrbanGreeningOverview: React.FC = () => {
                 <div className="bg-white px-6 py-3 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold text-gray-900">Urban Greening Dashboard</h1>
-                        <div className="text-xs text-gray-500">Updated {new Date().toLocaleString()}</div>
+                        <div className="flex items-center gap-3">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={handleRefresh}
+                                disabled={isUrbanGreeningLoading || isSaplingLoading}
+                                className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                            >
+                                <RefreshCw className={`h-4 w-4 text-slate-600 ${isUrbanGreeningLoading || isSaplingLoading ? "animate-spin" : ""}`} />
+                            </Button>
+                            <div className="text-xs text-gray-500">Updated {new Date().toLocaleString()}</div>
+                        </div>
                     </div>
                 </div>
 

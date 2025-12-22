@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useDashboardData } from "@/core/hooks/emissions/useDashboardData";
+import { useEmissionTests } from "@/core/api/emission-service";
 
 // Interfaces for transformed chart data
 interface ChartDataPoint {
@@ -46,6 +47,9 @@ export const useEmissionOverviewData = (
     selectedYear,
     selectedQuarter
   );
+  
+  // Get emission tests for monthly trends
+  const { data: emissionTestsData } = useEmissionTests();
 
   // Transform data for key stats cards
   const keyStatsData: EmissionKeyStats = useMemo(() => {
@@ -164,7 +168,7 @@ export const useEmissionOverviewData = (
     });
   }, [data]);
 
-  // Transform data for monthly trends (mock data)
+  // Transform data for monthly trends (real data from emission tests)
   const monthlyTrendsData: MonthlyTrendPoint[] = useMemo(() => {
     const months = [
       "Jan",
@@ -181,25 +185,51 @@ export const useEmissionOverviewData = (
       "Dec",
     ];
 
-    // Safe number generation for consistent values
+    // Safe number conversion
     const safeNumber = (value: any, defaultValue: number = 0): number => {
       const num = Number(value);
       return isNaN(num) || !isFinite(num) ? defaultValue : Math.max(num, 0);
     };
 
-    return months.map((month) => {
-      const tests = safeNumber(Math.floor(Math.random() * 50) + 20, 20);
-      // Ensure compliance is always <= tests (70-95% compliance rate)
-      const complianceRate = Math.random() * 0.25 + 0.7; // 70% to 95%
-      const compliance = safeNumber(Math.floor(tests * complianceRate), 0);
+    // If no emission tests data, return empty data
+    if (!emissionTestsData || emissionTestsData.length === 0) {
+      return months.map((month) => ({
+        month,
+        tests: 0,
+        compliance: 0,
+      }));
+    }
+
+    // Filter tests for the selected year
+    const yearTests = emissionTestsData.filter(
+      (test: any) => test.year === selectedYear
+    );
+
+    // Aggregate tests by month
+    const monthlyAggregation = months.map((month, index) => {
+      const monthNumber = index + 1;
+      
+      // Filter tests for this month
+      const monthTests = yearTests.filter((test: any) => {
+        if (!test.test_date) return false;
+        const testDate = new Date(test.test_date);
+        return testDate.getMonth() + 1 === monthNumber;
+      });
+
+      const totalTests = monthTests.length;
+      const passedTests = monthTests.filter(
+        (test: any) => test.result === true
+      ).length;
 
       return {
         month,
-        tests,
-        compliance: Math.min(compliance, tests), // Additional safety check
+        tests: safeNumber(totalTests, 0),
+        compliance: safeNumber(passedTests, 0),
       };
     });
-  }, []);
+
+    return monthlyAggregation;
+  }, [emissionTestsData, selectedYear]);
 
   // Transform data for engine type analysis
   const engineTypeData: EngineTypeDataPoint[] = useMemo(() => {

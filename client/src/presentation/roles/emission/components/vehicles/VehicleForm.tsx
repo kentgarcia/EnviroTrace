@@ -33,7 +33,21 @@ const vehicleSchema = z.object({
   plateNumber: z
     .string()
     .min(3, { message: "Plate number must be at least 3 characters" })
-    .max(20, { message: "Plate number must be at most 20 characters" }),
+    .max(20, { message: "Plate number must be at most 20 characters" })
+    .optional()
+    .or(z.literal("")),
+  chassisNumber: z
+    .string()
+    .min(3, { message: "Chassis number must be at least 3 characters" })
+    .max(100, { message: "Chassis number must be at most 100 characters" })
+    .optional()
+    .or(z.literal("")),
+  registrationNumber: z
+    .string()
+    .min(3, { message: "Registration number must be at least 3 characters" })
+    .max(100, { message: "Registration number must be at most 100 characters" })
+    .optional()
+    .or(z.literal("")),
   driverName: z
     .string()
     .min(3, { message: "Driver name must be at least 3 characters" })
@@ -57,7 +71,13 @@ const vehicleSchema = z.object({
     .int()
     .min(2, { message: "Wheels must be at least 2" })
     .max(18, { message: "Wheels must be at most 18" }),
-});
+}).refine(
+  (data) => data.plateNumber || data.chassisNumber || data.registrationNumber,
+  {
+    message: "At least one of Plate Number, Chassis Number, or Registration Number is required",
+    path: ["plateNumber"],
+  }
+);
 
 type VehicleFormValues = z.infer<typeof vehicleSchema>;
 
@@ -84,7 +104,9 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
 }) => {
   // Set default values
   const defaultValues: VehicleFormValues = {
-    plateNumber: initialValues ? initialValues.plateNumber : "",
+    plateNumber: initialValues?.plateNumber || "",
+    chassisNumber: initialValues?.chassisNumber || "",
+    registrationNumber: initialValues?.registrationNumber || "",
     driverName: initialValues ? initialValues.driverName : "",
     contactNumber: initialValues?.contactNumber || "",
     officeName: initialValues ? initialValues.officeName : offices[0] || "",
@@ -107,58 +129,86 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-        {/* Plate Number */}
-        <FormField
-          control={form.control}
-          name="plateNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Plate Number</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="e.g. ABC-123" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Driver Name */}
-        <FormField
-          control={form.control}
-          name="driverName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Driver Name</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="e.g. John Doe" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {/* Contact Number */}
-        <FormField
-          control={form.control}
-          name="contactNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Contact Number (Optional)</FormLabel>
-              <FormControl>
-                <Input {...field} placeholder="e.g. +63 912 345 6789" />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Plate Number */}
+          <FormField
+            control={form.control}
+            name="plateNumber"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Plate Number</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. ABC-123" className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]" />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          {/* Chassis Number */}
+          <FormField
+            control={form.control}
+            name="chassisNumber"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Chassis Number</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Optional" className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]" />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          {/* Registration Number */}
+          <FormField
+            control={form.control}
+            name="registrationNumber"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Registration Number</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Optional" className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]" />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          {/* Driver Name */}
+          <FormField
+            control={form.control}
+            name="driverName"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Driver Name</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. John Doe" className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]" />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
+          {/* Contact Number */}
+          <FormField
+            control={form.control}
+            name="contactNumber"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Contact Number</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Optional" className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]" />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Office */}
           <FormField
             control={form.control}
             name="officeName"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Office</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Office</FormLabel>
                 <FormControl>
                   <Popover open={openOffice} onOpenChange={setOpenOffice}>
                     <PopoverTrigger asChild>
@@ -166,13 +216,13 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         variant="outline"
                         role="combobox"
                         aria-expanded={openOffice}
-                        className="w-full justify-between"
+                        className="w-full justify-between rounded-lg border-slate-200 text-slate-700 font-medium"
                       >
-                        {field.value || "Select or type office..."}
+                        {field.value || "Select office..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-full p-0 rounded-xl border-slate-200 shadow-lg">
                       <Command>
                         <CommandInput
                           placeholder="Search or type office..."
@@ -191,7 +241,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         <CommandEmpty>
                           No office found. Press enter to use typed value.
                         </CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-60 overflow-auto">
                           {offices.map((office) => (
                             <CommandItem
                               key={office}
@@ -200,6 +250,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                 field.onChange(office);
                                 setOpenOffice(false);
                               }}
+                              className="rounded-md"
                             >
                               <Check
                                 className={cn(
@@ -217,7 +268,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                     </PopoverContent>
                   </Popover>
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-[10px]" />
               </FormItem>
             )}
           />
@@ -226,8 +277,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
             control={form.control}
             name="vehicleType"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Vehicle Type</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Vehicle Type</FormLabel>
                 <FormControl>
                   <Popover
                     open={openVehicleType}
@@ -238,13 +289,13 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         variant="outline"
                         role="combobox"
                         aria-expanded={openVehicleType}
-                        className="w-full justify-between"
+                        className="w-full justify-between rounded-lg border-slate-200 text-slate-700 font-medium"
                       >
-                        {field.value || "Select or type vehicle type..."}
+                        {field.value || "Select type..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-full p-0 rounded-xl border-slate-200 shadow-lg">
                       <Command>
                         <CommandInput
                           placeholder="Search or type vehicle type..."
@@ -263,7 +314,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         <CommandEmpty>
                           No vehicle type found. Press enter to use typed value.
                         </CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-60 overflow-auto">
                           {vehicleTypes.map((type) => (
                             <CommandItem
                               key={type}
@@ -272,6 +323,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                 field.onChange(type);
                                 setOpenVehicleType(false);
                               }}
+                              className="rounded-md"
                             >
                               <Check
                                 className={cn(
@@ -289,7 +341,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                     </PopoverContent>
                   </Popover>
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-[10px]" />
               </FormItem>
             )}
           />
@@ -298,8 +350,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
             control={form.control}
             name="engineType"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Engine Type</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Engine Type</FormLabel>
                 <FormControl>
                   <Popover
                     open={openEngineType}
@@ -310,13 +362,13 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         variant="outline"
                         role="combobox"
                         aria-expanded={openEngineType}
-                        className="w-full justify-between"
+                        className="w-full justify-between rounded-lg border-slate-200 text-slate-700 font-medium"
                       >
-                        {field.value || "Select or type engine type..."}
+                        {field.value || "Select engine..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-full p-0 rounded-xl border-slate-200 shadow-lg">
                       <Command>
                         <CommandInput
                           placeholder="Search or type engine type..."
@@ -335,7 +387,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         <CommandEmpty>
                           No engine type found. Press enter to use typed value.
                         </CommandEmpty>
-                        <CommandGroup>
+                        <CommandGroup className="max-h-60 overflow-auto">
                           {engineTypes.map((type) => (
                             <CommandItem
                               key={type}
@@ -344,6 +396,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                                 field.onChange(type);
                                 setOpenEngineType(false);
                               }}
+                              className="rounded-md"
                             >
                               <Check
                                 className={cn(
@@ -361,7 +414,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                     </PopoverContent>
                   </Popover>
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-[10px]" />
               </FormItem>
             )}
           />
@@ -370,14 +423,15 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
             control={form.control}
             name="wheels"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Wheels</FormLabel>
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Wheels</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     min={2}
                     max={18}
                     {...field}
+                    className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]"
                     onChange={(e) =>
                       field.onChange(
                         Math.max(2, Math.min(18, Number(e.target.value)))
@@ -385,18 +439,24 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                     }
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-[10px]" />
               </FormItem>
             )}
           />
         </div>
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel}
+            className="rounded-lg border-slate-200 text-slate-600 font-medium"
+          >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isLoading || form.formState.isSubmitting}
+            className="rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white font-semibold px-6"
           >
             {isLoading
               ? "Saving..."

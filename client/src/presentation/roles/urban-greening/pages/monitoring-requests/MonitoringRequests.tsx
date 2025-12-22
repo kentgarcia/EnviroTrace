@@ -6,7 +6,7 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
-import { Plus, BarChart3, Map, List, Database } from "lucide-react";
+import { Plus, BarChart3, Map, List, Database, RefreshCw } from "lucide-react";
 import MapView from "../MapView";
 import MonitoringRequestForm from "./components/MonitoringRequestForm";
 import MonitoringRequestDetails from "./components/MonitoringRequestDetails";
@@ -224,26 +224,48 @@ const MonitoringRequests: React.FC = () => {
     <div className="flex min-h-screen w-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopNavBarContainer dashboardType="urban-greening" />
-        {/* Body Section */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+        
+        <Tabs defaultValue="analytics" className="flex-1 flex flex-col overflow-hidden">
+          {/* Header Section */}
+          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="px-6 py-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Monitoring Requests</h1>
+                <p className="text-xs text-muted-foreground mt-0.5">Manage environmental monitoring and compliance requests</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={refetchRequests}
+                  disabled={loading}
+                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                  <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
+            <div className="px-6">
+              <TabsList className="mb-0">
+                <TabsTrigger value="analytics" className="flex items-center">
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  Analytics & Charts
+                </TabsTrigger>
+                <TabsTrigger value="map" className="flex items-center">
+                  <Map className="w-4 h-4 mr-2" />
+                  Map View
+                </TabsTrigger>
+                <TabsTrigger value="data" className="flex items-center">
+                  <Database className="w-4 h-4 mr-2" />
+                  Data Management
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
-          <Tabs defaultValue="analytics" className="mt-6">
-            <TabsList className="mb-6">
-              <TabsTrigger value="analytics" className="flex items-center">
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Analytics & Charts
-              </TabsTrigger>
-              <TabsTrigger value="map" className="flex items-center">
-                <Map className="w-4 h-4 mr-2" />
-                Map View
-              </TabsTrigger>
-              <TabsTrigger value="data" className="flex items-center">
-                <Database className="w-4 h-4 mr-2" />
-                Data Management
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="analytics" className="space-y-6">
+          {/* Body Section */}
+          <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+            <TabsContent value="analytics" className="space-y-6 mt-0">
               <MonitoringAnalytics
                 requests={requests.filter((request) => {
                   let matchesSearch = true;
@@ -272,8 +294,7 @@ const MonitoringRequests: React.FC = () => {
               />
             </TabsContent>
 
-            <TabsContent value="map" className="space-y-6">
-
+            <TabsContent value="map" className="space-y-6 mt-0">
               <MapView
                 requests={requests
                   .filter((r) => typeof r.title === "string")
@@ -309,7 +330,7 @@ const MonitoringRequests: React.FC = () => {
             </TabsContent>
 
             <TabsContent value="data" className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-col mt-0s-3 gap-6">
                 {/* Data Table Section */}
                 <div className="col-span-2">
                   <Card className="h-full">
@@ -357,8 +378,8 @@ const MonitoringRequests: React.FC = () => {
                 </div>
               </div>
             </TabsContent>
-          </Tabs>
-        </div>
+          </div>
+        </Tabs>
       </div>
 
       {/* Action Workflow Dialog */}

@@ -19,7 +19,7 @@ import {
 } from "@/presentation/components/shared/ui/dropdown-menu";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2 } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, X } from "lucide-react";
 import { Vehicle, VehicleFormInput } from "@/core/api/emission-service";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { VehicleDetails } from "./VehicleDetails";
@@ -109,7 +109,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onEditVehicle,
 
   // Optional TanStack Table state props (with defaults)
-  sorting = [{ id: "plateNumber", desc: false }],
+  sorting = [{ id: "identifier", desc: false }],
   onSortingChange,
   pagination = { pageIndex: 0, pageSize: 10 },
   onPaginationChange,
@@ -129,19 +129,30 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   // Define columns
   const columns: ColumnDef<Vehicle>[] = [
     {
-      accessorKey: "plate_number",
+      id: "identifier",
+      accessorFn: (row) => row.plate_number || row.chassis_number || row.registration_number || "N/A",
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
         >
-          Plate Number
-          <ArrowUpDown className="ml-1 h-4 w-4" />
+          Vehicle ID
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="font-medium">{row.original.plate_number}</div>
+        <div className="flex flex-col">
+          <span className="font-bold text-slate-900">
+            {row.original.plate_number ||
+              row.original.chassis_number ||
+              row.original.registration_number ||
+              "N/A"}
+          </span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+            {row.original.plate_number ? "PLATE" : row.original.chassis_number ? "CHASSIS" : row.original.registration_number ? "REG" : "ID"}
+          </span>
+        </div>
       ),
     },
     {
@@ -150,13 +161,19 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
         >
           Office
-          <ArrowUpDown className="ml-1 h-4 w-4" />
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => row.original.office?.name || "Unknown Office",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-600 font-medium">
+            {row.original.office?.name || "Unknown Office"}
+          </span>
+        </div>
+      ),
     },
     {
       accessorKey: "driver_name",
@@ -164,13 +181,17 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
         >
           Driver
-          <ArrowUpDown className="ml-1 h-4 w-4" />
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
-      cell: ({ row }) => row.original.driver_name,
+      cell: ({ row }) => (
+        <span className="text-sm text-slate-600 font-medium">
+          {row.original.driver_name}
+        </span>
+      ),
     },
     {
       accessorKey: "vehicle_type",
@@ -178,23 +199,57 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-medium"
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
         >
           Type
-          <ArrowUpDown className="ml-1 h-4 w-4" />
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => (
-        <span
-          title={`${row.original.vehicle_type}, ${row.original.engine_type} engine, ${row.original.wheels} wheels`}
-        >
+        <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px] font-bold uppercase tracking-tight px-2 py-0">
           {row.original.vehicle_type}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "engine_type",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+        >
+          Engine
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs text-slate-500 font-medium uppercase">
+          {row.original.engine_type}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "wheels",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+        >
+          Wheels
+          <ArrowUpDown className="ml-1 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs text-slate-500 font-medium">
+          {row.original.wheels}
         </span>
       ),
     },
     {
       id: "actions",
-      header: () => <div className="text-right">Actions</div>,
+      header: () => <div className="text-right text-white font-bold uppercase text-[10px] tracking-wider">Actions</div>,
       cell: ({ row }) => (
         <div className="text-right">
           <DropdownMenu>
@@ -240,14 +295,15 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       <div className="flex gap-6">
         {/* List of vehicles (left) */}
         <div className="w-1/3 border-r pr-4 overflow-y-auto max-h-[70vh]">
-          <ul className="divide-y">            {vehicles.map((v) => (
+          <ul className="divide-y">
+            {vehicles.map((v) => (
             <li
               key={v.id}
               className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsVehicle.id === v.id ? "bg-blue-100 font-semibold" : ""
                 }`}
               onClick={() => setDetailsVehicle(v)}
             >
-              <div className="text-sm">{v.plate_number}</div>
+              <div className="text-sm">{v.plate_number || v.chassis_number || v.registration_number || "N/A"}</div>
               <div className="text-xs text-muted-foreground">
                 {v.driver_name} • {v.office?.name || "Unknown Office"}
               </div>
@@ -265,7 +321,8 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             >
               &larr; Back to table
             </Button>
-          </div>          <VehicleDetails
+          </div>
+          <VehicleDetails
             vehicle={detailsVehicle}
             isOpen={true}
             onClose={() => setDetailsVehicle(null)}
@@ -297,7 +354,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       showColumnVisibility={true}
       showPagination={true}
       defaultPageSize={10}
-      defaultDensity="normal"
+      defaultDensity="compact"
     />
   );
 };

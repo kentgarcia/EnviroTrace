@@ -25,7 +25,7 @@ export function DashboardCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md hover:-translate-y-1",
+        "cursor-pointer transition-all border-2 hover:border-primary/50 hover:-translate-y-1 bg-card",
         className
       )}
       onClick={onClick}

@@ -2,21 +2,7 @@ import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import {
   LogOut,
   User,
-  ChevronDown,
-  BarChart2,
-  Users,
-  Car,
-  Calendar,
   Building,
-  ClipboardList,
-  FileStack,
-  FileText,
-  Cloud,
-  Wallet,
-  UserCircle,
-  Receipt,
-  TreePine,
-  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -26,63 +12,35 @@ import React from "react";
 
 interface TopNavBarContainerProps {
   dashboardType:
-  | "air-quality"
   | "urban-greening"
   | "government-emission"
   | "admin"
-  | "smoke-belching";
+  ;
+}
+
+interface MenuItem {
+  label: string;
+  path: string;
+  children?: { label: string; path: string }[];
 }
 
 function getMenuItems(
   dashboardType: TopNavBarContainerProps["dashboardType"],
   matchRoute: ReturnType<typeof useMatchRoute>
-) {
+): MenuItem[] {
   const basePath = `/${dashboardType}`;
-  if (dashboardType === "air-quality") {
+  if (dashboardType === "admin") {
     return [
       {
         label: "Overview",
-        icon: <BarChart2 className="w-4 h-4 mr-1" />,
-        path: `/air-quality/overview`,
-      },
-      {
-        label: "Smoke Belcher",
-        icon: <Cloud className="w-4 h-4 mr-1" />,
-        path: `/air-quality/smoke-belcher`,
-        children: [
-          {
-            label: "Driver Query",
-            icon: <Users className="w-4 h-4 mr-1" />,
-            path: `/air-quality/driver-query`,
-          },
-        ],
-      },
-      {
-        label: "Order of Payment",
-        icon: <FileStack className="w-4 h-4 mr-1" />,
-        path: `/air-quality/order-of-payment`,
-      },
-      {
-        label: "Fee Control",
-        icon: <Wallet className="w-4 h-4 mr-1" />,
-        path: `/air-quality/fee-control`,
-      },
-    ];
-  } else if (dashboardType === "admin") {
-    return [
-      {
-        label: "Overview",
-        icon: <BarChart2 className="w-4 h-4 mr-1" />,
         path: `${basePath}/overview`,
       },
       {
-        label: "User Management",
-        icon: <Users className="w-4 h-4 mr-1" />,
+        label: "Users",
         path: `${basePath}/user-management`,
       },
       {
-        label: "Session Management",
-        icon: <Monitor className="w-4 h-4 mr-1" />,
+        label: "Sessions",
         path: `${basePath}/session-management`,
       },
     ];
@@ -90,27 +48,22 @@ function getMenuItems(
     return [
       {
         label: "Dashboard",
-        icon: <BarChart2 className="w-4 h-4 mr-1" />,
         path: `${basePath}/overview`,
       },
       {
         label: "Vehicles",
-        icon: <Car className="w-4 h-4 mr-1" />,
         path: `${basePath}/vehicles`,
       },
       {
-        label: "Quarterly Testing",
-        icon: <Calendar className="w-4 h-4 mr-1" />,
+        label: "Testing",
         path: `${basePath}/quarterly-testing`,
       },
       {
         label: "Offices",
-        icon: <Building className="w-4 h-4 mr-1" />,
         path: `${basePath}/offices`,
       },
       {
         label: "Reports",
-        icon: <FileStack className="w-4 h-4 mr-1" />,
         path: `${basePath}/reports`,
       },
     ];
@@ -118,27 +71,22 @@ function getMenuItems(
     return [
       {
         label: "Dashboard",
-        icon: <BarChart2 className="w-4 h-4 mr-1" />,
         path: `${basePath}/overview`,
       },
       {
-        label: "Monitoring Requests",
-        icon: <FileText className="w-4 h-4 mr-1" />,
+        label: "Requests",
         path: `${basePath}/monitoring-requests`,
       },
       {
-        label: "Tree Management",
-        icon: <TreePine className="w-4 h-4 mr-1" />,
+        label: "Trees",
         path: `${basePath}/tree-management`,
       },
       {
-        label: "Planting Records",
-        icon: <TreePine className="w-4 h-4 mr-1" />,
+        label: "Planting",
         path: `${basePath}/planting-records`,
       },
       {
-        label: "Fee Records",
-        icon: <Receipt className="w-4 h-4 mr-1" />,
+        label: "Fees",
         path: `${basePath}/fee-records`,
       },
     ];
@@ -147,17 +95,14 @@ function getMenuItems(
   return [
     {
       label: "Dashboard",
-      icon: <BarChart2 className="w-4 h-4 mr-1" />,
       path: `${basePath}/overview`,
     },
     {
       label: "Records",
-      icon: <ClipboardList className="w-4 h-4 mr-1" />,
       path: `${basePath}/records`,
     },
     {
       label: "Reports",
-      icon: <FileStack className="w-4 h-4 mr-1" />,
       path: `${basePath}/reports`,
     },
   ];
@@ -169,7 +114,6 @@ export default function TopNavBarContainer({
   const matchRoute = useMatchRoute();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  // Use separate selectors to avoid infinite re-render
   const clearToken = useAuthStore(state => state.clearToken);
   const roles = useAuthStore(state => state.roles);
 
@@ -180,16 +124,12 @@ export default function TopNavBarContainer({
     navigate({ to: "/" });
   };
 
-  // --- Dashboard Switch Dropdown Logic ---
+  const userRoles: string[] = roles || [];
+
   const dashboardRoleMap = [
     { role: "admin", label: "Admin Dashboard", path: "/admin/overview" },
     {
-      role: "air_quality",
-      label: "Air Quality",
-      path: "/air-quality/overview",
-    },
-    {
-      role: "tree_management",
+      role: "urban_greening",
       label: "Urban Greening",
       path: "/urban-greening/overview",
     },
@@ -200,117 +140,99 @@ export default function TopNavBarContainer({
     },
   ];
 
-  // Determine dashboards based on persisted auth store roles
-  // Use persisted auth store roles for switch dashboard
-  // Build switch dashboard dropdown only when user has roles
-  const userRoles: string[] = roles || [];
-  // Remove debug log
-  // console.log("Auth store roles:", userRoles);
-
-  let switchDashboardDropdown: NavItem | null = null;
-
-  if (userRoles.length > 0) {
-    const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
-    // For admin, all dashboards; else only userDashboards
-    const dashboardsToShow = userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
-    // Determine current dashboard
-    const current = dashboardRoleMap.find(d => d.path.includes(`/${dashboardType}`));
-
-    switchDashboardDropdown = {
-      label: (
-        <span className="flex items-center">
-          <Building className="w-4 h-4 mr-1" />
-          Switch Dashboard
-        </span>
-      ),
-      onClick: () => navigate({ to: "/dashboard-selection" }),
-      children: dashboardsToShow.map(d => (
-        <button
-          key={d.role}
-          className="block w-full text-left px-4 py-2 hover:bg-gray-600 uppercase"
-          onClick={() => navigate({ to: d.path })}
-        >
-          {d.label}
-        </button>
-      )),
-    };
-  }
+  const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
+  const dashboardsToShow = userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
   const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute).map(
     (item) => {
       if (item.children) {
-        // If children exist, map them to buttons for dropdown
         return {
-          label: (
-            <span className="flex items-center">
-              {item.icon}
-              {item.label}
-            </span>
-          ),
-          active: !!matchRoute({ to: item.path, fuzzy: false }),
+          label: item.label,
+          active: !!matchRoute({ to: item.path, fuzzy: true }),
           onClick: () => navigate({ to: item.path }),
-          children: item.children.map((child: any) => (
+          children: item.children.map((child) => (
             <button
               key={child.path}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-600 uppercase"
+              className="flex items-center w-full text-left px-4 py-2 hover:bg-slate-50 uppercase"
               onClick={() => navigate({ to: child.path })}
             >
-              <span className="flex items-center">
-                {child.icon}
-                {child.label}
-              </span>
+              {child.label}
             </button>
           )),
         };
       }
       return {
-        label: (
-          <span className="flex items-center">
-            {item.icon}
-            {item.label}
-          </span>
-        ),
-        active: !!matchRoute({ to: item.path, fuzzy: false }),
+        label: item.label,
+        active: !!matchRoute({ to: item.path, fuzzy: true }),
         onClick: () => navigate({ to: item.path }),
       };
     }
   );
 
-  // Don't add switch dashboard to main menu items
-  const allMenuItems: NavItem[] = menuItems;
-
-  // Remove debug logs
-  // console.log("Switch dashboard dropdown:", switchDashboardDropdown);
-  // console.log("All menu items:", allMenuItems);
-
-  // Account actions (right-aligned) - include switch dashboard if available
   const accountItems: NavItem[] = [
+    ...(dashboardsToShow.length > 0 ? [
+      {
+        label: "Switch",
+        onClick: () => navigate({ to: "/dashboard-selection" }),
+        children: dashboardsToShow.map(d => (
+          <button
+            key={d.role}
+            className="flex items-center w-full text-left px-5 py-3.5 text-[13px] font-black uppercase tracking-widest text-slate-800 hover:text-main hover:bg-slate-50 transition-all border-0"
+            onClick={() => navigate({ to: d.path })}
+          >
+            <Building className="w-4 h-4 mr-3 text-main" />
+            {d.label}
+          </button>
+        )),
+      }
+    ] : []),
     {
-      label: (
-        <span className="flex items-center">
-          <User className="w-4 h-4 mr-1" />
-          My Profile
-        </span>
-      ),
-      onClick: () => navigate({ to: "/profile" }),
-    },
-    // Add switch dashboard to account items if it exists
-    ...(switchDashboardDropdown ? [switchDashboardDropdown] : []),
-    {
-      label: (
-        <span className="flex items-center">
-          <LogOut className="w-4 h-4 mr-1" />
-          Sign Out
-        </span>
-      ),
-      onClick: handleSignOut,
+      label: "Account",
+      children: [
+        <button
+          key="profile"
+          className="flex items-center w-full text-left px-5 py-3.5 text-[13px] font-black uppercase tracking-widest text-slate-800 hover:text-main hover:bg-slate-50 transition-all border-0"
+          onClick={() => navigate({ to: "/profile" })}
+        >
+          <User className="w-4 h-4 mr-3 text-main" />
+          Profile
+        </button>,
+        <button
+          key="logout"
+          className="flex items-center w-full text-left px-5 py-3.5 text-[13px] font-black uppercase tracking-widest text-red-600 hover:bg-red-50 transition-all border-0"
+          onClick={handleSignOut}
+        >
+          <LogOut className="w-4 h-4 mr-3" />
+          Logout
+        </button>
+      ],
     },
   ];
 
   return (
-    <div className="flex w-full bg-main">
-      <TopNavBar items={allMenuItems} className="flex-1" />
-      <TopNavBar items={accountItems} className="justify-end flex-1" />
-    </div>
+    <header className="w-full bg-main border-b border-white/10 sticky top-0 z-40">
+      <div className="max-w-[1600px] mx-auto grid grid-cols-3 items-center h-20 px-6">
+        <div className="flex justify-start">
+          <Link to="/dashboard-selection" className="flex items-center gap-3 group">
+            <div className="flex items-center gap-2">
+              <img src="/images/logo_munti.png" alt="Muntinlupa Logo" className="w-10 h-10 object-contain" />
+              <img src="/images/logo_epnro.png" alt="EPNRO Logo" className="w-10 h-10 object-contain" />
+            </div>
+            <div className="flex flex-col border-l border-white/20 pl-3">
+              <span className="text-white font-black text-lg leading-none tracking-tighter">ENVIROTRACE</span>
+              <span className="text-secondary font-bold text-[10px] leading-none tracking-[0.2em] uppercase mt-0.5">Navigator</span>
+            </div>
+          </Link>
+        </div>
+        
+        <div className="flex justify-center">
+          <TopNavBar items={menuItems} />
+        </div>
+        
+        <div className="flex justify-end">
+          <TopNavBar items={accountItems} />
+        </div>
+      </div>
+    </header>
   );
 }

@@ -107,6 +107,10 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         if filters:
             if filters.get("plate_number"):
                 query = query.filter(Vehicle.plate_number.ilike(f"%{filters['plate_number']}%"))
+            if filters.get("chassis_number"):
+                query = query.filter(Vehicle.chassis_number.ilike(f"%{filters['chassis_number']}%"))
+            if filters.get("registration_number"):
+                query = query.filter(Vehicle.registration_number.ilike(f"%{filters['registration_number']}%"))
             if filters.get("driver_name"):
                 query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
             if filters.get("office_name"):
@@ -149,6 +153,10 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         if filters:
             if filters.get("plate_number"):
                 query = query.filter(Vehicle.plate_number.ilike(f"%{filters['plate_number']}%"))
+            if filters.get("chassis_number"):
+                query = query.filter(Vehicle.chassis_number.ilike(f"%{filters['chassis_number']}%"))
+            if filters.get("registration_number"):
+                query = query.filter(Vehicle.registration_number.ilike(f"%{filters['registration_number']}%"))
             if filters.get("driver_name"):
                 query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
             if filters.get("office_name"):
@@ -224,10 +232,12 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         }
     
     def search(self, db: Session, *, search_term: str, skip: int = 0, limit: int = 100):
-        """Search vehicles by plate number, driver name, or office"""
+        """Search vehicles by plate number, chassis number, registration number, driver name, or office"""
         query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id).filter(
             or_(
                 Vehicle.plate_number.ilike(f"%{search_term}%"),
+                Vehicle.chassis_number.ilike(f"%{search_term}%"),
+                Vehicle.registration_number.ilike(f"%{search_term}%"),
                 Vehicle.driver_name.ilike(f"%{search_term}%"),
                 Office.name.ilike(f"%{search_term}%")
             )

@@ -35,7 +35,9 @@ class VehicleBase(BaseModel):
     contact_number: Optional[str] = None
     engine_type: str
     office_id: UUID4
-    plate_number: str
+    plate_number: Optional[str] = None
+    chassis_number: Optional[str] = None
+    registration_number: Optional[str] = None
     vehicle_type: str
     wheels: int
 
@@ -48,6 +50,8 @@ class VehicleUpdate(BaseModel):
     engine_type: Optional[str] = None
     office_id: Optional[UUID4] = None
     plate_number: Optional[str] = None
+    chassis_number: Optional[str] = None
+    registration_number: Optional[str] = None
     vehicle_type: Optional[str] = None
     wheels: Optional[int] = None
 

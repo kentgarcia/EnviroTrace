@@ -3,19 +3,18 @@ import {
     Sparkles,
     Clock,
     AlertTriangle,
-    Users,
     Car,
     Target,
     CheckCircle,
-    XCircle,
-    BarChart3,
-    Calendar,
-    TrendingUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Progress } from "@/presentation/components/shared/ui/progress";
 import { Badge } from "@/presentation/components/shared/ui/badge";
-import StatCard from "@/presentation/components/shared/StatCard";
+import { Button } from "@/presentation/components/shared/ui/button";
+import { StatCard } from "@/presentation/components/shared/StatCard";
+import { EChartsPieChart } from "@/presentation/components/shared/dashboard/EChartsPieChart";
+import { EChartsBarChart } from "@/presentation/components/shared/dashboard/EChartsBarChart";
+import { cn } from "@/core/utils/utils";
 import { EmissionTest } from "@/core/api/emission-service";
 
 type QuarterKey = "Q1" | "Q2" | "Q3" | "Q4";
@@ -157,25 +156,22 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             };
         });
 
-        const pendingCount = Math.max(expectedTests - totalTests, 0);
         const completionRate = expectedTests > 0 ? (totalTests / expectedTests) * 100 : 0;
         const passRate = totalTests > 0 ? (passCount / totalTests) * 100 : 0;
 
-        const quarterList: QuarterPerformance[] = quarterKeys.map((quarterKey, index) => {
-            const data = quarterTotals[quarterKey];
-            const pending = Math.max(totalVehicles - data.tested, 0);
-            const completion = totalVehicles > 0 ? (data.tested / totalVehicles) * 100 : 0;
-            const passPercentage = data.tested > 0 ? (data.passed / data.tested) * 100 : 0;
-
+        const quarterList: QuarterPerformance[] = quarterKeys.map((key) => {
+            const q = quarterTotals[key];
+            const qExpected = totalVehicles;
+            const qPending = Math.max(qExpected - q.tested, 0);
             return {
-                key: quarterKey,
-                label: `Q${index + 1}`,
-                tested: data.tested,
-                passed: data.passed,
-                failed: data.failed,
-                pending,
-                completionRate: completion,
-                passRate: passPercentage,
+                key,
+                label: key === "Q1" ? "1st Quarter" : key === "Q2" ? "2nd Quarter" : key === "Q3" ? "3rd Quarter" : "4th Quarter",
+                tested: q.tested,
+                passed: q.passed,
+                failed: q.failed,
+                pending: qPending,
+                completionRate: qExpected > 0 ? (q.tested / qExpected) * 100 : 0,
+                passRate: q.tested > 0 ? (q.passed / q.tested) * 100 : 0,
             };
         });
 
@@ -185,67 +181,38 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             totalTests,
             passCount,
             failCount,
-            pendingCount,
+            pendingCount: Math.max(expectedTests - totalTests, 0),
             completionRate,
             passRate,
             quarterList,
-            officeBreakdown,
+            officeBreakdown: officeBreakdown.sort((a, b) => b.completionRate - a.completionRate),
         };
     }, [officeGroups]);
 
     const selectedOfficeLabel = useMemo(() => {
-        if (selectedOffices.length === 0 || selectedOffices.includes("all")) {
-            return "All offices";
+        if (selectedOffices.includes("all") || selectedOffices.length === 0) {
+            return "All Offices";
         }
-
-        const officeNames = selectedOffices
-            .map((id) => officeGroups.find((office) => office.office_id === id)?.office_name)
-            .filter(Boolean) as string[];
-
-        if (officeNames.length === 0) {
-            return `${selectedOffices.length} office${selectedOffices.length === 1 ? "" : "s"}`;
+        if (selectedOffices.length === 1) {
+            return officeGroups.find((o) => o.office_id === selectedOffices[0])?.office_name || "Selected Office";
         }
-
-        if (officeNames.length <= 2) {
-            return officeNames.join(" • ");
-        }
-
-        return `${officeNames.slice(0, 2).join(" • ")} + ${officeNames.length - 2} more`;
+        return `${selectedOffices.length} Offices Selected`;
     }, [selectedOffices, officeGroups]);
-
-    const topOffice = useMemo(() => {
-        return overview.officeBreakdown
-            .filter((office) => office.expectedTests > 0)
-            .slice()
-            .sort((a, b) => b.completionRate - a.completionRate)[0] ?? null;
-    }, [overview.officeBreakdown]);
-
-    const laggingQuarter = useMemo(() => {
-        return overview.quarterList
-            .slice()
-            .sort((a, b) => b.pending - a.pending)[0] ?? null;
-    }, [overview.quarterList]);
-
-    const strongestQuarter = useMemo(() => {
-        return overview.quarterList
-            .slice()
-            .sort((a, b) => b.passRate - a.passRate)[0] ?? null;
-    }, [overview.quarterList]);
 
     const statusState = useMemo(() => {
         if (overview.expectedTests === 0) {
             return {
-                label: "No vehicles in view",
-                message: "Adjust your filters or year to see testing progress.",
-                tone: "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200",
-                Icon: Users,
+                label: "No data",
+                message: "No vehicles found for the selected filters.",
+                tone: "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200",
+                Icon: AlertTriangle,
             } as const;
         }
 
-        if (overview.completionRate >= 85 && overview.passRate >= 80) {
+        if (overview.completionRate >= 90) {
             return {
-                label: "On track",
-                message: "Most required tests are complete and passing—keep up the great work!",
+                label: "Excellent",
+                message: "Testing is nearly complete for the year. Great job maintaining compliance!",
                 tone: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
                 Icon: Sparkles,
             } as const;
@@ -268,275 +235,160 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
         } as const;
     }, [overview.expectedTests, overview.completionRate, overview.passRate]);
 
-    const insights = useMemo(() => {
-        if (overview.expectedTests === 0) {
-            return [
-                "No vehicles were returned for the current filters.",
-                "Select different offices or adjust the year to track testing progress.",
-            ];
-        }
+    const pieData = [
+        { id: "passed", label: "Passed", value: overview.passCount },
+        { id: "failed", label: "Failed", value: overview.failCount },
+        { id: "pending", label: "Pending", value: overview.pendingCount },
+    ];
 
-        const items = [
-            overview.pendingCount === 0
-                ? "All scheduled tests for the year are complete."
-                : `${formatNumber(overview.pendingCount)} test${overview.pendingCount === 1 ? "" : "s"} remain this year.`,
-            overview.passRate > 0
-                ? `${formatPercent(overview.passRate)} of completed tests are passing.`
-                : "No tests have been recorded yet.",
-        ];
+    const barData = overview.officeBreakdown.map(o => ({
+        id: o.id,
+        label: o.name,
+        value: o.completionRate
+    }));
 
-        if (topOffice) {
-            items.push(
-                `${topOffice.name} is leading with ${formatPercent(topOffice.completionRate)} completion.`
-            );
-        }
-
-        if (laggingQuarter) {
-            items.push(
-                `${laggingQuarter.label} has the largest backlog (${formatNumber(laggingQuarter.pending)} pending vehicles).`
-            );
-        }
-
-        if (strongestQuarter) {
-            items.push(
-                `${strongestQuarter.label} holds the best pass rate at ${formatPercent(strongestQuarter.passRate)}.`
-            );
-        }
-
-        return items;
-    }, [overview, topOffice, laggingQuarter, strongestQuarter]);
-
-    const showOfficeBreakdown =
-        selectedOffices.length > 0 &&
-        !selectedOffices.includes("all") &&
-        overview.officeBreakdown.length > 0;
-
-    const QuarterProgressCard: React.FC<{ data: QuarterPerformance }> = ({ data }) => {
-        const tone =
-            data.completionRate >= 80
-                ? "text-emerald-600"
-                : data.completionRate >= 60
-                    ? "text-amber-600"
-                    : "text-rose-600";
-
-        return (
-            <Card className="border border-slate-200 shadow-none bg-white">
-                <CardContent className="space-y-4 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>{data.label} {selectedYear}</span>
-                        </div>
-                        <Badge variant="outline" className={`${tone} border-current bg-transparent`}>{formatPercent(data.completionRate)} complete</Badge>
-                    </div>
-                    <div>
-                        <Progress value={data.completionRate} className="h-2" />
-                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{formatNumber(data.tested)} tested</span>
-                            <span>{formatNumber(data.pending)} pending</span>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div className="rounded-md bg-emerald-50 py-2">
-                            <div className="text-sm font-semibold text-emerald-600">{formatNumber(data.passed)}</div>
-                            <div className="text-muted-foreground">Passed</div>
-                        </div>
-                        <div className="rounded-md bg-rose-50 py-2">
-                            <div className="text-sm font-semibold text-rose-600">{formatNumber(data.failed)}</div>
-                            <div className="text-muted-foreground">Failed</div>
-                        </div>
-                        <div className="rounded-md bg-slate-50 py-2">
-                            <div className="text-sm font-semibold text-slate-700">{formatNumber(data.pending)}</div>
-                            <div className="text-muted-foreground">Pending</div>
-                        </div>
-                    </div>
-                    <div className="text-xs font-medium text-muted-foreground">Pass rate: {formatPercent(data.passRate)}</div>
-                </CardContent>
-            </Card>
-        );
-    };
+    const barChartHeight = Math.max(350, barData.length * 32);
 
     return (
-        <div className="space-y-6">
-            <Card className="border border-slate-200 shadow-none bg-white">
-                <CardHeader className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <CardTitle className="text-2xl font-semibold text-slate-900">
-                            Overview for {selectedYear}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground">{selectedOfficeLabel}</p>
-                    </div>
-                    <Badge className={`flex items-center gap-1 text-sm ${statusState.tone}`}>
-                        <statusState.Icon className="h-4 w-4" />
-                        {statusState.label}
-                    </Badge>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-6">
-                    <p className="text-sm text-muted-foreground max-w-3xl">{statusState.message}</p>
-
-                    <div className="grid gap-6 xl:grid-cols-[minmax(220px,0.7fr)_minmax(260px,1fr)_minmax(250px,0.8fr)]">
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-5 text-center shadow-sm">
-                            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Annual completion
-                            </div>
-                            <div className="mt-2 text-4xl font-semibold text-slate-900">
-                                {formatPercent(overview.completionRate)}
-                            </div>
-                            <Progress value={overview.completionRate} className="mt-4 h-2" />
-                            <div className="mt-3 text-xs text-muted-foreground">
-                                {formatNumber(overview.totalTests)} of {formatNumber(overview.expectedTests)} tests completed
-                            </div>
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                <div className="text-xs font-semibold uppercase text-muted-foreground">Vehicles tested</div>
-                                <div className="mt-1 text-2xl font-semibold text-slate-900">{formatNumber(stats.totalTested)}</div>
-                                <div className="text-xs text-muted-foreground">Have at least one quarter recorded</div>
-                            </div>
-                            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                <div className="text-xs font-semibold uppercase text-muted-foreground">Fully compliant</div>
-                                <div className="mt-1 text-2xl font-semibold text-emerald-600">{formatNumber(stats.totalPassed)}</div>
-                                <div className="text-xs text-muted-foreground">Vehicles passing across their tests</div>
-                            </div>
-                            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                <div className="text-xs font-semibold uppercase text-muted-foreground">Needs review</div>
-                                <div className="mt-1 text-2xl font-semibold text-rose-600">{formatNumber(stats.totalFailed)}</div>
-                                <div className="text-xs text-muted-foreground">Vehicles with a failed quarter</div>
-                            </div>
-                            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                                <div className="text-xs font-semibold uppercase text-muted-foreground">No tests yet</div>
-                                <div className="mt-1 text-2xl font-semibold text-slate-700">{formatNumber(stats.totalUntested)}</div>
-                                <div className="text-xs text-muted-foreground">Waiting for first inspection</div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-                            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                                Key insights
-                            </div>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                {insights.map((item, index) => (
-                                    <li key={`${item}-${index}`} className="flex gap-2">
-                                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <StatCard label="Vehicles in scope" value={overview.totalVehicles} Icon={Car} />
-                <StatCard
-                    label="Tests completed"
-                    value={`${formatNumber(overview.totalTests)} / ${formatNumber(overview.expectedTests)}`}
+        <div className="space-y-8">
+            {/* Top Summary Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard 
+                    label="Annual Completion" 
+                    value={formatPercent(overview.completionRate)} 
                     Icon={Target}
+                    colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0"
+                    }}
                 />
-                <StatCard
-                    label="Completion rate"
-                    value={formatPercent(overview.completionRate)}
-                    Icon={BarChart3}
-                />
-                <StatCard
-                    label="Pass rate"
-                    value={formatPercent(overview.passRate)}
+                <StatCard 
+                    label="Pass Rate" 
+                    value={formatPercent(overview.passRate)} 
                     Icon={CheckCircle}
+                    colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0"
+                    }}
                 />
-                <StatCard
-                    label="Tests failed"
-                    value={overview.failCount}
-                    Icon={XCircle}
+                <StatCard 
+                    label="Vehicles in Scope" 
+                    value={formatNumber(overview.totalVehicles)} 
+                    Icon={Car}
+                    colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0"
+                    }}
                 />
-                <StatCard
-                    label="Tests remaining"
-                    value={overview.pendingCount}
-                    Icon={Clock}
+                <StatCard 
+                    label="Status" 
+                    value={statusState.label} 
+                    Icon={statusState.Icon}
+                    colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0",
+                    }}
                 />
             </div>
 
-            <Card className="border border-slate-200 shadow-none bg-white">
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                        <CardTitle className="text-xl">Quarterly performance</CardTitle>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        Track how each quarter is progressing for {selectedYear}.
-                    </p>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                        {overview.quarterList.map((quarter) => (
-                            <QuarterProgressCard key={quarter.key} data={quarter} />
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {showOfficeBreakdown && (
-                <Card className="border border-slate-200 shadow-none bg-white">
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-muted-foreground" />
-                            <CardTitle className="text-xl">Office breakdown</CardTitle>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            Insight into each selected office's progress.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {overview.officeBreakdown.map((office) => (
-                            <div
-                                key={office.id}
-                                className="rounded-lg border border-slate-200 bg-slate-50 p-4 shadow-sm"
-                            >
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <div className="text-base font-semibold text-slate-900">{office.name}</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {formatNumber(office.vehicleCount)} vehicle{office.vehicleCount === 1 ? "" : "s"} in scope
-                                        </div>
-                                    </div>
-                                    <Badge variant="outline" className="text-sm font-medium">
-                                        {formatPercent(office.completionRate)} complete
-                                    </Badge>
-                                </div>
-                                <div className="mt-3 grid gap-3 md:grid-cols-3">
-                                    <div className="rounded-md border border-white bg-white/70 p-3 text-sm">
-                                        <div className="text-xs uppercase text-muted-foreground">Completed tests</div>
-                                        <div className="mt-1 text-lg font-semibold text-slate-900">
-                                            {formatNumber(office.completedTests)} / {formatNumber(office.expectedTests)}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-md border border-white bg-white/70 p-3 text-sm">
-                                        <div className="text-xs uppercase text-muted-foreground">Pending</div>
-                                        <div className="mt-1 text-lg font-semibold text-slate-900">{formatNumber(office.pendingTests)}</div>
-                                    </div>
-                                    <div className="rounded-md border border-white bg-white/70 p-3 text-sm">
-                                        <div className="text-xs uppercase text-muted-foreground">Pass rate</div>
-                                        <div className="mt-1 text-lg font-semibold text-slate-900">{formatPercent(office.passRate)}</div>
-                                    </div>
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-                                        {formatNumber(office.passCount)} passed tests
-                                    </Badge>
-                                    <Badge variant="secondary" className="bg-rose-100 text-rose-700">
-                                        {formatNumber(office.failCount)} failed tests
-                                    </Badge>
-                                    <Badge variant="secondary" className="bg-slate-100 text-slate-700">
-                                        {formatNumber(office.pendingTests)} pending
-                                    </Badge>
-                                </div>
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-1 sticky top-24">
+                    <EChartsPieChart 
+                        title="Overall Test Results" 
+                        data={pieData} 
+                        colors={["#10b981", "#ee1c25", "#e2e8f0"]}
+                        height={350}
+                    />
+                </div>
+                <div className="lg:col-span-2">
+                    <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+                        <CardHeader className="pb-0">
+                            <CardTitle className="text-lg font-bold text-slate-900">Office Completion Rates (%)</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className={cn(
+                                "w-full",
+                                barData.length > 15 ? "max-h-[600px] overflow-y-auto" : ""
+                            )}>
+                                <EChartsBarChart 
+                                    title="" 
+                                    data={barData} 
+                                    layout="horizontal"
+                                    color="#0033a0"
+                                    height={barChartHeight}
+                                    valueFormatter={(v) => `${v.toFixed(1)}%`}
+                                />
                             </div>
-                        ))}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
+            {/* Quarterly Progress Section */}
+            <div className="grid grid-cols-1 gap-8">
+                <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg font-bold text-slate-900">Quarterly Performance</CardTitle>
+                        <p className="text-sm text-slate-500">Breakdown of testing progress by quarter</p>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                            {overview.quarterList.map((q) => (
+                                <div key={q.key} className="space-y-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm">
+                                                <span className="text-sm font-bold text-slate-600">{q.key}</span>
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-bold text-slate-800">{q.label}</div>
+                                                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                                                    {formatNumber(q.tested)} tested
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-sm font-bold text-slate-900">{formatPercent(q.completionRate)}</div>
+                                            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Done</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                        <div className="relative h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
+                                            <div 
+                                                className="h-full bg-[#10b981] transition-all duration-500" 
+                                                style={{ width: `${(q.passed / overview.totalVehicles) * 100}%` }}
+                                            />
+                                            <div 
+                                                className="h-full bg-[#ee1c25] transition-all duration-500" 
+                                                style={{ width: `${(q.failed / overview.totalVehicles) * 100}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
+                                            <div className="flex items-center gap-2 text-[#10b981]">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                                                <span>{q.passed} Pass</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[#ee1c25]">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-[#ee1c25]" />
+                                                <span>{q.failed} Fail</span>
+                                            </div>
+                                            <div className="text-slate-400">
+                                                {q.pending} Left
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
-            )}
+            </div>
         </div>
     );
 };

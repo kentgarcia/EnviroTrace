@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import SignIn from "@/presentation/pages/public/SignIn";
 import DashboardSelection from "@/presentation/pages/public/DashboardSelection";
 import ProfilePage from "@/presentation/pages/public/ProfilePage";
+import TermsOfService from "@/presentation/pages/public/TermsOfService";
+import PrivacyPolicy from "@/presentation/pages/public/PrivacyPolicy";
 import NotFound from "@/presentation/pages/public/NotFound";
 import { UserRole } from "@/integrations/types/userData";
 import { redirect } from "@tanstack/react-router";
@@ -15,7 +17,6 @@ import { Outlet } from "@tanstack/react-router";
 import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
 // import { smokeBelchingRoute } from "./roles/belching/belching.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
-import { airQualityRoute } from "./roles/air-quality/air-quality.routes";
 import { urbanGreeningRoute } from "./roles/urban-greening/urban-greening.routes";
 import Unauthorized from "./pages/public/Unauthorized";
 
@@ -74,6 +75,18 @@ const profileRoute = createRoute({
   component: ProfilePage,
 });
 
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: TermsOfService,
+});
+
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: PrivacyPolicy,
+});
+
 const unauthorizedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/403",
@@ -91,7 +104,8 @@ export const routeTree = rootRoute.addChildren([
   indexRoute,
   dashboardSelectionRoute,
   profileRoute,
-  ...airQualityRoute,
+  termsRoute,
+  privacyRoute,
   ...adminRoutes,
   // ...smokeBelchingRoute,
   ...govEmissionRoute,

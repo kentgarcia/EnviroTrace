@@ -171,6 +171,8 @@ def get_vehicles(
     skip: int = 0,
     limit: int = 100,
     plate_number: Optional[str] = None,
+    chassis_number: Optional[str] = None,
+    registration_number: Optional[str] = None,
     driver_name: Optional[str] = None,
     office_name: Optional[str] = None,
     office_id: Optional[UUID] = None,
@@ -192,6 +194,10 @@ def get_vehicles(
     filters = {}
     if plate_number:
         filters["plate_number"] = plate_number
+    if chassis_number:
+        filters["chassis_number"] = chassis_number
+    if registration_number:
+        filters["registration_number"] = registration_number
     if driver_name:
         filters["driver_name"] = driver_name
     if office_name:

@@ -1,5 +1,4 @@
 from .auth_models import User, Profile, UserRoleMapping # etc.
-from .air_quality_models import AirQualityFee, AirQualityDriver, AirQualityRecord, AirQualityViolation # etc.
 from .emission_models import Vehicle, Test # etc.
 from .monitoring_request_models import MonitoringRequest
 from .urban_greening_models import SaplingRequest

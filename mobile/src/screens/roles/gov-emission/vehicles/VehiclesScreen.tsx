@@ -470,7 +470,18 @@ const VehicleCard = React.memo(
           {/* Header row with plate number and status */}
           <View style={styles.cardHeader}>
             <View style={styles.plateNumberContainer}>
-              <Text style={styles.plateNumber}>{vehicle.plate_number}</Text>
+              <Text style={styles.plateNumber}>
+                {vehicle.plate_number ||
+                  vehicle.chassis_number ||
+                  vehicle.registration_number ||
+                  "N/A"}
+              </Text>
+              {!vehicle.plate_number && vehicle.chassis_number && (
+                <Text style={styles.plateNumberLabel}>(Chassis)</Text>
+              )}
+              {!vehicle.plate_number && !vehicle.chassis_number && vehicle.registration_number && (
+                <Text style={styles.plateNumberLabel}>(Reg)</Text>
+              )}
             </View>
             {vehicle.latest_test_result !== undefined && vehicle.latest_test_result !== null && (
               <Chip
@@ -878,6 +889,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111827",
     letterSpacing: 0.2,
+  },
+  plateNumberLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginLeft: 4,
   },
   syncDot: {
     width: 6,

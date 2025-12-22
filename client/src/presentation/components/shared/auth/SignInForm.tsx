@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useLogin } from "@/core/api/auth-service";
+import { Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import {
   Alert,
@@ -105,25 +106,25 @@ export function SignInForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
-        <div className="flex items-center justify-center mb-2">
+    <Card className="w-full max-w-md mx-auto backdrop-blur-sm bg-white/95">
+      <CardHeader className="space-y-3 pb-4">
+        <div className="flex items-center justify-center gap-3 mb-2">
           <img
             src="/images/logo_munti.png"
-            alt="Logo 1"
-            className="h-16 w-16 rounded-md"
+            alt="Muntinlupa Logo"
+            className="h-14 w-14 rounded-lg"
           />
           <img
             src="/images/logo_epnro.png"
-            alt="Logo 2"
-            className="h-16 w-16 rounded-md"
+            alt="EPNRO Logo"
+            className="h-14 w-14 rounded-lg"
           />
         </div>
-        <CardTitle className="text-2xl text-center">
-          Environmental Management System
+        <CardTitle className="text-2xl font-bold text-center">
+          Welcome Back
         </CardTitle>
-        <CardDescription className="text-center">
-          Enter your credentials to access your dashboard
+        <CardDescription className="text-center text-base">
+          Sign in to access your environmental dashboard
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -216,9 +217,12 @@ export function SignInForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col space-y-2">
-        <div className="text-sm text-center text-muted-foreground mt-2">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+      <CardFooter className="flex flex-col space-y-3 pt-6 border-t">
+        <div className="text-xs text-center text-muted-foreground leading-relaxed">
+          By signing in, you agree to our{" "}
+          <Link to="/terms" className="text-primary hover:underline font-medium">Terms of Service</Link>
+          {" "}and{" "}
+          <Link to="/privacy" className="text-primary hover:underline font-medium">Privacy Policy</Link>
         </div>
       </CardFooter>
     </Card>
