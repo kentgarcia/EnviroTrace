@@ -3,8 +3,21 @@
 
 from pydantic import BaseModel, Field
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Union, Any
 from uuid import UUID
+
+
+# ==================== Photo Metadata Schema ====================
+
+class TreePhotoMetadata(BaseModel):
+    """Metadata for a tree photo"""
+    url: str
+    path: Optional[str] = None
+    filename: Optional[str] = None
+    size: Optional[int] = None
+    uploaded_at: Optional[str] = None
+    uploaded_by_id: Optional[str] = None
+    uploaded_by_email: Optional[str] = None
 
 
 # ==================== Tree Species Schemas ====================
@@ -17,6 +30,37 @@ class TreeSpeciesBase(BaseModel):
     is_native: bool = False
     is_endangered: bool = False
     description: Optional[str] = None
+    
+    # Physical / Growth fields
+    wood_density_min: Optional[float] = Field(None, description="Minimum wood density in g/cm³")
+    wood_density_max: Optional[float] = Field(None, description="Maximum wood density in g/cm³")
+    wood_density_avg: Optional[float] = Field(None, description="Average wood density in g/cm³")
+    
+    avg_mature_height_min_m: Optional[float] = Field(None, description="Minimum mature height in meters")
+    avg_mature_height_max_m: Optional[float] = Field(None, description="Maximum mature height in meters")
+    avg_mature_height_avg_m: Optional[float] = Field(None, description="Average mature height in meters")
+    
+    avg_trunk_diameter_min_cm: Optional[float] = Field(None, description="Minimum trunk diameter at DBH in cm")
+    avg_trunk_diameter_max_cm: Optional[float] = Field(None, description="Maximum trunk diameter at DBH in cm")
+    avg_trunk_diameter_avg_cm: Optional[float] = Field(None, description="Average trunk diameter at DBH in cm")
+    
+    growth_rate_m_per_year: Optional[float] = Field(None, description="Representative growth rate in m/year")
+    growth_speed_label: Optional[str] = Field(None, description="Slow / Moderate / Fast")
+    
+    # Carbon / CO2 fields
+    co2_absorbed_kg_per_year: Optional[float] = Field(None, description="CO2 absorbed per year in kg")
+    co2_stored_mature_min_kg: Optional[float] = Field(None, description="Minimum CO2 stored at maturity in kg")
+    co2_stored_mature_max_kg: Optional[float] = Field(None, description="Maximum CO2 stored at maturity in kg")
+    co2_stored_mature_avg_kg: Optional[float] = Field(None, description="Average CO2 stored at maturity in kg")
+    carbon_fraction: Optional[float] = Field(None, description="Biomass to carbon fraction")
+    
+    # Removal impact factors
+    decay_years_min: Optional[int] = Field(None, description="Minimum decay years after removal")
+    decay_years_max: Optional[int] = Field(None, description="Maximum decay years after removal")
+    lumber_carbon_retention_pct: Optional[float] = Field(None, description="Carbon retention as lumber (0-1)")
+    burned_carbon_release_pct: Optional[float] = Field(None, description="Carbon released when burned (0-1)")
+    
+    notes: Optional[str] = Field(None, description="Additional notes about this species")
 
 
 class TreeSpeciesCreate(TreeSpeciesBase):
@@ -32,6 +76,34 @@ class TreeSpeciesUpdate(BaseModel):
     is_endangered: Optional[bool] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    
+    # Physical / Growth fields
+    wood_density_min: Optional[float] = None
+    wood_density_max: Optional[float] = None
+    wood_density_avg: Optional[float] = None
+    avg_mature_height_min_m: Optional[float] = None
+    avg_mature_height_max_m: Optional[float] = None
+    avg_mature_height_avg_m: Optional[float] = None
+    avg_trunk_diameter_min_cm: Optional[float] = None
+    avg_trunk_diameter_max_cm: Optional[float] = None
+    avg_trunk_diameter_avg_cm: Optional[float] = None
+    growth_rate_m_per_year: Optional[float] = None
+    growth_speed_label: Optional[str] = None
+    
+    # Carbon / CO2 fields
+    co2_absorbed_kg_per_year: Optional[float] = None
+    co2_stored_mature_min_kg: Optional[float] = None
+    co2_stored_mature_max_kg: Optional[float] = None
+    co2_stored_mature_avg_kg: Optional[float] = None
+    carbon_fraction: Optional[float] = None
+    
+    # Removal impact factors
+    decay_years_min: Optional[int] = None
+    decay_years_max: Optional[int] = None
+    lumber_carbon_retention_pct: Optional[float] = None
+    burned_carbon_release_pct: Optional[float] = None
+    
+    notes: Optional[str] = None
 
 
 class TreeSpeciesResponse(TreeSpeciesBase):
@@ -68,7 +140,7 @@ class TreeInventoryBase(BaseModel):
     cutting_request_id: Optional[UUID] = None
     planting_project_id: Optional[UUID] = None
     replacement_tree_id: Optional[UUID] = None
-    photos: Optional[List[str]] = None
+    photos: Optional[List[Union[str, TreePhotoMetadata]]] = None  # Can be URLs or metadata objects
     notes: Optional[str] = None
 
 
@@ -90,7 +162,7 @@ class TreeInventoryCreate(BaseModel):
     contact_person: Optional[str] = None
     contact_number: Optional[str] = None
     planting_project_id: Optional[UUID] = None
-    photos: Optional[List[str]] = []
+    photos: Optional[List[Union[str, TreePhotoMetadata]]] = []  # Can be URLs or metadata objects
     notes: Optional[str] = None
 
 
@@ -118,7 +190,7 @@ class TreeInventoryUpdate(BaseModel):
     cutting_request_id: Optional[UUID] = None
     planting_project_id: Optional[UUID] = None
     replacement_tree_id: Optional[UUID] = None
-    photos: Optional[List[str]] = None
+    photos: Optional[List[Union[str, TreePhotoMetadata]]] = None  # Can be URLs or metadata objects
     notes: Optional[str] = None
 
 
@@ -341,6 +413,73 @@ class PlantingProjectResponse(PlantingProjectInDB):
 
 # ==================== Statistics Schemas ====================
 
+class SpeciesComposition(BaseModel):
+    """Species breakdown with counts"""
+    species_name: str
+    common_name: str
+    count: int
+    percentage: float
+    is_native: bool = False
+
+
+class SpeciesCarbonData(BaseModel):
+    """Carbon data per species"""
+    species_name: str
+    common_name: str
+    tree_count: int
+    co2_stored_kg: float
+    co2_absorbed_per_year_kg: float
+    percentage_of_total: float
+
+
+class TreeCountCompositionStats(BaseModel):
+    """Tree Count & Composition Statistics"""
+    total_trees: int = 0
+    alive_trees: int = 0
+    cut_trees: int = 0
+    dead_trees: int = 0
+    native_count: int = 0
+    endangered_count: int = 0
+    native_ratio: float = 0.0
+    trees_per_species: List[SpeciesComposition] = []
+
+
+class CarbonStockStats(BaseModel):
+    """Carbon Stock Statistics"""
+    total_co2_stored_kg: float = 0.0
+    total_co2_stored_tonnes: float = 0.0
+    co2_stored_per_species: List[SpeciesCarbonData] = []
+    top_5_species_contribution_pct: float = 0.0
+
+
+class AnnualCarbonSequestrationStats(BaseModel):
+    """Annual Carbon Sequestration Statistics"""
+    total_co2_absorbed_per_year_kg: float = 0.0
+    total_co2_absorbed_per_year_tonnes: float = 0.0
+    co2_absorbed_per_hectare_kg: Optional[float] = None  # If area data available
+    co2_from_new_plantings_kg: float = 0.0
+    trees_planted_this_year: int = 0
+
+
+class CarbonLossStats(BaseModel):
+    """Carbon Loss Statistics"""
+    trees_removed_this_year: int = 0
+    co2_released_from_removals_kg: float = 0.0
+    co2_released_from_removals_tonnes: float = 0.0
+    projected_decay_release_kg: float = 0.0
+    projected_decay_release_tonnes: float = 0.0
+    removal_methods: List[dict] = []  # breakdown by cutting reason
+
+
+class TreeCarbonStatistics(BaseModel):
+    """Comprehensive Tree Carbon Statistics"""
+    composition: TreeCountCompositionStats
+    carbon_stock: CarbonStockStats
+    annual_sequestration: AnnualCarbonSequestrationStats
+    carbon_loss: CarbonLossStats
+    generated_at: str  # ISO timestamp
+
+
 class TreeInventoryStats(BaseModel):
     total_trees: int = 0
     alive_trees: int = 0
@@ -363,3 +502,4 @@ class PlantingProjectStats(BaseModel):
     completed_projects: int = 0
     total_trees_planted: int = 0
     by_type: Optional[List[dict]] = []
+

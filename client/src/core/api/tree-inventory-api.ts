@@ -19,6 +19,34 @@ export interface TreeSpecies {
   description?: string;
   is_active: boolean;
   created_at: string;
+  
+  // Physical / Growth fields
+  wood_density_min?: number;
+  wood_density_max?: number;
+  wood_density_avg?: number;
+  avg_mature_height_min_m?: number;
+  avg_mature_height_max_m?: number;
+  avg_mature_height_avg_m?: number;
+  avg_trunk_diameter_min_cm?: number;
+  avg_trunk_diameter_max_cm?: number;
+  avg_trunk_diameter_avg_cm?: number;
+  growth_rate_m_per_year?: number;
+  growth_speed_label?: string;
+  
+  // Carbon / CO2 fields
+  co2_absorbed_kg_per_year?: number;
+  co2_stored_mature_min_kg?: number;
+  co2_stored_mature_max_kg?: number;
+  co2_stored_mature_avg_kg?: number;
+  carbon_fraction?: number;
+  
+  // Removal impact factors
+  decay_years_min?: number;
+  decay_years_max?: number;
+  lumber_carbon_retention_pct?: number;
+  burned_carbon_release_pct?: number;
+  
+  notes?: string;
 }
 
 export interface TreeSpeciesCreate {
@@ -29,6 +57,45 @@ export interface TreeSpeciesCreate {
   is_native?: boolean;
   is_endangered?: boolean;
   description?: string;
+  
+  // Physical / Growth fields
+  wood_density_min?: number;
+  wood_density_max?: number;
+  wood_density_avg?: number;
+  avg_mature_height_min_m?: number;
+  avg_mature_height_max_m?: number;
+  avg_mature_height_avg_m?: number;
+  avg_trunk_diameter_min_cm?: number;
+  avg_trunk_diameter_max_cm?: number;
+  avg_trunk_diameter_avg_cm?: number;
+  growth_rate_m_per_year?: number;
+  growth_speed_label?: string;
+  
+  // Carbon / CO2 fields
+  co2_absorbed_kg_per_year?: number;
+  co2_stored_mature_min_kg?: number;
+  co2_stored_mature_max_kg?: number;
+  co2_stored_mature_avg_kg?: number;
+  carbon_fraction?: number;
+  
+  // Removal impact factors
+  decay_years_min?: number;
+  decay_years_max?: number;
+  lumber_carbon_retention_pct?: number;
+  burned_carbon_release_pct?: number;
+  
+  notes?: string;
+}
+
+// Photo metadata structure for tree images
+export interface TreePhotoMetadata {
+  url: string;
+  path?: string;
+  filename: string;
+  size: number;
+  uploaded_at: string;
+  uploaded_by_id?: string;
+  uploaded_by_email?: string;
 }
 
 export interface TreeInventory {
@@ -56,7 +123,7 @@ export interface TreeInventory {
   cutting_request_id?: string;
   planting_project_id?: string;
   replacement_tree_id?: string;
-  photos?: string[];
+  photos?: (string | TreePhotoMetadata)[];  // Can be URLs or metadata objects
   notes?: string;
   created_at: string;
   updated_at?: string;
@@ -82,7 +149,7 @@ export interface TreeInventoryCreate {
   contact_person?: string;
   contact_number?: string;
   planting_project_id?: string;
-  photos?: string[];
+  photos?: (string | TreePhotoMetadata)[];  // Can be URLs or metadata objects
   notes?: string;
 }
 
@@ -190,6 +257,68 @@ export interface PlantingProjectStats {
   completed_projects: number;
   total_trees_planted: number;
   by_type: { type: string; count: number; trees: number }[];
+}
+
+// ==================== Carbon Statistics Types ====================
+
+export interface SpeciesComposition {
+  species_name: string;
+  common_name: string;
+  count: number;
+  percentage: number;
+  is_native: boolean;
+}
+
+export interface SpeciesCarbonData {
+  species_name: string;
+  common_name: string;
+  tree_count: number;
+  co2_stored_kg: number;
+  co2_absorbed_per_year_kg: number;
+  percentage_of_total: number;
+}
+
+export interface TreeCountCompositionStats {
+  total_trees: number;
+  alive_trees: number;
+  cut_trees: number;
+  dead_trees: number;
+  native_count: number;
+  endangered_count: number;
+  native_ratio: number;
+  trees_per_species: SpeciesComposition[];
+}
+
+export interface CarbonStockStats {
+  total_co2_stored_kg: number;
+  total_co2_stored_tonnes: number;
+  co2_stored_per_species: SpeciesCarbonData[];
+  top_5_species_contribution_pct: number;
+}
+
+export interface AnnualCarbonSequestrationStats {
+  total_co2_absorbed_per_year_kg: number;
+  total_co2_absorbed_per_year_tonnes: number;
+  co2_absorbed_per_hectare_kg?: number;
+  co2_from_new_plantings_kg: number;
+  trees_planted_this_year: number;
+}
+
+export interface CarbonLossStats {
+  trees_removed_this_year: number;
+  co2_released_from_removals_kg: number;
+  co2_released_from_removals_tonnes: number;
+  projected_decay_release_kg: number;
+  projected_decay_release_tonnes: number;
+  removal_methods: { reason: string; count: number; co2_released_kg: number }[];
+}
+
+export interface TreeCarbonStatistics {
+  composition: TreeCountCompositionStats;
+  carbon_stock: CarbonStockStats;
+  annual_sequestration: AnnualCarbonSequestrationStats;
+  carbon_loss: CarbonLossStats;
+  generated_at: string;
 }
 
 // Lightweight type for map display
@@ -412,5 +541,12 @@ export const updateTreeSpecies = async (id: string, data: Partial<TreeSpeciesCre
 
 export const deleteTreeSpecies = async (id: string): Promise<{ message: string; trees_using_species: number; species_name: string }> => {
   const res = await apiClient.delete(`/tree-inventory/species/${id}`);
+  return res.data;
+};
+
+// ==================== Carbon Statistics API ====================
+
+export const fetchCarbonStatistics = async (): Promise<TreeCarbonStatistics> => {
+  const res = await apiClient.get('/tree-inventory/trees/carbon-statistics');
   return res.data;
 };

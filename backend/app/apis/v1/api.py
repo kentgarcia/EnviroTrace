@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from .sapling_requests import router as sapling_requests_router
 from .tree_inventory_router import router as tree_inventory_router
 from .urban_greening_projects import router as urban_greening_projects_router
+from .upload_router import router as upload_router
 from . import auth_router, profile_router, emission_router, fee_router, test_schedules, tree_management_router, planting_router, admin_router, session_router
 from .dashboard_router import router as dashboard_router
 from .gemini_router import router as gemini_router
@@ -23,3 +24,4 @@ api_v1_router.include_router(sapling_requests_router)
 api_v1_router.include_router(urban_greening_projects_router, prefix="/urban-greening-projects", tags=["Urban Greening Projects"])
 api_v1_router.include_router(dashboard_router)
 api_v1_router.include_router(gemini_router, prefix="/gemini", tags=["Gemini AI"])
+api_v1_router.include_router(upload_router)  # File Upload

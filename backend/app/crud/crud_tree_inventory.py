@@ -14,7 +14,10 @@ from app.schemas.tree_inventory_schemas import (
     TreeMonitoringLogCreate,
     PlantingProjectCreate, PlantingProjectUpdate,
     TreeInventoryStats, PlantingProjectStats,
-    TreeSpeciesCreate, TreeSpeciesUpdate
+    TreeSpeciesCreate, TreeSpeciesUpdate,
+    TreeCarbonStatistics, TreeCountCompositionStats, CarbonStockStats,
+    AnnualCarbonSequestrationStats, CarbonLossStats,
+    SpeciesComposition, SpeciesCarbonData
 )
 
 
@@ -543,4 +546,255 @@ def get_planting_project_stats(db: Session) -> PlantingProjectStats:
         completed_projects=completed,
         total_trees_planted=total_planted,
         by_type=[{"type": t, "count": c, "trees": tr or 0} for t, c, tr in by_type]
+    )
+
+
+def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
+    """
+    Get comprehensive tree carbon statistics including:
+    - Tree Count & Composition
+    - Carbon Stock
+    - Annual Carbon Sequestration
+    - Carbon Loss
+    """
+    from datetime import datetime
+    
+    current_year = datetime.now().year
+    
+    # ==================== Tree Count & Composition ====================
+    
+    # Basic counts
+    total_trees = db.query(func.count(TreeInventory.id)).scalar() or 0
+    alive_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'alive').scalar() or 0
+    cut_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'cut').scalar() or 0
+    dead_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'dead').scalar() or 0
+    
+    # Native vs endangered - join with species table
+    native_subquery = db.query(func.count(TreeInventory.id))\
+        .join(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+        .filter(TreeSpecies.is_native == True)\
+        .filter(TreeInventory.status == 'alive')\
+        .scalar() or 0
+    
+    endangered_subquery = db.query(func.count(TreeInventory.id))\
+        .join(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+        .filter(TreeSpecies.is_endangered == True)\
+        .filter(TreeInventory.status == 'alive')\
+        .scalar() or 0
+    
+    native_count = native_subquery
+    endangered_count = endangered_subquery
+    native_ratio = round(native_count / alive_trees * 100, 1) if alive_trees > 0 else 0.0
+    
+    # Trees per species with native flag
+    species_counts = db.query(
+        TreeInventory.common_name,
+        TreeSpecies.scientific_name,
+        TreeSpecies.is_native,
+        func.count(TreeInventory.id).label('count')
+    ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+     .filter(TreeInventory.status == 'alive')\
+     .group_by(TreeInventory.common_name, TreeSpecies.scientific_name, TreeSpecies.is_native)\
+     .order_by(desc('count'))\
+     .all()
+    
+    trees_per_species = []
+    for common_name, scientific_name, is_native, count in species_counts:
+        trees_per_species.append(SpeciesComposition(
+            species_name=scientific_name or common_name or "Unknown",
+            common_name=common_name or "Unknown",
+            count=count,
+            percentage=round(count / alive_trees * 100, 2) if alive_trees > 0 else 0,
+            is_native=is_native or False
+        ))
+    
+    composition = TreeCountCompositionStats(
+        total_trees=total_trees,
+        alive_trees=alive_trees,
+        cut_trees=cut_trees,
+        dead_trees=dead_trees,
+        native_count=native_count,
+        endangered_count=endangered_count,
+        native_ratio=native_ratio,
+        trees_per_species=trees_per_species
+    )
+    
+    # ==================== Carbon Stock ====================
+    
+    # Calculate CO2 stored based on species data
+    # Join trees with species to get CO2 stored per tree
+    carbon_by_species = db.query(
+        TreeInventory.common_name,
+        TreeSpecies.scientific_name,
+        func.count(TreeInventory.id).label('tree_count'),
+        TreeSpecies.co2_stored_mature_avg_kg,
+        TreeSpecies.co2_absorbed_kg_per_year
+    ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+     .filter(TreeInventory.status == 'alive')\
+     .group_by(
+         TreeInventory.common_name,
+         TreeSpecies.scientific_name,
+         TreeSpecies.co2_stored_mature_avg_kg,
+         TreeSpecies.co2_absorbed_kg_per_year
+     ).all()
+    
+    total_co2_stored = 0.0
+    co2_stored_per_species = []
+    
+    for common_name, scientific_name, tree_count, co2_stored, co2_absorbed in carbon_by_species:
+        # Use species avg CO2 stored, or estimate 500kg if unknown
+        species_co2_stored = (co2_stored or 500.0) * tree_count
+        species_co2_absorbed = (co2_absorbed or 22.0) * tree_count  # Default ~22kg/year
+        
+        total_co2_stored += species_co2_stored
+        
+        co2_stored_per_species.append({
+            "species_name": scientific_name or common_name or "Unknown",
+            "common_name": common_name or "Unknown",
+            "tree_count": tree_count,
+            "co2_stored_kg": species_co2_stored,
+            "co2_absorbed_per_year_kg": species_co2_absorbed,
+            "percentage_of_total": 0  # Calculate after we have total
+        })
+    
+    # Calculate percentages and sort
+    for species_data in co2_stored_per_species:
+        species_data["percentage_of_total"] = round(
+            species_data["co2_stored_kg"] / total_co2_stored * 100, 2
+        ) if total_co2_stored > 0 else 0
+    
+    co2_stored_per_species.sort(key=lambda x: x["co2_stored_kg"], reverse=True)
+    
+    # Convert to proper schema objects
+    co2_species_list = [
+        SpeciesCarbonData(
+            species_name=s["species_name"],
+            common_name=s["common_name"],
+            tree_count=s["tree_count"],
+            co2_stored_kg=s["co2_stored_kg"],
+            co2_absorbed_per_year_kg=s["co2_absorbed_per_year_kg"],
+            percentage_of_total=s["percentage_of_total"]
+        ) for s in co2_stored_per_species
+    ]
+    
+    # Top 5 species contribution
+    top_5_contribution = sum(s.percentage_of_total for s in co2_species_list[:5])
+    
+    carbon_stock = CarbonStockStats(
+        total_co2_stored_kg=round(total_co2_stored, 2),
+        total_co2_stored_tonnes=round(total_co2_stored / 1000, 2),
+        co2_stored_per_species=co2_species_list,
+        top_5_species_contribution_pct=round(top_5_contribution, 1)
+    )
+    
+    # ==================== Annual Carbon Sequestration ====================
+    
+    # Total CO2 absorbed per year (all alive trees)
+    total_co2_absorbed = sum(s.co2_absorbed_per_year_kg for s in co2_species_list)
+    
+    # Trees planted this year
+    trees_planted_this_year = db.query(func.count(TreeInventory.id))\
+        .filter(extract('year', TreeInventory.planted_date) == current_year)\
+        .scalar() or 0
+    
+    # CO2 from new plantings (newly planted trees absorb less initially)
+    # Estimate 30% of mature absorption rate for new trees
+    new_planting_co2 = db.query(
+        func.count(TreeInventory.id),
+        func.avg(TreeSpecies.co2_absorbed_kg_per_year)
+    ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+     .filter(extract('year', TreeInventory.planted_date) == current_year)\
+     .first()
+    
+    new_tree_count = new_planting_co2[0] or 0
+    avg_absorption = new_planting_co2[1] or 22.0
+    co2_from_new_plantings = new_tree_count * avg_absorption * 0.3  # 30% for young trees
+    
+    annual_sequestration = AnnualCarbonSequestrationStats(
+        total_co2_absorbed_per_year_kg=round(total_co2_absorbed, 2),
+        total_co2_absorbed_per_year_tonnes=round(total_co2_absorbed / 1000, 2),
+        co2_absorbed_per_hectare_kg=None,  # Would need area data
+        co2_from_new_plantings_kg=round(co2_from_new_plantings, 2),
+        trees_planted_this_year=trees_planted_this_year
+    )
+    
+    # ==================== Carbon Loss ====================
+    
+    # Trees removed this year
+    trees_removed_this_year = db.query(func.count(TreeInventory.id))\
+        .filter(
+            extract('year', TreeInventory.cutting_date) == current_year
+        ).scalar() or 0
+    
+    # CO2 released from removals
+    removed_trees_carbon = db.query(
+        TreeInventory.cutting_reason,
+        func.count(TreeInventory.id).label('count'),
+        TreeSpecies.co2_stored_mature_avg_kg,
+        TreeSpecies.burned_carbon_release_pct,
+        TreeSpecies.lumber_carbon_retention_pct,
+        TreeSpecies.decay_years_min,
+        TreeSpecies.decay_years_max
+    ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
+     .filter(extract('year', TreeInventory.cutting_date) == current_year)\
+     .group_by(
+         TreeInventory.cutting_reason,
+         TreeSpecies.co2_stored_mature_avg_kg,
+         TreeSpecies.burned_carbon_release_pct,
+         TreeSpecies.lumber_carbon_retention_pct,
+         TreeSpecies.decay_years_min,
+         TreeSpecies.decay_years_max
+     ).all()
+    
+    total_co2_released = 0.0
+    projected_decay_release = 0.0
+    removal_methods = {}
+    
+    for (cutting_reason, count, co2_stored, burned_pct, lumber_pct, 
+         decay_min, decay_max) in removed_trees_carbon:
+        co2_per_tree = co2_stored or 500.0
+        total_tree_co2 = co2_per_tree * count
+        
+        # Estimate release based on disposal method
+        reason = cutting_reason or "Unknown"
+        if "burn" in reason.lower() or "fire" in reason.lower():
+            # Burned - immediate release
+            release_pct = burned_pct or 0.95
+            co2_released = total_tree_co2 * release_pct
+        elif "lumber" in reason.lower() or "wood" in reason.lower():
+            # Converted to lumber - partial retention
+            retention_pct = lumber_pct or 0.5
+            co2_released = total_tree_co2 * (1 - retention_pct)
+        else:
+            # Natural decay - gradual release
+            co2_released = total_tree_co2 * 0.3  # 30% immediate, rest over decay years
+            avg_decay = ((decay_min or 10) + (decay_max or 20)) / 2
+            projected_decay_release += total_tree_co2 * 0.7 / avg_decay  # Annual decay release
+        
+        total_co2_released += co2_released
+        
+        # Track by method
+        if reason not in removal_methods:
+            removal_methods[reason] = {"count": 0, "co2_released_kg": 0}
+        removal_methods[reason]["count"] += count
+        removal_methods[reason]["co2_released_kg"] += co2_released
+    
+    carbon_loss = CarbonLossStats(
+        trees_removed_this_year=trees_removed_this_year,
+        co2_released_from_removals_kg=round(total_co2_released, 2),
+        co2_released_from_removals_tonnes=round(total_co2_released / 1000, 2),
+        projected_decay_release_kg=round(projected_decay_release, 2),
+        projected_decay_release_tonnes=round(projected_decay_release / 1000, 2),
+        removal_methods=[
+            {"reason": k, "count": v["count"], "co2_released_kg": round(v["co2_released_kg"], 2)}
+            for k, v in removal_methods.items()
+        ]
+    )
+    
+    return TreeCarbonStatistics(
+        composition=composition,
+        carbon_stock=carbon_stock,
+        annual_sequestration=annual_sequestration,
+        carbon_loss=carbon_loss,
+        generated_at=datetime.now().isoformat()
     )

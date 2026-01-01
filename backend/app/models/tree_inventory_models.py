@@ -28,6 +28,37 @@ class TreeSpecies(Base):
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Physical / Growth Fields
+    wood_density_min = Column(Float, nullable=True, comment="Minimum wood density in g/cm³")
+    wood_density_max = Column(Float, nullable=True, comment="Maximum wood density in g/cm³")
+    wood_density_avg = Column(Float, nullable=True, comment="Average wood density in g/cm³")
+    
+    avg_mature_height_min_m = Column(Float, nullable=True, comment="Minimum mature height in meters")
+    avg_mature_height_max_m = Column(Float, nullable=True, comment="Maximum mature height in meters")
+    avg_mature_height_avg_m = Column(Float, nullable=True, comment="Average mature height in meters")
+    
+    avg_trunk_diameter_min_cm = Column(Float, nullable=True, comment="Minimum trunk diameter at DBH in cm")
+    avg_trunk_diameter_max_cm = Column(Float, nullable=True, comment="Maximum trunk diameter at DBH in cm")
+    avg_trunk_diameter_avg_cm = Column(Float, nullable=True, comment="Average trunk diameter at DBH in cm")
+    
+    growth_rate_m_per_year = Column(Float, nullable=True, comment="Representative growth rate in m/year")
+    growth_speed_label = Column(String(50), nullable=True, comment="Slow / Moderate / Fast")
+    
+    # Carbon / CO2 Fields
+    co2_absorbed_kg_per_year = Column(Float, nullable=True, comment="CO2 absorbed per year in kg")
+    co2_stored_mature_min_kg = Column(Float, nullable=True, comment="Minimum CO2 stored at maturity in kg")
+    co2_stored_mature_max_kg = Column(Float, nullable=True, comment="Maximum CO2 stored at maturity in kg")
+    co2_stored_mature_avg_kg = Column(Float, nullable=True, comment="Average CO2 stored at maturity in kg")
+    carbon_fraction = Column(Float, nullable=True, comment="Biomass to carbon fraction")
+    
+    # Removal Impact Factors
+    decay_years_min = Column(Integer, nullable=True, comment="Minimum decay years after removal")
+    decay_years_max = Column(Integer, nullable=True, comment="Maximum decay years after removal")
+    lumber_carbon_retention_pct = Column(Float, nullable=True, comment="Carbon retention as lumber (0-1)")
+    burned_carbon_release_pct = Column(Float, nullable=True, comment="Carbon released when burned (0-1)")
+    
+    notes = Column(Text, nullable=True, comment="Additional notes about this species")
 
 
 class TreeInventory(Base):

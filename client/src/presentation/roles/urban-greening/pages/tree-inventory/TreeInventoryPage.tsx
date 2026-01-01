@@ -36,6 +36,7 @@ import TreeForm from "./components/TreeForm";
 import TreeDetailPanel from "./components/TreeDetailPanel";
 import TreeInventoryMap from "./components/TreeInventoryMap";
 import SpeciesManagement from "./components/SpeciesManagement";
+import CarbonStatistics from "./components/CarbonStatistics";
 
 // Search params type
 interface TreeInventorySearch {
@@ -411,104 +412,8 @@ const TreeInventoryPage: React.FC = () => {
 
           {/* Statistics Tab */}
           {activeTab === "stats" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Overview Stats */}
-              <Card className="col-span-full">
-                <CardHeader>
-                  <CardTitle>Inventory Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <div className="text-3xl font-bold text-gray-900">{stats?.total_trees || 0}</div>
-                      <div className="text-sm text-gray-600">Total Trees</div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-3xl font-bold text-green-700">{stats?.alive_trees || 0}</div>
-                      <div className="text-sm text-green-600">Alive</div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <div className="text-3xl font-bold text-green-700">{stats?.healthy_trees || 0}</div>
-                      <div className="text-sm text-green-600">Healthy</div>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <div className="text-3xl font-bold text-yellow-700">{stats?.needs_attention_trees || 0}</div>
-                      <div className="text-sm text-yellow-600">Needs Attention</div>
-                    </div>
-                    <div className="text-center p-4 bg-orange-50 rounded-lg">
-                      <div className="text-3xl font-bold text-orange-700">{stats?.diseased_trees || 0}</div>
-                      <div className="text-sm text-orange-600">Diseased</div>
-                    </div>
-                    <div className="text-center p-4 bg-red-50 rounded-lg">
-                      <div className="text-3xl font-bold text-red-700">{stats?.cut_trees || 0}</div>
-                      <div className="text-sm text-red-600">Cut</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* This Year Activity */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>This Year's Activity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span className="text-sm text-green-700">Trees Planted</span>
-                    <span className="text-xl font-bold text-green-800">{stats?.trees_planted_this_year || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                    <span className="text-sm text-red-700">Trees Cut</span>
-                    <span className="text-xl font-bold text-red-800">{stats?.trees_cut_this_year || 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 border rounded-lg">
-                    <span className="text-sm text-gray-700">Replacement Ratio</span>
-                    <span className="text-xl font-bold">
-                      {stats?.replacement_ratio !== null ? `${stats?.replacement_ratio}:1` : "—"}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Top Species */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Species</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {stats?.top_species?.slice(0, 5).map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{item.species}</span>
-                        <Badge variant="outline">{item.count}</Badge>
-                      </div>
-                    ))}
-                    {(!stats?.top_species || stats.top_species.length === 0) && (
-                      <div className="text-sm text-gray-500 text-center py-4">No data available</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* By Barangay */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trees by Barangay</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {stats?.by_barangay?.slice(0, 5).map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{item.barangay}</span>
-                        <Badge variant="outline">{item.count}</Badge>
-                      </div>
-                    ))}
-                    {(!stats?.by_barangay || stats.by_barangay.length === 0) && (
-                      <div className="text-sm text-gray-500 text-center py-4">No data available</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="overflow-auto h-[calc(100vh-200px)]">
+              <CarbonStatistics />
             </div>
           )}
 

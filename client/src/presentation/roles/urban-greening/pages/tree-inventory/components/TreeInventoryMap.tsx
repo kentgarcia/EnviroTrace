@@ -8,20 +8,32 @@
  * - Only refetches when viewport leaves cached bounds
  * - Merges new data, never clears during loading
  * - Memoized markers for performance
+ * - Integrated side panel for tree details (no modal)
  */
 
 import React, { useState, useMemo, useCallback, useRef, memo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { Button } from "@/presentation/components/shared/ui/button";
 import {
   Layers,
   TreePine,
   Loader2,
+  X,
+  MapPin,
+  Calendar,
+  Ruler,
+  Leaf,
+  AlertTriangle,
+  User,
+  Phone,
+  Image as ImageIcon,
+  ChevronLeft,
+  ExternalLink,
 } from "lucide-react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
 import { useSmartTreesInBounds, useSmartTreeClusters, useTreeById } from "../logic/useTreeInventory";
-import { TreeMapItem, TreeCluster, BoundsParams } from "@/core/api/tree-inventory-api";
+import { TreeMapItem, TreeCluster, BoundsParams, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
 import "leaflet/dist/leaflet.css";
 
 // Default center - San Fernando, Pampanga (Philippines)
@@ -197,8 +209,8 @@ const MapBoundsTracker = ({
   return null;
 };
 
-// Tree detail dialog component - lazy loaded
-const TreeDetailDialog = ({ 
+// Integrated tree detail panel - shown on the side of the map
+const TreeDetailSidePanel = ({ 
   treeId, 
   onClose 
 }: { 
@@ -206,112 +218,257 @@ const TreeDetailDialog = ({
   onClose: () => void;
 }) => {
   const { data: tree, isLoading } = useTreeById(treeId || "");
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   
   if (!treeId) return null;
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Normalize photos
+  const normalizedPhotos = (tree?.photos || []).map((photo) => {
+    if (typeof photo === "string") {
+      return { url: photo, filename: photo.split("/").pop() || "image.jpg" };
+    }
+    return photo as TreePhotoMetadata;
+  });
+
+  const statusColors: Record<string, string> = {
+    alive: "bg-green-100 text-green-700 border-green-200",
+    cut: "bg-red-100 text-red-700 border-red-200",
+    dead: "bg-gray-100 text-gray-700 border-gray-200",
+    replaced: "bg-blue-100 text-blue-700 border-blue-200",
+  };
+
+  const healthColors: Record<string, string> = {
+    healthy: "bg-green-100 text-green-700",
+    needs_attention: "bg-yellow-100 text-yellow-700",
+    diseased: "bg-orange-100 text-orange-700",
+    dead: "bg-gray-100 text-gray-700",
+  };
   
   return (
-    <Dialog open={!!treeId} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <TreePine className="w-5 h-5 text-green-600" />
-            Tree Details
-          </DialogTitle>
-        </DialogHeader>
-        
+    <div className="absolute top-0 right-0 bottom-0 w-[340px] bg-white z-[1000] border-l border-gray-200 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b bg-gradient-to-r from-green-600 to-green-700 text-white shrink-0">
+        <div className="flex items-center gap-2">
+          <TreePine className="w-5 h-5" />
+          <span className="font-semibold">Tree Details</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="h-8 w-8 text-white hover:bg-white/20 rounded-full"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : tree ? (
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <div className="font-mono text-lg text-blue-700 font-semibold">
+          <div className="p-4 space-y-4">
+            {/* Tree Code */}
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+              <div className="font-mono text-lg text-blue-700 font-bold">
                 {tree.tree_code}
               </div>
+              <div className="text-sm text-blue-600 mt-1">
+                {tree.species || tree.common_name}
+              </div>
             </div>
-            
+
+            {/* Status & Health */}
+            <div className="flex gap-2">
+              <Badge className={`${statusColors[tree.status] || "bg-gray-100"} border px-3 py-1`}>
+                {tree.status.toUpperCase()}
+              </Badge>
+              <Badge className={`${healthColors[tree.health] || "bg-gray-100"} px-3 py-1 flex items-center gap-1`}>
+                {tree.health === "healthy" && <Leaf className="w-3 h-3" />}
+                {tree.health === "needs_attention" && <AlertTriangle className="w-3 h-3" />}
+                {tree.health.replace("_", " ").toUpperCase()}
+              </Badge>
+            </div>
+
+            {/* Species Info */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-xs text-gray-500">Species</div>
-                <div className="font-medium">{tree.species || tree.common_name}</div>
+              <div className="p-2 bg-gray-50 rounded-lg">
+                <div className="text-xs text-gray-500">Scientific Name</div>
+                <div className="text-sm font-medium truncate">{tree.species || "—"}</div>
               </div>
-              <div>
+              <div className="p-2 bg-gray-50 rounded-lg">
                 <div className="text-xs text-gray-500">Common Name</div>
-                <div className="font-medium">{tree.common_name || "—"}</div>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Status</div>
-                <Badge className={
-                  tree.status === "alive" ? "bg-green-100 text-green-700" :
-                  tree.status === "cut" ? "bg-red-100 text-red-700" :
-                  "bg-gray-100 text-gray-700"
-                }>
-                  {tree.status.toUpperCase()}
-                </Badge>
-              </div>
-              <div>
-                <div className="text-xs text-gray-500">Health</div>
-                <Badge className={
-                  tree.health === "healthy" ? "bg-green-100 text-green-700" :
-                  tree.health === "needs_attention" ? "bg-yellow-100 text-yellow-700" :
-                  tree.health === "diseased" ? "bg-orange-100 text-orange-700" :
-                  "bg-gray-100 text-gray-700"
-                }>
-                  {tree.health.replace("_", " ").toUpperCase()}
-                </Badge>
+                <div className="text-sm font-medium truncate">{tree.common_name || "—"}</div>
               </div>
             </div>
-            
-            {tree.address && (
-              <div>
-                <div className="text-xs text-gray-500">Address</div>
-                <div className="text-sm">{tree.address}</div>
-              </div>
-            )}
-            
-            {tree.barangay && (
-              <div>
-                <div className="text-xs text-gray-500">Barangay</div>
-                <div className="text-sm">{tree.barangay}</div>
-              </div>
-            )}
-            
-            <div className="grid grid-cols-3 gap-3 pt-2 border-t">
-              {tree.height_meters && (
-                <div className="text-center">
-                  <div className="text-lg font-semibold">{tree.height_meters}m</div>
-                  <div className="text-xs text-gray-500">Height</div>
+
+            {/* Location */}
+            {(tree.address || tree.barangay) && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                  <MapPin className="w-3 h-3" />
+                  Location
                 </div>
-              )}
-              {tree.diameter_cm && (
-                <div className="text-center">
-                  <div className="text-lg font-semibold">{tree.diameter_cm}cm</div>
-                  <div className="text-xs text-gray-500">Diameter</div>
-                </div>
-              )}
-              {tree.planted_date && (
-                <div className="text-center">
-                  <div className="text-lg font-semibold">
-                    {new Date(tree.planted_date).getFullYear()}
+                {tree.address && <div className="text-sm">{tree.address}</div>}
+                {tree.barangay && (
+                  <div className="text-sm text-gray-600">Brgy. {tree.barangay}</div>
+                )}
+                {tree.latitude && tree.longitude && (
+                  <div className="text-xs text-gray-400 mt-1 font-mono">
+                    {tree.latitude.toFixed(6)}, {tree.longitude.toFixed(6)}
                   </div>
-                  <div className="text-xs text-gray-500">Planted</div>
-                </div>
-              )}
-            </div>
-            
+                )}
+              </div>
+            )}
+
+            {/* Measurements */}
+            {(tree.height_meters || tree.diameter_cm || tree.age_years) && (
+              <div className="grid grid-cols-3 gap-2">
+                {tree.height_meters && (
+                  <div className="text-center p-2 bg-green-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-700">{tree.height_meters}</div>
+                    <div className="text-xs text-green-600">meters</div>
+                  </div>
+                )}
+                {tree.diameter_cm && (
+                  <div className="text-center p-2 bg-green-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-700">{tree.diameter_cm}</div>
+                    <div className="text-xs text-green-600">cm dia.</div>
+                  </div>
+                )}
+                {tree.age_years && (
+                  <div className="text-center p-2 bg-green-50 rounded-lg">
+                    <div className="text-lg font-bold text-green-700">{tree.age_years}</div>
+                    <div className="text-xs text-green-600">years</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Dates */}
+            {tree.planted_date && (
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-600">Planted:</span>
+                <span className="font-medium">{formatDate(tree.planted_date)}</span>
+              </div>
+            )}
+
+            {tree.cutting_date && (
+              <div className="p-2 bg-red-50 rounded-lg border border-red-100">
+                <div className="text-xs text-red-600">Cut on {formatDate(tree.cutting_date)}</div>
+                {tree.cutting_reason && (
+                  <div className="text-sm text-red-700 mt-1">{tree.cutting_reason}</div>
+                )}
+              </div>
+            )}
+
+            {/* Contact Info */}
+            {(tree.managed_by || tree.contact_person || tree.contact_number) && (
+              <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                <div className="text-xs text-gray-500 font-medium">Management</div>
+                {tree.managed_by && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-3 h-3 text-gray-400" />
+                    {tree.managed_by}
+                  </div>
+                )}
+                {tree.contact_person && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="w-3 h-3 text-gray-400" />
+                    {tree.contact_person}
+                  </div>
+                )}
+                {tree.contact_number && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="w-3 h-3 text-gray-400" />
+                    {tree.contact_number}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notes */}
             {tree.notes && (
-              <div className="pt-2 border-t">
-                <div className="text-xs text-gray-500 mb-1">Notes</div>
+              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                <div className="text-xs text-yellow-700 mb-1">Notes</div>
                 <div className="text-sm text-gray-700">{tree.notes}</div>
               </div>
             )}
+
+            {/* Photos */}
+            {normalizedPhotos.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                  <ImageIcon className="w-4 h-4" />
+                  Photos ({normalizedPhotos.length})
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {normalizedPhotos.slice(0, 4).map((photo, idx) => (
+                    <div
+                      key={photo.url || idx}
+                      className="relative rounded-lg overflow-hidden border border-gray-200 cursor-pointer group"
+                      onClick={() => setSelectedPhoto(photo.url)}
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.filename || `Photo ${idx + 1}`}
+                        className="w-full h-20 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    </div>
+                  ))}
+                </div>
+                {normalizedPhotos.length > 4 && (
+                  <div className="text-xs text-gray-500 text-center">
+                    +{normalizedPhotos.length - 4} more photos
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Metadata */}
+            <div className="pt-3 border-t text-xs text-gray-400 space-y-1">
+              <div>Created: {formatDate(tree.created_at)}</div>
+              {tree.updated_at && <div>Updated: {formatDate(tree.updated_at)}</div>}
+            </div>
           </div>
         ) : (
-          <div className="text-center py-4 text-gray-500">Tree not found</div>
+          <div className="text-center py-8 text-gray-500">Tree not found</div>
         )}
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      {/* Photo Preview Overlay */}
+      {selectedPhoto && (
+        <div 
+          className="absolute inset-0 bg-black/90 z-10 flex items-center justify-center"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-3 right-3 p-2 bg-white/10 rounded-full text-white hover:bg-white/20"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={selectedPhoto}
+            alt="Tree photo"
+            className="max-w-full max-h-full object-contain p-4"
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -416,7 +573,7 @@ const TreeInventoryMap: React.FC = () => {
 
       <CardContent className="flex-1 p-0 relative overflow-hidden">
         {/* Filter Controls */}
-        <div className="absolute top-4 right-4 z-[1000] bg-white rounded-lg border p-2 space-y-1">
+        <div className={`absolute top-4 z-[1000] bg-white rounded-lg border p-2 space-y-1 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
           <div className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
             <Layers className="w-3 h-3" />
             Filters
@@ -483,7 +640,7 @@ const TreeInventoryMap: React.FC = () => {
         </div>
 
         {/* Zoom indicator with cache status */}
-        <div className="absolute top-32 right-4 z-[1000] bg-white rounded-lg border px-3 py-2">
+        <div className={`absolute top-32 z-[1000] bg-white rounded-lg border px-3 py-2 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
           <div className="text-xs text-gray-500">
             Zoom: {zoom} {useClusters ? "(clustered)" : "(individual)"}
           </div>
@@ -521,13 +678,13 @@ const TreeInventoryMap: React.FC = () => {
             </div>
           </div>
         )}
-      </CardContent>
 
-      {/* Tree detail dialog - lazy loaded */}
-      <TreeDetailDialog 
-        treeId={selectedTreeId} 
-        onClose={() => setSelectedTreeId(null)} 
-      />
+        {/* Tree detail side panel - integrated on the map */}
+        <TreeDetailSidePanel 
+          treeId={selectedTreeId} 
+          onClose={() => setSelectedTreeId(null)} 
+        />
+      </CardContent>
     </Card>
   );
 };

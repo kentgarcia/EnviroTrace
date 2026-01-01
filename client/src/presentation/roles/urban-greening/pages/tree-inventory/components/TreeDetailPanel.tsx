@@ -23,8 +23,11 @@ import {
   Plus,
   ClipboardCheck,
   Clock,
+  Image as ImageIcon,
+  User,
+  ZoomIn,
 } from "lucide-react";
-import { TreeInventory, MonitoringLogCreate } from "@/core/api/tree-inventory-api";
+import { TreeInventory, MonitoringLogCreate, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
 import { useTreeMonitoringLogs, useMonitoringMutations } from "../logic/useTreeInventory";
 
 interface TreeDetailPanelProps {
@@ -41,6 +44,7 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   onDelete,
 }) => {
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [logForm, setLogForm] = useState<{
     health_status: "healthy" | "needs_attention" | "diseased" | "dead";
     notes: string;
@@ -91,6 +95,38 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
       day: "numeric",
     });
   };
+
+  const formatDateTime = (dateString?: string) => {
+    if (!dateString) return "—";
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes || bytes === 0) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  // Normalize photos to consistent format
+  const normalizedPhotos = (tree.photos || []).map((photo) => {
+    if (typeof photo === "string") {
+      return {
+        url: photo,
+        filename: photo.split("/").pop() || "image.jpg",
+        size: 0,
+        uploaded_at: "",
+        uploaded_by_email: undefined,
+      };
+    }
+    return photo as TreePhotoMetadata;
+  });
 
   return (
     <Card className="h-full flex flex-col">
@@ -205,6 +241,49 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
           <div className="p-3 bg-gray-50 rounded-lg text-sm">
             <div className="text-gray-500 text-xs mb-1">Notes</div>
             {tree.notes}
+          </div>
+        )}
+
+        {/* Photos */}
+        {normalizedPhotos.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <ImageIcon className="w-4 h-4" />
+              Photos ({normalizedPhotos.length})
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {normalizedPhotos.map((photo, index) => (
+                <div
+                  key={photo.url || index}
+                  className="relative group rounded-lg overflow-hidden border border-gray-200 cursor-pointer"
+                  onClick={() => setSelectedPhoto(photo.url)}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.filename || `Photo ${index + 1}`}
+                    className="w-full h-24 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                    <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  {(photo.uploaded_at || photo.uploaded_by_email) && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1.5">
+                      {photo.uploaded_by_email && (
+                        <div className="flex items-center gap-1 text-white text-[9px]">
+                          <User className="w-2.5 h-2.5" />
+                          <span className="truncate">{photo.uploaded_by_email}</span>
+                        </div>
+                      )}
+                      {photo.uploaded_at && (
+                        <div className="text-gray-300 text-[9px]">
+                          {formatDateTime(photo.uploaded_at)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -340,6 +419,25 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Preview Dialog */}
+      <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
+        <DialogContent className="max-w-3xl p-0 rounded-2xl border-none overflow-hidden bg-black">
+          <button
+            onClick={() => setSelectedPhoto(null)}
+            className="absolute top-3 right-3 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {selectedPhoto && (
+            <img
+              src={selectedPhoto}
+              alt="Tree photo preview"
+              className="w-full h-auto max-h-[80vh] object-contain"
+            />
+          )}
         </DialogContent>
       </Dialog>
     </Card>

@@ -11,7 +11,7 @@ from app.schemas.tree_inventory_schemas import (
     TreeInventoryCreate, TreeInventoryUpdate, TreeInventoryResponse,
     TreeMonitoringLogCreate, TreeMonitoringLogResponse,
     PlantingProjectCreate, PlantingProjectUpdate, PlantingProjectResponse,
-    TreeInventoryStats, PlantingProjectStats,
+    TreeInventoryStats, PlantingProjectStats, TreeCarbonStatistics,
     TreeSpeciesCreate, TreeSpeciesUpdate, TreeSpeciesResponse
 )
 from app.crud import crud_tree_inventory as crud
@@ -143,6 +143,18 @@ def get_tree_clusters(
 def get_tree_stats(db: Session = Depends(get_db)):
     """Get tree inventory statistics"""
     return crud.get_tree_inventory_stats(db)
+
+
+@router.get("/trees/carbon-statistics", response_model=TreeCarbonStatistics)
+def get_carbon_statistics(db: Session = Depends(get_db)):
+    """
+    Get comprehensive tree carbon statistics including:
+    - Tree Count & Composition (total, per species, native vs exotic)
+    - Carbon Stock (total CO₂ stored, per species, top 5 contribution)
+    - Annual Carbon Sequestration (total absorbed, from new plantings)
+    - Carbon Loss (from removals, projected decay)
+    """
+    return crud.get_tree_carbon_statistics(db)
 
 
 @router.get("/trees/{tree_id}", response_model=TreeInventoryResponse)

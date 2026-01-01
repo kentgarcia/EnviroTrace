@@ -9,8 +9,9 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { TreeInventory, TreeInventoryCreate, TreeSpecies } from "@/core/api/tree-inventory-api";
+import { TreeInventory, TreeInventoryCreate, TreeSpecies, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
 import { useTreeSpecies, useCreateSpecies } from "../logic/useTreeInventory";
+import TreeImageUpload, { UploadedImage } from "./TreeImageUpload";
 import { Save, X, MapPin, Plus, Search, Loader2 } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
@@ -134,6 +135,22 @@ const TreeForm: React.FC<TreeFormProps> = ({
   const { data: speciesList = [], isLoading: speciesLoading } = useTreeSpecies();
   const createSpeciesMutation = useCreateSpecies();
 
+  // Normalize initial photos to UploadedImage format
+  const normalizeInitialPhotos = (photos?: (string | TreePhotoMetadata)[]): UploadedImage[] => {
+    if (!photos) return [];
+    return photos.map((photo) => {
+      if (typeof photo === "string") {
+        return {
+          url: photo,
+          filename: photo.split("/").pop() || "image.jpg",
+          size: 0,
+          uploaded_at: new Date().toISOString(),
+        };
+      }
+      return photo as UploadedImage;
+    });
+  };
+
   const [formData, setFormData] = useState({
     species: initialData?.species || "",
     common_name: initialData?.common_name || "",
@@ -148,6 +165,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
     diameter_cm: initialData?.diameter_cm || null as number | null,
     age_years: initialData?.age_years || null as number | null,
     notes: initialData?.notes || "",
+    photos: normalizeInitialPhotos(initialData?.photos),
   });
 
   const [customSpecies, setCustomSpecies] = useState({
@@ -299,10 +317,27 @@ const TreeForm: React.FC<TreeFormProps> = ({
     }
   };
 
+  const handlePhotosChange = useCallback((photos: UploadedImage[]) => {
+    setFormData((prev) => ({ ...prev, photos }));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // Convert photos to the format expected by the API
+      const photosPayload = formData.photos.length > 0 
+        ? formData.photos.map((photo) => ({
+            url: photo.url,
+            path: photo.path,
+            filename: photo.filename,
+            size: photo.size,
+            uploaded_at: photo.uploaded_at,
+            uploaded_by_id: photo.uploaded_by_id,
+            uploaded_by_email: photo.uploaded_by_email,
+          }))
+        : undefined;
+
       const payload: TreeInventoryCreate = {
         species: formData.species || undefined,
         common_name: formData.common_name || "Unknown",
@@ -317,6 +352,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
         diameter_cm: formData.diameter_cm || undefined,
         age_years: formData.age_years || undefined,
         notes: formData.notes || undefined,
+        photos: photosPayload,
       };
       await onSave(payload);
     } catch (error) {
@@ -739,6 +775,20 @@ const TreeForm: React.FC<TreeFormProps> = ({
             className="mt-1 rounded-lg"
           />
         </div>
+      </div>
+
+      {/* Photo Documentation */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">
+          Photo Documentation <span className="font-normal text-gray-400">(Optional)</span>
+        </h3>
+        <TreeImageUpload
+          initialPhotos={formData.photos}
+          onPhotosChange={handlePhotosChange}
+          treeId={initialData?.id}
+          maxImages={10}
+          disabled={isSubmitting}
+        />
       </div>
 
       {/* Form Actions */}

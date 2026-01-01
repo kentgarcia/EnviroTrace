@@ -1,6 +1,7 @@
-// client/src/presentation/roles/urban-greening/pages/tree-inventory/components/SpeciesForm.tsx
+// client/src/presentation/components/shared/species/SpeciesForm.tsx
 /**
- * Form component for adding/editing tree species with comprehensive environmental impact data
+ * Shared Species Form Component
+ * Used by both Tree Inventory and Greening Projects for managing tree species
  */
 
 import React, { useState } from "react";
@@ -19,6 +20,98 @@ interface SpeciesFormProps {
 }
 
 const GROWTH_SPEED_OPTIONS = ["Slow", "Moderate", "Fast"];
+
+// Collapsible section header component
+const SectionHeader = ({ 
+  title, 
+  icon: Icon, 
+  isOpen, 
+  onToggle,
+  colorClass = "text-blue-600"
+}: { 
+  title: string; 
+  icon: React.ElementType; 
+  isOpen: boolean; 
+  onToggle: () => void;
+  colorClass?: string;
+}) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className={`w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors ${isOpen ? 'bg-gray-50' : ''}`}
+  >
+    <div className="flex items-center gap-2">
+      <Icon className={`w-4 h-4 ${colorClass}`} />
+      <span className="font-medium text-gray-800">{title}</span>
+    </div>
+    {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+  </button>
+);
+
+// Min/Max/Avg input group component
+const MinMaxAvgInput = ({
+  label,
+  minName,
+  maxName,
+  avgName,
+  unit,
+  minValue,
+  maxValue,
+  avgValue,
+  onChange,
+}: {
+  label: string;
+  minName: string;
+  maxName: string;
+  avgName: string;
+  unit: string;
+  minValue?: number;
+  maxValue?: number;
+  avgValue?: number;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) => (
+  <div className="space-y-2">
+    <Label className="text-sm font-medium">{label} ({unit})</Label>
+    <div className="grid grid-cols-3 gap-2">
+      <div>
+        <Input
+          type="number"
+          step="any"
+          name={minName}
+          value={minValue ?? ""}
+          onChange={onChange}
+          placeholder="Min"
+          className="text-sm"
+        />
+        <span className="text-xs text-gray-500 mt-1">Min</span>
+      </div>
+      <div>
+        <Input
+          type="number"
+          step="any"
+          name={maxName}
+          value={maxValue ?? ""}
+          onChange={onChange}
+          placeholder="Max"
+          className="text-sm"
+        />
+        <span className="text-xs text-gray-500 mt-1">Max</span>
+      </div>
+      <div>
+        <Input
+          type="number"
+          step="any"
+          name={avgName}
+          value={avgValue ?? ""}
+          onChange={onChange}
+          placeholder="Avg"
+          className="text-sm"
+        />
+        <span className="text-xs text-gray-500 mt-1">Avg</span>
+      </div>
+    </div>
+  </div>
+);
 
 const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, onCancel }) => {
   const [formData, setFormData] = useState<TreeSpeciesCreate>({
@@ -133,92 +226,6 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
       setIsSubmitting(false);
     }
   };
-
-  // Collapsible section header component
-  const SectionHeader = ({ 
-    title, 
-    icon: Icon, 
-    isOpen, 
-    onToggle,
-    colorClass = "text-blue-600"
-  }: { 
-    title: string; 
-    icon: React.ElementType; 
-    isOpen: boolean; 
-    onToggle: () => void;
-    colorClass?: string;
-  }) => (
-    <button
-      type="button"
-      onClick={onToggle}
-      className={`w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors ${isOpen ? 'bg-gray-50' : ''}`}
-    >
-      <div className="flex items-center gap-2">
-        <Icon className={`w-4 h-4 ${colorClass}`} />
-        <span className="font-medium text-gray-800">{title}</span>
-      </div>
-      {isOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-    </button>
-  );
-
-  // Min/Max/Avg input group component
-  const MinMaxAvgInput = ({
-    label,
-    baseName,
-    unit,
-    minValue,
-    maxValue,
-    avgValue,
-  }: {
-    label: string;
-    baseName: string;
-    unit: string;
-    minValue?: number;
-    maxValue?: number;
-    avgValue?: number;
-  }) => (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium">{label} ({unit})</Label>
-      <div className="grid grid-cols-3 gap-2">
-        <div>
-          <Input
-            type="number"
-            step="any"
-            name={`${baseName}_min`}
-            value={minValue ?? ""}
-            onChange={handleNumberChange}
-            placeholder="Min"
-            className="text-sm"
-          />
-          <span className="text-xs text-gray-500 mt-1">Min</span>
-        </div>
-        <div>
-          <Input
-            type="number"
-            step="any"
-            name={`${baseName}_max`}
-            value={maxValue ?? ""}
-            onChange={handleNumberChange}
-            placeholder="Max"
-            className="text-sm"
-          />
-          <span className="text-xs text-gray-500 mt-1">Max</span>
-        </div>
-        <div>
-          <Input
-            type="number"
-            step="any"
-            name={`${baseName}_avg`}
-            value={avgValue ?? ""}
-            onChange={handleNumberChange}
-            placeholder="Avg"
-            className="text-sm"
-          />
-          <span className="text-xs text-gray-500 mt-1">Avg</span>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -354,29 +361,38 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
           <div className="p-4 border border-gray-200 rounded-lg space-y-4 bg-gray-50/50">
             <MinMaxAvgInput
               label="Wood Density"
-              baseName="wood_density"
+              minName="wood_density_min"
+              maxName="wood_density_max"
+              avgName="wood_density_avg"
               unit="g/cm³"
               minValue={formData.wood_density_min}
               maxValue={formData.wood_density_max}
               avgValue={formData.wood_density_avg}
+              onChange={handleNumberChange}
             />
             
             <MinMaxAvgInput
               label="Mature Height"
-              baseName="avg_mature_height"
+              minName="avg_mature_height_min_m"
+              maxName="avg_mature_height_max_m"
+              avgName="avg_mature_height_avg_m"
               unit="m"
               minValue={formData.avg_mature_height_min_m}
               maxValue={formData.avg_mature_height_max_m}
               avgValue={formData.avg_mature_height_avg_m}
+              onChange={handleNumberChange}
             />
             
             <MinMaxAvgInput
               label="Trunk Diameter (DBH)"
-              baseName="avg_trunk_diameter"
+              minName="avg_trunk_diameter_min_cm"
+              maxName="avg_trunk_diameter_max_cm"
+              avgName="avg_trunk_diameter_avg_cm"
               unit="cm"
               minValue={formData.avg_trunk_diameter_min_cm}
               maxValue={formData.avg_trunk_diameter_max_cm}
               avgValue={formData.avg_trunk_diameter_avg_cm}
+              onChange={handleNumberChange}
             />
 
             <div className="grid grid-cols-2 gap-4">
