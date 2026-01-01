@@ -1,0 +1,55 @@
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov/
+*.cover
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+README.md
+MIGRATION_SUMMARY.md
+SUPABASE_MIGRATION_GUIDE.md
+TEST_ACCOUNTS.md
+URBAN_GREENING_PROJECTS_SETUP.md
+
+# Deployment
+render.yaml
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Alembic (keep only necessary files)
+alembic/__pycache__
+
+# Scripts
+scripts/
+
+# Test files
+test_*.py
+*_test.py
