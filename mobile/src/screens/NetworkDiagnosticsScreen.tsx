@@ -76,7 +76,7 @@ export default function NetworkDiagnosticsScreen() {
 
     if (isLoading && !diagnostics) {
         return (
-            <SafeAreaView style={styles.loadingContainer} edges={["top"]}>
+            <SafeAreaView style={styles.loadingContainer} edges={["top", "left", "right"]}>
                 <StatusBar barStyle="dark-content" />
                 <ActivityIndicator size="large" color="#4CAF50" />
                 <Text style={styles.loadingText}>Running diagnostics...</Text>
@@ -85,7 +85,7 @@ export default function NetworkDiagnosticsScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container} edges={["top"]}>
+        <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
             <StatusBar barStyle="dark-content" />
 
             {/* Header with Back Button */}

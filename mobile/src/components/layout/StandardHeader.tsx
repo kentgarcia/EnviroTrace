@@ -1,7 +1,6 @@
 import React from "react";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { Text, useTheme } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Icon, { IconName } from "../icons/Icon";
 import { useNavigation } from "@react-navigation/native";
@@ -19,6 +18,7 @@ export interface StandardHeaderProps {
     backgroundColor?: string;
     borderColor?: string;
     showChangeDashboardAction?: boolean;
+    showProfileAction?: boolean;
     titleSize?: number;
     subtitleSize?: number;
     iconSize?: number;
@@ -35,7 +35,8 @@ export default function StandardHeader({
     statusBarStyle = "dark",
     backgroundColor = "transparent",
     borderColor = "transparent",
-    showChangeDashboardAction = true,
+    showChangeDashboardAction = false,
+    showProfileAction = true,
     titleSize = 28,
     subtitleSize = 14,
     iconSize = 24,
@@ -53,7 +54,7 @@ export default function StandardHeader({
     };
 
     return (
-        <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor }]}>
+        <View style={[styles.safe, { backgroundColor }]}>
             <StatusBar style={statusBarStyle} backgroundColor="transparent" translucent />
             <View style={[styles.header, { backgroundColor, borderBottomColor: borderColor }]}>
                 {/* Left Side - Back Button or Title */}
@@ -61,10 +62,9 @@ export default function StandardHeader({
                     {showBack && (
                         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                             <Icon
-                                name="ChevronRight"
-                                size={iconSize}
-                                color="#475569"
-                                style={{ transform: [{ rotate: "180deg" }] }}
+                                name="ChevronLeft"
+                                size={iconSize - 2}
+                                color="#1E293B"
                             />
                         </TouchableOpacity>
                     )}
@@ -74,9 +74,12 @@ export default function StandardHeader({
                                 {title}
                             </Text>
                             {subtitle && (
-                                <Text variant="bodySmall" style={[styles.headerSubtitle, { fontSize: subtitleSize }]}>
-                                    {subtitle}
-                                </Text>
+                                <View style={styles.subtitleContainer}>
+                                    <View style={styles.subtitleDot} />
+                                    <Text variant="bodySmall" style={[styles.headerSubtitle, { fontSize: subtitleSize }]}>
+                                        {subtitle}
+                                    </Text>
+                                </View>
                             )}
                         </View>
                     )}
@@ -100,7 +103,16 @@ export default function StandardHeader({
 
                     {rightActionIcon && (
                         <TouchableOpacity onPress={onRightActionPress} style={styles.actionButton}>
-                            <Icon name={rightActionIcon} size={iconSize} color="#475569" />
+                            <Icon name={rightActionIcon} size={iconSize - 4} color="#1E293B" />
+                        </TouchableOpacity>
+                    )}
+
+                    {showProfileAction && (
+                        <TouchableOpacity
+                            onPress={() => (navigation as any).navigate("Profile")}
+                            style={styles.actionButton}
+                        >
+                            <Icon name="UserCircle" size={iconSize - 2} color="#2563EB" />
                         </TouchableOpacity>
                     )}
 
@@ -109,12 +121,12 @@ export default function StandardHeader({
                             onPress={() => setSelectedDashboard(null)}
                             style={styles.actionButton}
                         >
-                            <Icon name="LayoutDashboard" size={iconSize} color="#475569" />
+                            <Icon name="LayoutDashboard" size={iconSize - 4} color="#1E293B" />
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -127,9 +139,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 28,
-        paddingVertical: 16,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
         backgroundColor: "transparent",
+        borderBottomWidth: 1,
     },
     headerLeft: {
         flex: 1,
@@ -138,46 +151,66 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     backButton: {
-        padding: 8,
-        borderRadius: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
         borderWidth: 1,
-        borderColor: "rgba(226, 232, 240, 0.5)",
+        borderColor: "#E2E8F0",
     },
     headerTitle: {
-        color: "#1E293B",
-        fontWeight: "700",
+        color: "#0F172A",
+        fontWeight: "800",
         fontSize: 28,
-        letterSpacing: -0.5,
+        letterSpacing: -0.8,
+    },
+    subtitleContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 2,
+    },
+    subtitleDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: "#2563EB",
     },
     headerSubtitle: {
         color: "#64748B",
-        fontSize: 14,
-        marginTop: 2,
+        fontSize: 13,
+        fontWeight: "600",
     },
     titleWithBack: {
         flex: 1,
     },
     titleText: {
-        color: "#1E293B",
-        fontWeight: "700",
+        color: "#0F172A",
+        fontWeight: "800",
         fontSize: 20,
+        letterSpacing: -0.5,
     },
     subtitleText: {
         color: "#64748B",
-        fontSize: 13,
-        marginTop: 2,
+        fontSize: 12,
+        fontWeight: "500",
+        marginTop: 1,
     },
     headerActions: {
         flexDirection: "row",
-        gap: 8,
+        gap: 10,
         alignItems: "center",
     },
     actionButton: {
-        padding: 8,
-        borderRadius: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+        alignItems: "center",
+        justifyContent: "center",
         borderWidth: 1,
-        borderColor: "rgba(226, 232, 240, 0.5)",
+        borderColor: "#E2E8F0",
     },
 });

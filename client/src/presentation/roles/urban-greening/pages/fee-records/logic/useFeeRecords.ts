@@ -121,8 +121,8 @@ export const useFeeRecordMutations = () => {
   };
 };
 
-export const fetchFeeRecords = async (): Promise<FeeRecord[]> => {
-  const records = await fetchUrbanGreeningFeeRecords();
+export const fetchFeeRecords = async (year?: number): Promise<FeeRecord[]> => {
+  const records = await fetchUrbanGreeningFeeRecords(year);
   return records.map(transformApiRecord);
 };
 

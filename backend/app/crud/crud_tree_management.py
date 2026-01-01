@@ -47,13 +47,30 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
     def create_sync(self, db: Session, *, obj_in: TreeManagementRequestCreate) -> TreeManagementRequest:
         """Synchronous version of create for use with sync sessions"""
         import json
+        from datetime import date as dt_date
         
         obj_in_data = obj_in.model_dump()
         
+        # Auto-generate request number if not provided
+        if not obj_in_data.get('request_number'):
+            # Generate request number: TR{YEAR}-{sequential}
+            from datetime import datetime
+            today = datetime.now()
+            year = today.year
+            # Count this year's requests
+            count = db.query(TreeManagementRequest).filter(
+                TreeManagementRequest.request_number.like(f"TR{year}-%")
+            ).count()
+            obj_in_data['request_number'] = f"TR{year}-{count + 1:04d}"
+        
+        # Auto-set request_date to today if not provided
+        if not obj_in_data.get('request_date'):
+            obj_in_data['request_date'] = dt_date.today()
+        
         # Convert list fields to JSON strings for database storage
-        # Ensure we have proper lists, not None or other types
+        obj_in_data['linked_tree_ids'] = json.dumps(obj_in_data.get('linked_tree_ids', []) or [])
+        obj_in_data['new_trees'] = json.dumps(obj_in_data.get('new_trees', []) or [])
         obj_in_data['inspectors'] = json.dumps(obj_in_data.get('inspectors', []) or [])
-        obj_in_data['trees_and_quantities'] = json.dumps(obj_in_data.get('trees_and_quantities', []) or [])
         obj_in_data['picture_links'] = json.dumps(obj_in_data.get('picture_links', []) or [])
             
         db_obj = TreeManagementRequest(**obj_in_data)
@@ -69,10 +86,12 @@ class CRUDTreeManagementRequest(CRUDBase[TreeManagementRequest, TreeManagementRe
         update_data = obj_in.model_dump(exclude_unset=True)
         
         # Convert list fields to JSON strings for database storage
+        if 'linked_tree_ids' in update_data:
+            update_data['linked_tree_ids'] = json.dumps(update_data['linked_tree_ids'] or [])
+        if 'new_trees' in update_data:
+            update_data['new_trees'] = json.dumps(update_data['new_trees'] or [])
         if 'inspectors' in update_data:
             update_data['inspectors'] = json.dumps(update_data['inspectors'] or [])
-        if 'trees_and_quantities' in update_data:
-            update_data['trees_and_quantities'] = json.dumps(update_data['trees_and_quantities'] or [])
         if 'picture_links' in update_data:
             update_data['picture_links'] = json.dumps(update_data['picture_links'] or [])
             

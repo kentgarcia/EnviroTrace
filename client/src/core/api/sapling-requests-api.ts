@@ -3,6 +3,7 @@ import apiClient from "./api-client";
 export interface SaplingItem {
   name: string;
   qty: number;
+  plant_type?: string; // ornamental, trees, seeds, etc.
 }
 
 export interface SaplingRequest {
@@ -29,8 +30,9 @@ export interface SaplingRequestUpdate {
   saplings?: SaplingItem[];
 }
 
-export const fetchSaplingRequests = async (): Promise<SaplingRequest[]> => {
-  const res = await apiClient.get("/planting/sapling-requests/");
+export const fetchSaplingRequests = async (year?: number): Promise<SaplingRequest[]> => {
+  const params = year ? { year } : {};
+  const res = await apiClient.get("/planting/sapling-requests/", { params });
   return res.data;
 };
 

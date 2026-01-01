@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, RefreshControl, ScrollView, TouchableOpacity, FlatList } from "react-native";
 import { Text, Button, Divider, ActivityIndicator, Chip } from "react-native-paper";
 import { Dropdown } from "react-native-element-dropdown";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
-import StandardHeader from "../../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../../components/layout/ScreenLayout";
+import FloatingActionButton from "../../../../components/FloatingActionButton";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { cardStyles } from "../../../../styles/cardStyles";
 import {
   useEmissionTests,
   useVehicles,
@@ -85,25 +86,24 @@ export default function TestingScreen() {
   }, [groups]);
 
   return (
-    <>
-      <StandardHeader
-        title="Emission Testing"
-        subtitle={`${items.length} Total Tests`}
-        statusBarStyle="dark"
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        borderColor="#E5E7EB"
-        rightActionIcon="RefreshCw"
-        onRightActionPress={() => refetchTests()}
-        titleSize={22}
-        subtitleSize={12}
-        iconSize={20}
-      />
-
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+    <ScreenLayout
+      header={{
+        title: "Emission Testing",
+        subtitle: `${items.length} Total Tests Recorded`,
+        statusBarStyle: "dark",
+        backgroundColor: "#F8FAFC",
+        rightActionIcon: "RefreshCw",
+        onRightActionPress: () => refetchTests(),
+        showProfileAction: true,
+      }}
+    >
         {/* Filter Section */}
         <View style={styles.filterWrapper}>
           <View style={styles.filterSection}>
-            <Text style={styles.filterTitle}>Testing Period</Text>
+            <View style={styles.filterHeader}>
+              <Icon name="Calendar" size={18} color="#2563EB" />
+              <Text style={styles.filterTitle}>Testing Period</Text>
+            </View>
 
             {/* Quarter and Year on Same Row */}
             <View style={styles.periodRow}>
@@ -127,9 +127,6 @@ export default function TestingScreen() {
                   placeholderStyle={styles.dropdownPlaceholder}
                   containerStyle={styles.dropdownContainer}
                   itemTextStyle={styles.dropdownItemText}
-                  renderLeftIcon={() => (
-                    <Icon name="Calendar" size={16} color="#6B7280" style={{ marginRight: 8 }} />
-                  )}
                 />
               </View>
 
@@ -167,7 +164,9 @@ export default function TestingScreen() {
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon name="ClipboardList" size={64} color="#9CA3AF" />
+            <View style={styles.emptyIconContainer}>
+              <Icon name="ClipboardList" size={48} color="#2563EB" />
+            </View>
             <Text style={styles.emptyTitle}>No Tests This Period</Text>
             <Text style={styles.emptyText}>
               No emission tests recorded for Q{quarter} {year}
@@ -177,6 +176,7 @@ export default function TestingScreen() {
               onPress={() => (navigation as any).navigate("Vehicles")}
               style={styles.emptyButton}
               labelStyle={styles.emptyButtonLabel}
+              buttonColor="#2563EB"
               icon={() => <Icon name="Plus" size={20} color="#FFFFFF" />}
             >
               Record New Test
@@ -188,8 +188,8 @@ export default function TestingScreen() {
               <RefreshControl
                 refreshing={loading}
                 onRefresh={onRefresh}
-                colors={["#111827"]}
-                tintColor="#111827"
+                colors={["#2563EB"]}
+                tintColor="#2563EB"
               />
             }
             style={styles.scrollView}
@@ -206,7 +206,9 @@ export default function TestingScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={styles.officeHeaderLeft}>
-                    <Icon name="Building2" size={18} color="#111827" />
+                    <View style={styles.officeIconContainer}>
+                      <Icon name="Building2" size={18} color="#2563EB" />
+                    </View>
                     <Text style={styles.officeName}>{group.name}</Text>
                     <View style={styles.countBadge}>
                       <Text style={styles.countText}>{group.items.length}</Text>
@@ -215,7 +217,7 @@ export default function TestingScreen() {
                   <Icon
                     name="ChevronDown"
                     size={20}
-                    color="#6B7280"
+                    color="#64748B"
                     style={{
                       transform: [{ rotate: expandedByOffice[group.key] ? "0deg" : "-90deg" }],
                     }}
@@ -235,27 +237,42 @@ export default function TestingScreen() {
                                 item.vehicle?.registration_number ||
                                 "Unknown"}
                             </Text>
-                            <Text style={styles.vehicleType}>
-                              {item.vehicle?.vehicle_type || "N/A"} • {item.vehicle?.engine_type || "N/A"}
-                            </Text>
+                            <View style={styles.vehicleInfoRow}>
+                              <Icon name="Car" size={12} color="#64748B" />
+                              <Text style={styles.vehicleType}>
+                                {item.vehicle?.vehicle_type || "N/A"} • {item.vehicle?.engine_type || "N/A"}
+                              </Text>
+                            </View>
                           </View>
-                          <Chip
-                            compact
+                          <View
                             style={[
-                              styles.statusChip,
+                              styles.statusBadge,
                               {
                                 backgroundColor:
                                   item.test.result === null
-                                    ? "#F59E0B"
+                                    ? "#FEF3C7"
                                     : item.test.result
-                                      ? "#16A34A"
-                                      : "#E72525",
+                                      ? "#DCFCE7"
+                                      : "#FEE2E2",
                               },
                             ]}
-                            textStyle={styles.statusChipText}
                           >
-                            {item.test.result === null ? "Pending" : item.test.result ? "Pass" : "Fail"}
-                          </Chip>
+                            <Text 
+                              style={[
+                                styles.statusBadgeText,
+                                {
+                                  color:
+                                    item.test.result === null
+                                      ? "#D97706"
+                                      : item.test.result
+                                        ? "#16A34A"
+                                        : "#DC2626",
+                                }
+                              ]}
+                            >
+                              {item.test.result === null ? "Pending" : item.test.result ? "Pass" : "Fail"}
+                            </Text>
+                          </View>
                         </View>
                         {idx < group.items.length - 1 && <Divider style={styles.divider} />}
                       </View>
@@ -267,38 +284,42 @@ export default function TestingScreen() {
             <View style={styles.bottomSpacer} />
           </ScrollView>
         )}
-      </SafeAreaView>
-    </>
+
+        <FloatingActionButton
+          onPress={() => (navigation as any).navigate("AddTest")}
+        />
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
   },
   filterWrapper: {
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 16,
     paddingBottom: 8,
   },
   filterSection: {
     backgroundColor: "#FFFFFF",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   filterTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
-    marginBottom: 12,
+    color: "#0F172A",
+    marginBottom: 16,
     letterSpacing: -0.3,
   },
   periodRow: {
@@ -314,36 +335,38 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#374151",
-    marginBottom: 6,
-    letterSpacing: -0.2,
+    color: "#64748B",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   dropdown: {
     height: 44,
-    borderColor: "#E5E7EB",
-    borderWidth: 1.5,
-    borderRadius: 10,
+    borderColor: "#E2E8F0",
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   dropdownPlaceholder: {
-    fontSize: 13,
-    color: "#9CA3AF",
+    fontSize: 14,
+    color: "#94A3B8",
     fontWeight: "500",
   },
   dropdownSelectedText: {
-    fontSize: 13,
-    color: "#111827",
+    fontSize: 14,
+    color: "#0F172A",
     fontWeight: "600",
   },
   dropdownContainer: {
-    borderRadius: 10,
-    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderColor: "#E2E8F0",
     marginTop: 4,
+    overflow: "hidden",
   },
   dropdownItemText: {
-    fontSize: 13,
-    color: "#1F2937",
+    fontSize: 14,
+    color: "#0F172A",
     fontWeight: "500",
   },
   yearRow: {
@@ -356,62 +379,19 @@ const styles = StyleSheet.create({
   yearButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#111827",
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   yearDisplay: {
     flex: 1,
     alignItems: "center",
   },
   yearText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
-    letterSpacing: -0.3,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 19,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 28,
-    fontWeight: "500",
-  },
-  emptyButton: {
-    backgroundColor: "#111827",
-    borderRadius: 12,
-    elevation: 2,
-    paddingHorizontal: 8,
-  },
-  emptyButtonLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    paddingVertical: 6,
-    letterSpacing: -0.2,
+    color: "#0F172A",
   },
   scrollView: {
     flex: 1,
@@ -420,37 +400,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    overflow: "hidden",
   },
   officeHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   officeHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
     flex: 1,
+  },
+  officeIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
   officeName: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0F172A",
     flex: 1,
-    letterSpacing: -0.2,
   },
   countBadge: {
-    backgroundColor: "#111827",
+    backgroundColor: "#F1F5F9",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
@@ -458,44 +441,90 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#64748B",
   },
   testsList: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
   testItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: 14,
   },
   testInfo: {
     flex: 1,
     marginRight: 12,
   },
   plateNumber: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0F172A",
     marginBottom: 4,
-    letterSpacing: -0.2,
+  },
+  vehicleInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   vehicleType: {
-    fontSize: 12,
-    color: "#6B7280",
+    fontSize: 13,
+    color: "#64748B",
     fontWeight: "500",
   },
-  statusChip: {
-    elevation: 0,
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  statusChipText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "700",
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
   },
   divider: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#F1F5F9",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingTop: 60,
+  },
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  emptyButton: {
+    borderRadius: 12,
+    width: "100%",
+  },
+  emptyButtonLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    paddingVertical: 6,
   },
   bottomSpacer: {
     height: 120,

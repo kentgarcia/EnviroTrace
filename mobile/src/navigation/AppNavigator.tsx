@@ -1,5 +1,6 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { View, Text, StyleSheet } from "react-native";
 import { useAuthStore } from "../core/stores/authStore";
 import AuthNavigator from "./AuthNavigator";
 import MainNavigator from "./MainNavigator";
@@ -72,9 +73,8 @@ export default function AppNavigator() {
         />
       ) : (
         <Stack.Screen
-          name="RolePlaceholder"
-          // @ts-ignore - simple wrapper for now
-          children={() => <RoleDashboardPlaceholder role={selectedDashboard as string} />}
+          name="DashboardSelector"
+          component={DashboardSelectorNavigator}
           options={{
             gestureEnabled: false,
           }}

@@ -121,10 +121,8 @@ export default function AddVehicleScreen() {
       <StandardHeader
         title="Add Vehicle"
         showBack
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        borderColor="#E5E7EB"
-        titleSize={22}
-        subtitleSize={12}
+        backgroundColor="#FFFFFF"
+        titleSize={20}
         iconSize={20}
       />
       <SafeAreaView style={styles.container} edges={["bottom"]}>
@@ -152,13 +150,15 @@ export default function AddVehicleScreen() {
                   placeholder="Enter plate number"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#6B7280" />} />}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#64748B" />} />}
                 />
-                <HelperText type="error" visible={!plate.trim()}>
+                <HelperText type="error" visible={!plate.trim()} style={styles.helperText}>
                   Plate number is required
                 </HelperText>
                 {params?.fromPlateRecognition && (
-                  <HelperText type="info" visible={true}>
+                  <HelperText type="info" visible={true} style={styles.helperTextInfo}>
                     📷 Plate number detected from image
                   </HelperText>
                 )}
@@ -173,9 +173,11 @@ export default function AddVehicleScreen() {
                   placeholder="Enter driver name"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#6B7280" />} />}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#64748B" />} />}
                 />
-                <HelperText type="error" visible={!driver.trim()}>
+                <HelperText type="error" visible={!driver.trim()} style={styles.helperText}>
                   Driver name is required
                 </HelperText>
               </View>
@@ -190,7 +192,9 @@ export default function AddVehicleScreen() {
                   placeholder="Enter contact number"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="Phone" size={16} color="#6B7280" />} />}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="Phone" size={16} color="#64748B" />} />}
                 />
               </View>
             </View>
@@ -218,12 +222,13 @@ export default function AddVehicleScreen() {
                   disable={loadingOffices || offices.length === 0}
                   renderRightIcon={renderChevronIcon}
                   renderItem={renderDropdownItem}
+                  activeColor="#EFF6FF"
                 />
-                <HelperText type="error" visible={!officeId.trim()}>
+                <HelperText type="error" visible={!officeId.trim()} style={styles.helperText}>
                   Office is required
                 </HelperText>
                 {offices.length === 0 && !loadingOffices && (
-                  <HelperText type="info" visible={true}>
+                  <HelperText type="info" visible={true} style={styles.helperTextInfo}>
                     No offices available
                   </HelperText>
                 )}
@@ -244,7 +249,9 @@ export default function AddVehicleScreen() {
                     placeholder="Enter vehicle type"
                     style={styles.input}
                     outlineStyle={styles.inputOutline}
-                    left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#6B7280" />} />}
+                    textColor="#0F172A"
+                    placeholderTextColor="#94A3B8"
+                    left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#64748B" />} />}
                   />
                   {existingVehicleTypes.length > 0 && (
                     <View style={styles.vehicleTypeSuggestions}>
@@ -263,11 +270,12 @@ export default function AddVehicleScreen() {
                         maxHeight={300}
                         renderRightIcon={renderChevronIcon}
                         renderItem={renderDropdownItem}
+                        activeColor="#EFF6FF"
                       />
                     </View>
                   )}
                 </View>
-                <HelperText type="error" visible={!vehicleType.trim()}>
+                <HelperText type="error" visible={!vehicleType.trim()} style={styles.helperText}>
                   Vehicle type is required
                 </HelperText>
               </View>
@@ -288,8 +296,9 @@ export default function AddVehicleScreen() {
                   maxHeight={300}
                   renderRightIcon={renderChevronIcon}
                   renderItem={renderDropdownItem}
+                  activeColor="#EFF6FF"
                 />
-                <HelperText type="error" visible={!engineType.trim()}>
+                <HelperText type="error" visible={!engineType.trim()} style={styles.helperText}>
                   Engine type is required
                 </HelperText>
               </View>
@@ -304,7 +313,9 @@ export default function AddVehicleScreen() {
                   placeholder="4"
                   style={styles.input}
                   outlineStyle={styles.inputOutline}
-                  left={<TextInput.Icon icon={() => <Icon name="CirclePlus" size={16} color="#6B7280" />} />}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="CirclePlus" size={16} color="#64748B" />} />}
                 />
               </View>
             </View>
@@ -317,7 +328,7 @@ export default function AddVehicleScreen() {
                 disabled={!isValid || addVehicleMutation.isPending}
                 loading={addVehicleMutation.isPending}
                 style={styles.saveBtn}
-                buttonColor="#111827"
+                buttonColor="#2563EB"
                 labelStyle={styles.saveBtnLabel}
               >
                 Save Vehicle
@@ -333,7 +344,7 @@ export default function AddVehicleScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -347,13 +358,19 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
     marginBottom: 16,
-    letterSpacing: -0.3,
   },
   inputWrapper: {
     marginBottom: 12,
@@ -361,17 +378,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#374151",
+    color: "#0F172A",
     marginBottom: 8,
-    letterSpacing: -0.2,
   },
   input: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   inputOutline: {
-    borderColor: "#E5E7EB",
+    borderColor: "#E2E8F0",
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
+  },
+  helperText: {
+    marginTop: 4,
+    fontSize: 11,
+  },
+  helperTextInfo: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#2563EB",
   },
   vehicleTypeContainer: {
     position: "relative",
@@ -381,39 +406,35 @@ const styles = StyleSheet.create({
   },
   suggestionsLabel: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#64748B",
     marginBottom: 8,
     fontWeight: "600",
   },
   dropdown: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 56,
+    paddingVertical: 12,
+    minHeight: 48,
   },
   dropdownPlaceholder: {
     fontSize: 14,
-    color: "#9CA3AF",
+    color: "#94A3B8",
     fontWeight: "500",
   },
   dropdownSelectedText: {
     fontSize: 14,
-    color: "#111827",
+    color: "#0F172A",
     fontWeight: "600",
   },
   dropdownContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    overflow: "hidden",
   },
   dropdownItem: {
     paddingHorizontal: 18,
@@ -421,19 +442,18 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
-    color: "#4B5563",
+    color: "#0F172A",
     fontWeight: "500",
   },
   buttonSection: {
     marginTop: 8,
   },
   saveBtn: {
-    borderRadius: 12,
-    paddingVertical: 6,
+    borderRadius: 14,
+    paddingVertical: 8,
   },
   saveBtnLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    letterSpacing: -0.2,
   },
 });

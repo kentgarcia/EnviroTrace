@@ -5,10 +5,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/compone
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Badge } from "@/presentation/components/shared/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/presentation/components/shared/ui/dialog";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import ColorDivider from "@/presentation/components/shared/layout/ColorDivider";
 import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import FeeRecordForm from "./components/FeeRecordForm";
 
@@ -32,22 +31,27 @@ import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 const FeeRecords: React.FC = () => {
+    const currentYear = new Date().getFullYear();
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
+    const [activeTab, setActiveTab] = useState<"all" | "pending" | "overdue" | "paid">("pending");
     const [typeFilter, setTypeFilter] = useState("all");
+    const [yearFilter, setYearFilter] = useState<number | "all">(currentYear); // Default to current year
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [formMode, setFormMode] = useState<"add">("add");
     const [selectedRecord, setSelectedRecord] = useState<FeeRecord | null>(null);
     const [selectedRowForDetails, setSelectedRowForDetails] = useState<FeeRecord | null>(null);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isMarkOverdueDialogOpen, setIsMarkOverdueDialogOpen] = useState(false);
+    const [overdueCount, setOverdueCount] = useState(0);
 
     const { updateMutation, createMutation, deleteMutation, fullUpdateMutation } = useFeeRecordMutations();
 
-    // Use React Query for data fetching
+    // Use React Query for data fetching with year filter
     const { data: allRecords = [], isLoading, error, refetch } = useQuery({
-        queryKey: ["fee-records"],
-        queryFn: fetchFeeRecords,
+        queryKey: ["fee-records", yearFilter],
+        queryFn: () => fetchFeeRecords(yearFilter === "all" ? undefined : (yearFilter as number)),
     });
 
     // Column definitions for fee records
@@ -68,8 +72,43 @@ const FeeRecords: React.FC = () => {
                 cell: ({ getValue }: any) => formatCurrency(Number(getValue())),
             },
             { accessorKey: "date", header: "Date" },
-            { accessorKey: "due_date", header: "Due Date" },
             {
+                accessorKey: "due_date",
+                header: "Due Date",
+                cell: ({ getValue, row }: any) => {
+                    const dueDate = getValue() as string;
+                    const isOverdue = new Date(dueDate) < new Date() && (row.original.status === "pending" || row.original.status === "overdue");
+                    return (
+                        <span className={isOverdue && activeTab === "pending" ? "font-semibold text-red-600" : ""}>
+                            {dueDate}
+                            {isOverdue && activeTab === "pending" && (
+                                <Badge className="ml-2 bg-red-100 text-red-800 text-xs">OVERDUE</Badge>
+                            )}
+                        </span>
+                    );
+                },
+            },
+        ] as ColumnDef<FeeRecord>[];
+
+        // Add OR Number column if in Paid tab
+        if (activeTab === "paid") {
+            base.push({
+                accessorKey: "or_number",
+                header: "OR Number",
+                cell: ({ getValue }: any) => (
+                    <span className="font-mono font-medium text-blue-700">{getValue() || "---"}</span>
+                ),
+            });
+            base.push({
+                accessorKey: "payment_date",
+                header: "Payment Date",
+                cell: ({ getValue }: any) => getValue() || "---",
+            });
+        }
+
+        // Add Status column if not in specific status tabs
+        if (activeTab === "all") {
+            base.push({
                 accessorKey: "status",
                 header: "Status",
                 cell: ({ getValue }: any) => {
@@ -95,10 +134,11 @@ const FeeRecords: React.FC = () => {
                         </Badge>
                     );
                 },
-            },
-        ] as ColumnDef<FeeRecord>[];
+            });
+        }
+
         return base;
-    }, []);
+    }, [activeTab]);
 
     const handleRowSelect = useCallback((rows: any[]) => {
         setSelectedRows(rows);
@@ -130,10 +170,14 @@ const FeeRecords: React.FC = () => {
 
     const handleDeleteSelected = () => {
         if (!selectedRowForDetails) return;
-        if (confirm(`Delete fee record?`)) {
-            deleteMutation.mutate(selectedRowForDetails.id);
-            setSelectedRowForDetails(null);
-        }
+        setIsDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!selectedRowForDetails) return;
+        deleteMutation.mutate(selectedRowForDetails.id);
+        setSelectedRowForDetails(null);
+        setIsDeleteDialogOpen(false);
     };
 
     const handleFormSave = (data: any) => {
@@ -148,20 +192,76 @@ const FeeRecords: React.FC = () => {
         setSelectedRecord(null);
     };
 
-    // Filter data based on search and filters
+    const handleMarkOverdue = () => {
+        const overdueRecords = filteredData.filter(record => 
+            record.status === "pending" && new Date(record.due_date) < new Date()
+        );
+        
+        if (overdueRecords.length === 0) {
+            toast.info("No overdue records to update");
+            return;
+        }
+
+        setOverdueCount(overdueRecords.length);
+        setIsMarkOverdueDialogOpen(true);
+    };
+
+    const confirmMarkOverdue = () => {
+        const overdueRecords = filteredData.filter(record => 
+            record.status === "pending" && new Date(record.due_date) < new Date()
+        );
+        
+        // Update each overdue record
+        overdueRecords.forEach(record => {
+            updateMutation.mutate({
+                id: record.id,
+                field: "status",
+                value: "overdue"
+            });
+        });
+        setIsMarkOverdueDialogOpen(false);
+    };
+
+    // Generate year options dynamically from 2020 to current year
+    const yearOptions = useMemo<number[]>(() => {
+        const years: number[] = [];
+        for (let year = currentYear; year >= 2020; year--) {
+            years.push(year);
+        }
+        return years;
+    }, [currentYear]);
+
+    // Filter data based on search and filters (year filtering now done on backend)
     const filteredData = useMemo(() => {
-        return filterRecords(
+        let filtered = filterRecords(
             allRecords,
             searchTerm,
-            statusFilter,
+            activeTab === "all" ? "all" : activeTab,
             typeFilter
         );
-    }, [allRecords, searchTerm, statusFilter, typeFilter]);
+        
+        // Sort pending records by due date (nearest first)
+        if (activeTab === "pending" || activeTab === "overdue") {
+            filtered = [...filtered].sort((a, b) => {
+                return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            });
+        }
+        
+        return filtered;
+    }, [allRecords, searchTerm, activeTab, typeFilter]);
 
     // Calculate statistics
     const statusCounts = useMemo(() => getStatusCounts(allRecords), [allRecords]);
     const totalAmount = useMemo(() => getTotalAmount(allRecords), [allRecords]);
     const paidAmount = useMemo(() => getPaidAmount(allRecords), [allRecords]);
+
+    // Check for overdue records in pending view
+    const overdueInPendingCount = useMemo(() => {
+        if (activeTab !== "pending") return 0;
+        return filteredData.filter(record => 
+            record.status === "pending" && new Date(record.due_date) < new Date()
+        ).length;
+    }, [activeTab, filteredData]);
 
     return (
         <div className="flex min-h-screen w-full">
@@ -213,18 +313,99 @@ const FeeRecords: React.FC = () => {
                         <div className={`min-w-0 flex flex-col transition-all duration-300 lg:col-span-2`}>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle>Fee Records</CardTitle>
-                                    <Button
-                                        onClick={handleAddRecord}
-                                        size="sm"
-                                        disabled={isLoading}
-                                    >
-                                        Add New Record
-                                    </Button>
+                                    <div className="flex flex-col gap-4 w-full">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle>Fee Records</CardTitle>
+                                            <Button
+                                                onClick={handleAddRecord}
+                                                size="sm"
+                                                disabled={isLoading}
+                                                className="rounded-lg"
+                                            >
+                                                Add New Record
+                                            </Button>
+                                        </div>
+                                        
+                                        {/* Tabs Design */}
+                                        <div className="flex border-b border-gray-200">
+                                            <button
+                                                onClick={() => setActiveTab("pending")}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+                                                    activeTab === "pending" 
+                                                    ? "text-blue-600" 
+                                                    : "text-gray-500 hover:text-gray-700"
+                                                }`}
+                                            >
+                                                Pending
+                                                {activeTab === "pending" && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveTab("overdue")}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+                                                    activeTab === "overdue" 
+                                                    ? "text-blue-600" 
+                                                    : "text-gray-500 hover:text-gray-700"
+                                                }`}
+                                            >
+                                                Overdue
+                                                {activeTab === "overdue" && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveTab("paid")}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+                                                    activeTab === "paid" 
+                                                    ? "text-blue-600" 
+                                                    : "text-gray-500 hover:text-gray-700"
+                                                }`}
+                                            >
+                                                Paid
+                                                {activeTab === "paid" && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveTab("all")}
+                                                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+                                                    activeTab === "all" 
+                                                    ? "text-blue-600" 
+                                                    : "text-gray-500 hover:text-gray-700"
+                                                }`}
+                                            >
+                                                All Records
+                                                {activeTab === "all" && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
+                                    {/* Overdue Alert for Pending Tab */}
+                                    {activeTab === "pending" && overdueInPendingCount > 0 && (
+                                        <Alert className="border-orange-200 bg-orange-50 mb-4">
+                                            <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                            <AlertDescription className="text-orange-800 flex items-center justify-between">
+                                                <span>
+                                                    You have <strong>{overdueInPendingCount}</strong> overdue record(s) in pending status.
+                                                </span>
+                                                <Button
+                                                    onClick={handleMarkOverdue}
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100 rounded-lg"
+                                                >
+                                                    Mark as Overdue
+                                                </Button>
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     {/* Filters and Search */}
-                                    <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                                    <div className="flex flex-col sm:flex-row gap-4 mb-4 mt-2">
                                         <div className="flex-1">
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -232,25 +413,24 @@ const FeeRecords: React.FC = () => {
                                                     placeholder="Search by reference number or payer name..."
                                                     value={searchTerm}
                                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                                    className="pl-10"
+                                                    className="pl-10 rounded-lg"
                                                 />
                                             </div>
                                         </div>
                                         <select
-                                            value={statusFilter}
-                                            onChange={(e) => setStatusFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
+                                            value={yearFilter}
+                                            onChange={(e) => setYearFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
+                                            className="px-3 py-2 border rounded-lg text-sm"
                                         >
-                                            <option value="all">All Status</option>
-                                            <option value="paid">Paid</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="overdue">Overdue</option>
-                                            <option value="cancelled">Cancelled</option>
+                                            {yearOptions.map(year => (
+                                                <option key={year} value={year}>{year}</option>
+                                            ))}
+                                            <option value="all">All Years</option>
                                         </select>
                                         <select
                                             value={typeFilter}
                                             onChange={(e) => setTypeFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-md"
+                                            className="px-3 py-2 border rounded-lg text-sm"
                                         >
                                             <option value="all">All Types</option>
                                             <option value="cutting_permit">Cutting Permit</option>
@@ -291,9 +471,9 @@ const FeeRecords: React.FC = () => {
                                                 mode="edit"
                                                 initialData={selectedRowForDetails}
                                                 onSave={(data) => {
-                                                    // Drop id from payload, keep only updatable fields
-                                                    const { id, ...rest } = data || {};
-                                                    fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data: rest });
+                                                    // Only send updateable fields, exclude auto-generated and readonly fields
+                                                    const { id, reference_number, or_number, created_at, updated_at, ...updateData } = data || {};
+                                                    fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data: updateData });
                                                     setIsEditingDetails(false);
                                                 }}
                                                 onCancel={() => setIsEditingDetails(false)}
@@ -313,9 +493,9 @@ const FeeRecords: React.FC = () => {
                                                 {selectedRowForDetails.payment_date && (
                                                     <div className="flex justify-between"><span className="text-gray-600">Payment Date</span><span className="font-medium">{selectedRowForDetails.payment_date}</span></div>
                                                 )}
-                                                <div className="pt-3 border-t space-y-2">
-                                                    <Button variant="outline" size="sm" onClick={handleStartInlineEdit}>Edit</Button>
-                                                    <Button variant="outline" size="sm" className="text-red-600" onClick={handleDeleteSelected}>Delete</Button>
+                                                <div className="pt-3 border-t flex gap-2">
+                                                    <Button variant="outline" size="sm" onClick={handleStartInlineEdit} className="rounded-lg">Edit</Button>
+                                                    <Button variant="outline" size="sm" className="text-red-600 rounded-lg" onClick={handleDeleteSelected}>Delete</Button>
                                                 </div>
                                             </div>
                                         )
@@ -359,16 +539,85 @@ const FeeRecords: React.FC = () => {
 
             {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Add Fee Record</DialogTitle>
+                <DialogContent className="sm:max-w-lg rounded-2xl border-none p-0 overflow-hidden max-h-[90vh] flex flex-col">
+                    <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
+                        <DialogTitle className="text-xl font-bold text-white">Add Fee Record</DialogTitle>
+                        <DialogDescription className="text-blue-100/80">
+                            Enter the details of the new fee record to add to the database.
+                        </DialogDescription>
                     </DialogHeader>
-                    <FeeRecordForm
-                        mode="add"
-                        initialData={selectedRecord}
-                        onSave={handleFormSave}
-                        onCancel={handleFormCancel}
-                    />
+                    <div className="p-6 bg-white overflow-y-auto">
+                        <FeeRecordForm
+                            mode="add"
+                            initialData={selectedRecord}
+                            onSave={handleFormSave}
+                            onCancel={handleFormCancel}
+                        />
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl border-none p-0 overflow-hidden">
+                    <DialogHeader className="bg-red-600 p-6 m-0 border-none">
+                        <DialogTitle className="text-xl font-bold text-white">Confirm Delete</DialogTitle>
+                        <DialogDescription className="text-red-100/80">
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-6 bg-white space-y-4">
+                        <p className="text-sm text-gray-700">
+                            Are you sure you want to delete this fee record?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsDeleteDialogOpen(false)}
+                                className="rounded-lg"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={confirmDelete}
+                                className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                            >
+                                Delete
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Mark Overdue Confirmation Dialog */}
+            <Dialog open={isMarkOverdueDialogOpen} onOpenChange={setIsMarkOverdueDialogOpen}>
+                <DialogContent className="sm:max-w-md rounded-2xl border-none p-0 overflow-hidden">
+                    <DialogHeader className="bg-orange-600 p-6 m-0 border-none">
+                        <DialogTitle className="text-xl font-bold text-white">Mark as Overdue</DialogTitle>
+                        <DialogDescription className="text-orange-100/80">
+                            Update status for overdue records.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-6 bg-white space-y-4">
+                        <p className="text-sm text-gray-700">
+                            Mark <strong>{overdueCount}</strong> overdue record(s) as OVERDUE?
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsMarkOverdueDialogOpen(false)}
+                                className="rounded-lg"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={confirmMarkOverdue}
+                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-lg"
+                            >
+                                Mark as Overdue
+                            </Button>
+                        </div>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

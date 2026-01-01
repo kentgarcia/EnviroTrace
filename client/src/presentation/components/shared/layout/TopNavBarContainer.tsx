@@ -74,16 +74,16 @@ function getMenuItems(
         path: `${basePath}/overview`,
       },
       {
-        label: "Requests",
-        path: `${basePath}/monitoring-requests`,
+        label: "Tree Registry",
+        path: `${basePath}/tree-inventory`,
       },
       {
-        label: "Trees",
-        path: `${basePath}/tree-management`,
+        label: "Tree Requests",
+        path: `${basePath}/tree-requests`,
       },
       {
-        label: "Planting",
-        path: `${basePath}/planting-records`,
+        label: "Greening Projects",
+        path: `${basePath}/greening-projects`,
       },
       {
         label: "Fees",

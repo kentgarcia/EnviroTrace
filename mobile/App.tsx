@@ -2,10 +2,12 @@ import React, { useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { PaperProvider } from "react-native-paper";
 import PaperIcon from "./src/components/icons/PaperIcon";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { AppState, AppStateStatus } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore } from "./src/core/stores/authStore";
 import { database } from "./src/core/database/database";
+import smartCache from "./src/core/cache/smartCache";
 import AppNavigator from "./src/navigation/AppNavigator";
 import theme from "./src/core/theme/theme";
 import { LoadingScreen } from "./src/components/LoadingScreen";
@@ -17,13 +19,23 @@ import {
   Poppins_600SemiBold,
 } from "@expo-google-fonts/poppins";
 
+// Configure focus manager for React Query to work with React Native
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener("change", (state: AppStateStatus) => {
+    handleFocus(state === "active");
+  });
+  return () => subscription.remove();
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 2 * 60 * 1000, // 2 minutes - data is fresh for 2 min
+      gcTime: 30 * 60 * 1000, // 30 minutes - keep in memory cache
       retry: 2,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true, // Refetch when app comes to foreground
+      refetchOnReconnect: true, // Refetch when network reconnects
+      networkMode: "offlineFirst", // Return cached data first, then fetch
     },
   },
 });
@@ -42,6 +54,10 @@ export default function App() {
         console.log("Initializing database...");
         await database.init();
         console.log("Database initialized successfully");
+
+        // Clean up expired cache entries
+        console.log("Cleaning up expired cache...");
+        await smartCache.cleanup();
 
         console.log("Checking authentication...");
         await checkAuth();

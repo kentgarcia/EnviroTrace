@@ -10,12 +10,122 @@ from app.schemas.tree_management_schemas import (
 
 router = APIRouter()
 
+@router.get("/stats")
+def get_tree_management_stats(db: Session = Depends(get_db)):
+    """
+    Get statistics for tree management requests.
+    Returns counts by status, total trees affected, and fees collected.
+    """
+    import json
+    from sqlalchemy import func
+    from app.models.urban_greening_models import TreeManagementRequest as TreeManagementRequestModel, FeeRecord
+    
+    # Get all requests
+    all_requests = db.query(TreeManagementRequestModel).all()
+    
+    # Count by status
+    status_counts = db.query(
+        TreeManagementRequestModel.status,
+        func.count(TreeManagementRequestModel.id)
+    ).group_by(TreeManagementRequestModel.status).all()
+    
+    by_status = {status: count for status, count in status_counts}
+    
+    # Count by type
+    type_counts = db.query(
+        TreeManagementRequestModel.request_type,
+        func.count(TreeManagementRequestModel.id)
+    ).group_by(TreeManagementRequestModel.request_type).all()
+    
+    by_type = [{
+        "type": req_type,
+        "count": count
+    } for req_type, count in type_counts]
+    
+    # Count total trees affected (linked_tree_ids + new_trees)
+    trees_affected = 0
+    for req in all_requests:
+        # Count linked trees from inventory
+        if req.linked_tree_ids:
+            try:
+                linked_ids = json.loads(req.linked_tree_ids) if isinstance(req.linked_tree_ids, str) else req.linked_tree_ids
+                if isinstance(linked_ids, list):
+                    trees_affected += len(linked_ids)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        
+        # Count new trees not in inventory
+        if req.new_trees:
+            try:
+                new_tree_list = json.loads(req.new_trees) if isinstance(req.new_trees, str) else req.new_trees
+                if isinstance(new_tree_list, list):
+                    trees_affected += len(new_tree_list)
+            except (json.JSONDecodeError, TypeError):
+                pass
+    
+    # Calculate fees collected (only paid fees)
+    # Fee records with type cutting_permit, pruning_permit, or violation_fine
+    fees_collected = 0
+    fee_records = db.query(FeeRecord).filter(
+        FeeRecord.status == "paid",
+        FeeRecord.type.in_(["cutting_permit", "pruning_permit", "violation_fine"])
+    ).all()
+    
+    for fee in fee_records:
+        if fee.amount:
+            fees_collected += float(fee.amount)
+    
+    return {
+        "total_requests": len(all_requests),
+        "filed": by_status.get("filed", 0),
+        "on_hold": by_status.get("on_hold", 0),
+        "for_signature": by_status.get("for_signature", 0),
+        "payment_pending": by_status.get("payment_pending", 0),
+        "by_type": by_type,
+        "by_status": [
+            {"status": status, "count": count}
+            for status, count in by_status.items()
+        ],
+        "trees_affected": trees_affected,
+        "fees_collected": fees_collected,
+    }
+
 @router.get("/", response_model=List[TreeManagementRequest])
-def read_tree_management_requests(db: Session = Depends(get_db), skip: int = 0, limit: int = 100):
+def read_tree_management_requests(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    year: int = Query(None, description="Filter by year (extracted from request_date)"),
+    status: str = Query(None, description="Filter by status"),
+    type: str = Query(None, description="Filter by request type"),
+    search: str = Query(None, description="Search in requester name, address, or request number")
+):
     """
-    Retrieve tree management requests.
+    Retrieve tree management requests with optional filters.
     """
-    requests = tree_management_request.get_multi_sync(db, skip=skip, limit=limit)
+    # Start with base query
+    if year:
+        from datetime import date as dt_date
+        start_date = dt_date(year, 1, 1)
+        end_date = dt_date(year, 12, 31)
+        requests = tree_management_request.get_by_date_range(db, start_date=start_date, end_date=end_date)
+    else:
+        requests = tree_management_request.get_multi_sync(db, skip=skip, limit=limit)
+    
+    # Apply filters
+    if status:
+        requests = [r for r in requests if r.status == status]
+    if type:
+        requests = [r for r in requests if r.request_type == type]
+    if search:
+        search_lower = search.lower()
+        requests = [
+            r for r in requests
+            if search_lower in (r.request_number or "").lower()
+            or search_lower in (r.requester_name or "").lower()
+            or search_lower in (r.property_address or "").lower()
+        ]
+    
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
 @router.get("/by-month", response_model=List[TreeManagementRequest])
@@ -42,29 +152,8 @@ def read_tree_management_requests_by_month(
 def create_tree_management_request(request_in: TreeManagementRequestCreate, db: Session = Depends(get_db)):
     """
     Create new tree management request.
+    Request number will be auto-generated in TR{YEAR}-{sequential} format.
     """
-    import random
-    
-    # Generate a unique request number in format 2XXXXX if not provided or empty
-    if not request_in.request_number or request_in.request_number.strip() == "":
-        max_attempts = 100
-        for attempt in range(max_attempts):
-            # Generate 6-digit number starting with 2 (200000 to 299999)
-            request_number = f"2{random.randint(10000, 99999)}"
-            
-            # Check if this number already exists
-            existing = tree_management_request.get_by_request_number(db, request_number=request_number)
-            if not existing:
-                request_in.request_number = request_number
-                break
-        else:
-            raise HTTPException(status_code=500, detail="Failed to generate unique request number after multiple attempts")
-    else:
-        # Check if provided request number already exists
-        existing = tree_management_request.get_by_request_number(db, request_number=request_in.request_number)
-        if existing:
-            raise HTTPException(status_code=400, detail="Request number already exists")
-    
     created_obj = tree_management_request.create_sync(db=db, obj_in=request_in)
     return TreeManagementRequest.from_db_model(created_obj)
 

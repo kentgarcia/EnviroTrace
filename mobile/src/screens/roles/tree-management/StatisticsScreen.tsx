@@ -17,10 +17,9 @@ import {
     ProgressBar,
     Text,
 } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
-import StandardHeader from "../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../components/layout/ScreenLayout";
 import { treeManagementService, TreeManagementRequest } from "../../../core/api/tree-management-service";
 
 export default function StatisticsScreen() {
@@ -170,15 +169,17 @@ export default function StatisticsScreen() {
     };
 
     return (
-        <View style={styles.root}>
-            <StandardHeader
-                title="Statistics"
-                titleSize={22}
-                showBack={true}
-                onBack={() => navigation.goBack()}
-            />
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                <ScrollView
+        <ScreenLayout
+            header={{
+                title: "Statistics",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+                showBack: true,
+                onBack: () => navigation.goBack(),
+            }}
+        >
+            <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
@@ -442,20 +443,11 @@ export default function StatisticsScreen() {
                         </>
                     )}
                 </ScrollView>
-            </SafeAreaView>
-        </View>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    safeArea: {
-        flex: 1,
-        backgroundColor: "transparent",
-    },
     scrollView: {
         flex: 1,
     },

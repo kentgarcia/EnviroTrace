@@ -1,7 +1,6 @@
 import React from "react";
 import { View, StyleSheet, ScrollView, Text, Image } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import StandardHeader from "../../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../../components/layout/ScreenLayout";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "../../../../components/icons/Icon";
 
@@ -15,18 +14,19 @@ export default function AboutScreen() {
     ];
 
     return (
-        <>
-            <StandardHeader
-                title="About"
-                subtitle="App Information"
-                backgroundColor="rgba(255, 255, 255, 0.95)"
-                statusBarStyle="dark"
-                titleSize={22}
-                subtitleSize={12}
-                iconSize={20}
-                showBack={true}
-            />
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <ScreenLayout
+            header={{
+                title: "About",
+                subtitle: "App Information",
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                statusBarStyle: "dark",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+                showBack: true,
+                showProfileAction: false,
+            }}
+        >
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
@@ -85,16 +85,11 @@ export default function AboutScreen() {
                     {/* Bottom Spacer */}
                     <View style={{ height: 100 }} />
                 </ScrollView>
-            </SafeAreaView>
-        </>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: "#F9FAFB",
-    },
     scrollView: {
         flex: 1,
     },

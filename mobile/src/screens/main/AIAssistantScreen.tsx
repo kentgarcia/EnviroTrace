@@ -9,12 +9,10 @@ import {
     KeyboardAvoidingView,
     Platform,
     ActivityIndicator,
-    StatusBar,
     Image,
     Modal,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
 import { vehicleService } from "../../core/api/vehicle-service";
 import { treeManagementService } from "../../core/api/tree-management-service";
@@ -22,6 +20,7 @@ import DataDisplay, { ActionButtons } from "../../components/chatbot/DataDisplay
 import Icon from "../../components/icons/Icon";
 import MarkdownText from "../../components/MarkdownText";
 import { useNavigation } from "@react-navigation/native";
+import ScreenLayout from "../../components/layout/ScreenLayout";
 
 interface CommandOption {
     id: string;
@@ -261,47 +260,34 @@ export default function AIAssistantScreen() {
 
     return (
         <>
-            <View style={styles.root}>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-
-                {/* Background Image - same as other screens */}
-                <View style={styles.backgroundImageWrapper} pointerEvents="none">
-                    <Image
-                        source={require("../../../assets/images/bg_login.png")}
-                        style={styles.backgroundImage}
-                        resizeMode="cover"
-                        accessibilityIgnoresInvertColors
-                    />
-                </View>
-
-                <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <Icon name="ChevronRight" size={20} color="#64748B" style={{ transform: [{ rotate: "180deg" }] }} />
-                        </TouchableOpacity>
-                        <View style={styles.headerCenter}>
-                            <Image
-                                source={require("../../../assets/images/logo_app.png")}
-                                style={styles.headerLogo}
-                                resizeMode="contain"
-                            />
-                            <View style={styles.headerTextContainer}>
-                                <Text style={styles.headerTitle}>AI Assistant</Text>
-                                <View style={styles.headerStatus}>
-                                    <View style={styles.headerStatusDot} />
-                                    <Text style={styles.headerStatusText}>Online</Text>
-                                </View>
+            <ScreenLayout edges={["top", "left", "right"]}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Icon name="ChevronRight" size={20} color="#64748B" style={{ transform: [{ rotate: "180deg" }] }} />
+                    </TouchableOpacity>
+                    <View style={styles.headerCenter}>
+                        <Image
+                            source={require("../../../assets/images/logo_app.png")}
+                            style={styles.headerLogo}
+                            resizeMode="contain"
+                        />
+                        <View style={styles.headerTextContainer}>
+                            <Text style={styles.headerTitle}>AI Assistant</Text>
+                            <View style={styles.headerStatus}>
+                                <View style={styles.headerStatusDot} />
+                                <Text style={styles.headerStatusText}>Online</Text>
                             </View>
                         </View>
-                        <View style={{ width: 36 }} />
                     </View>
+                    <View style={{ width: 36 }} />
+                </View>
 
-                    <KeyboardAvoidingView
-                        style={styles.container}
-                        behavior={Platform.OS === "ios" ? "padding" : "height"}
-                        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-                    >
+                <KeyboardAvoidingView
+                    style={styles.container}
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                >
                         {/* Messages */}
                         <ScrollView
                             ref={scrollViewRef}
@@ -411,87 +397,63 @@ export default function AIAssistantScreen() {
                             </View>
                         </View>
                     </KeyboardAvoidingView>
-                </SafeAreaView>
+            </ScreenLayout>
 
-                {/* Command Menu Modal */}
-                <Modal
-                    visible={showCommandMenu}
-                    transparent={true}
-                    animationType="fade"
-                    onRequestClose={() => setShowCommandMenu(false)}
+            {/* Command Menu Modal */}
+            <Modal
+                visible={showCommandMenu}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowCommandMenu(false)}
+            >
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowCommandMenu(false)}
                 >
-                    <TouchableOpacity
-                        style={styles.modalOverlay}
-                        activeOpacity={1}
-                        onPress={() => setShowCommandMenu(false)}
-                    >
-                        <View style={styles.commandMenuContainer}>
-                            <View style={styles.commandMenuHeader}>
-                                <Icon name="Slash" size={20} color="#3A5A7A" />
-                                <Text style={styles.commandMenuTitle}>Quick Commands</Text>
-                                <TouchableOpacity onPress={() => setShowCommandMenu(false)}>
-                                    <Icon name="X" size={20} color="#6B7280" />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView
-                                style={styles.commandMenuScroll}
-                                showsVerticalScrollIndicator={false}
-                            >
-                                {commandOptions.map((option) => (
-                                    <TouchableOpacity
-                                        key={option.id}
-                                        style={styles.commandOption}
-                                        onPress={() => handleCommandSelect(option)}
-                                    >
-                                        <View style={styles.commandOptionIcon}>
-                                            <Icon name={option.icon} size={20} color="#3A5A7A" />
-                                        </View>
-                                        <View style={styles.commandOptionContent}>
-                                            <Text style={styles.commandOptionLabel}>
-                                                {option.label}
-                                            </Text>
-                                            {option.description && (
-                                                <Text style={styles.commandOptionDescription}>
-                                                    {option.description}
-                                                </Text>
-                                            )}
-                                        </View>
-                                        <Icon name="ChevronRight" size={16} color="#9CA3AF" />
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
+                    <View style={styles.commandMenuContainer}>
+                        <View style={styles.commandMenuHeader}>
+                            <Icon name="Slash" size={20} color="#3A5A7A" />
+                            <Text style={styles.commandMenuTitle}>Quick Commands</Text>
+                            <TouchableOpacity onPress={() => setShowCommandMenu(false)}>
+                                <Icon name="X" size={20} color="#6B7280" />
+                            </TouchableOpacity>
                         </View>
-                    </TouchableOpacity>
-                </Modal>
-            </View>
+                        <ScrollView
+                            style={styles.commandMenuScroll}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {commandOptions.map((option) => (
+                                <TouchableOpacity
+                                    key={option.id}
+                                    style={styles.commandOption}
+                                    onPress={() => handleCommandSelect(option)}
+                                >
+                                    <View style={styles.commandOptionIcon}>
+                                        <Icon name={option.icon} size={20} color="#3A5A7A" />
+                                    </View>
+                                    <View style={styles.commandOptionContent}>
+                                        <Text style={styles.commandOptionLabel}>
+                                            {option.label}
+                                        </Text>
+                                        {option.description && (
+                                            <Text style={styles.commandOptionDescription}>
+                                                {option.description}
+                                            </Text>
+                                        )}
+                                    </View>
+                                    <Icon name="ChevronRight" size={16} color="#9CA3AF" />
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    backgroundImageWrapper: {
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    backgroundImage: {
-        width: "100%",
-        height: "100%",
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    safeArea: {
-        flex: 1,
-    },
     header: {
         flexDirection: "row",
         alignItems: "center",
@@ -590,11 +552,6 @@ const styles = StyleSheet.create({
         borderBottomLeftRadius: 4,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     userBubble: {
         backgroundColor: "rgba(255, 255, 255, 0.9)",

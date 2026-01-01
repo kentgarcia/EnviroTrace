@@ -11,23 +11,31 @@ import {
     AddRequestScreen,
     StatisticsScreen,
 } from "../screens/roles/tree-management";
+import TreeInventoryScreen from "../screens/roles/tree-management/TreeInventoryScreen";
+import GreeningProjectsScreen from "../screens/roles/tree-management/GreeningProjectsScreen";
+import FeeRecordsScreen from "../screens/roles/tree-management/FeeRecordsScreen";
+import MapViewScreen from "../screens/roles/tree-management/MapViewScreen";
 
 // Import shared screens (profile, etc.)
 import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
-import OfflineDataScreen from "../screens/roles/gov-emission/profile/OfflineDataScreen";
-import SyncSettingsScreen from "../screens/roles/gov-emission/profile/SyncSettingsScreen";
-import CustomBottomTabBar from "../components/layout/CustomBottomTabBar";
+import CustomBottomTabBar from "../components/layout/BottomTabBar";
 
 export type TreeManagementStackParamList = {
+    MainTabs: undefined;
+    Profile: undefined;
     TreeManagementOverview: undefined;
+    TreeInventory: undefined;
+    MapView: undefined;
     TreeRequests: undefined;
+    GreeningProjects: undefined;
+    FeeRecords: undefined;
     AddRequest: undefined;
     Statistics: undefined;
-    Profile: undefined;
     RequestDetail: { requestId: string };
 };
 
 const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator();
 const Stack = createNativeStackNavigator();
 
 function TreeRequestsStack() {
@@ -67,17 +75,7 @@ function StatisticsStack() {
     );
 }
 
-function ProfileStack() {
-    return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="ProfileHome" component={ProfileScreen} />
-            <Stack.Screen name="OfflineData" component={OfflineDataScreen} />
-            <Stack.Screen name="SyncSettings" component={SyncSettingsScreen} />
-        </Stack.Navigator>
-    );
-}
-
-export default function TreeManagementNavigator() {
+function MainTabs() {
     return (
         <Tab.Navigator
             tabBar={(props) => <CustomBottomTabBar {...props} />}
@@ -87,19 +85,25 @@ export default function TreeManagementNavigator() {
 
                     switch (route.name) {
                         case "TreeManagementOverview":
-                            iconName = "dashboard";
+                            iconName = "LayoutDashboard";
+                            break;
+                        case "TreeInventory":
+                            iconName = "Trees";
+                            break;
+                        case "MapView":
+                            iconName = "Map";
                             break;
                         case "TreeRequests":
-                            iconName = "assignment";
+                            iconName = "ClipboardList";
                             break;
-                        case "Statistics":
-                            iconName = "bar-chart";
+                        case "GreeningProjects":
+                            iconName = "Leaf";
                             break;
-                        case "Profile":
-                            iconName = "person";
+                        case "FeeRecords":
+                            iconName = "Receipt";
                             break;
                         default:
-                            iconName = "help";
+                            iconName = "HelpCircle";
                     }
 
                     return <Icon name={iconName} size={size} color={color} />;
@@ -123,8 +127,26 @@ export default function TreeManagementNavigator() {
                 name="TreeManagementOverview"
                 component={OverviewScreen}
                 options={{
-                    title: "Tree Management Dashboard",
+                    title: "Urban Greening Dashboard",
                     tabBarLabel: "Overview",
+                    headerShown: false,
+                }}
+            />
+            <Tab.Screen
+                name="TreeInventory"
+                component={TreeInventoryScreen}
+                options={{
+                    title: "Tree Inventory",
+                    tabBarLabel: "Inventory",
+                    headerShown: false,
+                }}
+            />
+            <Tab.Screen
+                name="MapView"
+                component={MapViewScreen}
+                options={{
+                    title: "Map View",
+                    tabBarLabel: "Map",
                     headerShown: false,
                 }}
             />
@@ -138,23 +160,39 @@ export default function TreeManagementNavigator() {
                 }}
             />
             <Tab.Screen
-                name="Statistics"
-                component={StatisticsStack}
+                name="GreeningProjects"
+                component={GreeningProjectsScreen}
                 options={{
-                    title: "Statistics & Reports",
-                    tabBarLabel: "Statistics",
+                    title: "Greening Projects",
+                    tabBarLabel: "Projects",
                     headerShown: false,
                 }}
             />
             <Tab.Screen
-                name="Profile"
-                component={ProfileStack}
+                name="FeeRecords"
+                component={FeeRecordsScreen}
                 options={{
-                    title: "Profile & Settings",
-                    tabBarLabel: "Profile",
+                    title: "Fee Records",
+                    tabBarLabel: "Fees",
                     headerShown: false,
                 }}
             />
         </Tab.Navigator>
+    );
+}
+
+export default function TreeManagementNavigator() {
+    return (
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+            <RootStack.Screen name="MainTabs" component={MainTabs} />
+            <RootStack.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{
+                    presentation: "modal",
+                    headerShown: false,
+                }}
+            />
+        </RootStack.Navigator>
     );
 }

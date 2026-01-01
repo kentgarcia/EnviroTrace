@@ -14,12 +14,15 @@ import HelpScreen from "../screens/roles/gov-emission/profile/HelpScreen";
 import VehicleDetailScreen from "../screens/roles/gov-emission/vehicles/VehicleDetailScreen";
 import AddVehicleScreen from "../screens/roles/gov-emission/vehicles/AddVehicleScreen";
 import AddTestScreen from "../screens/roles/gov-emission/test/AddTestScreen";
-import CustomBottomTabBar from "../components/layout/CustomBottomTabBar";
+import ReportsScreen from "../screens/roles/gov-emission/reports/ReportsScreen";
+import CustomBottomTabBar from "../components/layout/BottomTabBar";
 
 export type MainStackParamList = {
+  MainTabs: undefined;
   Overview: undefined;
   Vehicles: undefined;
   Testing: undefined;
+  Reports: undefined;
   Offices: undefined;
   Profile: undefined;
   VehicleDetail: { vehicleId: string };
@@ -28,6 +31,7 @@ export type MainStackParamList = {
 };
 
 const Tab = createBottomTabNavigator();
+const RootStack = createNativeStackNavigator();
 const Stack = createNativeStackNavigator();
 
 function VehiclesStack() {
@@ -106,7 +110,7 @@ function OfficesStack() {
   );
 }
 
-export default function MainNavigator() {
+function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <CustomBottomTabBar {...props} />}
@@ -116,32 +120,30 @@ export default function MainNavigator() {
 
           switch (route.name) {
             case "Overview":
-              iconName = "dashboard";
+              iconName = "LayoutDashboard";
               break;
             case "Vehicles":
-              iconName = "directions-car";
+              iconName = "Car";
               break;
             case "Testing":
-              iconName = "assignment";
+              iconName = "ClipboardCheck";
               break;
             case "Offices":
-              iconName = "business";
+              iconName = "Building2";
               break;
-            case "Profile":
-              iconName = "person";
+            case "Reports":
+              iconName = "FileText";
               break;
             default:
-              iconName = "help";
+              iconName = "HelpCircle";
           }
 
-          // Icon uses given color; our custom bar will pass theme primary for active
           return <Icon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: "#003595",
-        tabBarInactiveTintColor: "#9E9E9E",
-        // Style handled by custom bar
+        tabBarInactiveTintColor: "#6B7280",
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: "500",
         },
         headerStyle: {
@@ -214,20 +216,30 @@ export default function MainNavigator() {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileStack}
-        options={({ route }) => {
-          const routeName = getFocusedRouteNameFromRoute(route) ?? "ProfileHome";
-          return {
-            title: "Profile & Settings",
-            tabBarLabel: "Profile",
-            headerShown: false,
-            tabBarStyle: routeName === "OfflineData" || routeName === "SyncSettings"
-              ? { display: "none" }
-              : undefined,
-          };
+        name="Reports"
+        component={ReportsScreen}
+        options={{
+          title: "Reports & Analytics",
+          tabBarLabel: "Reports",
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function MainNavigator() {
+  return (
+    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+      <RootStack.Screen name="MainTabs" component={MainTabs} />
+      <RootStack.Screen 
+        name="Profile" 
+        component={ProfileStack}
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
+      />
+    </RootStack.Navigator>
   );
 }

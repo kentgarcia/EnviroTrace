@@ -20,10 +20,10 @@ import {
     TextInput,
     Text,
 } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import StandardHeader from "../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../components/layout/ScreenLayout";
+import { cardStyles } from "../../../styles/cardStyles";
 
 // Mock data - replace with actual API calls
 const mockRequestDetails = {
@@ -168,32 +168,35 @@ export default function RequestDetailScreen() {
 
     if (loading && !request) {
         return (
-            <View style={styles.root}>
-                <StandardHeader
-                    title="Request Details"
-                    titleSize={22}
-                    showBack={true}
-                    onBack={() => navigation.goBack()}
-                />
-                <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                    <View style={styles.loadingContainer}>
-                        <Text style={styles.loadingText}>Loading request details...</Text>
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenLayout
+                header={{
+                    title: "Request Details",
+                    titleSize: 22,
+                    subtitleSize: 12,
+                    iconSize: 20,
+                    showBack: true,
+                    onBack: () => navigation.goBack(),
+                }}
+            >
+                <View style={styles.loadingContainer}>
+                    <Text style={styles.loadingText}>Loading request details...</Text>
+                </View>
+            </ScreenLayout>
         );
     }
 
     return (
-        <View style={styles.root}>
-            <StandardHeader
-                title="Request Details"
-                titleSize={22}
-                showBack={true}
-                onBack={() => navigation.goBack()}
-            />
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                <ScrollView
+        <ScreenLayout
+            header={{
+                title: "Request Details",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+                showBack: true,
+                onBack: () => navigation.goBack(),
+            }}
+        >
+            <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
@@ -374,20 +377,11 @@ export default function RequestDetailScreen() {
                         </View>
                     </Modal>
                 </Portal>
-            </SafeAreaView>
-        </View>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    safeArea: {
-        flex: 1,
-        backgroundColor: "transparent",
-    },
     scrollView: {
         flex: 1,
     },
@@ -457,10 +451,7 @@ const styles = StyleSheet.create({
         marginHorizontal: 0,
     },
     sectionTitle: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#111827",
-        letterSpacing: -0.3,
+        ...cardStyles.cardTitle,
         marginBottom: 16,
     },
     infoRow: {

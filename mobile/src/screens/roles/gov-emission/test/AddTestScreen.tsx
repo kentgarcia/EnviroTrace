@@ -312,10 +312,9 @@ export default function AddTestScreen() {
       <StandardHeader
         title="Record Emission Test"
         showBack
-        backgroundColor="rgba(255, 255, 255, 0.95)"
+        backgroundColor="#FFFFFF"
         statusBarStyle="dark"
-        titleSize={22}
-        subtitleSize={12}
+        titleSize={20}
         iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
@@ -323,6 +322,7 @@ export default function AddTestScreen() {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           {/* Vehicle Selection Section */}
           <View style={styles.section}>
@@ -359,19 +359,19 @@ export default function AddTestScreen() {
                   disabled={isProcessingPlate}
                 >
                   <View style={styles.secondaryActionIcon}>
-                    <Icon name="Search" size={20} color="#FFFFFF" />
+                    <Icon name="Search" size={20} color="#2563EB" />
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.secondaryActionTitle}>Search Manually</Text>
                     <Text style={styles.secondaryActionSubtitle}>Enter plate number</Text>
                   </View>
-                  <Icon name="ChevronRight" size={20} color="#9CA3AF" />
+                  <Icon name="ChevronRight" size={20} color="#64748B" />
                 </TouchableOpacity>
 
                 {/* Processing Indicator */}
                 {isProcessingPlate && (
                   <View style={styles.processingContainer}>
-                    <ActivityIndicator size="small" color="#111827" />
+                    <ActivityIndicator size="small" color="#2563EB" />
                     <Text style={styles.processingText}>Processing...</Text>
                   </View>
                 )}
@@ -380,19 +380,19 @@ export default function AddTestScreen() {
               <View style={styles.card}>
                 <View style={styles.selectedVehicleCard}>
                   <View style={styles.vehicleIconContainer}>
-                    <Icon name="Car" size={28} color="#111827" />
+                    <Icon name="Car" size={28} color="#2563EB" />
                   </View>
                   <View style={styles.selectedVehicleInfo}>
                     <View style={styles.plateRow}>
-                      <Icon name="Hash" size={16} color="#6B7280" />
+                      <Icon name="Hash" size={16} color="#64748B" />
                       <Text style={styles.plateNumber}>{recognizedVehicle.plate_number}</Text>
                     </View>
                     <View style={styles.infoRow}>
-                      <Icon name="User" size={14} color="#6B7280" />
+                      <Icon name="User" size={14} color="#64748B" />
                       <Text style={styles.infoText}>{recognizedVehicle.driver_name}</Text>
                     </View>
                     <View style={styles.infoRow}>
-                      <Icon name="Car" size={14} color="#6B7280" />
+                      <Icon name="Car" size={14} color="#64748B" />
                       <Text style={styles.infoText}>
                         {recognizedVehicle.vehicle_type} • {recognizedVehicle.engine_type}
                       </Text>
@@ -412,19 +412,19 @@ export default function AddTestScreen() {
                 {preSelectedVehicle ? (
                   <View style={styles.selectedVehicleCard}>
                     <View style={styles.vehicleIconContainer}>
-                      <Icon name="Car" size={28} color="#02339C" />
+                      <Icon name="Car" size={28} color="#2563EB" />
                     </View>
                     <View style={styles.selectedVehicleInfo}>
                       <View style={styles.plateRow}>
-                        <Icon name="Hash" size={16} color="#6B7280" />
+                        <Icon name="Hash" size={16} color="#64748B" />
                         <Text style={styles.plateNumber}>{preSelectedVehicle.plate_number}</Text>
                       </View>
                       <View style={styles.infoRow}>
-                        <Icon name="User" size={14} color="#6B7280" />
+                        <Icon name="User" size={14} color="#64748B" />
                         <Text style={styles.infoText}>{preSelectedVehicle.driver_name || "Unknown driver"}</Text>
                       </View>
                       <View style={styles.infoRow}>
-                        <Icon name="Car" size={14} color="#6B7280" />
+                        <Icon name="Car" size={14} color="#64748B" />
                         <Text style={styles.infoText}>
                           {preSelectedVehicle.vehicle_type} • {preSelectedVehicle.engine_type}
                         </Text>
@@ -449,7 +449,7 @@ export default function AddTestScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Test Date</Text>
                 <View style={styles.inputContainer}>
-                  <Icon name="Calendar" size={18} color="#6B7280" />
+                  <Icon name="Calendar" size={18} color="#64748B" />
                   <PaperInput
                     value={date}
                     onChangeText={setDate}
@@ -458,6 +458,8 @@ export default function AddTestScreen() {
                     underlineColor="transparent"
                     activeUnderlineColor="transparent"
                     mode="flat"
+                    textColor="#0F172A"
+                    placeholderTextColor="#94A3B8"
                   />
                 </View>
               </View>
@@ -479,7 +481,7 @@ export default function AddTestScreen() {
                       selectedTextStyle={styles.dropdownSelectedText}
                       itemTextStyle={styles.dropdownItemText}
                       containerStyle={styles.dropdownListContainer}
-                      activeColor="#EEF2FF"
+                      activeColor="#EFF6FF"
                     />
                   </View>
                 </View>
@@ -497,6 +499,8 @@ export default function AddTestScreen() {
                       underlineColor="transparent"
                       activeUnderlineColor="transparent"
                       mode="flat"
+                      textColor="#0F172A"
+                      placeholderTextColor="#94A3B8"
                     />
                   </View>
                 </View>
@@ -517,7 +521,7 @@ export default function AddTestScreen() {
                     <Icon
                       name="CheckCircle"
                       size={16}
-                      color={result === "pass" ? "#16A34A" : "#6B7280"}
+                      color={result === "pass" ? "#16A34A" : "#64748B"}
                     />
                     <Text
                       style={[
@@ -540,7 +544,7 @@ export default function AddTestScreen() {
                     <Icon
                       name="XCircle"
                       size={16}
-                      color={result === "fail" ? "#DC2626" : "#6B7280"}
+                      color={result === "fail" ? "#DC2626" : "#64748B"}
                     />
                     <Text
                       style={[
@@ -563,7 +567,7 @@ export default function AddTestScreen() {
                     <Icon
                       name="HelpCircle"
                       size={16}
-                      color={result === "unknown" ? "#F59E0B" : "#6B7280"}
+                      color={result === "unknown" ? "#D97706" : "#64748B"}
                     />
                     <Text
                       style={[
@@ -591,6 +595,8 @@ export default function AddTestScreen() {
                     underlineColor="transparent"
                     activeUnderlineColor="transparent"
                     mode="flat"
+                    textColor="#0F172A"
+                    placeholderTextColor="#94A3B8"
                   />
                 </View>
               </View>
@@ -726,7 +732,7 @@ export default function AddTestScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   scrollView: {
     flex: 1,
@@ -738,50 +744,41 @@ const styles = StyleSheet.create({
 
   // Section Styles
   section: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#64748B",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginBottom: 12,
+    paddingLeft: 4,
   },
 
   // Card Styles
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
     padding: 16,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
   },
 
   // Primary Action Button (Scan Plate)
   primaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#111827",
-    borderRadius: 12,
+    backgroundColor: "#2563EB",
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
     gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   actionButtonIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
     alignItems: "center",
     justifyContent: "center",
@@ -790,11 +787,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   actionButtonTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   actionButtonSubtitle: {
     fontSize: 12,
@@ -812,11 +808,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#F1F5F9",
   },
   dividerText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: "#94A3B8",
     fontWeight: "700",
   },
 
@@ -824,31 +820,30 @@ const styles = StyleSheet.create({
   secondaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     padding: 16,
     gap: 12,
   },
   secondaryActionIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "#111827",
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryActionTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0F172A",
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   secondaryActionSubtitle: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#64748B",
     fontWeight: "500",
   },
 
@@ -862,7 +857,7 @@ const styles = StyleSheet.create({
   },
   processingText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "#64748B",
     fontWeight: "500",
   },
 
@@ -875,16 +870,16 @@ const styles = StyleSheet.create({
   vehicleIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(17, 24, 39, 0.1)",
+    borderRadius: 14,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "rgba(17, 24, 39, 0.15)",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
   },
   selectedVehicleInfo: {
     flex: 1,
-    gap: 6,
+    gap: 4,
   },
   plateRow: {
     flexDirection: "row",
@@ -892,10 +887,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   plateNumber: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
-    letterSpacing: -0.3,
+    color: "#0F172A",
+    letterSpacing: -0.5,
   },
   infoRow: {
     flexDirection: "row",
@@ -904,7 +899,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: "#6B7280",
+    color: "#64748B",
     fontWeight: "500",
   },
   changeButton: {
@@ -918,7 +913,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   preSelectedText: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#16A34A",
     fontWeight: "700",
   },
@@ -928,30 +923,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#374151",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#64748B",
     marginBottom: 8,
-    letterSpacing: -0.2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     paddingHorizontal: 12,
     gap: 8,
   },
   textInput: {
     flex: 1,
     backgroundColor: "transparent",
-    fontSize: 14,
-    color: "#111827",
+    fontSize: 15,
+    color: "#0F172A",
     paddingHorizontal: 0,
-    height: 44,
-    fontWeight: "500",
+    height: 48,
+    fontWeight: "600",
   },
   textarea: {
     height: 100,
@@ -969,42 +965,38 @@ const styles = StyleSheet.create({
 
   // Dropdown Styles
   dropdownContainer: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     paddingHorizontal: 12,
-    height: 44,
+    height: 48,
     justifyContent: "center",
   },
   dropdown: {
-    height: 44,
+    height: 48,
   },
   dropdownPlaceholder: {
-    fontSize: 13,
-    color: "#9CA3AF",
+    fontSize: 14,
+    color: "#94A3B8",
     fontWeight: "500",
   },
   dropdownSelectedText: {
-    fontSize: 13,
-    color: "#111827",
+    fontSize: 14,
+    color: "#0F172A",
     fontWeight: "600",
   },
   dropdownItemText: {
-    fontSize: 13,
-    color: "#111827",
+    fontSize: 14,
+    color: "#0F172A",
     fontWeight: "500",
   },
   dropdownListContainer: {
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     marginTop: 4,
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    overflow: "hidden",
   },
 
   // Result Chips
@@ -1017,35 +1009,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     paddingVertical: 12,
     gap: 6,
   },
   resultChipPass: {
     backgroundColor: "#DCFCE7",
     borderColor: "#16A34A",
-    borderWidth: 2,
   },
   resultChipFail: {
     backgroundColor: "#FEE2E2",
     borderColor: "#DC2626",
-    borderWidth: 2,
   },
   resultChipUnknown: {
     backgroundColor: "#FEF3C7",
-    borderColor: "#F59E0B",
-    borderWidth: 2,
+    borderColor: "#D97706",
   },
   resultChipText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#6B7280",
+    color: "#64748B",
   },
   resultChipTextActive: {
-    color: "#111827",
+    color: "#0F172A",
   },
 
   // Save Button
@@ -1053,32 +1042,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#111827",
-    borderRadius: 12,
+    backgroundColor: "#2563EB",
+    borderRadius: 14,
     paddingVertical: 16,
     gap: 8,
     marginTop: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   saveButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#94A3B8",
     opacity: 0.6,
   },
   saveButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: -0.2,
   },
 
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(15, 23, 42, 0.6)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1087,34 +1070,30 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 400,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
   },
   modalTitle: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: "800",
-    color: "#111827",
+    color: "#0F172A",
     marginBottom: 20,
     textAlign: "center",
     letterSpacing: -0.5,
   },
   modalInputContainer: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     marginBottom: 20,
     paddingHorizontal: 12,
   },
   modalInput: {
     backgroundColor: "transparent",
-    fontSize: 15,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600",
+    height: 52,
   },
   modalButtons: {
     flexDirection: "row",
@@ -1122,44 +1101,43 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: "#F3F6FB",
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
   },
   modalCancelText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#6B7280",
+    color: "#64748B",
   },
   modalSearchButton: {
     flex: 1,
-    backgroundColor: "#111827",
-    borderRadius: 10,
-    paddingVertical: 12,
+    backgroundColor: "#2563EB",
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   modalSearchButtonDisabled: {
-    backgroundColor: "#9CA3AF",
+    backgroundColor: "#94A3B8",
     opacity: 0.6,
   },
   modalSearchText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: -0.2,
   },
 
   // Suggestions Styles
   suggestionsContainer: {
     maxHeight: 250,
     marginBottom: 16,
-    borderRadius: 10,
-    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   suggestionItem: {
     flexDirection: "row",
@@ -1169,7 +1147,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: "#F1F5F9",
   },
   suggestionContent: {
     flexDirection: "row",
@@ -1179,8 +1157,8 @@ const styles = StyleSheet.create({
   suggestionIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(17, 24, 39, 0.1)",
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -1191,13 +1169,12 @@ const styles = StyleSheet.create({
   suggestionPlate: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
+    color: "#0F172A",
     marginBottom: 2,
-    letterSpacing: -0.2,
   },
   suggestionDriver: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#64748B",
     fontWeight: "500",
   },
 });

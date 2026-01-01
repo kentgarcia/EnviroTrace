@@ -1,9 +1,8 @@
 import React from "react";
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from "react-native";
 import { Button, Avatar, Chip } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "../../../../core/stores/authStore";
-import StandardHeader from "../../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../../components/layout/ScreenLayout";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "../../../../components/icons/Icon";
 
@@ -33,16 +32,18 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <>
-      <StandardHeader
-        title="Profile & Settings"
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        statusBarStyle="dark"
-        titleSize={22}
-        subtitleSize={12}
-        iconSize={20}
-      />
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+    <ScreenLayout
+      header={{
+        title: "Profile & Settings",
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        statusBarStyle: "dark",
+        titleSize: 22,
+        subtitleSize: 12,
+        iconSize: 20,
+        showProfileAction: false,
+        showBack: true,
+      }}
+    >
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -127,16 +128,11 @@ export default function ProfileScreen() {
           {/* Bottom Spacer */}
           <View style={{ height: 120 }} />
         </ScrollView>
-      </SafeAreaView>
-    </>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
   scrollView: {
     flex: 1,
   },

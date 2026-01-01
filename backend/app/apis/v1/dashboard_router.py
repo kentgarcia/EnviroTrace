@@ -44,11 +44,11 @@ def get_urban_greening_dashboard(db: Session = Depends(get_db)):
     for i, label in enumerate(month_labels(), start=1):
         fee_monthly.append(MonthValue(month=i, label=label, total=fee_by_month.get(i, 0.0)))
 
-    # Planting type breakdown (current year)
+    # Planting type breakdown (current year) - sum quantities instead of count
     type_rows = (
         db.query(
             UrbanGreeningPlanting.planting_type,
-            func.count(UrbanGreeningPlanting.id)
+            func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
         )
         .filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
         .group_by(UrbanGreeningPlanting.planting_type)

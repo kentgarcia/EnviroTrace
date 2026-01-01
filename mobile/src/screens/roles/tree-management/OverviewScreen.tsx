@@ -1,14 +1,13 @@
 import React, { useState } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from "react-native";
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity } from "react-native";
 import { Card, Text, Chip, Button } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
-import StandardHeader from "../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../components/layout/ScreenLayout";
+import { cardStyles } from "../../../styles/cardStyles";
 import Svg, { Defs, LinearGradient, Stop, Rect, Line } from "react-native-svg";
 
 import { useTreeManagementData } from "../../../hooks/useTreeManagementData";
-import { useNetworkSync } from "../../../hooks/useNetworkSync";
 import { useAuthStore } from "../../../core/stores/authStore";
 import StatsCard from "../../../components/StatsCard";
 
@@ -17,7 +16,6 @@ export default function TreeManagementOverviewScreen() {
     const navigation = useNavigation();
     const { user } = useAuthStore();
     const { data, loading, refetch } = useTreeManagementData();
-    const { syncData, isSyncing, lastSyncTime } = useNetworkSync();
     const [headerDims, setHeaderDims] = useState({ width: 0, height: 0 });
 
     // Mock data - replace with actual API calls
@@ -40,7 +38,7 @@ export default function TreeManagementOverviewScreen() {
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            await Promise.all([refetch(), syncData()]);
+            await refetch();
         } catch (error) {
             console.error("Refresh error:", error);
         } finally {
@@ -48,59 +46,32 @@ export default function TreeManagementOverviewScreen() {
         }
     };
 
-    const formatLastSync = () => {
-        if (!lastSyncTime) return "Never";
-        const now = new Date();
-        const diff = now.getTime() - lastSyncTime.getTime();
-        const minutes = Math.floor(diff / 60000);
-        if (minutes < 1) return "Just now";
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h ago`;
-        return lastSyncTime.toLocaleDateString();
-    };
-
-    const syncChipLabel = isSyncing ? "Syncing" : `Synced ${formatLastSync()}`;
-
     return (
-        <View style={styles.root}>
-            {/* Background Image */}
-            <View style={styles.backgroundImageWrapper} pointerEvents="none">
-                <Image
-                    source={require("../../../../assets/images/bg_login.png")}
-                    style={styles.backgroundImage}
-                    resizeMode="cover"
-                    accessibilityIgnoresInvertColors
-                />
-            </View>
-
-            <StandardHeader
-                title="Overview"
-                subtitle="Tree Management Dashboard"
-                statusBarStyle="dark"
-                backgroundColor="rgba(255, 255, 255, 0.95)"
-                borderColor="#E5E7EB"
-                rightActionIcon="RefreshCw"
-                onRightActionPress={() => syncData()}
-                titleSize={22}
-                subtitleSize={12}
-                iconSize={20}
-            />
-
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={["#111827"]}
-                            tintColor="#111827"
-                        />
-                    }
-                >
+        <ScreenLayout
+            header={{
+                title: "Overview",
+                subtitle: "Tree Management Dashboard",
+                statusBarStyle: "dark",
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                borderColor: "#E5E7EB",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+            }}
+        >
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={["#111827"]}
+                        tintColor="#111827"
+                    />
+                }
+            >
                     {/* Header Section */}
                     <View
                         style={styles.headerCard}
@@ -154,22 +125,6 @@ export default function TreeManagementOverviewScreen() {
                                 <Text style={styles.welcomeSubtitle}>
                                     Tree Management Monitoring Dashboard
                                 </Text>
-                            </View>
-
-                            <View style={styles.syncSection}>
-                                <Chip
-                                    icon={(props) => (
-                                        <Icon
-                                            name={isSyncing ? "RefreshCw" : "CheckCircle2"}
-                                            color="#FFFFFF"
-                                            size={props?.size ?? 18}
-                                        />
-                                    )}
-                                    style={styles.syncChip}
-                                    textStyle={styles.syncText}
-                                >
-                                    {isSyncing ? "Syncing..." : `Last sync: ${formatLastSync()}`}
-                                </Chip>
                             </View>
                         </View>
                     </View>
@@ -270,45 +225,45 @@ export default function TreeManagementOverviewScreen() {
                             <View style={styles.actionItem}>
                                 <TouchableOpacity
                                     style={styles.actionButton}
-                                    onPress={() => navigation.navigate("AddRequest" as never)}
+                                    onPress={() => navigation.navigate("TreeInventory" as never)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon name="TreePalm" size={20} color="#111827" />
+                                </TouchableOpacity>
+                                <Text style={styles.actionTitle}>Inventory</Text>
+                            </View>
+
+                            <View style={styles.actionItem}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => navigation.navigate("MapView" as never)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon name="Map" size={20} color="#111827" />
+                                </TouchableOpacity>
+                                <Text style={styles.actionTitle}>Map</Text>
+                            </View>
+
+                            <View style={styles.actionItem}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => navigation.navigate("GreeningProjects" as never)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Icon name="Leaf" size={20} color="#111827" />
+                                </TouchableOpacity>
+                                <Text style={styles.actionTitle}>Projects</Text>
+                            </View>
+
+                            <View style={styles.actionItem}>
+                                <TouchableOpacity
+                                    style={styles.actionButton}
+                                    onPress={() => (navigation as any).navigate("TreeRequests", { screen: "AddRequest" })}
                                     activeOpacity={0.7}
                                 >
                                     <Icon name="FilePlus" size={20} color="#111827" />
                                 </TouchableOpacity>
                                 <Text style={styles.actionTitle}>New Request</Text>
-                            </View>
-
-                            <View style={styles.actionItem}>
-                                <TouchableOpacity
-                                    style={styles.actionButton}
-                                    onPress={() => navigation.navigate("TreeRequests" as never)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Icon name="ClipboardList" size={20} color="#111827" />
-                                </TouchableOpacity>
-                                <Text style={styles.actionTitle}>View Requests</Text>
-                            </View>
-
-                            <View style={styles.actionItem}>
-                                <TouchableOpacity
-                                    style={styles.actionButton}
-                                    onPress={() => syncData()}
-                                    activeOpacity={0.7}
-                                >
-                                    <Icon name="RefreshCw" size={20} color="#111827" />
-                                </TouchableOpacity>
-                                <Text style={styles.actionTitle}>Sync Data</Text>
-                            </View>
-
-                            <View style={styles.actionItem}>
-                                <TouchableOpacity
-                                    style={styles.actionButton}
-                                    onPress={() => navigation.navigate("Statistics" as never)}
-                                    activeOpacity={0.7}
-                                >
-                                    <Icon name="BarChart3" size={20} color="#111827" />
-                                </TouchableOpacity>
-                                <Text style={styles.actionTitle}>Statistics</Text>
                             </View>
                         </View>
                     </View>
@@ -316,36 +271,11 @@ export default function TreeManagementOverviewScreen() {
                     {/* Bottom spacing for floating navbar */}
                     <View style={styles.bottomSpacer} />
                 </ScrollView>
-            </SafeAreaView>
-        </View>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    backgroundImageWrapper: {
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    backgroundImage: {
-        width: "100%",
-        height: "100%",
-        position: "absolute",
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    safeArea: {
-        flex: 1,
-        backgroundColor: "transparent",
-    },
     scrollView: {
         flex: 1,
     },
@@ -359,11 +289,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         borderRadius: 12,
         overflow: "hidden",
-        elevation: 2,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
     },
     headerBg: {
         ...StyleSheet.absoluteFillObject,
@@ -386,44 +311,22 @@ const styles = StyleSheet.create({
         color: "#E5E7EB",
         fontWeight: "500",
     },
-    syncSection: {
-        alignItems: "flex-start",
-    },
-    syncChip: {
-        borderRadius: 16,
-        elevation: 0,
-        backgroundColor: "#111827",
-    },
-    syncText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#FFFFFF",
-    },
 
     // Stats Section
     statsSection: {
         marginBottom: 24,
     },
-    sectionTitle: {
-        color: "#1F2937",
-        fontWeight: "700",
-        marginBottom: 16,
-        fontSize: 17,
-        letterSpacing: -0.3,
-    },
+    sectionTitle: cardStyles.sectionTitle,
     statsGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 12,
     },
     statCard: {
+        ...cardStyles.cardCompact,
         flex: 1,
         minWidth: "47%",
-        backgroundColor: "#FFFFFF",
         borderRadius: 16,
-        padding: 14,
-        borderWidth: 1.5,
-        borderColor: "#E5E7EB",
     },
     statCardHeader: {
         flexDirection: "row",

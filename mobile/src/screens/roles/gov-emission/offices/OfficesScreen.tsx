@@ -1,16 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, TextInput } from "react-native";
 import { Text, ActivityIndicator, Chip, Divider } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
-import StandardHeader from "../../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../../components/layout/ScreenLayout";
 import { database, LocalOffice, LocalVehicle } from "../../../../core/database/database";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import { useNetworkSync } from "../../../../hooks/useNetworkSync";
+import { cardStyles } from "../../../../styles/cardStyles";
 
 export default function OfficesScreen() {
   const navigation = useNavigation();
-  const { syncData, isSyncing } = useNetworkSync();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -57,7 +55,6 @@ export default function OfficesScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await syncData();
     if (selectedOffice) {
       await loadVehiclesForOffice(selectedOffice.id);
     } else {
@@ -102,57 +99,58 @@ export default function OfficesScreen() {
   const title = selectedOffice ? selectedOffice.name : "Government Offices";
 
   return (
-    <>
-      <StandardHeader
-        title={title}
-        subtitle={
-          selectedOffice
-            ? `${filteredVehicles.length} ${filteredVehicles.length === 1 ? "Vehicle" : "Vehicles"}`
-            : `${filteredOffices.length} ${filteredOffices.length === 1 ? "Office" : "Offices"}`
-        }
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        statusBarStyle="dark"
-        showBack={!!selectedOffice}
-        onBack={backToOffices}
-        rightActionIcon="RefreshCw"
-        onRightActionPress={() => syncData()}
-        titleSize={22}
-        subtitleSize={12}
-        iconSize={20}
-      />
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+    <ScreenLayout
+      header={{
+        title: title,
+        subtitle: selectedOffice
+          ? `${filteredVehicles.length} ${filteredVehicles.length === 1 ? "Vehicle" : "Vehicles"}`
+          : `${filteredOffices.length} ${filteredOffices.length === 1 ? "Office" : "Offices"}`,
+        backgroundColor: "#2563EB",
+        statusBarStyle: "light",
+        titleColor: "#FFFFFF",
+        subtitleColor: "rgba(255, 255, 255, 0.8)",
+        borderColor: "transparent",
+        showBack: !!selectedOffice,
+        onBack: backToOffices,
+        titleSize: 22,
+        subtitleSize: 12,
+        iconSize: 20,
+      }}
+    >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Icon name="Search" size={18} color="#6B7280" />
+          <Icon name="Search" size={18} color="#64748B" />
           <TextInput
             style={styles.searchInput}
             placeholder={selectedOffice ? "Search vehicles..." : "Search offices..."}
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Icon name="X" size={18} color="#6B7280" />
+              <Icon name="X" size={18} color="#64748B" />
             </TouchableOpacity>
           )}
         </View>
 
         {loading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#111827" />
+            <ActivityIndicator size="large" color="#2563EB" />
           </View>
         ) : (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#111827"]} tintColor="#111827" />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2563EB"]} tintColor="#2563EB" />}
           >
             {!selectedOffice ? (
               // Offices View
               filteredOffices.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Icon name="Building2" size={64} color="#D1D5DB" />
+                  <View style={styles.emptyIconContainer}>
+                    <Icon name="Building2" size={48} color="#CBD5E1" />
+                  </View>
                   <Text style={styles.emptyTitle}>
                     {searchQuery ? "No offices found" : "No offices available"}
                   </Text>
@@ -169,19 +167,21 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Building2" size={22} color="#111827" />
+                      <Icon name="Building2" size={20} color="#2563EB" />
                     </View>
                     <View style={styles.cardContent}>
                       <Text style={styles.cardTitle}>{office.name}</Text>
-                      {office.address && <Text style={styles.cardSubtitle}>{office.address}</Text>}
+                      {office.address && <Text style={styles.cardSubtitle} numberOfLines={1}>{office.address}</Text>}
                       {office.contact_number && (
                         <View style={styles.cardRow}>
-                          <Icon name="Phone" size={14} color="#6B7280" />
+                          <Icon name="Phone" size={12} color="#94A3B8" />
                           <Text style={styles.cardDetail}>{office.contact_number}</Text>
                         </View>
                       )}
                     </View>
-                    <Icon name="ChevronRight" size={20} color="#9CA3AF" />
+                    <View style={styles.chevronContainer}>
+                      <Icon name="ChevronRight" size={18} color="#CBD5E1" />
+                    </View>
                   </TouchableOpacity>
                 ))
               )
@@ -189,7 +189,9 @@ export default function OfficesScreen() {
               // Vehicles View
               filteredVehicles.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Icon name="Car" size={64} color="#D1D5DB" />
+                  <View style={styles.emptyIconContainer}>
+                    <Icon name="Car" size={48} color="#CBD5E1" />
+                  </View>
                   <Text style={styles.emptyTitle}>
                     {searchQuery ? "No vehicles found" : "No vehicles available"}
                   </Text>
@@ -206,30 +208,33 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Car" size={22} color="#111827" />
+                      <Icon name="Car" size={20} color="#2563EB" />
                     </View>
                     <View style={styles.cardContent}>
                       <View style={styles.cardHeader}>
                         <Text style={styles.cardTitle}>{vehicle.plate_number}</Text>
                         {vehicle.latest_test_result !== null && (
-                          <Chip
+                          <View
                             style={[
-                              styles.statusChip,
-                              vehicle.latest_test_result ? styles.statusChipPass : styles.statusChipFail,
+                              styles.statusBadge,
+                              vehicle.latest_test_result ? styles.statusBadgePass : styles.statusBadgeFail,
                             ]}
-                            textStyle={styles.statusChipText}
                           >
-                            {vehicle.latest_test_result ? "Pass" : "Fail"}
-                          </Chip>
+                            <Text style={[styles.statusBadgeText, vehicle.latest_test_result ? styles.statusTextPass : styles.statusTextFail]}>
+                              {vehicle.latest_test_result ? "Pass" : "Fail"}
+                            </Text>
+                          </View>
                         )}
                       </View>
                       <Text style={styles.cardSubtitle}>{vehicle.driver_name || "Unknown driver"}</Text>
                       <View style={styles.cardRow}>
-                        <Icon name="CircleDot" size={14} color="#6B7280" />
+                        <Icon name="CircleDot" size={12} color="#94A3B8" />
                         <Text style={styles.cardDetail}>{vehicle.vehicle_type}</Text>
                       </View>
                     </View>
-                    <Icon name="ChevronRight" size={20} color="#9CA3AF" />
+                    <View style={styles.chevronContainer}>
+                      <Icon name="ChevronRight" size={18} color="#CBD5E1" />
+                    </View>
                   </TouchableOpacity>
                 ))
               )
@@ -238,39 +243,30 @@ export default function OfficesScreen() {
             <View style={{ height: 120 }} />
           </ScrollView>
         )}
-      </SafeAreaView>
-    </>
+    </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginHorizontal: 16,
-    marginVertical: 12,
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 20,
+    marginVertical: 16,
+    gap: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#1F2937",
+    color: "#1E293B",
     padding: 0,
+    fontWeight: "500",
   },
   centerContainer: {
     flex: 1,
@@ -279,39 +275,33 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
-    elevation: 1,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    gap: 14,
   },
   cardIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(17, 24, 39, 0.1)",
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
   },
   cardContent: {
     flex: 1,
-    gap: 5,
+    gap: 4,
   },
   cardHeader: {
     flexDirection: "row",
@@ -319,66 +309,81 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#1E293B",
     letterSpacing: -0.3,
   },
   cardSubtitle: {
     fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
+    color: "#64748B",
+    fontWeight: "600",
   },
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
   },
   cardDetail: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#94A3B8",
     fontWeight: "500",
   },
-  statusChip: {
+  chevronContainer: {
+    width: 24,
     height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statusBadge: {
     paddingHorizontal: 8,
-    borderRadius: 12,
-    elevation: 0,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  statusChipPass: {
-    backgroundColor: "#DCFCE7",
-    borderWidth: 1.5,
-    borderColor: "#86EFAC",
+  statusBadgePass: {
+    backgroundColor: "#F0FDF4",
   },
-  statusChipFail: {
-    backgroundColor: "#FEE2E2",
-    borderWidth: 1.5,
-    borderColor: "#FCA5A5",
+  statusBadgeFail: {
+    backgroundColor: "#FEF2F2",
   },
-  statusChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    lineHeight: 14,
-    letterSpacing: 0.2,
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  statusTextPass: {
+    color: "#16A34A",
+  },
+  statusTextFail: {
+    color: "#DC2626",
   },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 24,
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginTop: 16,
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1E293B",
     marginBottom: 8,
-    letterSpacing: -0.3,
+    textAlign: "center",
   },
   emptyText: {
-    fontSize: 13,
-    color: "#6B7280",
+    fontSize: 14,
+    color: "#64748B",
     textAlign: "center",
     fontWeight: "500",
+    lineHeight: 20,
   },
 });

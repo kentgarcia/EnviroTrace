@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { View, StyleSheet, ScrollView, StatusBar, TouchableOpacity, Image, Platform } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, useTheme, Portal, Dialog, Button, Text } from "react-native-paper";
-import { LinearGradient } from "expo-linear-gradient";
-import { View as RNView } from "react-native";
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Portal, Dialog, Button, Text } from "react-native-paper";
 import { useAuthStore } from "../../core/stores/authStore";
 import Icon from "../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
+import ScreenLayout from "../../components/layout/ScreenLayout";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
@@ -17,9 +16,14 @@ export default function DashboardSelectorScreen() {
     const navigation = useNavigation();
     const { user, getUserRoles, setSelectedDashboard, logout } = useAuthStore();
     const allRoles = useMemo(() => getUserRoles(), [getUserRoles]);
-    // Filter out admin role for mobile app
-    const roles = useMemo(() => allRoles.filter(role => role !== 'admin' && role !== 'air_quality'), [allRoles]);
-    const { colors } = useTheme();
+    // If admin, show all dashboards; otherwise filter out admin and air_quality roles
+    const roles = useMemo(() => {
+        const isAdmin = allRoles.includes('admin');
+        if (isAdmin) {
+            return ['government_emission', 'tree_management'];
+        }
+        return allRoles.filter(role => role !== 'admin' && role !== 'air_quality');
+    }, [allRoles]);
     const [logoutVisible, setLogoutVisible] = useState(false);
     const insets = useSafeAreaInsets();
 
@@ -34,45 +38,32 @@ export default function DashboardSelectorScreen() {
 
     return (
         <>
-            <View style={styles.root}>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-
-                {/* Background Image - same as login */}
-                <View style={styles.backgroundImageWrapper} pointerEvents="none">
-                    <Image
-                        source={require("../../../assets/images/bg_login.png")}
-                        style={styles.backgroundImage}
-                        resizeMode="cover"
-                        accessibilityIgnoresInvertColors
-                    />
+            <ScreenLayout edges={["top", "left", "right"]}>
+                {/* Header with Profile and Logout */}
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <Image
+                            source={require("../../../assets/images/logo_app.png")}
+                            style={styles.appLogo}
+                            resizeMode="contain"
+                            accessibilityLabel="EnviroTrace"
+                        />
+                        <Text style={styles.appName}>EnviroTrace</Text>
+                    </View>
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={() => (navigation as any).navigate('ProfileHome')} style={styles.headerButton}>
+                            <Icon name="UserCircle" size={20} color="#64748B" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setLogoutVisible(true)} style={styles.headerButton}>
+                            <Icon name="LogOut" size={20} color="#64748B" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-                    {/* Header with Profile and Logout */}
-                    <View style={styles.header}>
-                        <View style={styles.headerLeft}>
-                            <Image
-                                source={require("../../../assets/images/logo_app.png")}
-                                style={styles.appLogo}
-                                resizeMode="contain"
-                                accessibilityLabel="EnviroTrace"
-                            />
-                            <Text style={styles.appName}>EnviroTrace</Text>
-                        </View>
-                        <View style={styles.headerActions}>
-                            <TouchableOpacity onPress={() => (navigation as any).navigate('ProfileHome')} style={styles.headerButton}>
-                                <Icon name="UserCircle" size={20} color="#64748B" />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => setLogoutVisible(true)} style={styles.headerButton}>
-                                <Icon name="LogOut" size={20} color="#64748B" />
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
-                    >
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+                >
                         {/* Welcome Section */}
                         <View style={styles.welcomeSection}>
                             <Text style={styles.welcomeTitle}>Select Dashboard</Text>
@@ -146,73 +137,49 @@ export default function DashboardSelectorScreen() {
                             <Text style={styles.footerVersion}>v1.0.0</Text>
                         </View>
                     </View>
-                </SafeAreaView>
+            </ScreenLayout>
 
-                <Portal>
-                    <Dialog visible={logoutVisible} onDismiss={() => setLogoutVisible(false)} style={styles.dialog}>
-                        <View style={styles.dialogTitle}>
-                            <View style={styles.logoutIconContainer}>
-                                <Icon name="LogOut" size={32} color="#EF4444" />
-                            </View>
+            <Portal>
+                <Dialog visible={logoutVisible} onDismiss={() => setLogoutVisible(false)} style={styles.dialog}>
+                    <View style={styles.dialogTitle}>
+                        <View style={styles.logoutIconContainer}>
+                            <Icon name="LogOut" size={32} color="#EF4444" />
                         </View>
-                        <Dialog.Content style={styles.logoutContent}>
-                            <Text style={styles.logoutTitle}>Sign out of your account?</Text>
-                            <Text style={styles.logoutMessage}>
-                                You'll need to sign in again to access your dashboards and data.
-                            </Text>
-                        </Dialog.Content>
-                        <Dialog.Actions style={styles.dialogActions}>
-                            <Button
-                                mode="outlined"
-                                onPress={() => setLogoutVisible(false)}
-                                style={styles.cancelButton}
-                                labelStyle={styles.cancelButtonText}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                mode="contained"
-                                buttonColor="#EF4444"
-                                onPress={async () => {
-                                    setLogoutVisible(false);
-                                    await logout();
-                                }}
-                                style={styles.logoutButton}
-                            >
-                                Sign Out
-                            </Button>
-                        </Dialog.Actions>
-                    </Dialog>
-                </Portal>
-            </View>
+                    </View>
+                    <Dialog.Content style={styles.logoutContent}>
+                        <Text style={styles.logoutTitle}>Sign out of your account?</Text>
+                        <Text style={styles.logoutMessage}>
+                            You'll need to sign in again to access your dashboards and data.
+                        </Text>
+                    </Dialog.Content>
+                    <Dialog.Actions style={styles.dialogActions}>
+                        <Button
+                            mode="outlined"
+                            onPress={() => setLogoutVisible(false)}
+                            style={styles.cancelButton}
+                            labelStyle={styles.cancelButtonText}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            mode="contained"
+                            buttonColor="#EF4444"
+                            onPress={async () => {
+                                setLogoutVisible(false);
+                                await logout();
+                            }}
+                            style={styles.logoutButton}
+                        >
+                            Sign Out
+                        </Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    backgroundImageWrapper: {
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    backgroundImage: {
-        width: "100%",
-        height: "100%",
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    safeArea: {
-        flex: 1,
-    },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -282,11 +249,6 @@ const styles = StyleSheet.create({
         gap: 14,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3.84,
-        elevation: 2,
     },
     aiIconContainer: {
         width: 44,
@@ -343,11 +305,6 @@ const styles = StyleSheet.create({
         gap: 14,
         borderWidth: 1,
         borderColor: "#E5E7EB",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
     dashboardIconContainer: {
         width: 44,

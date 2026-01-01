@@ -8,4 +8,3 @@ from app.models.emission_models import Vehicle, VehicleDriverHistory, TestSchedu
 from app.models.urban_greening_models import FeeRecord
 from app.models.urban_greening_models import SaplingRequest
 from app.models.fee_models import AirQualityFee as Emission_AirQualityFee
-from app.models.monitoring_request_models import MonitoringRequest

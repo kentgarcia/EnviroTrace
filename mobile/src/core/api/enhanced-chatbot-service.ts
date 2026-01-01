@@ -109,10 +109,6 @@ class EnhancedChatbotService {
   async executeAction(action: ChatAction): Promise<any> {
     try {
       switch (action.action) {
-        case "get_air_quality_data":
-          return await this.getAirQualityData(
-            action.parameters?.query || "air quality data"
-          );
         case "get_vehicle_data":
           return await this.getVehicleData(
             action.parameters?.query || "vehicle data"
@@ -149,17 +145,6 @@ class EnhancedChatbotService {
     message: string
   ): Promise<ChatbotResponse | null> {
     const lowerMessage = message.toLowerCase();
-
-    // Air Quality Commands
-    if (
-      this.matchesPattern(
-        lowerMessage,
-        ["show", "get", "list"],
-        ["air quality", "air data", "pollution"]
-      )
-    ) {
-      return await this.getAirQualityData(message);
-    }
 
     // Vehicle/Emission Commands
     if (
@@ -218,101 +203,6 @@ class EnhancedChatbotService {
     }
 
     return null; // Not a recognized command
-  }
-
-  /**
-   * Get air quality data
-   */
-  private async getAirQualityData(message: string): Promise<ChatbotResponse> {
-    try {
-      // Determine what specific air quality data to fetch
-      const lowerMessage = message.toLowerCase();
-
-      if (lowerMessage.includes("violation") || lowerMessage.includes("fine")) {
-        const response = await apiClient.get("/air-quality/violations");
-        const violations = response.data.violations || response.data;
-
-        return {
-          response: `Found ${violations.length} air quality violations. Here are the recent violations:`,
-          success: true,
-          data: {
-            type: "table",
-            title: "Air Quality Violations",
-            data: violations.slice(0, 10), // Show latest 10
-            metadata: {
-              totalRecords: violations.length,
-              source: "Air Quality Monitoring",
-            },
-          },
-          actions: [
-            {
-              id: "view_all_violations",
-              label: "View All Violations",
-              type: "button",
-              action: "get_air_quality_violations",
-            },
-            {
-              id: "generate_report",
-              label: "Generate Report",
-              type: "button",
-              action: "generate_air_quality_report",
-            },
-          ],
-        };
-      }
-
-      if (lowerMessage.includes("driver")) {
-        const response = await apiClient.get("/air-quality/drivers");
-        const drivers = response.data.drivers || response.data;
-
-        return {
-          response: `Found ${drivers.length} registered drivers. Here's the driver information:`,
-          success: true,
-          data: {
-            type: "table",
-            title: "Air Quality Drivers",
-            data: drivers.slice(0, 10),
-            metadata: {
-              totalRecords: drivers.length,
-              source: "Driver Registry",
-            },
-          },
-        };
-      }
-
-      // Default: Get recent air quality records
-      const response = await apiClient.get("/air-quality/records");
-      const records = response.data.records || response.data;
-
-      return {
-        response: `Here are the latest air quality monitoring records. ${records.length} total records found.`,
-        success: true,
-        data: {
-          type: "table",
-          title: "Air Quality Records",
-          data: records.slice(0, 10),
-          metadata: {
-            totalRecords: records.length,
-            source: "Air Quality Monitoring System",
-          },
-        },
-        actions: [
-          {
-            id: "analyze_trends",
-            label: "Analyze Trends",
-            type: "button",
-            action: "analyze_air_quality_trends",
-          },
-        ],
-      };
-    } catch (error: any) {
-      return {
-        response:
-          "I couldn't retrieve air quality data at the moment. Please try again later.",
-        success: false,
-        error: error.message,
-      };
-    }
   }
 
   /**
@@ -511,12 +401,6 @@ class EnhancedChatbotService {
         },
         actions: [
           {
-            id: "detailed_air_quality",
-            label: "View Air Quality Details",
-            type: "button",
-            action: "get_air_quality_data",
-          },
-          {
             id: "detailed_emissions",
             label: "View Emission Details",
             type: "button",
@@ -564,22 +448,6 @@ class EnhancedChatbotService {
       };
     }
 
-    if (lowerMessage.includes("create") && lowerMessage.includes("violation")) {
-      return {
-        response:
-          "I can help you create a new violation record. This action requires confirmation:",
-        success: true,
-        actions: [
-          {
-            id: "create_violation",
-            label: "Create Violation",
-            type: "confirmation",
-            action: "create_air_quality_violation",
-          },
-        ],
-      };
-    }
-
     return {
       response:
         "I can help you with various control operations. Please specify what you'd like to create, update, or schedule.",
@@ -618,50 +486,8 @@ class EnhancedChatbotService {
     const searchTerm = words[words.length - 1]; // Get the last word as search term
 
     try {
-      if (lowerMessage.includes("driver")) {
-        const response = await apiClient.get(
-          `/air-quality/drivers/search?query=${searchTerm}`
-        );
-        const drivers = response.data.drivers || response.data;
-
-        return {
-          response: `Search results for "${searchTerm}" in drivers:`,
-          success: true,
-          data: {
-            type: "table",
-            title: `Driver Search Results - "${searchTerm}"`,
-            data: drivers,
-            metadata: {
-              totalRecords: drivers.length,
-              source: "Driver Search",
-            },
-          },
-        };
-      }
-
-      if (lowerMessage.includes("record")) {
-        const response = await apiClient.get(
-          `/air-quality/records/search?query=${searchTerm}`
-        );
-        const records = response.data.records || response.data;
-
-        return {
-          response: `Search results for "${searchTerm}" in records:`,
-          success: true,
-          data: {
-            type: "table",
-            title: `Record Search Results - "${searchTerm}"`,
-            data: records,
-            metadata: {
-              totalRecords: records.length,
-              source: "Record Search",
-            },
-          },
-        };
-      }
-
       return {
-        response: `I can search for drivers, vehicles, or records. Please specify what you'd like to search for.`,
+        response: `I can search for vehicles or records. Please specify what you'd like to search for.`,
         success: true,
       };
     } catch (error: any) {
@@ -721,27 +547,14 @@ The system has THREE main modules:
 - Statistics: Monitor requests by type, status, and timeline
 - Commands: "show tree requests", "tree management", "pruning requests", "tree stats"
 
-**3. AIR QUALITY MONITORING**
-- Smoke Belcher Reports: Document vehicles emitting excessive smoke
-- Violation Records: Track air quality violations and offenders
-- Fee Control: Manage violation fees and penalty structures
-- Violation Status: Monitor paid/unpaid violations
-- Driver Registry: Track violators and repeat offenders
-- Fee Categories: Different levels and amounts for various violations
-- Commands: "show air quality", "smoke belchers", "violations", "fees"
-
 **AVAILABLE COMMANDS:**
 Core Data Access:
 - "show vehicles" or "vehicle records" - Government vehicle registry
 - "show tree management" or "tree requests" - Tree management requests
-- "show air quality" or "smoke belchers" - Air quality reports
-- "show violations" - Air quality violation records
-- "show fees" or "fee control" - Violation fee structures
 - "system statistics" or "stats" - Overall system overview
 
 Search & Query:
 - "find vehicle [plate_number]" - Search specific vehicle
-- "search driver [name]" - Find driver records
 - "find request [id]" - Search tree management request
 
 Analysis & Reports:
@@ -766,7 +579,7 @@ Analysis & Reports:
 2. Use clear formatting with bullet points and sections
 3. Suggest relevant commands when appropriate
 4. Provide context and explanations for data
-5. Use emojis sparingly for visual clarity (🚗 vehicles, 🌳 trees, 🌫️ air quality)
+5. Use emojis sparingly for visual clarity (🚗 vehicles, 🌳 trees)
 6. If you can retrieve data directly, do so - don't just tell users about commands
 7. Be proactive in offering next steps or related information
 
@@ -825,11 +638,11 @@ Please provide a helpful, accurate response. If the question relates to data you
   getSuggestedQuestions(): string[] {
     return [
       "Show me the dashboard overview",
-      "What are the recent air quality violations?",
       "Find vehicle ABC-123",
       "Show pending tree management requests",
       "How many emission tests were done today?",
-      "Search for driver John Smith",
+      "Show recent tree planting requests",
+      "What vehicles need testing this month?",
     ];
   }
 

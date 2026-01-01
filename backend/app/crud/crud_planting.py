@@ -366,6 +366,17 @@ class CRUDSaplingRequest(CRUDBase[SaplingRequest, SaplingRequestCreate, SaplingR
 
     def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[SaplingRequest]:
         return db.query(SaplingRequest).order_by(desc(SaplingRequest.date_received)).offset(skip).limit(limit).all()
+    
+    def get_by_year(self, db: Session, *, year: int, skip: int = 0, limit: int = 100) -> List[SaplingRequest]:
+        """Get sapling requests filtered by year"""
+        return (
+            db.query(SaplingRequest)
+            .filter(extract('year', SaplingRequest.date_received) == year)
+            .order_by(desc(SaplingRequest.date_received))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def create(self, db: Session, *, obj_in) -> SaplingRequest:
         data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump()

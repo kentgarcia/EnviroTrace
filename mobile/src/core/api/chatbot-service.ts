@@ -88,10 +88,9 @@ class ChatbotService {
    * Build an environmental context prompt for better responses
    */
   private buildEnvironmentalPrompt(userMessage: string): string {
-    return `You are an AI assistant specializing in environmental monitoring and management for the Eco Dashboard Navigator mobile app. 
+    return `You are an AI assistant specializing in environmental monitoring and management for the EnviroTrace mobile app. 
 
 Context: You're helping users with questions about:
-- Air quality monitoring and data analysis
 - Vehicle emissions testing and management
 - Environmental compliance and regulations
 - Tree management and urban greening
@@ -110,12 +109,12 @@ Keep your response conversational, informative, and under 300 words for mobile r
    */
   getSuggestedQuestions(): string[] {
     return [
-      "How do I interpret air quality readings?",
       "What are normal emission levels for vehicles?",
-      "How can I improve air quality in my area?",
       "What should I do if emission tests fail?",
-      "How do trees help improve air quality?",
-      "What are the health effects of poor air quality?",
+      "How do trees benefit the environment?",
+      "What tree species are best for urban areas?",
+      "How can I request a tree planting?",
+      "What is the emission testing process?",
     ];
   }
 

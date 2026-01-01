@@ -175,6 +175,7 @@ class SaplingStatistics(BaseModel):
 class SaplingItem(BaseModel):
     name: str
     qty: int
+    plant_type: Optional[str] = None
 
 class SaplingRequestBase(BaseModel):
     date_received: date
@@ -226,9 +227,9 @@ class SaplingRequestBase(BaseModel):
                 continue
             # Fallback
             try:
-                normalized.append({"name": str(it), "qty": 1})
+                normalized.append({"name": str(it), "qty": 1, "plant_type": None})
             except Exception:
-                normalized.append({"name": "", "qty": 1})
+                normalized.append({"name": "", "qty": 1, "plant_type": None})
 
         return normalized
 
@@ -266,24 +267,28 @@ class SaplingRequestUpdate(BaseModel):
             if isinstance(it, dict):
                 name = it.get("name") or it.get("species") or it.get("species_name") or ""
                 qty = it.get("qty") or it.get("quantity") or 1
+                plant_type = it.get("plant_type")
+                # Convert empty string to None for consistency
+                if plant_type == "":
+                    plant_type = None
                 try:
                     qty = int(qty)
                 except Exception:
                     qty = 1
-                normalized.append({"name": name, "qty": qty})
+                normalized.append({"name": name, "qty": qty, "plant_type": plant_type})
                 continue
             if isinstance(it, str):
                 import re
                 m = re.match(r"^(?P<name>.+?):\s*(?P<qty>\d+)$", it.strip())
                 if m:
-                    normalized.append({"name": m.group("name").strip(), "qty": int(m.group("qty"))})
+                    normalized.append({"name": m.group("name").strip(), "qty": int(m.group("qty")), "plant_type": None})
                 else:
-                    normalized.append({"name": it.strip(), "qty": 1})
+                    normalized.append({"name": it.strip(), "qty": 1, "plant_type": None})
                 continue
             try:
-                normalized.append({"name": str(it), "qty": 1})
+                normalized.append({"name": str(it), "qty": 1, "plant_type": None})
             except Exception:
-                normalized.append({"name": "", "qty": 1})
+                normalized.append({"name": "", "qty": 1, "plant_type": None})
 
         return normalized
 

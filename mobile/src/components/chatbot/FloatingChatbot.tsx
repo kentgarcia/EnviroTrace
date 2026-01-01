@@ -29,7 +29,7 @@ export default function FloatingChatbot({ visible, onClose }: FloatingChatbotPro
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             role: "assistant",
-            content: "Hi! I can help you access and control your environmental data. Try asking about air quality, vehicles, or tree management!",
+            content: "Hi! I can help you with vehicle emissions and tree management data. Ask me anything!",
             timestamp: new Date(),
         },
     ]);
@@ -189,9 +189,6 @@ export default function FloatingChatbot({ visible, onClose }: FloatingChatbotPro
         try {
             let response;
             switch (action.action) {
-                case "get_air_quality_data":
-                    response = await enhancedChatbotService.sendMessage("show air quality data");
-                    break;
                 case "get_vehicle_data":
                     response = await enhancedChatbotService.sendMessage("show vehicles");
                     break;

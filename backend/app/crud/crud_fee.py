@@ -54,6 +54,10 @@ air_quality_fee = CRUDAirQualityFee(AirQualityFee)
 
 
 class CRUDUrbanGreeningFeeRecord(CRUDBase[FeeRecord, UrbanGreeningFeeRecordCreate, UrbanGreeningFeeRecordUpdate]):
+    def get(self, db: Session, *, id: str) -> Optional[FeeRecord]:
+        """Synchronous version of get for use with sync sessions"""
+        return db.query(FeeRecord).filter(FeeRecord.id == id).first()
+    
     def get_by_reference_number(self, db: Session, *, reference_number: str) -> Optional[FeeRecord]:
         return db.query(FeeRecord).filter(FeeRecord.reference_number == reference_number).first()
 
@@ -72,6 +76,17 @@ class CRUDUrbanGreeningFeeRecord(CRUDBase[FeeRecord, UrbanGreeningFeeRecordCreat
             FeeRecord.due_date < date.today(),
             FeeRecord.status.in_(["pending", "overdue"])
         ).all()
+
+    def get_by_year(self, db: Session, *, year: int) -> List[FeeRecord]:
+        """Get fee records for a specific year based on the date field"""
+        from sqlalchemy import extract
+        return db.query(FeeRecord).filter(
+            extract('year', FeeRecord.date) == year
+        ).all()
+
+    def get_sync(self, db: Session, *, id: str) -> Optional[FeeRecord]:
+        """Synchronous version of get for use with sync sessions"""
+        return db.query(FeeRecord).filter(FeeRecord.id == id).first()
 
     def get_multi_sync(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[FeeRecord]:
         """Synchronous version of get_multi for use with sync sessions"""

@@ -75,10 +75,11 @@ export const deleteFee = async (fee_id: string) => {
 };
 
 // Urban Greening Fee Record API functions
-export const fetchUrbanGreeningFeeRecords = async (): Promise<
+export const fetchUrbanGreeningFeeRecords = async (year?: number): Promise<
   UrbanGreeningFeeRecord[]
 > => {
-  const res = await apiClient.get("/fees/urban-greening");
+  const params = year ? { year } : {};
+  const res = await apiClient.get("/fees/urban-greening", { params });
   return res.data;
 };
 

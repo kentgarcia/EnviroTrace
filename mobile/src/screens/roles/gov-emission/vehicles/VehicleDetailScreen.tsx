@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
+import { cardStyles } from "../../../../styles/cardStyles";
 import {
   useVehicle,
   useEmissionTests,
@@ -49,20 +50,19 @@ export default function VehicleDetailScreen() {
       <StandardHeader
         title="Vehicle Details"
         showBack
-        backgroundColor="rgba(255, 255, 255, 0.95)"
+        backgroundColor="#FFFFFF"
         statusBarStyle="dark"
-        titleSize={22}
-        subtitleSize={12}
+        titleSize={20}
         iconSize={20}
       />
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#111827" />
+            <ActivityIndicator size="large" color="#2563EB" />
           </View>
         ) : !vehicle ? (
           <View style={styles.emptyContainer}>
-            <Icon name="AlertCircle" size={48} color="#6B7280" />
+            <Icon name="AlertCircle" size={48} color="#64748B" />
             <Text style={styles.emptyText}>Vehicle not found</Text>
           </View>
         ) : (
@@ -77,6 +77,9 @@ export default function VehicleDetailScreen() {
                 <Text style={styles.sectionTitle}>Vehicle Information</Text>
                 <View style={styles.card}>
                   <View style={styles.plateContainer}>
+                    <View style={styles.plateIconContainer}>
+                      <Icon name="Car" size={24} color="#2563EB" />
+                    </View>
                     <Text style={styles.plateNumber}>
                       {vehicle.plate_number ||
                         vehicle.chassis_number ||
@@ -91,66 +94,70 @@ export default function VehicleDetailScreen() {
                     )}
                   </View>
 
-                  {vehicle.plate_number && (
+                  <View style={styles.infoGrid}>
+                    {vehicle.plate_number && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="Hash" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Plate Number</Text>
+                          <Text style={styles.infoValue}>{vehicle.plate_number}</Text>
+                        </View>
+                      </View>
+                    )}
+
                     <View style={styles.infoRow}>
-                      <Icon name="Hash" size={14} color="#6B7280" />
-                      <Text style={styles.infoLabel}>Plate Number:</Text>
-                      <Text style={styles.infoValue}>{vehicle.plate_number}</Text>
+                      <View style={styles.infoIconContainer}>
+                        <Icon name="User" size={14} color="#64748B" />
+                      </View>
+                      <View>
+                        <Text style={styles.infoLabel}>Driver</Text>
+                        <Text style={styles.infoValue}>{vehicle.driver_name}</Text>
+                      </View>
                     </View>
-                  )}
 
-                  {vehicle.chassis_number && (
+                    {vehicle.contact_number && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="Phone" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Contact</Text>
+                          <Text style={styles.infoValue}>{vehicle.contact_number}</Text>
+                        </View>
+                      </View>
+                    )}
+
                     <View style={styles.infoRow}>
-                      <Icon name="Hash" size={14} color="#6B7280" />
-                      <Text style={styles.infoLabel}>Chassis Number:</Text>
-                      <Text style={styles.infoValue}>{vehicle.chassis_number}</Text>
+                      <View style={styles.infoIconContainer}>
+                        <Icon name="Building2" size={14} color="#64748B" />
+                      </View>
+                      <View>
+                        <Text style={styles.infoLabel}>Office</Text>
+                        <Text style={styles.infoValue}>{vehicle.office?.name || "Unknown"}</Text>
+                      </View>
                     </View>
-                  )}
 
-                  {vehicle.registration_number && (
                     <View style={styles.infoRow}>
-                      <Icon name="Hash" size={14} color="#6B7280" />
-                      <Text style={styles.infoLabel}>Registration Number:</Text>
-                      <Text style={styles.infoValue}>{vehicle.registration_number}</Text>
+                      <View style={styles.infoIconContainer}>
+                        <Icon name="Car" size={14} color="#64748B" />
+                      </View>
+                      <View>
+                        <Text style={styles.infoLabel}>Vehicle Type</Text>
+                        <Text style={styles.infoValue}>{vehicle.vehicle_type}</Text>
+                      </View>
                     </View>
-                  )}
 
-                  <View style={styles.infoRow}>
-                    <Icon name="User" size={14} color="#6B7280" />
-                    <Text style={styles.infoLabel}>Driver:</Text>
-                    <Text style={styles.infoValue}>{vehicle.driver_name}</Text>
-                  </View>
-
-                  {vehicle.contact_number && (
                     <View style={styles.infoRow}>
-                      <Icon name="Phone" size={14} color="#6B7280" />
-                      <Text style={styles.infoLabel}>Contact:</Text>
-                      <Text style={styles.infoValue}>{vehicle.contact_number}</Text>
+                      <View style={styles.infoIconContainer}>
+                        <Icon name="Fuel" size={14} color="#64748B" />
+                      </View>
+                      <View>
+                        <Text style={styles.infoLabel}>Engine</Text>
+                        <Text style={styles.infoValue}>{vehicle.engine_type}</Text>
+                      </View>
                     </View>
-                  )}
-
-                  <View style={styles.infoRow}>
-                    <Icon name="Building2" size={14} color="#6B7280" />
-                    <Text style={styles.infoLabel}>Office:</Text>
-                    <Text style={styles.infoValue}>{vehicle.office?.name || "Unknown"}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Icon name="Car" size={14} color="#6B7280" />
-                    <Text style={styles.infoLabel}>Vehicle Type:</Text>
-                    <Text style={styles.infoValue}>{vehicle.vehicle_type}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Icon name="Fuel" size={14} color="#6B7280" />
-                    <Text style={styles.infoLabel}>Engine:</Text>
-                    <Text style={styles.infoValue}>{vehicle.engine_type}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Icon name="CircleDot" size={14} color="#6B7280" />
-                    <Text style={styles.infoLabel}>Wheels:</Text>
-                    <Text style={styles.infoValue}>{vehicle.wheels}</Text>
                   </View>
                 </View>
               </View>
@@ -160,30 +167,40 @@ export default function VehicleDetailScreen() {
                 <Text style={styles.sectionTitle}>Latest Test Result</Text>
                 <View style={styles.card}>
                   {vehicle.latest_test_result !== undefined && vehicle.latest_test_result !== null ? (
-                    <>
-                      <View style={styles.latestTestHeader}>
-                        <Chip
-                          compact
+                    <View style={styles.latestTestHeader}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: vehicle.latest_test_result ? "#DCFCE7" : "#FEE2E2",
+                          },
+                        ]}
+                      >
+                        <Text
                           style={[
-                            styles.statusChip,
+                            styles.statusBadgeText,
                             {
-                              backgroundColor: vehicle.latest_test_result ? "#16A34A" : "#E72525",
+                              color: vehicle.latest_test_result ? "#16A34A" : "#DC2626",
                             },
                           ]}
-                          textStyle={styles.statusChipText}
                         >
                           {vehicle.latest_test_result ? "Pass" : "Fail"}
-                        </Chip>
-                        {vehicle.latest_test_date && (
+                        </Text>
+                      </View>
+                      {vehicle.latest_test_date && (
+                        <View style={styles.testDateContainer}>
+                          <Icon name="Calendar" size={14} color="#64748B" />
                           <Text style={styles.testDate}>
                             {formatDate(vehicle.latest_test_date)}
                           </Text>
-                        )}
-                      </View>
-                    </>
+                        </View>
+                      )}
+                    </View>
                   ) : (
                     <View style={styles.noTestContainer}>
-                      <Icon name="FileQuestion" size={32} color="#6B7280" />
+                      <View style={styles.noTestIconContainer}>
+                        <Icon name="FileQuestion" size={32} color="#64748B" />
+                      </View>
                       <Text style={styles.noTestText}>No emission tests recorded</Text>
                     </View>
                   )}
@@ -207,18 +224,25 @@ export default function VehicleDetailScreen() {
                               Q{test.quarter} {test.year}
                             </Text>
                           </View>
-                          <Chip
-                            compact
+                          <View
                             style={[
-                              styles.statusChip,
+                              styles.statusBadge,
                               {
-                                backgroundColor: test.result ? "#16A34A" : "#E72525",
+                                backgroundColor: test.result ? "#DCFCE7" : "#FEE2E2",
                               },
                             ]}
-                            textStyle={styles.statusChipText}
                           >
-                            {test.result ? "Pass" : "Fail"}
-                          </Chip>
+                            <Text
+                              style={[
+                                styles.statusBadgeText,
+                                {
+                                  color: test.result ? "#16A34A" : "#DC2626",
+                                },
+                              ]}
+                            >
+                              {test.result ? "Pass" : "Fail"}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     ))}
@@ -227,20 +251,17 @@ export default function VehicleDetailScreen() {
               )}
             </ScrollView>
 
-            {/* Custom Bottom Action Bar - Replicates Tab Bar Design */}
+            {/* Custom Bottom Action Bar */}
             <View style={styles.bottomBarContainer}>
-              <View style={styles.bottomBarBackground} />
               <SafeAreaView edges={["bottom"]} style={styles.bottomBarSafeArea}>
-                <View style={styles.bottomBarOuter}>
-                  <TouchableOpacity
-                    style={styles.actionPill}
-                    onPress={() => (navigation as any).navigate("Testing", { screen: "AddTest", params: { vehicleId } })}
-                    activeOpacity={0.8}
-                  >
-                    <Icon name="ClipboardPlus" size={24} color="#FFFFFF" />
-                    <Text style={styles.actionLabel}>Record Emission Test</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={styles.actionPill}
+                  onPress={() => (navigation as any).navigate("Testing", { screen: "AddTest", params: { vehicleId } })}
+                  activeOpacity={0.8}
+                >
+                  <Icon name="ClipboardPlus" size={22} color="#FFFFFF" />
+                  <Text style={styles.actionLabel}>Record Emission Test</Text>
+                </TouchableOpacity>
               </SafeAreaView>
             </View>
           </>
@@ -253,12 +274,13 @@ export default function VehicleDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F8FAFC",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F8FAFC",
   },
   emptyContainer: {
     flex: 1,
@@ -269,7 +291,7 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#6B7280",
+    color: "#64748B",
     textAlign: "center",
     fontWeight: "500",
   },
@@ -277,167 +299,181 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100, // Extra space for bottom action bar
+    paddingBottom: 120,
   },
   section: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
     marginBottom: 12,
-    letterSpacing: -0.3,
+    paddingLeft: 4,
   },
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    padding: 14,
-    elevation: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   plateContainer: {
+    alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    paddingBottom: 12,
+    borderBottomColor: "#F1F5F9",
+    paddingBottom: 20,
+    marginBottom: 20,
+  },
+  plateIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 12,
   },
   plateNumber: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
-    color: "#111827",
+    color: "#0F172A",
     textAlign: "center",
-    letterSpacing: 0.3,
+    letterSpacing: -0.5,
   },
   plateLabel: {
     fontSize: 12,
-    fontWeight: "500",
-    color: "#6B7280",
+    fontWeight: "600",
+    color: "#64748B",
     textAlign: "center",
     marginTop: 4,
+  },
+  infoGrid: {
+    gap: 16,
   },
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    gap: 8,
+    gap: 12,
+  },
+  infoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   infoLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#374151",
-    width: 95,
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 13,
-    color: "#1F2937",
-    flex: 1,
-    fontWeight: "500",
+    fontSize: 15,
+    color: "#0F172A",
+    fontWeight: "600",
   },
   latestTestHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  statusChip: {
-    elevation: 0,
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  statusChipText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "700",
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  testDateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   testDate: {
-    fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "500",
+    fontSize: 14,
+    color: "#64748B",
+    fontWeight: "600",
   },
   noTestContainer: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
-    gap: 10,
+    paddingVertical: 24,
+    gap: 12,
+  },
+  noTestIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
   },
   noTestText: {
-    fontSize: 13,
-    color: "#6B7280",
+    fontSize: 14,
+    color: "#64748B",
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "600",
   },
   testItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: 16,
   },
   testInfo: {
     flex: 1,
   },
   testDateText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#111827",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 4,
   },
   testQuarter: {
-    fontSize: 11,
-    color: "#6B7280",
+    fontSize: 13,
+    color: "#64748B",
     fontWeight: "500",
   },
   divider: {
-    backgroundColor: "#E5E7EB",
-    marginVertical: 8,
+    backgroundColor: "#F1F5F9",
   },
-  // Bottom Action Bar - Replicates Tab Bar Design
   bottomBarContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 24,
-  },
-  bottomBarBackground: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "#FFFFFF",
-    height: 80,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   bottomBarSafeArea: {
     backgroundColor: "transparent",
   },
-  bottomBarOuter: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    alignItems: "center",
-  },
   actionPill: {
     flexDirection: "row",
-    backgroundColor: "#111827",
-    borderRadius: 48,
+    backgroundColor: "#2563EB",
+    borderRadius: 16,
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 18,
     gap: 12,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 68,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
   },
   actionLabel: {
     fontSize: 16,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: -0.2,
   },
 });

@@ -22,11 +22,10 @@ import {
     useTheme,
     Text,
 } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../components/icons/Icon";
 import { Dropdown } from "react-native-element-dropdown";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import StandardHeader from "../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../components/layout/ScreenLayout";
 import { treeManagementService, TreeManagementRequest } from "../../../core/api/tree-management-service";
 
 export default function TreeRequestsScreen() {
@@ -260,19 +259,18 @@ export default function TreeRequestsScreen() {
     const hasActiveFilters = selectedStatus || selectedType;
 
     return (
-        <View style={styles.root}>
-            <StandardHeader
-                title="Tree Requests"
-                subtitle={`${filteredRequests.length} Total`}
-                backgroundColor="rgba(255, 255, 255, 0.95)"
-                statusBarStyle="dark"
-                borderColor="#E5E7EB"
-                titleSize={22}
-                subtitleSize={12}
-                iconSize={20}
-            />
-
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <ScreenLayout
+            header={{
+                title: "Tree Requests",
+                subtitle: `${filteredRequests.length} Total`,
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                statusBarStyle: "dark",
+                borderColor: "#E5E7EB",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+            }}
+        >
                 {/* Search bar with filter button */}
                 <View style={styles.searchContainer}>
                     <View style={styles.searchInputContainer}>
@@ -464,7 +462,7 @@ export default function TreeRequestsScreen() {
                         </View>
 
                         <Dialog.Actions style={styles.dialogActions}>
-                            <SafeAreaView edges={["bottom"]} style={styles.dialogActionsContent}>
+                            <View style={styles.dialogActionsContent}>
                                 <Button
                                     mode="outlined"
                                     onPress={() => {
@@ -484,24 +482,15 @@ export default function TreeRequestsScreen() {
                                 >
                                     Apply Filters
                                 </Button>
-                            </SafeAreaView>
+                            </View>
                         </Dialog.Actions>
                     </Dialog>
-                </Portal>
-            </SafeAreaView>
-        </View>
+                    </Portal>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    safeArea: {
-        flex: 1,
-        backgroundColor: "transparent",
-    },
     searchContainer: {
         paddingHorizontal: 16,
         paddingVertical: 12,

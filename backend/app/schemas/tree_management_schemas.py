@@ -3,74 +3,101 @@ from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
 
+class NewTreeEntry(BaseModel):
+    """New tree entry not yet in inventory"""
+    species: Optional[str] = None
+    common_name: str
+    address: Optional[str] = None
+    condition: Optional[str] = None
+    notes: Optional[str] = None
+
 class TreeManagementRequestBase(BaseModel):
-    request_number: str
-    request_type: str  # pruning, cutting, violation_complaint
+    request_type: str  # cutting, pruning, violation
     
-    # Requester Information (simplified)
+    # Requester Information
     requester_name: str
+    requester_contact: Optional[str] = None
+    requester_email: Optional[str] = None
     property_address: str
+    barangay: Optional[str] = None
     
-    # Status (limited options)
-    status: str = 'filed'  # filed, on_hold, for_signature, payment_pending
+    # Request Details
     request_date: date
+    reason: Optional[str] = None
+    urgency: str = 'normal'  # low, normal, high, emergency
     
-    # Processing Information (connected to Fee Records)
+    # Status
+    status: str = 'filed'  # filed, on_hold, for_signature, payment_pending
+    
+    # Tree Links
+    linked_tree_ids: Optional[List[str]] = None
+    new_trees: Optional[List[NewTreeEntry]] = None
+    
+    # Processing Information
     fee_record_id: Optional[UUID] = None
     
-    # Inspection Information (inline instead of separate reports)
-    inspectors: Optional[List[str]] = None  # List of inspector names
-    trees_and_quantities: Optional[List[str]] = None  # List of "Tree Type: Quantity" entries
-    picture_links: Optional[List[str]] = None  # List of picture URLs for future bucket integration
+    # Inspection Information
+    inspectors: Optional[List[str]] = None
+    picture_links: Optional[List[str]] = None
     
-    # Optional fields
-    notes: Optional[str] = None  # General notes
-    
-    # Link to Monitoring Request
-    monitoring_request_id: Optional[str] = None
+    # Notes
+    notes: Optional[str] = None
 
 class TreeManagementRequestCreate(BaseModel):
     request_number: Optional[str] = ""  # Optional for auto-generation
-    request_type: str  # pruning, cutting, violation_complaint
+    request_type: str  # cutting, pruning, violation
     
-    # Requester Information (simplified)
+    # Requester Information
     requester_name: str
+    requester_contact: Optional[str] = None
+    requester_email: Optional[str] = None
     property_address: str
+    barangay: Optional[str] = None
     
-    # Status (limited options)
+    # Request Details
+    request_date: Optional[date] = None  # Auto-set to today if not provided
+    reason: Optional[str] = None
+    urgency: str = 'normal'  # low, normal, high, emergency
+    
+    # Status
     status: str = 'filed'  # filed, on_hold, for_signature, payment_pending
-    request_date: date
     
-    # Processing Information (connected to Fee Records)
-    fee_record_id: Optional[UUID] = None
+    # Tree Links
+    linked_tree_ids: Optional[List[str]] = None
+    new_trees: Optional[List[NewTreeEntry]] = None
     
-    # Inspection Information (inline instead of separate reports)
-    inspectors: List[str] = []  # List of inspector names
-    trees_and_quantities: List[str] = []  # List of "Tree Type: Quantity" entries
-    picture_links: List[str] = []  # List of picture URLs for future bucket integration
+    # Processing Information
+    fee_record_id: Optional[str] = None
     
-    # Optional fields
-    notes: Optional[str] = None  # General notes
+    # Inspection Information
+    inspectors: Optional[List[str]] = None
+    picture_links: Optional[List[str]] = None
     
-    # Link to Monitoring Request
-    monitoring_request_id: Optional[str] = None
+    # Notes
+    notes: Optional[str] = None
 
 class TreeManagementRequestUpdate(BaseModel):
     request_number: Optional[str] = None
     request_type: Optional[str] = None
     requester_name: Optional[str] = None
+    requester_contact: Optional[str] = None
+    requester_email: Optional[str] = None
     property_address: Optional[str] = None
-    status: Optional[str] = None
+    barangay: Optional[str] = None
     request_date: Optional[date] = None
-    fee_record_id: Optional[UUID] = None
-    inspectors: Optional[List[str]] = []
-    trees_and_quantities: Optional[List[str]] = []
-    picture_links: Optional[List[str]] = []
+    reason: Optional[str] = None
+    urgency: Optional[str] = None
+    status: Optional[str] = None
+    linked_tree_ids: Optional[List[str]] = None
+    new_trees: Optional[List[NewTreeEntry]] = None
+    fee_record_id: Optional[str] = None
+    inspectors: Optional[List[str]] = None
+    picture_links: Optional[List[str]] = None
     notes: Optional[str] = None
-    monitoring_request_id: Optional[str] = None
 
 class TreeManagementRequestInDB(TreeManagementRequestBase):
     id: UUID
+    request_number: str
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -88,12 +115,16 @@ class TreeManagementRequest(TreeManagementRequestInDB):
             'request_number': db_obj.request_number,
             'request_type': db_obj.request_type,
             'requester_name': db_obj.requester_name,
+            'requester_contact': db_obj.requester_contact,
+            'requester_email': db_obj.requester_email,
             'property_address': db_obj.property_address,
-            'status': db_obj.status,
+            'barangay': db_obj.barangay,
             'request_date': db_obj.request_date,
+            'reason': db_obj.reason,
+            'urgency': db_obj.urgency,
+            'status': db_obj.status,
             'fee_record_id': db_obj.fee_record_id,
             'notes': db_obj.notes,
-            'monitoring_request_id': db_obj.monitoring_request_id,
             'created_at': db_obj.created_at,
             'updated_at': db_obj.updated_at,
         }
@@ -117,8 +148,9 @@ class TreeManagementRequest(TreeManagementRequestInDB):
             except (json.JSONDecodeError, TypeError, ValueError):
                 return []
         
+        data['linked_tree_ids'] = safe_parse_json_list(db_obj.linked_tree_ids)
+        data['new_trees'] = safe_parse_json_list(db_obj.new_trees)
         data['inspectors'] = safe_parse_json_list(db_obj.inspectors)
-        data['trees_and_quantities'] = safe_parse_json_list(db_obj.trees_and_quantities)
         data['picture_links'] = safe_parse_json_list(db_obj.picture_links)
             
         return cls(**data)

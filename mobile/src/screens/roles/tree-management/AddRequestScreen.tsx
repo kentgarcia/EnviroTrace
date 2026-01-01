@@ -8,9 +8,9 @@ import {
     Text,
 } from "react-native-paper";
 import { Dropdown } from "react-native-element-dropdown";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import StandardHeader from "../../../components/layout/StandardHeader";
+import { cardStyles } from "../../../styles/cardStyles";
+import ScreenLayout from "../../../components/layout/ScreenLayout";
 import Icon from "../../../components/icons/Icon";
 import { treeManagementService, TreeManagementRequestCreate } from "../../../core/api/tree-management-service";
 
@@ -92,21 +92,23 @@ export default function AddRequestScreen() {
     };
 
     return (
-        <>
-            <StandardHeader
-                title="Add Request"
-                titleSize={22}
-                showBack
-                backgroundColor="rgba(255, 255, 255, 0.95)"
-                borderColor="#E5E7EB"
-            />
-            <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    style={styles.keyboardAvoidingView}
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-                >
-                    <ScrollView
+        <ScreenLayout
+            header={{
+                title: "Add Request",
+                titleSize: 22,
+                subtitleSize: 12,
+                iconSize: 20,
+                showBack: true,
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                borderColor: "#E5E7EB",
+            }}
+        >
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingView}
+                keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            >
+                <ScrollView
                         style={styles.scrollView}
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
@@ -327,13 +329,12 @@ export default function AddRequestScreen() {
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
-            </SafeAreaView>
-        </>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
+    container: {
         flex: 1,
         backgroundColor: "#FFFFFF",
     },
@@ -351,11 +352,9 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
+        ...cardStyles.sectionTitle,
         fontSize: 16,
-        fontWeight: "700",
-        color: "#111827",
         marginBottom: 16,
-        letterSpacing: -0.3,
     },
     sectionHeader: {
         flexDirection: "row",

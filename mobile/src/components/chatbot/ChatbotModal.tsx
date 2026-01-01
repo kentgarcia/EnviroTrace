@@ -32,7 +32,7 @@ export default function ChatbotModal({ visible, onDismiss }: ChatbotModalProps) 
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             role: "assistant",
-            content: "Hi! I'm your environmental monitoring assistant. I can help you access and control your environmental data. Try asking me about air quality, vehicles, or tree management!",
+            content: "Hi! I'm your environmental monitoring assistant. I can help you with vehicle emissions and tree management. Ask me anything!",
             timestamp: new Date(),
         },
     ]);

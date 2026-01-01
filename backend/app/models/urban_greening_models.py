@@ -74,24 +74,55 @@ class SaplingRecord(Base):
 class UrbanGreeningProject(Base):
     __tablename__ = "urban_greening_projects"
     __table_args__ = (
-        Index("idx_urban_greening_project_type", "type"),
+        Index("idx_urban_greening_project_type", "project_type"),
         Index("idx_urban_greening_project_status", "status"),
-        Index("idx_urban_greening_project_date", "planting_date"),
+        Index("idx_urban_greening_project_code", "project_code"),
         {"schema": "urban_greening"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    project_name = Column(String(255), nullable=False)
-    type = Column(String(50), nullable=False)  # ornamental, trees, seeds, seeds_private
-    quantity = Column(Integer, nullable=False)
-    species = Column(String(255), nullable=False)
-    planting_date = Column(Date, nullable=False)
+    project_code = Column(String(50), unique=True, nullable=True)  # Auto-generated: U+YYYY-####
+    project_type = Column(String(50), nullable=False)  # tree_planting, ornamental_planting, reforestation, urban_forest, roadside_greening
+    barangay = Column(String(100), nullable=True)
     location = Column(String(500), nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    status = Column(String(50), nullable=False)  # planned, planted, maintained, completed
-    responsible_person = Column(String(255), nullable=True)
+    latitude = Column(Numeric(10, 8), nullable=True)
+    longitude = Column(Numeric(11, 8), nullable=True)
+    area_sqm = Column(Numeric(10, 2), nullable=True)
+    
+    # Date planning
+    planting_date = Column(Date, nullable=True)  # Legacy field
+    planned_start_date = Column(Date, nullable=True)
+    planned_end_date = Column(Date, nullable=True)
+    actual_start_date = Column(Date, nullable=True)
+    actual_end_date = Column(Date, nullable=True)
+    
+    # Plants - JSON array of {plant_type, species, common_name, quantity, unit_cost, source}
+    plants = Column(Text, nullable=True)
+    total_plants = Column(Integer, nullable=True)
+    surviving_plants = Column(Integer, nullable=True)
+    survival_rate = Column(Numeric(5, 2), nullable=True)
+    
+    # Status: planning, procurement, ready, in_progress, completed, cancelled
+    status = Column(String(50), nullable=False, default='planning')
+    
+    # Responsible parties
+    project_lead = Column(String(255), nullable=True)
+    contact_number = Column(String(50), nullable=True)
+    organization = Column(String(255), nullable=True)
+    
+    # Funding
+    funding_source = Column(String(255), nullable=True)
+    budget = Column(Numeric(12, 2), nullable=True)
+    
+    # Additional info
+    description = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
+    photos = Column(Text, nullable=True)  # JSON array
+    
+    # Linked resources
+    linked_cutting_request_id = Column(UUID(as_uuid=True), nullable=True)  # Link to single tree cutting request
+    linked_cut_tree_ids = Column(Text, nullable=True)  # JSON array of tree cutting request IDs
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -102,34 +133,44 @@ class TreeManagementRequest(Base):
         Index("idx_urban_greening_tree_request_type", "request_type"),
         Index("idx_urban_greening_tree_request_status", "status"),
         Index("idx_urban_greening_tree_request_date", "request_date"),
+        Index("idx_tree_management_requests_barangay", "barangay"),
+        Index("idx_tree_management_requests_urgency", "urgency"),
         {"schema": "urban_greening"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     request_number = Column(String(50), unique=True, nullable=False)
-    request_type = Column(String(50), nullable=False)  # pruning, cutting, violation_complaint
+    request_type = Column(String(50), nullable=False)  # cutting, pruning, violation
     
-    # Requester Information (simplified)
+    # Requester Information
     requester_name = Column(String(255), nullable=False)
+    requester_contact = Column(String(100), nullable=True)
+    requester_email = Column(String(255), nullable=True)
     property_address = Column(Text, nullable=False)
+    barangay = Column(String(100), nullable=True)
     
-    # Status (limited options)
-    status = Column(String(50), nullable=False, default='filed')  # filed, on_hold, for_signature, payment_pending
+    # Request Details
     request_date = Column(Date, nullable=False)
+    reason = Column(Text, nullable=True)
+    urgency = Column(String(50), nullable=False, default='normal')  # low, normal, high, emergency
     
-    # Processing Information (connected to Fee Records)
-    fee_record_id = Column(UUID(as_uuid=True), nullable=True)  # Reference to fee_records table
+    # Status
+    status = Column(String(50), nullable=False, default='filed')  # filed, on_hold, for_signature, payment_pending
     
-    # Inspection Information (inline instead of separate reports)
+    # Tree Links
+    linked_tree_ids = Column(Text, nullable=True)  # JSON array of tree inventory IDs
+    new_trees = Column(Text, nullable=True)  # JSON array of new tree entries
+    
+    # Processing Information
+    fee_record_id = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Inspection Information (kept for backward compatibility)
     inspectors = Column(Text, nullable=True)  # JSON array of inspector names
-    trees_and_quantities = Column(Text, nullable=True)  # JSON array of "Tree Type: Quantity" entries
-    picture_links = Column(Text, nullable=True)  # JSON array of picture URLs for future bucket integration
+    trees_and_quantities = Column(Text, nullable=True)  # JSON array (deprecated, use linked_tree_ids/new_trees)
+    picture_links = Column(Text, nullable=True)  # JSON array of picture URLs
     
-    # Optional fields
-    notes = Column(Text, nullable=True)  # General notes
-    
-    # Link to Monitoring Request (string id from monitoring module)
-    monitoring_request_id = Column(String, nullable=True)
+    # Notes
+    notes = Column(Text, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

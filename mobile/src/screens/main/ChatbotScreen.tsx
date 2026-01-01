@@ -13,11 +13,12 @@ import {
     Image,
     Modal,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { enhancedChatbotService, ChatMessage, ChatAction } from "../../core/api/enhanced-chatbot-service";
 import DataDisplay, { ActionButtons } from "../../components/chatbot/DataDisplay";
 import Icon from "../../components/icons/Icon";
+import ScreenLayout from "../../components/layout/ScreenLayout";
 
 interface CommandOption {
     id: string;
@@ -136,26 +137,11 @@ export default function ChatbotScreen() {
             // Execute the action based on its type
             let response;
             switch (action.action) {
-                case "get_air_quality_data":
-                    response = await enhancedChatbotService.sendMessage("show air quality data");
-                    break;
                 case "get_vehicle_data":
                     response = await enhancedChatbotService.sendMessage("show vehicles");
                     break;
                 case "get_tree_data":
                     response = await enhancedChatbotService.sendMessage("show tree management");
-                    break;
-                case "analyze_air_quality_trends":
-                    response = await enhancedChatbotService.sendMessage("analyze air quality trends");
-                    break;
-                case "get_air_quality_violations":
-                    response = await enhancedChatbotService.sendMessage("show air quality violations");
-                    break;
-                case "generate_air_quality_report":
-                    response = {
-                        response: "Air quality report generation initiated. You'll receive the report via email shortly.",
-                        success: true
-                    };
                     break;
                 case "schedule_emission_test":
                     response = {
@@ -290,37 +276,29 @@ export default function ChatbotScreen() {
     };
 
     return (
-        <View style={styles.root}>
-            <StatusBar style="dark" />
-            <View style={styles.backgroundImageWrapper}>
-                <Image
-                    source={require("../../../assets/images/bg_login.png")}
-                    style={styles.backgroundImage}
-                />
-            </View>
-            <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.headerCenter}>
-                        <Image
-                            source={require("../../../assets/images/logo_app.png")}
-                            style={styles.headerLogo}
-                            resizeMode="contain"
-                        />
-                        <View style={styles.headerTextContainer}>
-                            <Text style={styles.headerTitle}>Environmental Assistant</Text>
-                            <View style={styles.headerStatus}>
-                                {isLoading && <ActivityIndicator size="small" color="#3A5A7A" />}
-                                {!isLoading && (
-                                    <>
-                                        <View style={styles.headerStatusDot} />
-                                        <Text style={styles.headerStatusText}>Ready</Text>
-                                    </>
-                                )}
-                            </View>
+        <ScreenLayout statusBarStyle="dark-content">
+            {/* Header */}
+            <View style={styles.header}>
+                <View style={styles.headerCenter}>
+                    <Image
+                        source={require("../../../assets/images/logo_app.png")}
+                        style={styles.headerLogo}
+                        resizeMode="contain"
+                    />
+                    <View style={styles.headerTextContainer}>
+                        <Text style={styles.headerTitle}>Environmental Assistant</Text>
+                        <View style={styles.headerStatus}>
+                            {isLoading && <ActivityIndicator size="small" color="#3A5A7A" />}
+                            {!isLoading && (
+                                <>
+                                    <View style={styles.headerStatusDot} />
+                                    <Text style={styles.headerStatusText}>Ready</Text>
+                                </>
+                            )}
                         </View>
                     </View>
                 </View>
+            </View>
 
                 <KeyboardAvoidingView
                     style={styles.chatContainer}
@@ -431,35 +409,11 @@ export default function ChatbotScreen() {
                         </View>
                     </TouchableOpacity>
                 </Modal>
-            </SafeAreaView>
-        </View>
+        </ScreenLayout>
     );
 }
 
 const styles = StyleSheet.create({
-    root: {
-        flex: 1,
-        backgroundColor: "#FFFFFF",
-    },
-    backgroundImageWrapper: {
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    backgroundImage: {
-        width: "100%",
-        height: "100%",
-        position: "absolute" as const,
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    safeArea: {
-        flex: 1,
-    },
     header: {
         flexDirection: "row",
         alignItems: "center",

@@ -19,10 +19,11 @@ import {
   useTheme,
 } from "react-native-paper";
 import { Dropdown } from "react-native-element-dropdown";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import StandardHeader from "../../../../components/layout/StandardHeader";
+import ScreenLayout from "../../../../components/layout/ScreenLayout";
+import FloatingActionButton from "../../../../components/FloatingActionButton";
+import { cardStyles } from "../../../../styles/cardStyles";
 
 import {
   useVehicles,
@@ -35,7 +36,6 @@ import {
 type FilterValues = {
   vehicleType: string;
   engineType: string;
-  testResult: string;
   office: string;
 };
 
@@ -51,7 +51,6 @@ type FilterDialogProps = {
     vehicleTypes: DropdownOption[];
     engineTypes: DropdownOption[];
     offices: DropdownOption[];
-    testResults: DropdownOption[];
   };
   initialValues: FilterValues;
   onApply: (filters: FilterValues) => void;
@@ -68,7 +67,6 @@ export default function VehiclesScreen() {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterVehicleType, setFilterVehicleType] = useState<string>("");
   const [filterEngineType, setFilterEngineType] = useState<string>("");
-  const [filterTestResult, setFilterTestResult] = useState<string>("");
   const [filterOffice, setFilterOffice] = useState<string>("");
 
   // Build filters object for API
@@ -114,34 +112,15 @@ export default function VehiclesScreen() {
     const engineTypes = filterOptions?.engine_types || [];
     const offices = filterOptions?.offices || [];
 
-    // For test results, we need to determine from actual vehicles
-    const testResults = new Set<string>();
-    vehicles.forEach((vehicle) => {
-      if (vehicle.latest_test_result === true) {
-        testResults.add("passed");
-      } else if (vehicle.latest_test_result === false) {
-        testResults.add("failed");
-      } else {
-        testResults.add("not-tested");
-      }
-    });
-
     return {
       vehicleTypes,
       engineTypes,
       offices,
-      testResults: Array.from(testResults).sort(),
     };
-  }, [filterOptions, vehicles]);
+  }, [filterOptions]);
 
   // Format data for Dropdown component
   const dropdownData = useMemo(() => {
-    const testResultLabels: Record<string, string> = {
-      passed: "Passed",
-      failed: "Failed",
-      "not-tested": "Not Tested",
-    };
-
     return {
       vehicleTypes: [
         { label: "All Types", value: "" },
@@ -155,36 +134,12 @@ export default function VehiclesScreen() {
         { label: "All Offices", value: "" },
         ...dropdownFilterOptions.offices.map((office) => ({ label: office, value: office })),
       ],
-      testResults: [
-        { label: "All Results", value: "" },
-        ...dropdownFilterOptions.testResults.map((result) => ({
-          label: testResultLabels[result] || result,
-          value: result,
-        })),
-      ],
     };
   }, [dropdownFilterOptions]);
 
-  // Filter vehicles based on test result (client-side filtering since API doesn't support it)
+  // Filter vehicles based on office (client-side filtering if not already in API filters)
   const filteredVehicles = useMemo(() => {
     let filtered = vehicles;
-
-    // Apply test result filter (client-side)
-    if (filterTestResult) {
-      if (filterTestResult === "passed") {
-        filtered = filtered.filter(
-          (vehicle) => vehicle.latest_test_result === true
-        );
-      } else if (filterTestResult === "failed") {
-        filtered = filtered.filter(
-          (vehicle) => vehicle.latest_test_result === false
-        );
-      } else if (filterTestResult === "not-tested") {
-        filtered = filtered.filter(
-          (vehicle) => vehicle.latest_test_result === undefined || vehicle.latest_test_result === null
-        );
-      }
-    }
 
     // Apply office filter if not already in API filters
     if (filterOffice && !filters.office_name) {
@@ -194,14 +149,13 @@ export default function VehiclesScreen() {
     }
 
     return filtered;
-  }, [vehicles, filterTestResult, filterOffice, filters.office_name]);
+  }, [vehicles, filterOffice, filters.office_name]);
 
   // Optimized handlers using useCallback to prevent recreation on every render
   const handleApplyFilters = useCallback(
     (filters: FilterValues) => {
       setFilterVehicleType(filters.vehicleType);
       setFilterEngineType(filters.engineType);
-      setFilterTestResult(filters.testResult);
       setFilterOffice(filters.office);
       setFilterModalVisible(false);
     },
@@ -228,10 +182,9 @@ export default function VehiclesScreen() {
     () => ({
       vehicleType: filterVehicleType,
       engineType: filterEngineType,
-      testResult: filterTestResult,
       office: filterOffice,
     }),
-    [filterVehicleType, filterEngineType, filterTestResult, filterOffice]
+    [filterVehicleType, filterEngineType, filterOffice]
   );
 
   const onRefresh = useCallback(async () => {
@@ -258,19 +211,21 @@ export default function VehiclesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Icon name="Car" size={64} color="#D1D5DB" />
+      <View style={styles.emptyIconContainer}>
+        <Icon name="Car" size={48} color="#1E40AF" />
+      </View>
       <Text style={styles.emptyTitle}>No vehicles found</Text>
       <Text style={styles.emptyText}>
         {searchQuery
-          ? "Try adjusting your search"
-          : "Add your first vehicle to get started"}
+          ? "Try adjusting your search or filters"
+          : "Add your first vehicle to start tracking emissions"}
       </Text>
       {!searchQuery && (
         <Button
           mode="contained"
           onPress={handleAddVehicle}
           style={styles.emptyButton}
-          buttonColor="#111827"
+          buttonColor="#1E40AF"
         >
           Add Vehicle
         </Button>
@@ -279,35 +234,31 @@ export default function VehiclesScreen() {
   );
 
   return (
-    <View style={styles.root}>
-      <StandardHeader
-        title="Vehicles"
-        subtitle={`${filteredVehicles.length} Total`}
-        statusBarStyle="dark"
-        backgroundColor="rgba(255, 255, 255, 0.95)"
-        borderColor="#E5E7EB"
-        rightActionIcon="RefreshCw"
-        onRightActionPress={() => refetch()}
-        titleSize={22}
-        subtitleSize={12}
-        iconSize={20}
-      />
-
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+    <ScreenLayout
+      header={{
+        title: "Vehicles",
+        subtitle: `${filteredVehicles.length} Total Fleet`,
+        statusBarStyle: "dark",
+        backgroundColor: "#F8FAFC",
+        rightActionIcon: "RefreshCw",
+        onRightActionPress: () => refetch(),
+        showProfileAction: true,
+      }}
+    >
         {/* Search bar with filter button */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
-            <Icon name="Search" size={18} color="#6B7280" />
+            <Icon name="Search" size={18} color="#64748B" />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by plate, driver, or type..."
+              placeholder="Search plate, driver, or type..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#94A3B8"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery("")}>
-                <Icon name="X" size={18} color="#9CA3AF" />
+                <Icon name="X" size={18} color="#94A3B8" />
               </TouchableOpacity>
             )}
           </View>
@@ -316,14 +267,14 @@ export default function VehiclesScreen() {
             onPress={() => setFilterModalVisible(true)}
           >
             <Icon name="Filter" size={20} color="#FFFFFF" />
-            {(filterVehicleType || filterEngineType || filterTestResult || filterOffice) && (
+            {(filterVehicleType || filterEngineType || filterOffice) && (
               <View style={styles.filterBadge} />
             )}
           </TouchableOpacity>
         </View>
 
         {/* Active filters */}
-        {(filterVehicleType || filterEngineType || filterTestResult || filterOffice) && (
+        {(filterVehicleType || filterEngineType || filterOffice) && (
           <View style={styles.activeFiltersContainer}>
             <ScrollView
               horizontal
@@ -352,21 +303,6 @@ export default function VehiclesScreen() {
                   {filterEngineType}
                 </Chip>
               )}
-              {filterTestResult && (
-                <Chip
-                  compact
-                  mode="flat"
-                  onClose={() => setFilterTestResult("")}
-                  style={styles.activeFilterChip}
-                  textStyle={styles.activeFilterText}
-                >
-                  {filterTestResult === "passed"
-                    ? "Passed"
-                    : filterTestResult === "failed"
-                      ? "Failed"
-                      : "Not Tested"}
-                </Chip>
-              )}
               {filterOffice && (
                 <Chip
                   compact
@@ -382,7 +318,6 @@ export default function VehiclesScreen() {
                 onPress={() => {
                   setFilterVehicleType("");
                   setFilterEngineType("");
-                  setFilterTestResult("");
                   setFilterOffice("");
                 }}
                 style={styles.clearAllButton}
@@ -399,13 +334,6 @@ export default function VehiclesScreen() {
             {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? "s" : ""}
             {searchQuery && " found"}
           </Text>
-          <TouchableOpacity
-            onPress={handleAddVehicle}
-            style={styles.addButton}
-          >
-            <Icon name="Plus" size={16} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add</Text>
-          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -417,8 +345,8 @@ export default function VehiclesScreen() {
             <RefreshControl
               refreshing={isLoading}
               onRefresh={onRefresh}
-              colors={["#111827"]}
-              tintColor="#111827"
+              colors={["#1E40AF"]}
+              tintColor="#1E40AF"
             />
           }
           ListEmptyComponent={renderEmptyState}
@@ -429,7 +357,8 @@ export default function VehiclesScreen() {
           initialNumToRender={15}
           windowSize={5}
         />
-      </SafeAreaView>
+
+        <FloatingActionButton onPress={handleAddVehicle} />
 
       <FilterDialog
         visible={filterModalVisible}
@@ -440,7 +369,7 @@ export default function VehiclesScreen() {
         renderRightIcon={renderChevronIcon}
         renderItem={renderDropdownItem}
       />
-    </View>
+    </ScreenLayout>
   );
 }
 
@@ -455,101 +384,37 @@ const VehicleCard = React.memo(
   }) => {
     const handlePress = useCallback(() => onPress(vehicle), [onPress, vehicle]);
 
-    // Calculate quarter and year from latest test date
-    const testInfo = useMemo(() => {
-      if (!vehicle.latest_test_date) return null;
-      const date = new Date(vehicle.latest_test_date);
-      const quarter = Math.floor(date.getMonth() / 3) + 1;
-      const year = date.getFullYear();
-      return { quarter, year };
-    }, [vehicle.latest_test_date]);
-
     return (
       <TouchableOpacity activeOpacity={0.7} onPress={handlePress}>
         <View style={styles.vehicleCard}>
-          {/* Header row with plate number and status */}
+          {/* Header row with plate number */}
           <View style={styles.cardHeader}>
             <View style={styles.plateNumberContainer}>
+              <View style={styles.plateIcon}>
+                <Icon name="CreditCard" size={12} color="#1E40AF" />
+              </View>
               <Text style={styles.plateNumber}>
                 {vehicle.plate_number ||
                   vehicle.chassis_number ||
                   vehicle.registration_number ||
                   "N/A"}
               </Text>
-              {!vehicle.plate_number && vehicle.chassis_number && (
-                <Text style={styles.plateNumberLabel}>(Chassis)</Text>
-              )}
-              {!vehicle.plate_number && !vehicle.chassis_number && vehicle.registration_number && (
-                <Text style={styles.plateNumberLabel}>(Reg)</Text>
-              )}
-            </View>
-            {vehicle.latest_test_result !== undefined && vehicle.latest_test_result !== null && (
-              <Chip
-                compact
-                icon={() => (
-                  <Icon
-                    name={
-                      vehicle.latest_test_result ? "CheckCircle2" : "AlertCircle"
-                    }
-                    size={12}
-                    color={vehicle.latest_test_result ? "#16A34A" : "#DC2626"}
-                  />
-                )}
-                style={[
-                  styles.statusChip,
-                  {
-                    backgroundColor: vehicle.latest_test_result
-                      ? "#DCFCE7"
-                      : "#FEE2E2",
-                  },
-                ]}
-                textStyle={[
-                  styles.statusChipText,
-                  { color: vehicle.latest_test_result ? "#16A34A" : "#DC2626" },
-                ]}
-              >
-                {vehicle.latest_test_result ? "Pass" : "Fail"}
-                {testInfo && ` • Q${testInfo.quarter} ${testInfo.year}`}
-              </Chip>
-            )}
-          </View>
-
-          {/* Driver name */}
-          <Text style={styles.driverName}>{vehicle.driver_name}</Text>
-
-          {/* Vehicle details in compact grid */}
-          <View style={styles.detailsGrid}>
-            <View style={styles.detailItem}>
-              <Icon name="Car" size={12} color="#6B7280" />
-              <Text style={styles.detailText}>{vehicle.vehicle_type}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="Settings" size={12} color="#6B7280" />
-              <Text style={styles.detailText}>{vehicle.engine_type}</Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Icon name="CirclePlus" size={12} color="#6B7280" />
-              <Text style={styles.detailText}>{vehicle.wheels}w</Text>
             </View>
           </View>
 
-          {/* Last test date if available */}
-          {vehicle.latest_test_date && (
-            <View style={styles.lastTestRow}>
-              <Icon name="CalendarDays" size={11} color="#9CA3AF" />
-              <Text style={styles.lastTestText}>
-                {new Date(vehicle.latest_test_date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-            </View>
-          )}
+          {/* Compact Info Row */}
+          <View style={styles.compactInfoRow}>
+            <Text style={styles.driverName} numberOfLines={1}>{vehicle.driver_name}</Text>
+            <Text style={styles.dotSeparator}>•</Text>
+            <Text style={styles.vehicleType}>{vehicle.vehicle_type}</Text>
+            <Text style={styles.dotSeparator}>•</Text>
+            <Text style={styles.engineType}>{vehicle.engine_type}</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
   },
+
   (prevProps, nextProps) => {
     // Custom comparison for optimal re-rendering
     return (
@@ -558,9 +423,7 @@ const VehicleCard = React.memo(
       prevProps.vehicle.driver_name === nextProps.vehicle.driver_name &&
       prevProps.vehicle.vehicle_type === nextProps.vehicle.vehicle_type &&
       prevProps.vehicle.engine_type === nextProps.vehicle.engine_type &&
-      prevProps.vehicle.wheels === nextProps.vehicle.wheels &&
-      prevProps.vehicle.latest_test_result === nextProps.vehicle.latest_test_result &&
-      prevProps.vehicle.latest_test_date === nextProps.vehicle.latest_test_date
+      prevProps.vehicle.wheels === nextProps.vehicle.wheels
     );
   }
 );
@@ -597,7 +460,7 @@ const FilterDialog = React.memo(
     );
 
     const handleReset = useCallback(() => {
-      setFilters({ vehicleType: "", engineType: "", testResult: "", office: "" });
+      setFilters({ vehicleType: "", engineType: "", office: "" });
     }, []);
 
     const handleApply = useCallback(() => {
@@ -681,37 +544,16 @@ const FilterDialog = React.memo(
                   renderItem={renderOption}
                 />
               </View>
-
-              <Divider style={styles.divider} />
-
-              <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Test Result</Text>
-                <Dropdown
-                  data={dropdownData.testResults}
-                  labelField="label"
-                  valueField="value"
-                  placeholder="Select test result"
-                  value={filters.testResult}
-                  onChange={handleChange("testResult")}
-                  style={styles.dropdown}
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  selectedTextStyle={styles.dropdownSelectedText}
-                  containerStyle={styles.dropdownContainer}
-                  maxHeight={300}
-                  renderRightIcon={renderRightIcon}
-                  renderItem={renderOption}
-                />
-              </View>
             </ScrollView>
           </View>
 
           <Dialog.Actions style={styles.dialogActions}>
-            <SafeAreaView edges={["bottom"]} style={styles.dialogActionsContent}>
+            <View style={styles.dialogActionsContent}>
               <Button
                 mode="outlined"
                 onPress={handleReset}
                 style={styles.dialogButtonOutlined}
-                textColor="#6B7280"
+                textColor="#64748B"
               >
                 Reset
               </Button>
@@ -719,11 +561,11 @@ const FilterDialog = React.memo(
                 mode="contained"
                 onPress={handleApply}
                 style={styles.dialogButtonContained}
-                buttonColor="#111827"
+                buttonColor="#1E40AF"
               >
                 Apply Filters
               </Button>
-            </SafeAreaView>
+            </View>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -733,19 +575,11 @@ const FilterDialog = React.memo(
 
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: "transparent",
-  },
   searchContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 12,
+    paddingBottom: 8,
     gap: 10,
   },
   searchInputContainer: {
@@ -753,125 +587,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: "#1F2937",
+    color: "#0F172A",
     padding: 0,
-    fontWeight: "500",
+    fontWeight: "600",
   },
   filterButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#111827",
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#1E40AF",
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   filterBadge: {
     position: "absolute",
     top: 10,
     right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
     backgroundColor: "#60A5FA",
+    borderWidth: 1.5,
+    borderColor: "#1E40AF",
   },
   activeFiltersContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   activeFiltersContent: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
     alignItems: "center",
   },
   activeFilterChip: {
-    backgroundColor: "#111827",
+    backgroundColor: "#1E40AF",
     borderWidth: 0,
+    borderRadius: 8,
+    height: 28,
   },
   activeFilterText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#FFFFFF",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   clearAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
   clearAllText: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "600",
+    fontSize: 11,
+    color: "#1E40AF",
+    fontWeight: "700",
     textDecorationLine: "underline",
   },
   summaryContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 6,
   },
   summaryText: {
     fontSize: 13,
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#111827",
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  addButtonText: {
-    fontSize: 13,
-    color: "#FFFFFF",
+    color: "#64748B",
     fontWeight: "700",
   },
   listContainer: {
     padding: 16,
-    paddingTop: 8,
-    paddingBottom: 32,
+    paddingTop: 4,
+    paddingBottom: 100,
     flexGrow: 1,
   },
   vehicleCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
-    marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
   },
   cardHeader: {
     flexDirection: "row",
@@ -884,98 +688,85 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  plateIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   plateNumber: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#111827",
-    letterSpacing: 0.2,
+    color: "#0F172A",
+    letterSpacing: -0.3,
   },
-  plateNumberLabel: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#6B7280",
-    marginLeft: 4,
-  },
-  syncDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#F59E0B",
-  },
-  statusChip: {
-    height: 22,
-    borderRadius: 6,
-  },
-  statusChipText: {
-    fontSize: 10,
-    fontWeight: "700",
-    marginVertical: 0,
-    marginHorizontal: 0,
+  compactInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
   driverName: {
-    fontSize: 13,
-    color: "#374151",
-    marginBottom: 8,
+    fontSize: 12,
+    color: "#475569",
+    fontWeight: "700",
+    maxWidth: "45%",
+  },
+  dotSeparator: {
+    marginHorizontal: 4,
+    color: "#CBD5E1",
+    fontSize: 10,
+  },
+  vehicleType: {
+    fontSize: 11,
+    color: "#64748B",
     fontWeight: "600",
   },
-  detailsGrid: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 6,
-  },
-  detailItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  detailText: {
+  engineType: {
     fontSize: 11,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  lastTestRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 4,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  lastTestText: {
-    fontSize: 10,
-    color: "#9CA3AF",
-    fontWeight: "500",
+    color: "#64748B",
+    fontWeight: "600",
   },
   emptyState: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
     paddingTop: 60,
   },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 30,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
   emptyTitle: {
-    fontSize: 19,
-    color: "#111827",
-    marginTop: 20,
-    marginBottom: 10,
-    fontWeight: "700",
+    fontSize: 20,
+    color: "#0F172A",
+    marginBottom: 12,
+    fontWeight: "800",
   },
   emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
+    fontSize: 15,
+    color: "#64748B",
     textAlign: "center",
-    lineHeight: 21,
-    marginBottom: 28,
-    fontWeight: "500",
+    lineHeight: 22,
+    marginBottom: 32,
+    fontWeight: "600",
   },
   emptyButton: {
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 24,
+    height: 48,
+    justifyContent: "center",
   },
   dialog: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
+    borderRadius: 24,
     maxWidth: 500,
     alignSelf: "center",
     width: "90%",
@@ -991,7 +782,7 @@ const styles = StyleSheet.create({
   dialogTitleText: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#111827",
+    color: "#0F172A",
     letterSpacing: -0.5,
   },
   dialogContent: {
@@ -1003,40 +794,34 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#374151",
+    fontWeight: "800",
+    color: "#1E293B",
     marginBottom: 10,
-    letterSpacing: -0.2,
   },
   dropdown: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     minHeight: 48,
   },
   dropdownPlaceholder: {
     fontSize: 14,
-    color: "#9CA3AF",
-    fontWeight: "500",
+    color: "#94A3B8",
+    fontWeight: "600",
   },
   dropdownSelectedText: {
     fontSize: 14,
-    color: "#111827",
-    fontWeight: "600",
+    color: "#0F172A",
+    fontWeight: "700",
   },
   dropdownContainer: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   dropdownItem: {
     paddingHorizontal: 18,
@@ -1044,28 +829,16 @@ const styles = StyleSheet.create({
   },
   dropdownItemText: {
     fontSize: 14,
-    color: "#4B5563",
-    fontWeight: "500",
-  },
-  radioOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 8,
-  },
-  radioLabel: {
-    fontSize: 14,
-    color: "#4B5563",
-    marginLeft: 8,
+    color: "#475569",
+    fontWeight: "600",
   },
   divider: {
-    backgroundColor: "#E5E7EB",
+    backgroundColor: "#F1F5F9",
     height: 1,
   },
   dialogActions: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
-    gap: 12,
-    paddingBottom: 0,
+    paddingVertical: 24,
   },
   dialogActionsContent: {
     flexDirection: "row",
@@ -1074,12 +847,12 @@ const styles = StyleSheet.create({
   },
   dialogButtonOutlined: {
     flex: 1,
-    borderRadius: 12,
-    borderColor: "#D1D5DB",
-    borderWidth: 1.5,
+    borderRadius: 14,
+    borderColor: "#E2E8F0",
+    borderWidth: 1,
   },
   dialogButtonContained: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 14,
   },
 });

@@ -2,11 +2,10 @@ import { createRoute, RouteComponent } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 
 import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
-import MonitoringRequests from "./pages/monitoring-requests/MonitoringRequests";
 import FeeRecords from "./pages/fee-records/FeeRecords";
-import TreeManagement from "./pages/tree-management/TreeManagement";
-import SaplingManagement from "./pages/sapling-management/SaplingManagement";
-import SaplingRecommendationDemo from "./pages/SaplingRecommendationDemo";
+import TreeInventoryPage from "./pages/tree-inventory/TreeInventoryPage";
+import TreeRequestsPage from "./pages/tree-requests/TreeRequestsPage";
+import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
   return createRoute({
@@ -21,13 +20,18 @@ const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
 };
 
 export const urbanGreeningRoute = [
+  // Main dashboard - new streamlined view
   createUrbanGreeningRoute("/urban-greening/overview", UrbanGreeningOverview),
-  createUrbanGreeningRoute(
-    "/urban-greening/monitoring-requests",
-    MonitoringRequests
-  ),
+  
+  // Tree Inventory - central registry
+  createUrbanGreeningRoute("/urban-greening/tree-inventory", TreeInventoryPage),
+  
+  // Module 2: Tree Management Requests (cutting, pruning, violations)
+  createUrbanGreeningRoute("/urban-greening/tree-requests", TreeRequestsPage),
+  
+  // Module 3: Urban Greening Projects (replacement & new planting)
+  createUrbanGreeningRoute("/urban-greening/greening-projects", GreeningProjectsPage),
+  
+  // Supporting modules
   createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
-  createUrbanGreeningRoute("/urban-greening/tree-management", TreeManagement),
-  createUrbanGreeningRoute("/urban-greening/planting-records", SaplingManagement),
-  createUrbanGreeningRoute("/urban-greening/sapling-recommendations-demo", SaplingRecommendationDemo),
 ];
