@@ -3,75 +3,70 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, TextInp
 import { Text, ActivityIndicator, Chip, Divider } from "react-native-paper";
 import Icon from "../../../../components/icons/Icon";
 import ScreenLayout from "../../../../components/layout/ScreenLayout";
-import { database, LocalOffice, LocalVehicle } from "../../../../core/database/database";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { cardStyles } from "../../../../styles/cardStyles";
+import {
+  useOffices,
+  useVehicles,
+  Office,
+  Vehicle,
+} from "../../../../core/api/emission-service";
 
 export default function OfficesScreen() {
   const navigation = useNavigation();
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [offices, setOffices] = useState<LocalOffice[]>([]);
-  const [selectedOffice, setSelectedOffice] = useState<LocalOffice | null>(null);
-  const [vehicles, setVehicles] = useState<LocalVehicle[]>([]);
+  const [selectedOffice, setSelectedOffice] = useState<Office | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const loadOffices = async () => {
-    try {
-      setLoading(true);
-      const data = await database.getOffices();
-      setOffices(data);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch offices from API
+  const {
+    data: officesData,
+    isLoading: loadingOffices,
+    refetch: refetchOffices,
+  } = useOffices();
 
-  const loadVehiclesForOffice = async (officeId: string) => {
-    try {
-      setLoading(true);
-      const list = await database.getVehicles({ office_id: officeId, limit: 500 });
-      setVehicles(list);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Fetch vehicles from API (filtered by office if one is selected)
+  const {
+    data: vehiclesData,
+    isLoading: loadingVehicles,
+    refetch: refetchVehicles,
+  } = useVehicles(
+    selectedOffice ? { office_name: selectedOffice.name } : {},
+    0,
+    1000
+  );
 
-  useEffect(() => {
-    loadOffices();
-  }, []);
+  const offices = useMemo(() => officesData?.offices || [], [officesData]);
+  const vehicles = useMemo(() => vehiclesData?.vehicles || [], [vehiclesData]);
 
+  const loading = loadingOffices || loadingVehicles;
+
+  // Refetch data whenever screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      // Reload the current view when returning to this tab
       if (selectedOffice) {
-        loadVehiclesForOffice(selectedOffice.id);
+        refetchVehicles();
       } else {
-        loadOffices();
+        refetchOffices();
       }
-      return () => { };
-    }, [selectedOffice])
+    }, [selectedOffice, refetchOffices, refetchVehicles])
   );
 
   const onRefresh = async () => {
-    setRefreshing(true);
     if (selectedOffice) {
-      await loadVehiclesForOffice(selectedOffice.id);
+      await refetchVehicles();
     } else {
-      await loadOffices();
+      await refetchOffices();
     }
-    setRefreshing(false);
   };
 
-  const openOffice = (office: LocalOffice) => {
+  const openOffice = (office: Office) => {
     setSelectedOffice(office);
     setSearchQuery("");
-    loadVehiclesForOffice(office.id);
   };
 
   const backToOffices = () => {
     setSelectedOffice(null);
-    setVehicles([]);
     setSearchQuery("");
   };
 
@@ -91,7 +86,7 @@ export default function OfficesScreen() {
     const query = searchQuery.toLowerCase();
     return vehicles.filter(
       (vehicle) =>
-        vehicle.plate_number.toLowerCase().includes(query) ||
+        vehicle.plate_number?.toLowerCase().includes(query) ||
         vehicle.driver_name?.toLowerCase().includes(query)
     );
   }, [vehicles, searchQuery]);
@@ -105,13 +100,12 @@ export default function OfficesScreen() {
         subtitle: selectedOffice
           ? `${filteredVehicles.length} ${filteredVehicles.length === 1 ? "Vehicle" : "Vehicles"}`
           : `${filteredOffices.length} ${filteredOffices.length === 1 ? "Office" : "Offices"}`,
-        backgroundColor: "#2563EB",
-        statusBarStyle: "light",
-        titleColor: "#FFFFFF",
-        subtitleColor: "rgba(255, 255, 255, 0.8)",
+        statusBarStyle: "dark",
         borderColor: "transparent",
         showBack: !!selectedOffice,
         onBack: backToOffices,
+        rightActionIcon: "RefreshCw",
+        onRightActionPress: onRefresh,
         titleSize: 22,
         subtitleSize: 12,
         iconSize: 20,
@@ -136,13 +130,20 @@ export default function OfficesScreen() {
 
         {loading ? (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#2563EB" />
+            <ActivityIndicator size="large" color="#1E40AF" />
           </View>
         ) : (
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#2563EB"]} tintColor="#2563EB" />}
+            refreshControl={
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={onRefresh}
+                colors={["#1E40AF"]}
+                tintColor="#1E40AF"
+              />
+            }
           >
             {!selectedOffice ? (
               // Offices View
@@ -167,7 +168,7 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Building2" size={20} color="#2563EB" />
+                      <Icon name="Building2" size={20} color="#1E40AF" />
                     </View>
                     <View style={styles.cardContent}>
                       <Text style={styles.cardTitle}>{office.name}</Text>
@@ -208,11 +209,13 @@ export default function OfficesScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardIcon}>
-                      <Icon name="Car" size={20} color="#2563EB" />
+                      <Icon name="Car" size={20} color="#1E40AF" />
                     </View>
                     <View style={styles.cardContent}>
                       <View style={styles.cardHeader}>
-                        <Text style={styles.cardTitle}>{vehicle.plate_number}</Text>
+                        <Text style={styles.cardTitle}>
+                          {vehicle.plate_number || vehicle.chassis_number || vehicle.registration_number || "N/A"}
+                        </Text>
                         {vehicle.latest_test_result !== null && (
                           <View
                             style={[
@@ -275,7 +278,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     paddingHorizontal: 20,

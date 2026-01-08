@@ -7,7 +7,7 @@ import Constants from "expo-constants";
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   Constants.expoConfig?.extra?.apiUrl ||
-  "https://envirotrace.onrender.com/api/v1";
+  "https://envirotrace.up.railway.app/api/v1";
 
 console.log("🌐 Using API URL:", API_BASE_URL);
 console.log("📱 Environment:", __DEV__ ? "Development" : "Production");

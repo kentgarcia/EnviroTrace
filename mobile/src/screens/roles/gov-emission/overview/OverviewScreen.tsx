@@ -1,10 +1,30 @@
 import React, { useState, useMemo } from "react";
-import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Dimensions, Platform } from "react-native";
+import {
+  View,
+  ScrollView,
+  StyleSheet,
+  RefreshControl,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
 import { Text, Surface } from "react-native-paper";
 import Icon from "../../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import ScreenLayout from "../../../../components/layout/ScreenLayout";
-import Svg, { Defs, LinearGradient, Stop, Circle, Path, G, Rect } from "react-native-svg";
+import Svg, {
+  Defs,
+  LinearGradient,
+  Stop,
+  Circle,
+  Path,
+  G,
+  Rect,
+} from "react-native-svg";
+import {
+  PieChart,
+  LineChart,
+  BarChart,
+} from "react-native-chart-kit";
 
 import { useDashboardData } from "../../../../hooks/useDashboardData";
 
@@ -12,12 +32,18 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(
+    Math.floor(new Date().getMonth() / 3) + 1
+  );
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  
   const navigation = useNavigation();
-  const { data, loading, refetch } = useDashboardData();
+  const { data, loading, refetch } = useDashboardData(selectedYear, selectedQuarter);
 
-  const lastUpdated = useMemo(() => {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, [data]);
+  // Generate year options (last 5 years)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -29,6 +55,31 @@ export default function OverviewScreen() {
       setRefreshing(false);
     }
   };
+
+  const FilterChip = ({ 
+    label, 
+    active, 
+    onPress 
+  }: { 
+    label: string; 
+    active: boolean; 
+    onPress: () => void; 
+  }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.filterChip,
+        active && styles.filterChipActive
+      ]}
+    >
+      <Text style={[
+        styles.filterChipText,
+        active && styles.filterChipTextActive
+      ]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
 
   // Circular Progress Component for Hero Card
   const ComplianceCircle = ({ percentage }: { percentage: number }) => {
@@ -70,13 +121,54 @@ export default function OverviewScreen() {
     );
   };
 
+  const StatCard = ({
+    label,
+    value,
+    icon,
+    color,
+    bg,
+  }: {
+    label: string;
+    value: number | string;
+    icon: string;
+    color: string;
+    bg: string;
+  }) => (
+    <View style={styles.statCard}>
+      <View style={[styles.statIconBox, { backgroundColor: bg }]}>
+        <Icon name={icon} size={20} color={color} />
+      </View>
+      <View style={styles.statTextContainer}>
+        <Text style={styles.statValue} numberOfLines={1} ellipsizeMode="tail">
+          {value}
+        </Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+
+  const chartConfig = {
+    backgroundGradientFrom: "#ffffff",
+    backgroundGradientTo: "#ffffff",
+    color: (opacity = 1) => `rgba(30, 64, 175, ${opacity})`,
+    strokeWidth: 2,
+    barPercentage: 0.7,
+    useShadowColorFromDataset: false,
+    decimalPlaces: 0,
+    labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    propsForDots: {
+      r: "4",
+      strokeWidth: "2",
+      stroke: "#1E40AF",
+    },
+  };
+
   return (
     <ScreenLayout
       header={{
         title: "Dashboard",
         subtitle: "Emission Management",
         statusBarStyle: "dark",
-        backgroundColor: "#F8FAFC",
         showProfileAction: true,
       }}
     >
@@ -88,13 +180,75 @@ export default function OverviewScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={["#2563EB"]}
-            tintColor="#2563EB"
+            colors={["#1E40AF"]}
+            tintColor="#1E40AF"
           />
         }
       >
+        {/* Filters */}
+        <View style={styles.filterContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+            <FilterChip 
+              label="All Year" 
+              active={selectedQuarter === undefined} 
+              onPress={() => setSelectedQuarter(undefined)} 
+            />
+            {[1, 2, 3, 4].map(q => (
+              <FilterChip 
+                key={q}
+                label={`Q${q}`} 
+                active={selectedQuarter === q} 
+                onPress={() => setSelectedQuarter(q)} 
+              />
+            ))}
+            <View style={styles.verticalDivider} />
+            <TouchableOpacity
+              onPress={() => setShowYearPicker(!showYearPicker)}
+              style={[styles.filterChip, styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
+                {selectedYear}
+              </Text>
+              <Icon 
+                name={showYearPicker ? "ChevronDown" : "ChevronRight"} 
+                size={14} 
+                color="#FFFFFF" 
+              />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Year Picker Dropdown */}
+        {showYearPicker && (
+          <View style={styles.yearPickerContainer}>
+            <Text style={styles.yearPickerTitle}>Select Year</Text>
+            <View style={styles.yearOptionsGrid}>
+              {yearOptions.map(year => (
+                <TouchableOpacity
+                  key={year}
+                  onPress={() => {
+                    setSelectedYear(year);
+                    setShowYearPicker(false);
+                  }}
+                  style={[
+                    styles.yearOption,
+                    selectedYear === year && styles.yearOptionActive
+                  ]}
+                >
+                  <Text style={[
+                    styles.yearOptionText,
+                    selectedYear === year && styles.yearOptionTextActive
+                  ]}>
+                    {year}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Hero KPI Card */}
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => navigation.navigate("Reports" as never)}
           style={styles.heroCard}
@@ -117,91 +271,157 @@ export default function OverviewScreen() {
               />
             </Svg>
           </View>
-          
+
           <View style={styles.heroContent}>
             <View style={styles.heroInfo}>
-              <Text style={styles.heroLabel}>Overall Compliance • Q4 2025</Text>
+              <Text style={styles.heroLabel}>Overall Compliance • 2025</Text>
               <Text style={styles.heroTitle}>Fleet Performance</Text>
               <View style={styles.heroBadge}>
                 <Icon name="TrendingUp" size={14} color="#FFFFFF" />
-                <Text style={styles.heroBadgeText}>Above Target</Text>
+                <Text style={styles.heroBadgeText}>
+                  {data?.complianceRate >= 80 ? "Above Target" : "Needs Attention"}
+                </Text>
               </View>
             </View>
             <ComplianceCircle percentage={data?.complianceRate || 0} />
           </View>
         </TouchableOpacity>
 
-        {/* Secondary Metrics Grid */}
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: "#EFF6FF" }]}>
-              <Icon name="Car" size={22} color="#2563EB" />
-            </View>
-            <Text style={styles.metricValue}>{data?.totalVehicles || 0}</Text>
-            <Text style={styles.metricLabel}>Total Fleet</Text>
+        {/* Stats Grid */}
+        <View style={styles.statsGridContainer}>
+          <View style={styles.statsRow}>
+            <StatCard
+              label="Total Vehicles"
+              value={data?.totalVehicles || 0}
+              icon="Car"
+              color="#1E40AF"
+              bg="#EFF6FF"
+            />
+            <StatCard
+              label="Offices"
+              value={data?.departments || 0}
+              icon="Building2"
+              color="#7C3AED"
+              bg="#F5F3FF"
+            />
           </View>
-          
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: "#F0F9FF" }]}>
-              <Icon name="ClipboardCheck" size={22} color="#0EA5E9" />
-            </View>
-            <Text style={styles.metricValue}>{data?.testedVehicles || 0}</Text>
-            <Text style={styles.metricLabel}>Tests Done</Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              label="Passed Tests"
+              value={data?.passedTests || 0}
+              icon="CheckCircle"
+              color="#16A34A"
+              bg="#F0FDF4"
+            />
+            <StatCard
+              label="Failed Tests"
+              value={data?.failedTests || 0}
+              icon="XCircle"
+              color="#DC2626"
+              bg="#FEF2F2"
+            />
           </View>
-
-          <View style={styles.metricItem}>
-            <View style={[styles.metricIconBox, { backgroundColor: "#F5F3FF" }]}>
-              <Icon name="Building2" size={22} color="#7C3AED" />
-            </View>
-            <Text style={styles.metricValue}>{data?.departments || 0}</Text>
-            <Text style={styles.metricLabel}>Offices</Text>
+          <View style={styles.statsRow}>
+            <StatCard
+              label="Pending Tests"
+              value={data?.pendingTests || 0}
+              icon="Clock"
+              color="#F59E0B"
+              bg="#FFFBEB"
+            />
+            <StatCard
+              label="Top Office"
+              value={data?.topPerformingOffice?.name || "N/A"}
+              icon="Award"
+              color="#DB2777"
+              bg="#FDF2F8"
+            />
           </View>
         </View>
 
-        {/* Quick Actions Row */}
-        <Text style={styles.sectionTitle}>Quick Access</Text>
-        <View style={styles.actionsRow}>
-          {[
-            { label: "Add", icon: "Plus", color: "#2563EB", bg: "#EFF6FF", route: "Vehicles", screen: "AddVehicle" },
-            { label: "Test", icon: "ClipboardPlus", color: "#0EA5E9", bg: "#F0F9FF", route: "Testing", screen: "AddTest" },
-            { label: "Reports", icon: "FileText", color: "#4F46E5", bg: "#EEF2FF", route: "Reports" },
-            { label: "Offices", icon: "Building2", color: "#7C3AED", bg: "#F5F3FF", route: "Offices" },
-          ].map((action, idx) => (
-            <TouchableOpacity 
-              key={idx}
-              style={styles.actionItem}
-              onPress={() => (navigation as any).navigate(action.route, action.screen ? { screen: action.screen } : undefined)}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: action.bg }]}>
-                <Icon name={action.icon} size={22} color={action.color} />
-              </View>
-              <Text style={styles.actionLabel} numberOfLines={1}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
+        {/* Charts Section */}
+        
+        {/* Monthly Testing Trends */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Monthly Testing Trends</Text>
+          {data?.monthlyTrendsData?.labels?.length > 0 ? (
+            <LineChart
+              data={data.monthlyTrendsData}
+              width={SCREEN_WIDTH - 48}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No trend data available</Text>
+          )}
         </View>
 
-        {/* Recent Activity / Latest Update */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Latest Update</Text>
-          <Text style={styles.lastSyncText}>Synced at {lastUpdated}</Text>
+        {/* Vehicle Type Distribution */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Vehicle Type Distribution</Text>
+          {data?.vehicleTypeData?.length > 0 ? (
+            <PieChart
+              data={data.vehicleTypeData}
+              width={SCREEN_WIDTH - 48}
+              height={220}
+              chartConfig={chartConfig}
+              accessor={"population"}
+              backgroundColor={"transparent"}
+              paddingLeft={"15"}
+              center={[10, 0]}
+              absolute
+            />
+          ) : (
+            <Text style={styles.noDataText}>No vehicle type data available</Text>
+          )}
         </View>
 
-        <Surface style={styles.activityCard} elevation={0}>
-          <View style={styles.activityIcon}>
-            <Icon name="Clock" size={24} color="#2563EB" />
-          </View>
-          <View style={styles.activityContent}>
-            <Text style={styles.activityTitle}>
-              {data?.lastTestDate ? "Recent Emission Test" : "No Recent Activity"}
-            </Text>
-            <Text style={styles.activitySubtitle}>
-              {data?.lastTestDate 
-                ? `Last verification recorded on ${new Date(data.lastTestDate).toLocaleDateString()}`
-                : "Start recording tests to see activity here."}
-            </Text>
-          </View>
-          <Icon name="ChevronRight" size={20} color="#CBD5E1" />
-        </Surface>
+        {/* Quarterly Test Results */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Quarterly Test Results</Text>
+          {data?.quarterlyData?.labels?.length > 0 ? (
+            <BarChart
+              data={data.quarterlyData}
+              width={SCREEN_WIDTH - 48}
+              height={220}
+              yAxisLabel=""
+              yAxisSuffix=""
+              chartConfig={{
+                ...chartConfig,
+                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Green bars
+              }}
+              style={styles.chart}
+              showValuesOnTopOfBars
+            />
+          ) : (
+            <Text style={styles.noDataText}>No quarterly data available</Text>
+          )}
+        </View>
+
+        {/* Engine Type Performance */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.chartTitle}>Engine Type Performance</Text>
+          {data?.engineTypeData?.labels?.length > 0 ? (
+            <BarChart
+              data={data.engineTypeData}
+              width={SCREEN_WIDTH - 48}
+              height={220}
+              yAxisLabel=""
+              yAxisSuffix=""
+              chartConfig={{
+                ...chartConfig,
+                color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, // Purple bars
+              }}
+              style={styles.chart}
+              showValuesOnTopOfBars
+              verticalLabelRotation={30}
+            />
+          ) : (
+            <Text style={styles.noDataText}>No engine data available</Text>
+          )}
+        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -212,7 +432,6 @@ export default function OverviewScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -280,118 +499,151 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#FFFFFF",
   },
-  metricsGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 32,
+  statsGridContainer: {
+    marginBottom: 24,
+    gap: 12,
   },
-  metricItem: {
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  statCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    alignItems: "center",
-    marginHorizontal: 4,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  metricIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  metricValue: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-    marginTop: 2,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#0F172A",
-    marginBottom: 16,
-  },
-  lastSyncText: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginBottom: 16,
-  },
-  activityCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-  },
-  activityIcon: {
-    width: 48,
-    height: 48,
     borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 2,
-  },
-  activitySubtitle: {
-    fontSize: 13,
-    color: "#64748B",
-    lineHeight: 18,
-  },
-  actionsRow: {
+    padding: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 32,
-    paddingHorizontal: 0,
-  },
-  actionItem: {
-    width: (SCREEN_WIDTH - 48 - 24) / 4, // Screen width minus horizontal padding (24*2) minus gaps, divided by 4
     alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    minHeight: 72,
   },
-  actionIcon: {
-    width: 42,
-    height: 42,
+  statIconBox: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
+    flexShrink: 0,
   },
-  actionLabel: {
-    fontSize: 10,
+  statTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  chartContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    alignItems: "center",
+  },
+  chartTitle: {
+    fontSize: 16,
     fontWeight: "700",
-    color: "#1E293B",
-    textAlign: "center",
+    color: "#0F172A",
+    marginBottom: 16,
+    alignSelf: "flex-start",
+  },
+  chart: {
+    borderRadius: 16,
+    marginVertical: 8,
+  },
+  noDataText: {
+    color: "#94A3B8",
+    fontStyle: "italic",
+    marginVertical: 20,
   },
   bottomSpacer: {
     height: 100,
   },
+  filterContainer: {
+    marginBottom: 16,
+  },
+  filterScroll: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  filterChipActive: {
+    backgroundColor: "#1E40AF",
+    borderColor: "#1E40AF",
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
+  verticalDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#CBD5E1",
+    marginHorizontal: 4,
+    alignSelf: "center",
+  },
+  yearPickerContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  yearPickerTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+  yearOptionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  yearOption: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  yearOptionActive: {
+    backgroundColor: "#1E40AF",
+    borderColor: "#1E40AF",
+  },
+  yearOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  yearOptionTextActive: {
+    color: "#FFFFFF",
+  },
 });
-
 
 

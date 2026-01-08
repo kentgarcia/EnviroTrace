@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "Government Emission Mobile",
+    "name": "EnviroTrace",
     "slug": "gov-emission-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/logo_app.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
@@ -14,7 +14,13 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.epnro.govemission"
+      "bundleIdentifier": "com.epnro.govemission",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to take photos of trees for inspection.",
+        "NSLocationWhenInUseUsageDescription": "This app requires location access to tag photos with GPS coordinates.",
+        "NSPhotoLibraryUsageDescription": "This app requires photo library access to save tree inspection photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app requires permission to save photos to your photo library."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -26,7 +32,11 @@
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_WIFI_STATE",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
       "package": "com.epnro.govemission",
       "versionCode": 1,
@@ -47,6 +57,28 @@
       ],
       "expo-font",
       "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos of trees for inspection.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to tag photos with GPS coordinates.",
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location to tag photos with GPS coordinates."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to save tree inspection photos to your photo library.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ],
       "./plugins/withNetworkSecurityConfig.js"
     ],
     "scheme": "gov-emission",
@@ -54,7 +86,7 @@
       "eas": {
         "projectId": "966ce2df-01f4-4e40-a136-4e2c63429daa"
       },
-      "apiUrl": "https://envirotrace.onrender.com/api/v1"
+      "apiUrl": "https://envirotrace.up.railway.app/api/v1"
     }
   }
 }

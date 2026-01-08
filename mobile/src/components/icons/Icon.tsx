@@ -74,6 +74,13 @@ import {
     TrendingUp,
     TrendingDown,
     TreeDeciduous,
+    Award,
+    Leaf,
+    Sprout,
+    RotateCcw,
+    AlertTriangle,
+    Download,
+    Upload,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -148,6 +155,13 @@ const ICONS = {
     TrendingUp,
     TrendingDown,
     TreeDeciduous,
+    Award,
+    Leaf,
+    Sprout,
+    RotateCcw,
+    AlertTriangle,
+    Download,
+    Upload,
     CheckCircle: CheckCircle2, // Alias
 } as const;
 

@@ -62,9 +62,6 @@ export default function ReportsScreen() {
         title: "Reports",
         subtitle: "Generate and download reports",
         statusBarStyle: "light",
-        backgroundColor: "#2563EB",
-        titleColor: "#FFFFFF",
-        subtitleColor: "rgba(255, 255, 255, 0.8)",
         borderColor: "transparent",
         titleSize: 22,
         subtitleSize: 12,
@@ -169,15 +166,15 @@ export default function ReportsScreen() {
             <Text style={styles.dialogLabel}>Report Period</Text>
             <RadioButton.Group onValueChange={(value: any) => setReportType(value)} value={reportType}>
               <View style={styles.radioOption}>
-                <RadioButton value="monthly" color="#2563EB" />
+                <RadioButton value="monthly" color="#1E40AF" />
                 <Text style={styles.radioLabel}>Monthly Report</Text>
               </View>
               <View style={styles.radioOption}>
-                <RadioButton value="quarterly" color="#2563EB" />
+                <RadioButton value="quarterly" color="#1E40AF" />
                 <Text style={styles.radioLabel}>Quarterly Report</Text>
               </View>
               <View style={styles.radioOption}>
-                <RadioButton value="annual" color="#2563EB" />
+                <RadioButton value="annual" color="#1E40AF" />
                 <Text style={styles.radioLabel}>Annual Report</Text>
               </View>
             </RadioButton.Group>
@@ -185,18 +182,18 @@ export default function ReportsScreen() {
             <Text style={[styles.dialogLabel, { marginTop: 20 }]}>Export Format</Text>
             <RadioButton.Group onValueChange={(value: any) => setReportFormat(value)} value={reportFormat}>
               <View style={styles.radioOption}>
-                <RadioButton value="excel" color="#2563EB" />
+                <RadioButton value="excel" color="#1E40AF" />
                 <Text style={styles.radioLabel}>Excel (.xlsx)</Text>
               </View>
               <View style={styles.radioOption}>
-                <RadioButton value="pdf" color="#2563EB" />
+                <RadioButton value="pdf" color="#1E40AF" />
                 <Text style={styles.radioLabel}>PDF Document</Text>
               </View>
             </RadioButton.Group>
           </Dialog.Content>
           <Dialog.Actions style={styles.dialogActions}>
             <Button onPress={() => setShowGenerateDialog(false)} textColor="#64748B" labelStyle={styles.buttonLabel}>Cancel</Button>
-            <Button onPress={handleGenerateReport} mode="contained" buttonColor="#2563EB" labelStyle={styles.buttonLabel}>Generate</Button>
+            <Button onPress={handleGenerateReport} mode="contained" buttonColor="#1E40AF" labelStyle={styles.buttonLabel}>Generate</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -207,7 +204,6 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -248,7 +244,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1E40AF",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,

@@ -46,7 +46,7 @@ export default function VehicleDetailScreen() {
   const loading = loadingVehicle || loadingTests;
 
   return (
-    <>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <StandardHeader
         title="Vehicle Details"
         showBack
@@ -55,10 +55,10 @@ export default function VehicleDetailScreen() {
         titleSize={20}
         iconSize={20}
       />
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+      <View style={styles.safeArea}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2563EB" />
+            <ActivityIndicator size="large" color="#1E40AF" />
           </View>
         ) : !vehicle ? (
           <View style={styles.emptyContainer}>
@@ -78,7 +78,7 @@ export default function VehicleDetailScreen() {
                 <View style={styles.card}>
                   <View style={styles.plateContainer}>
                     <View style={styles.plateIconContainer}>
-                      <Icon name="Car" size={24} color="#2563EB" />
+                      <Icon name="Car" size={24} color="#1E40AF" />
                     </View>
                     <Text style={styles.plateNumber}>
                       {vehicle.plate_number ||
@@ -266,12 +266,16 @@ export default function VehicleDetailScreen() {
             </View>
           </>
         )}
-      </SafeAreaView>
-    </>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
   safeArea: {
     flex: 1,
     backgroundColor: "#F8FAFC",
@@ -463,7 +467,7 @@ const styles = StyleSheet.create({
   },
   actionPill: {
     flexDirection: "row",
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1E40AF",
     borderRadius: 16,
     paddingHorizontal: 24,
     paddingVertical: 18,

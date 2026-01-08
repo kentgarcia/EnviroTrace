@@ -328,7 +328,7 @@ export default function AddVehicleScreen() {
                 disabled={!isValid || addVehicleMutation.isPending}
                 loading={addVehicleMutation.isPending}
                 style={styles.saveBtn}
-                buttonColor="#2563EB"
+                buttonColor="#1E40AF"
                 labelStyle={styles.saveBtnLabel}
               >
                 Save Vehicle
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
   helperTextInfo: {
     marginTop: 4,
     fontSize: 11,
-    color: "#2563EB",
+    color: "#1E40AF",
   },
   vehicleTypeContainer: {
     position: "relative",

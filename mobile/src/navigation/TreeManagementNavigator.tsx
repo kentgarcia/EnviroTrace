@@ -12,9 +12,12 @@ import {
     StatisticsScreen,
 } from "../screens/roles/tree-management";
 import TreeInventoryScreen from "../screens/roles/tree-management/TreeInventoryScreen";
+import TreeDetailScreen from "../screens/roles/tree-management/TreeDetailScreen";
+import TreeFormScreen from "../screens/roles/tree-management/TreeFormScreen";
 import GreeningProjectsScreen from "../screens/roles/tree-management/GreeningProjectsScreen";
 import FeeRecordsScreen from "../screens/roles/tree-management/FeeRecordsScreen";
 import MapViewScreen from "../screens/roles/tree-management/MapViewScreen";
+import CameraScreen from "../screens/roles/tree-management/CameraScreen";
 
 // Import shared screens (profile, etc.)
 import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
@@ -25,7 +28,10 @@ export type TreeManagementStackParamList = {
     Profile: undefined;
     TreeManagementOverview: undefined;
     TreeInventory: undefined;
+    TreeDetail: { treeId: string };
+    TreeForm: { treeId?: string };
     MapView: undefined;
+    Camera: undefined;
     TreeRequests: undefined;
     GreeningProjects: undefined;
     FeeRecords: undefined;
@@ -88,19 +94,22 @@ function MainTabs() {
                             iconName = "LayoutDashboard";
                             break;
                         case "TreeInventory":
-                            iconName = "Trees";
+                            iconName = "TreeDeciduous";
                             break;
                         case "MapView":
-                            iconName = "Map";
+                            iconName = "MapPin";
+                            break;
+                        case "Camera":
+                            iconName = "Camera";
                             break;
                         case "TreeRequests":
-                            iconName = "ClipboardList";
+                            iconName = "FileText";
                             break;
                         case "GreeningProjects":
                             iconName = "Leaf";
                             break;
                         case "FeeRecords":
-                            iconName = "Receipt";
+                            iconName = "Banknote";
                             break;
                         default:
                             iconName = "HelpCircle";
@@ -151,29 +160,11 @@ function MainTabs() {
                 }}
             />
             <Tab.Screen
-                name="TreeRequests"
-                component={TreeRequestsStack}
+                name="Camera"
+                component={CameraScreen}
                 options={{
-                    title: "Tree Requests",
-                    tabBarLabel: "Requests",
-                    headerShown: false,
-                }}
-            />
-            <Tab.Screen
-                name="GreeningProjects"
-                component={GreeningProjectsScreen}
-                options={{
-                    title: "Greening Projects",
-                    tabBarLabel: "Projects",
-                    headerShown: false,
-                }}
-            />
-            <Tab.Screen
-                name="FeeRecords"
-                component={FeeRecordsScreen}
-                options={{
-                    title: "Fee Records",
-                    tabBarLabel: "Fees",
+                    title: "Camera",
+                    tabBarLabel: "Camera",
                     headerShown: false,
                 }}
             />
@@ -185,6 +176,20 @@ export default function TreeManagementNavigator() {
     return (
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="MainTabs" component={MainTabs} />
+            <RootStack.Screen
+                name="TreeDetail"
+                component={TreeDetailScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <RootStack.Screen
+                name="TreeForm"
+                component={TreeFormScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
             <RootStack.Screen
                 name="Profile"
                 component={ProfileScreen}

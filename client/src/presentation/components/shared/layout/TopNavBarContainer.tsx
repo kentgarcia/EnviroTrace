@@ -211,25 +211,24 @@ export default function TopNavBarContainer({
 
   return (
     <header className="w-full bg-main border-b border-white/10 sticky top-0 z-40">
-      <div className="max-w-[1600px] mx-auto grid grid-cols-3 items-center h-20 px-6">
-        <div className="flex justify-start">
-          <Link to="/dashboard-selection" className="flex items-center gap-3 group">
-            <div className="flex items-center gap-2">
-              <img src="/images/logo_munti.png" alt="Muntinlupa Logo" className="w-10 h-10 object-contain" />
-              <img src="/images/logo_epnro.png" alt="EPNRO Logo" className="w-10 h-10 object-contain" />
+      <div className="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-4 min-h-[64px] sm:min-h-[80px] px-3 sm:px-6 py-2">
+        <div className="hidden md:flex justify-start">
+          <Link to="/dashboard-selection" className="flex items-center gap-2 sm:gap-3 group">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <img src="/images/logo_munti.png" alt="Muntinlupa Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
+              <img src="/images/logo_epnro.png" alt="EPNRO Logo" className="w-8 h-8 sm:w-10 sm:h-10 object-contain" />
             </div>
-            <div className="flex flex-col border-l border-white/20 pl-3">
-              <span className="text-white font-black text-lg leading-none tracking-tighter">ENVIROTRACE</span>
-              <span className="text-secondary font-bold text-[10px] leading-none tracking-[0.2em] uppercase mt-0.5">Navigator</span>
+            <div className="flex flex-col border-l border-white/20 pl-2 sm:pl-3">
+              <span className="text-white font-black text-sm sm:text-base lg:text-lg leading-none tracking-tighter">ENVIROTRACE</span>
             </div>
           </Link>
         </div>
         
-        <div className="flex justify-center">
+        <div className="flex justify-center order-3 w-full sm:order-2 sm:w-auto sm:flex-1">
           <TopNavBar items={menuItems} />
         </div>
         
-        <div className="flex justify-end">
+        <div className="flex justify-end order-2 sm:order-3">
           <TopNavBar items={accountItems} />
         </div>
       </div>

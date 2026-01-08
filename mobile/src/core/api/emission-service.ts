@@ -76,7 +76,38 @@ const API_ENDPOINTS = {
   VEHICLES: "/emission/vehicles",
   FILTER_OPTIONS: "/emission/vehicles/filters/options",
   TESTS: "/emission/tests",
+  OFFICE_COMPLIANCE: "/emission/offices/compliance",
 };
+
+// Office Compliance Types
+export interface OfficeData {
+  office_name: string;
+  total_vehicles: number;
+  tested_vehicles: number;
+  compliant_vehicles: number;
+  non_compliant_vehicles: number;
+  compliance_rate: number;
+  last_test_date: string | null;
+}
+
+export interface OfficeComplianceSummary {
+  total_offices: number;
+  total_vehicles: number;
+  total_compliant: number;
+  overall_compliance_rate: number;
+}
+
+export interface OfficeComplianceResponse {
+  offices: OfficeData[];
+  summary: OfficeComplianceSummary;
+  total: number;
+}
+
+export interface OfficeFilters {
+  search_term?: string;
+  year?: number;
+  quarter?: number;
+}
 
 // Hooks for offices
 export function useOffices(search?: string, skip = 0, limit = 100) {
@@ -95,6 +126,36 @@ export function useOffices(search?: string, skip = 0, limit = 100) {
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 20 * 60 * 1000, // 20 minutes
+  });
+}
+
+export function useOfficeCompliance(
+  filters?: OfficeFilters,
+  skip = 0,
+  limit = 100
+) {
+  return useQuery<OfficeComplianceResponse>({
+    queryKey: ["officeCompliance", filters, skip, limit],
+    queryFn: async () => {
+      // Build query params
+      const params = new URLSearchParams();
+
+      if (skip) params.append("skip", skip.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            params.append(key, value.toString());
+          }
+        });
+      }
+
+      const { data } = await apiClient.get<OfficeComplianceResponse>(
+        `${API_ENDPOINTS.OFFICE_COMPLIANCE}?${params.toString()}`
+      );
+      return data;
+    },
   });
 }
 

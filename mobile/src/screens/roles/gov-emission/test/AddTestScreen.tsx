@@ -146,14 +146,14 @@ export default function AddTestScreen() {
           updated_at: new Date().toISOString(),
         };
         setRecognizedVehicle(vehicleDetails);
-        setPlateNumber(response.plate_number);
+        setPlateNumber(response.plate_number || "");
         Alert.alert(
           "Vehicle Found!",
           `License plate "${response.plate_number}" belongs to vehicle driven by ${response.vehicle_details.driver_name}.\n\nConfidence: ${Math.round(response.confidence * 100)}%`,
           [{ text: "OK" }]
         );
       } else {
-        setPlateNumber(response.plate_number);
+        setPlateNumber(response.plate_number || "");
 
         if (response.suggest_creation) {
           // Suggest creating a new vehicle record
@@ -302,7 +302,7 @@ export default function AddTestScreen() {
       updated_at: vehicle.updated_at,
     };
     setRecognizedVehicle(vehicleResponse);
-    setPlateNumber(vehicle.plate_number);
+    setPlateNumber(vehicle.plate_number || "");
     setShowSuggestions(false);
     setPlateSearchManual(false);
   };
@@ -359,7 +359,7 @@ export default function AddTestScreen() {
                   disabled={isProcessingPlate}
                 >
                   <View style={styles.secondaryActionIcon}>
-                    <Icon name="Search" size={20} color="#2563EB" />
+                    <Icon name="Search" size={20} color="#1E40AF" />
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.secondaryActionTitle}>Search Manually</Text>
@@ -371,7 +371,7 @@ export default function AddTestScreen() {
                 {/* Processing Indicator */}
                 {isProcessingPlate && (
                   <View style={styles.processingContainer}>
-                    <ActivityIndicator size="small" color="#2563EB" />
+                    <ActivityIndicator size="small" color="#1E40AF" />
                     <Text style={styles.processingText}>Processing...</Text>
                   </View>
                 )}
@@ -380,7 +380,7 @@ export default function AddTestScreen() {
               <View style={styles.card}>
                 <View style={styles.selectedVehicleCard}>
                   <View style={styles.vehicleIconContainer}>
-                    <Icon name="Car" size={28} color="#2563EB" />
+                    <Icon name="Car" size={28} color="#1E40AF" />
                   </View>
                   <View style={styles.selectedVehicleInfo}>
                     <View style={styles.plateRow}>
@@ -412,7 +412,7 @@ export default function AddTestScreen() {
                 {preSelectedVehicle ? (
                   <View style={styles.selectedVehicleCard}>
                     <View style={styles.vehicleIconContainer}>
-                      <Icon name="Car" size={28} color="#2563EB" />
+                      <Icon name="Car" size={28} color="#1E40AF" />
                     </View>
                     <View style={styles.selectedVehicleInfo}>
                       <View style={styles.plateRow}>
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
   primaryActionButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1E40AF",
     borderRadius: 14,
     padding: 16,
     marginBottom: 16,
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1E40AF",
     borderRadius: 14,
     paddingVertical: 16,
     gap: 8,
@@ -1114,7 +1114,7 @@ const styles = StyleSheet.create({
   },
   modalSearchButton: {
     flex: 1,
-    backgroundColor: "#2563EB",
+    backgroundColor: "#1E40AF",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

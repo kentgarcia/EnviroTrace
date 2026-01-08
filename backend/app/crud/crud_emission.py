@@ -442,82 +442,121 @@ class CRUDOfficeCompliance:
         limit: int = 100, 
         filters: Optional[Dict[str, Any]] = None
     ):
-        """Get office compliance data aggregated from vehicles and tests"""
+        """Get office compliance data aggregated from vehicles and tests (Optimized)"""
         
-        # Base query to get all offices that have vehicles
-        office_query = db.query(Office).join(Vehicle, Office.id == Vehicle.office_id).distinct()
-        
-        # Apply search filter if provided
+        # 1. Get Offices (paginated)
+        office_query = db.query(Office)
         if filters and filters.get("search_term"):
-            search_term = filters["search_term"]
-            office_query = office_query.filter(
-                Office.name.ilike(f"%{search_term}%")
-            )
+             office_query = office_query.filter(Office.name.ilike(f"%{filters['search_term']}%"))
         
-        all_offices = office_query.all()
-        total_offices = len(all_offices)
+        # We need to join with vehicles to ensure we only get offices that have vehicles? 
+        # The original code did: db.query(Office).join(Vehicle, Office.id == Vehicle.office_id).distinct()
+        office_query = office_query.join(Vehicle, Office.id == Vehicle.office_id).distinct()
         
-        # Paginate offices
-        paginated_offices = all_offices[skip:skip + limit] if limit > 0 else all_offices
+        total_offices = office_query.count()
+        offices = office_query.order_by(Office.name).offset(skip).limit(limit).all()
         
+        if not offices:
+             return {
+                "offices": [], 
+                "summary": {
+                    "total_offices": 0,
+                    "total_vehicles": 0,
+                    "total_compliant": 0,
+                    "overall_compliance_rate": 0
+                }, 
+                "total": 0
+            }
+
+        office_ids = [o.id for o in offices]
+
+        # 2. Get Vehicles for these offices
+        vehicle_query = db.query(Vehicle).filter(Vehicle.office_id.in_(office_ids))
+        
+        # Apply year/quarter filters to restrict vehicles to those tested in the period
+        if filters and (filters.get("year") or filters.get("quarter")):
+            test_filter_conditions = []
+            if filters.get("year"):
+                test_filter_conditions.append(Test.year == filters["year"])
+            if filters.get("quarter"):
+                test_filter_conditions.append(Test.quarter == filters["quarter"])
+            
+            # Subquery to find vehicle IDs that have matching tests
+            stmt = db.query(Test.vehicle_id).filter(*test_filter_conditions).distinct()
+            vehicle_query = vehicle_query.filter(Vehicle.id.in_(stmt))
+            
+        vehicles = vehicle_query.all()
+        
+        # Map office_id -> list of vehicles
+        vehicle_map = {o_id: [] for o_id in office_ids}
+        for v in vehicles:
+            if v.office_id in vehicle_map:
+                vehicle_map[v.office_id].append(v)
+            
+        # 3. Get Tests for these vehicles
+        vehicle_ids = [v.id for v in vehicles]
+        
+        if not vehicle_ids:
+             # No vehicles found matching criteria
+             return {
+                "offices": [], 
+                "summary": {
+                    "total_offices": len(offices),
+                    "total_vehicles": 0,
+                    "total_compliant": 0,
+                    "overall_compliance_rate": 0
+                }, 
+                "total": total_offices
+            }
+
+        test_query = db.query(Test).filter(Test.vehicle_id.in_(vehicle_ids))
+        
+        if filters:
+            if filters.get("year"):
+                test_query = test_query.filter(Test.year == filters["year"])
+            if filters.get("quarter"):
+                test_query = test_query.filter(Test.quarter == filters["quarter"])
+        
+        tests = test_query.order_by(Test.test_date.desc()).all()
+        
+        # Map vehicle_id -> latest test
+        latest_tests = {}
+        for t in tests:
+            if t.vehicle_id not in latest_tests:
+                latest_tests[t.vehicle_id] = t
+        
+        # 4. Aggregate Data
         office_compliance_data = []
         total_vehicles_all = 0
         total_compliant_all = 0
         
-        for office in paginated_offices:
-            # Get vehicles for this office
-            vehicles_query = db.query(Vehicle).filter(Vehicle.office_id == office.id)
+        for office in offices:
+            office_vehicles = vehicle_map.get(office.id, [])
             
-            # Apply year/quarter filters if provided
-            if filters:
-                if filters.get("year") or filters.get("quarter"):
-                    # Join with tests to filter by test date
-                    test_filter_conditions = []
-                    if filters.get("year"):
-                        test_filter_conditions.append(Test.year == filters["year"])
-                    if filters.get("quarter"):
-                        test_filter_conditions.append(Test.quarter == filters["quarter"])
-                    
-                    # Get vehicles that have tests matching the criteria
-                    if test_filter_conditions:
-                        vehicle_ids_with_tests = db.query(Test.vehicle_id).filter(*test_filter_conditions).distinct()
-                        vehicles_query = vehicles_query.filter(Vehicle.id.in_(vehicle_ids_with_tests))
-            
-            vehicles = vehicles_query.all()
-            total_vehicles = len(vehicles)
-            
+            total_vehicles = len(office_vehicles)
             if total_vehicles == 0:
                 continue
-                
-            # Count tested and compliant vehicles
+
             tested_vehicles = 0
             compliant_vehicles = 0
             last_test_date = None
             
-            for vehicle in vehicles:
-                # Get latest test for this vehicle
-                test_query = db.query(Test).filter(Test.vehicle_id == vehicle.id)
-                
-                # Apply year/quarter filters to tests if provided
-                if filters:
-                    if filters.get("year"):
-                        test_query = test_query.filter(Test.year == filters["year"])
-                    if filters.get("quarter"):
-                        test_query = test_query.filter(Test.quarter == filters["quarter"])
-                
-                latest_test = test_query.order_by(desc(Test.test_date)).first()
-                
-                if latest_test:
+            for v in office_vehicles:
+                test = latest_tests.get(v.id)
+                if test:
                     tested_vehicles += 1
-                    if latest_test.result: # type: ignore
+                    if test.result:
                         compliant_vehicles += 1
                     
-                    # Track the most recent test date across all vehicles
-                    if last_test_date is None or latest_test.test_date > last_test_date: # type: ignore
-                        last_test_date = latest_test.test_date
+                    if last_test_date is None or test.test_date > last_test_date:
+                        last_test_date = test.test_date
+            
+            # If we filtered vehicles by having tests, tested_vehicles should equal total_vehicles
+            # But let's keep the logic generic
             
             non_compliant_vehicles = tested_vehicles - compliant_vehicles
             compliance_rate = (compliant_vehicles / tested_vehicles * 100) if tested_vehicles > 0 else 0
+            
             office_data = OfficeComplianceData(
                 office_name=office.name,
                 total_vehicles=total_vehicles,
@@ -525,7 +564,7 @@ class CRUDOfficeCompliance:
                 compliant_vehicles=compliant_vehicles,
                 non_compliant_vehicles=non_compliant_vehicles,
                 compliance_rate=round(compliance_rate, 2),
-                last_test_date=last_test_date # type: ignore
+                last_test_date=last_test_date
             )
             
             office_compliance_data.append(office_data)

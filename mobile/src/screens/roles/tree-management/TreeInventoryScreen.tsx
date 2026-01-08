@@ -1,435 +1,886 @@
-import React, { useState } from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from "react-native";
-import { Card, Text, Chip, Searchbar, Portal, Dialog, Button, TextInput } from "react-native-paper";
+import React, { useState, useMemo, useCallback } from "react";
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+  ScrollView,
+} from "react-native";
+import {
+  Text,
+  Chip,
+  Button,
+  Dialog,
+  Portal,
+  Divider,
+  useTheme,
+} from "react-native-paper";
+import { Dropdown } from "react-native-element-dropdown";
 import Icon from "../../../components/icons/Icon";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import ScreenLayout from "../../../components/layout/ScreenLayout";
 import FloatingActionButton from "../../../components/FloatingActionButton";
+import { useQuery } from "@tanstack/react-query";
+import { treeInventoryApi, TreeInventory, TreeFilters } from "../../../core/api/tree-inventory-api";
 
-interface TreeInventoryItem {
-  id: string;
-  species: string;
-  commonName: string;
-  location: string;
-  latitude: number;
-  longitude: number;
-  height: number;
-  diameter: number;
-  condition: "excellent" | "good" | "fair" | "poor";
-  plantedDate: string;
-  lastInspection: string;
-}
+type FilterValues = {
+  status: string;
+  health: string;
+};
+
+type DropdownOption = {
+  label: string;
+  value: string;
+};
+
+type FilterDialogProps = {
+  visible: boolean;
+  onDismiss: () => void;
+  dropdownData: {
+    statuses: DropdownOption[];
+    healthLevels: DropdownOption[];
+  };
+  initialValues: FilterValues;
+  onApply: (filters: FilterValues) => void;
+  renderRightIcon: (visible?: boolean) => React.ReactElement | null;
+  renderItem: (item: DropdownOption, selected?: boolean) => React.ReactElement | null;
+};
 
 export default function TreeInventoryScreen() {
-  const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
+  const navigation = useNavigation();
+
+  // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [filterCondition, setFilterCondition] = useState<string | null>(null);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterHealth, setFilterHealth] = useState<string>("");
 
-  const mockTrees: TreeInventoryItem[] = [
-    {
-      id: "1",
-      species: "Narra",
-      commonName: "Philippine National Tree",
-      location: "City Hall Park",
-      latitude: 14.5995,
-      longitude: 120.9842,
-      height: 15.5,
-      diameter: 45.2,
-      condition: "excellent",
-      plantedDate: "2020-03-15",
-      lastInspection: "2025-12-01",
+  // Build filters object for API
+  const filters: TreeFilters = useMemo(() => {
+    const result: TreeFilters = { limit: 500 }; // Backend max is 500
+    if (searchQuery) result.search = searchQuery;
+    if (filterStatus) result.status = filterStatus;
+    if (filterHealth) result.health = filterHealth;
+    return result;
+  }, [searchQuery, filterStatus, filterHealth]);
+
+  // Fetch data from API
+  const {
+    data: treesResponse,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["tree-inventory", filters],
+    queryFn: async () => {
+      try {
+        console.log("Fetching trees with filters:", filters);
+        const response = await treeInventoryApi.getTrees(filters);
+        console.log("Tree inventory response:", response);
+        console.log("Number of trees:", response?.data?.length || 0);
+        return response;
+      } catch (err) {
+        console.error("Error fetching trees:", err);
+        if (err instanceof Error) {
+          console.error("Error message:", err.message);
+        }
+        throw err;
+      }
     },
-    {
-      id: "2",
-      species: "Mahogany",
-      commonName: "Philippine Mahogany",
-      location: "Barangay Green Space",
-      latitude: 14.6020,
-      longitude: 120.9850,
-      height: 12.3,
-      diameter: 38.5,
-      condition: "good",
-      plantedDate: "2019-06-20",
-      lastInspection: "2025-11-28",
-    },
-    {
-      id: "3",
-      species: "Molave",
-      commonName: "Philippine Hardwood",
-      location: "Municipal Plaza",
-      latitude: 14.6005,
-      longitude: 120.9830,
-      height: 10.8,
-      diameter: 32.1,
-      condition: "fair",
-      plantedDate: "2021-01-10",
-      lastInspection: "2025-12-15",
-    },
-  ];
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case "excellent":
-        return { bg: "#DCFCE7", text: "#059669" };
-      case "good":
-        return { bg: "#DBEAFE", text: "#2563EB" };
-      case "fair":
-        return { bg: "#FEF3C7", text: "#D97706" };
-      case "poor":
-        return { bg: "#FEE2E2", text: "#DC2626" };
-      default:
-        return { bg: "#F3F4F6", text: "#6B7280" };
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => setRefreshing(false), 1500);
-  };
-
-  const filteredTrees = mockTrees.filter((tree) => {
-    const matchesSearch =
-      tree.species.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tree.commonName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tree.location.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = !filterCondition || tree.condition === filterCondition;
-    return matchesSearch && matchesFilter;
+    staleTime: 60_000,
   });
 
-  const stats = {
-    total: mockTrees.length,
-    excellent: mockTrees.filter((t) => t.condition === "excellent").length,
-    good: mockTrees.filter((t) => t.condition === "good").length,
-    needsAttention: mockTrees.filter((t) => t.condition === "fair" || t.condition === "poor").length,
+  const trees = treesResponse?.data || [];
+  
+  // Log error if present
+  React.useEffect(() => {
+    if (error) {
+      console.error("Query error:", error);
+    }
+  }, [error]);
+
+  // Get filter options from data
+  const dropdownData = useMemo(() => {
+    return {
+      statuses: [
+        { label: "All Status", value: "" },
+        { label: "Alive", value: "alive" },
+        { label: "Cut", value: "cut" },
+        { label: "Dead", value: "dead" },
+        { label: "Replaced", value: "replaced" },
+      ],
+      healthLevels: [
+        { label: "All Health", value: "" },
+        { label: "Healthy", value: "healthy" },
+        { label: "Needs Attention", value: "needs_attention" },
+        { label: "Diseased", value: "diseased" },
+        { label: "Dead", value: "dead" },
+      ],
+    };
+  }, []);
+
+  // Optimized handlers using useCallback
+  const handleApplyFilters = useCallback(
+    (filters: FilterValues) => {
+      setFilterStatus(filters.status);
+      setFilterHealth(filters.health);
+      setFilterModalVisible(false);
+    },
+    []
+  );
+
+  // Memoized render functions for Dropdown
+  const renderChevronIcon = useCallback(
+    (_visible?: boolean) => <Icon name="ChevronDown" size={18} color="#6B7280" />,
+    []
+  );
+
+  const renderDropdownItem = useCallback(
+    (item: DropdownOption) => (
+      <View style={styles.dropdownItem}>
+        <Text style={styles.dropdownItemText}>{item.label}</Text>
+      </View>
+    ),
+    []
+  );
+
+  const filterDialogInitialValues = useMemo(
+    () => ({
+      status: filterStatus,
+      health: filterHealth,
+    }),
+    [filterStatus, filterHealth]
+  );
+
+  // Refetch data whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
+  const onRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  const handleTreePress = useCallback(
+    (tree: TreeInventory) => {
+      (navigation as any).navigate("TreeDetail", { treeId: tree.id });
+    },
+    [navigation]
+  );
+
+  const handleAddTree = () => {
+    navigation.navigate("TreeForm" as never);
   };
+
+  const renderTreeCard = useCallback(
+    ({ item }: { item: TreeInventory }) => (
+      <TreeCard tree={item} onPress={handleTreePress} />
+    ),
+    [handleTreePress]
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIconContainer}>
+        <Icon name="TreePalm" size={48} color="#059669" />
+      </View>
+      <Text style={styles.emptyTitle}>
+        {error ? "Error loading trees" : "No trees found"}
+      </Text>
+      <Text style={styles.emptyText}>
+        {error
+          ? `Failed to load tree inventory. Please check your connection and try again.`
+          : searchQuery
+          ? "Try adjusting your search or filters"
+          : "Add your first tree to start tracking"}
+      </Text>
+      {error ? (
+        <Button
+          mode="contained"
+          onPress={() => refetch()}
+          style={styles.emptyButton}
+          buttonColor="#DC2626"
+        >
+          Retry
+        </Button>
+      ) : !searchQuery ? (
+        <Button
+          mode="contained"
+          onPress={handleAddTree}
+          style={styles.emptyButton}
+          buttonColor="#059669"
+        >
+          Add Tree
+        </Button>
+      ) : null}
+    </View>
+  );
 
   return (
     <ScreenLayout
       header={{
         title: "Tree Inventory",
-        subtitle: "Central registry of all trees",
+        subtitle: isLoading ? "Loading..." : `${trees.length} Total Trees`,
         statusBarStyle: "dark",
-        backgroundColor: "rgba(255, 255, 255, 0.95)",
-        borderColor: "#E5E7EB",
-        titleSize: 22,
-        subtitleSize: 12,
-        iconSize: 20,
+        rightActionIcon: "RefreshCw",
+        onRightActionPress: () => refetch(),
+        showProfileAction: true,
       }}
     >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      {/* Search bar with filter button */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Icon name="Search" size={18} color="#64748B" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by code, species, or location..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94A3B8"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Icon name="X" size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.filterButton}
+          onPress={() => setFilterModalVisible(true)}
         >
-          {/* Stats Cards */}
-          <View style={styles.statsSection}>
-            <View style={styles.statsRow}>
-              <View style={[styles.statCard, { flex: 1 }]}>
-                <View style={[styles.statIcon, { backgroundColor: "#EFF6FF" }]}>
-                  <Icon name="TreePalm" size={20} color="#3B82F6" />
-                </View>
-                <Text style={styles.statValue}>{stats.total}</Text>
-                <Text style={styles.statLabel}>Total Trees</Text>
-              </View>
+          <Icon name="Filter" size={20} color="#FFFFFF" />
+          {(filterStatus || filterHealth) && (
+            <View style={styles.filterBadge} />
+          )}
+        </TouchableOpacity>
+      </View>
 
-              <View style={[styles.statCard, { flex: 1 }]}>
-                <View style={[styles.statIcon, { backgroundColor: "#DCFCE7" }]}>
-                  <Icon name="CheckCircle2" size={20} color="#10B981" />
-                </View>
-                <Text style={styles.statValue}>{stats.excellent}</Text>
-                <Text style={styles.statLabel}>Excellent</Text>
-              </View>
-            </View>
-
-            <View style={styles.statsRow}>
-              <View style={[styles.statCard, { flex: 1 }]}>
-                <View style={[styles.statIcon, { backgroundColor: "#DBEAFE" }]}>
-                  <Icon name="Leaf" size={20} color="#2563EB" />
-                </View>
-                <Text style={styles.statValue}>{stats.good}</Text>
-                <Text style={styles.statLabel}>Good Condition</Text>
-              </View>
-
-              <View style={[styles.statCard, { flex: 1 }]}>
-                <View style={[styles.statIcon, { backgroundColor: "#FEF3C7" }]}>
-                  <Icon name="AlertTriangle" size={20} color="#D97706" />
-                </View>
-                <Text style={styles.statValue}>{stats.needsAttention}</Text>
-                <Text style={styles.statLabel}>Needs Attention</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Search and Filter */}
-          <View style={styles.searchSection}>
-            <Searchbar
-              placeholder="Search by species, name, or location"
-              onChangeText={setSearchQuery}
-              value={searchQuery}
-              style={styles.searchBar}
-              inputStyle={styles.searchInput}
-              iconColor="#6B7280"
-            />
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
+      {/* Active filters */}
+      {(filterStatus || filterHealth) && (
+        <View style={styles.activeFiltersContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activeFiltersContent}
+          >
+            {filterStatus && (
               <Chip
-                selected={filterCondition === null}
-                onPress={() => setFilterCondition(null)}
-                style={styles.filterChip}
-                textStyle={styles.filterText}
+                compact
+                mode="flat"
+                onClose={() => setFilterStatus("")}
+                style={styles.activeFilterChip}
+                textStyle={styles.activeFilterText}
               >
-                All
+                {filterStatus}
               </Chip>
+            )}
+            {filterHealth && (
               <Chip
-                selected={filterCondition === "excellent"}
-                onPress={() => setFilterCondition("excellent")}
-                style={styles.filterChip}
-                textStyle={styles.filterText}
+                compact
+                mode="flat"
+                onClose={() => setFilterHealth("")}
+                style={styles.activeFilterChip}
+                textStyle={styles.activeFilterText}
               >
-                Excellent
+                {filterHealth.replace("_", " ")}
               </Chip>
-              <Chip
-                selected={filterCondition === "good"}
-                onPress={() => setFilterCondition("good")}
-                style={styles.filterChip}
-                textStyle={styles.filterText}
-              >
-                Good
-              </Chip>
-              <Chip
-                selected={filterCondition === "fair"}
-                onPress={() => setFilterCondition("fair")}
-                style={styles.filterChip}
-                textStyle={styles.filterText}
-              >
-                Fair
-              </Chip>
-              <Chip
-                selected={filterCondition === "poor"}
-                onPress={() => setFilterCondition("poor")}
-                style={styles.filterChip}
-                textStyle={styles.filterText}
-              >
-                Poor
-              </Chip>
-            </ScrollView>
-          </View>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                setFilterStatus("");
+                setFilterHealth("");
+              }}
+              style={styles.clearAllButton}
+            >
+              <Text style={styles.clearAllText}>Clear All</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
 
-          {/* Tree List */}
-          <View style={styles.treeList}>
-            {filteredTrees.map((tree) => {
-              const conditionColors = getConditionColor(tree.condition);
-              return (
-                <TouchableOpacity key={tree.id} style={styles.treeCard} activeOpacity={0.7}>
-                  <View style={styles.treeHeader}>
-                    <View style={styles.treeIconContainer}>
-                      <Icon name="TreePalm" size={24} color="#059669" />
-                    </View>
-                    <View style={styles.treeInfo}>
-                      <Text style={styles.treeSpecies}>{tree.species}</Text>
-                      <Text style={styles.treeCommonName}>{tree.commonName}</Text>
-                    </View>
-                    <Chip
-                      style={[styles.conditionChip, { backgroundColor: conditionColors.bg }]}
-                      textStyle={[styles.conditionText, { color: conditionColors.text }]}
-                      compact
-                    >
-                      {tree.condition}
-                    </Chip>
-                  </View>
+      {/* Tree count summary */}
+      <View style={styles.summaryContainer}>
+        <Text style={styles.summaryText}>
+          {trees.length} tree{trees.length !== 1 ? "s" : ""}
+          {searchQuery && " found"}
+        </Text>
+      </View>
 
-                  <View style={styles.treeDetails}>
-                    <View style={styles.detailRow}>
-                      <Icon name="MapPin" size={14} color="#9CA3AF" />
-                      <Text style={styles.detailText}>{tree.location}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Icon name="Ruler" size={14} color="#9CA3AF" />
-                      <Text style={styles.detailText}>
-                        Height: {tree.height}m • Diameter: {tree.diameter}cm
-                      </Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Icon name="Calendar" size={14} color="#9CA3AF" />
-                      <Text style={styles.detailText}>
-                        Planted: {new Date(tree.plantedDate).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Icon name="ClipboardCheck" size={14} color="#9CA3AF" />
-                      <Text style={styles.detailText}>
-                        Last Inspection: {new Date(tree.lastInspection).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+      <FlatList
+        data={trees}
+        renderItem={renderTreeCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={onRefresh}
+            colors={["#059669"]}
+            tintColor="#059669"
+          />
+        }
+        ListEmptyComponent={renderEmptyState}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={15}
+        windowSize={5}
+      />
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
+      <FloatingActionButton onPress={handleAddTree} />
 
-        <FloatingActionButton onPress={() => setShowAddDialog(true)} />
-
-      {/* Add Tree Dialog */}
-      <Portal>
-        <Dialog visible={showAddDialog} onDismiss={() => setShowAddDialog(false)} style={styles.dialog}>
-          <Dialog.Title>Add Tree to Inventory</Dialog.Title>
-          <Dialog.Content>
-            <Text style={styles.dialogText}>
-              Use the species management feature to add new trees to the inventory.
-            </Text>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button onPress={() => setShowAddDialog(false)}>Close</Button>
-            <Button mode="contained" onPress={() => setShowAddDialog(false)}>
-              Add Tree
-            </Button>
-          </Dialog.Actions>
-        </Dialog>
-      </Portal>
+      <FilterDialog
+        visible={filterModalVisible}
+        onDismiss={() => setFilterModalVisible(false)}
+        dropdownData={dropdownData}
+        initialValues={filterDialogInitialValues}
+        onApply={handleApplyFilters}
+        renderRightIcon={renderChevronIcon}
+        renderItem={renderDropdownItem}
+      />
     </ScreenLayout>
   );
 }
 
+// Memoized TreeCard component for optimal FlatList performance
+const TreeCard = React.memo(
+  ({
+    tree,
+    onPress,
+  }: {
+    tree: TreeInventory;
+    onPress: (tree: TreeInventory) => void;
+  }) => {
+    const handlePress = useCallback(() => onPress(tree), [onPress, tree]);
+
+    const getHealthColor = (health: string) => {
+      switch (health) {
+        case "healthy":
+          return { bg: "#DCFCE7", text: "#059669" };
+        case "needs_attention":
+          return { bg: "#FEF3C7", text: "#D97706" };
+        case "diseased":
+          return { bg: "#FEE2E2", text: "#DC2626" };
+        case "dead":
+          return { bg: "#F3F4F6", text: "#6B7280" };
+        default:
+          return { bg: "#F3F4F6", text: "#6B7280" };
+      }
+    };
+
+    const healthColors = getHealthColor(tree.health);
+
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={handlePress}>
+        <View style={styles.treeCard}>
+          {/* Header row with tree code */}
+          <View style={styles.cardHeader}>
+            <View style={styles.treeCodeContainer}>
+              <Text style={styles.treeCode}>{tree.tree_code}</Text>
+            </View>
+            <Chip
+              style={[styles.healthChip, { backgroundColor: healthColors.bg }]}
+              textStyle={[styles.healthText, { color: healthColors.text }]}
+              compact
+            >
+              {tree.health.replace("_", " ")}
+            </Chip>
+          </View>
+
+          {/* Compact Info Row */}
+          <View style={styles.compactInfoRow}>
+            <Text style={styles.species} numberOfLines={1}>
+              {tree.species}
+            </Text>
+            {tree.common_name && (
+              <>
+                <Text style={styles.dotSeparator}>•</Text>
+                <Text style={styles.commonName} numberOfLines={1}>
+                  {tree.common_name}
+                </Text>
+              </>
+            )}
+          </View>
+
+          {/* Location row */}
+          {(tree.address || tree.barangay) && (
+            <View style={styles.locationRow}>
+              <Icon name="MapPin" size={12} color="#64748B" />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {tree.address || tree.barangay}
+              </Text>
+            </View>
+          )}
+
+          {/* Details row */}
+          <View style={styles.detailsRow}>
+            {tree.height_meters && (
+              <View style={styles.detailItem}>
+                <Icon name="ArrowUpFromLine" size={12} color="#64748B" />
+                <Text style={styles.detailText}>{tree.height_meters}m</Text>
+              </View>
+            )}
+            {tree.diameter_cm && (
+              <View style={styles.detailItem}>
+                <Icon name="Circle" size={12} color="#64748B" />
+                <Text style={styles.detailText}>{tree.diameter_cm}cm</Text>
+              </View>
+            )}
+            <View style={styles.detailItem}>
+              <Icon name="Leaf" size={12} color="#64748B" />
+              <Text style={styles.detailText}>{tree.status}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+
+  (prevProps, nextProps) => {
+    return (
+      prevProps.tree.id === nextProps.tree.id &&
+      prevProps.tree.tree_code === nextProps.tree.tree_code &&
+      prevProps.tree.health === nextProps.tree.health &&
+      prevProps.tree.status === nextProps.tree.status
+    );
+  }
+);
+
+const FilterDialog = React.memo(
+  ({
+    visible,
+    onDismiss,
+    dropdownData,
+    initialValues,
+    onApply,
+    renderRightIcon,
+    renderItem,
+  }: FilterDialogProps) => {
+    const [filters, setFilters] = useState<FilterValues>(initialValues);
+
+    React.useEffect(() => {
+      if (visible) {
+        setFilters(initialValues);
+      }
+    }, [visible, initialValues]);
+
+    const handleChange = useCallback(
+      (key: keyof FilterValues) => (item: DropdownOption | any) => {
+        setFilters((prev) => ({ ...prev, [key]: item.value }));
+      },
+      []
+    );
+
+    const renderOption = useCallback(
+      (item: DropdownOption | any, selected?: boolean) =>
+        renderItem(item as DropdownOption, selected),
+      [renderItem]
+    );
+
+    const handleReset = useCallback(() => {
+      setFilters({ status: "", health: "" });
+    }, []);
+
+    const handleApply = useCallback(() => {
+      onApply(filters);
+    }, [filters, onApply]);
+
+    return (
+      <Portal>
+        <Dialog
+          visible={visible}
+          onDismiss={onDismiss}
+          style={styles.dialog}
+          dismissable
+        >
+          <View style={styles.dialogHeader}>
+            <Text style={styles.dialogTitleText}>Filter Trees</Text>
+            <TouchableOpacity onPress={onDismiss}>
+              <Icon name="X" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.dialogContent}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Status</Text>
+                <Dropdown
+                  data={dropdownData.statuses}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select status"
+                  value={filters.status}
+                  onChange={handleChange("status")}
+                  style={styles.dropdown}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  selectedTextStyle={styles.dropdownSelectedText}
+                  containerStyle={styles.dropdownContainer}
+                  maxHeight={300}
+                  renderRightIcon={renderRightIcon}
+                  renderItem={renderOption}
+                />
+              </View>
+
+              <Divider style={styles.divider} />
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Health</Text>
+                <Dropdown
+                  data={dropdownData.healthLevels}
+                  labelField="label"
+                  valueField="value"
+                  placeholder="Select health level"
+                  value={filters.health}
+                  onChange={handleChange("health")}
+                  style={styles.dropdown}
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  selectedTextStyle={styles.dropdownSelectedText}
+                  containerStyle={styles.dropdownContainer}
+                  maxHeight={300}
+                  renderRightIcon={renderRightIcon}
+                  renderItem={renderOption}
+                />
+              </View>
+            </ScrollView>
+          </View>
+
+          <Dialog.Actions style={styles.dialogActions}>
+            <View style={styles.dialogActionsContent}>
+              <Button
+                mode="outlined"
+                onPress={handleReset}
+                style={styles.dialogButtonOutlined}
+                textColor="#64748B"
+              >
+                Reset
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleApply}
+                style={styles.dialogButtonContained}
+                buttonColor="#059669"
+              >
+                Apply Filters
+              </Button>
+            </View>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+    );
+  }
+);
+
+
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 28,
-    paddingTop: 16,
-  },
-  statsSection: {
-    marginBottom: 20,
-    gap: 12,
-  },
-  statsRow: {
+  searchContainer: {
     flexDirection: "row",
-    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 10,
   },
-  statCard: {
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    alignItems: "center",
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#111827",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  searchSection: {
-    marginBottom: 16,
-    gap: 12,
-  },
-  searchBar: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    elevation: 0,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E2E8F0",
   },
   searchInput: {
+    flex: 1,
     fontSize: 14,
+    color: "#0F172A",
+    padding: 0,
+    fontWeight: "600",
   },
-  filterRow: {
+  filterButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#059669",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  filterBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: "#10B981",
+    borderWidth: 1.5,
+    borderColor: "#059669",
+  },
+  activeFiltersContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  activeFiltersContent: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
+    alignItems: "center",
   },
-  filterChip: {
-    marginRight: 8,
-    backgroundColor: "#F3F4F6",
+  activeFilterChip: {
+    backgroundColor: "#059669",
+    borderWidth: 0,
+    borderRadius: 8,
+    height: 28,
   },
-  filterText: {
+  activeFilterText: {
+    fontSize: 11,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  clearAllButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  clearAllText: {
+    fontSize: 11,
+    color: "#059669",
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+  summaryContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+  },
+  summaryText: {
     fontSize: 13,
+    color: "#64748B",
+    fontWeight: "700",
   },
-  treeList: {
-    gap: 12,
+  listContainer: {
+    padding: 16,
+    paddingTop: 4,
+    paddingBottom: 100,
+    flexGrow: 1,
   },
   treeCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#F1F5F9",
   },
-  treeHeader: {
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  treeCodeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    gap: 12,
+    gap: 6,
   },
-  treeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#ECFDF5",
-    alignItems: "center",
-    justifyContent: "center",
+  treeCode: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.3,
   },
-  treeInfo: {
-    flex: 1,
-  },
-  treeSpecies: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 2,
-  },
-  treeCommonName: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  conditionChip: {
+  healthChip: {
     height: 28,
   },
-  conditionText: {
+  healthText: {
     fontSize: 11,
     fontWeight: "600",
     textTransform: "capitalize",
   },
-  treeDetails: {
-    gap: 8,
-  },
-  detailRow: {
+  compactInfoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    marginBottom: 6,
+  },
+  species: {
+    fontSize: 13,
+    color: "#0F172A",
+    fontWeight: "700",
+    maxWidth: "50%",
+  },
+  dotSeparator: {
+    marginHorizontal: 4,
+    color: "#CBD5E1",
+    fontSize: 10,
+  },
+  commonName: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "600",
+    flex: 1,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 6,
+  },
+  locationText: {
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "600",
+    flex: 1,
+  },
+  detailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   detailText: {
-    fontSize: 13,
-    color: "#6B7280",
+    fontSize: 11,
+    color: "#64748B",
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
-  bottomSpacer: {
-    height: 100,
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    paddingTop: 60,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 30,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    color: "#0F172A",
+    marginBottom: 12,
+    fontWeight: "800",
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+    fontWeight: "600",
+  },
+  emptyButton: {
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    height: 48,
+    justifyContent: "center",
   },
   dialog: {
-    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    maxWidth: 500,
+    alignSelf: "center",
+    width: "90%",
   },
-  dialogText: {
+  dialogHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  dialogTitleText: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+  },
+  dialogContent: {
+    maxHeight: 400,
+  },
+  filterSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  filterLabel: {
     fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 12,
+    fontWeight: "800",
+    color: "#1E293B",
+    marginBottom: 10,
+  },
+  dropdown: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 48,
+  },
+  dropdownPlaceholder: {
+    fontSize: 14,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  dropdownSelectedText: {
+    fontSize: 14,
+    color: "#0F172A",
+    fontWeight: "700",
+  },
+  dropdownContainer: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  dropdownItem: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  divider: {
+    backgroundColor: "#F1F5F9",
+    height: 1,
+  },
+  dialogActions: {
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  dialogActionsContent: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  dialogButtonOutlined: {
+    flex: 1,
+    borderRadius: 14,
+    borderColor: "#E2E8F0",
+    borderWidth: 1,
+  },
+  dialogButtonContained: {
+    flex: 1,
+    borderRadius: 14,
   },
 });
+

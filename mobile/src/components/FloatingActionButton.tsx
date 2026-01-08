@@ -9,13 +9,13 @@ export interface FloatingActionButtonProps {
     iconSize?: number;
     /** Icon color (default: #FFFFFF) */
     iconColor?: string;
-    /** Background color (default: #111827) */
+    /** Background color (default: #1E40AF) */
     backgroundColor?: string;
     /** On press handler */
     onPress: () => void;
-    /** Bottom position (default: 90) */
+    /** Bottom position (default: 85) */
     bottom?: number;
-    /** Right position (default: 28) */
+    /** Right position (default: 24) */
     right?: number;
 }
 
@@ -27,10 +27,10 @@ export default function FloatingActionButton({
     icon = "Plus",
     iconSize = 24,
     iconColor = "#FFFFFF",
-    backgroundColor = "#111827",
+    backgroundColor = "#1E40AF",
     onPress,
-    bottom = 90,
-    right = 28,
+    bottom = 20,
+    right = 24,
 }: FloatingActionButtonProps) {
     return (
         <TouchableOpacity

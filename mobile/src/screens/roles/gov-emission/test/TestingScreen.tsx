@@ -91,7 +91,6 @@ export default function TestingScreen() {
         title: "Emission Testing",
         subtitle: `${items.length} Total Tests Recorded`,
         statusBarStyle: "dark",
-        backgroundColor: "#F8FAFC",
         rightActionIcon: "RefreshCw",
         onRightActionPress: () => refetchTests(),
         showProfileAction: true,
@@ -101,7 +100,7 @@ export default function TestingScreen() {
         <View style={styles.filterWrapper}>
           <View style={styles.filterSection}>
             <View style={styles.filterHeader}>
-              <Icon name="Calendar" size={18} color="#2563EB" />
+              <Icon name="Calendar" size={18} color="#1E40AF" />
               <Text style={styles.filterTitle}>Testing Period</Text>
             </View>
 
@@ -160,12 +159,12 @@ export default function TestingScreen() {
         {/* Content */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#111827" />
+            <ActivityIndicator size="large" color="#1E40AF" />
           </View>
         ) : groups.length === 0 ? (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconContainer}>
-              <Icon name="ClipboardList" size={48} color="#2563EB" />
+              <Icon name="ClipboardList" size={48} color="#1E40AF" />
             </View>
             <Text style={styles.emptyTitle}>No Tests This Period</Text>
             <Text style={styles.emptyText}>
@@ -176,7 +175,7 @@ export default function TestingScreen() {
               onPress={() => (navigation as any).navigate("Vehicles")}
               style={styles.emptyButton}
               labelStyle={styles.emptyButtonLabel}
-              buttonColor="#2563EB"
+              buttonColor="#1E40AF"
               icon={() => <Icon name="Plus" size={20} color="#FFFFFF" />}
             >
               Record New Test
@@ -188,8 +187,8 @@ export default function TestingScreen() {
               <RefreshControl
                 refreshing={loading}
                 onRefresh={onRefresh}
-                colors={["#2563EB"]}
-                tintColor="#2563EB"
+                colors={["#1E40AF"]}
+                tintColor="#1E40AF"
               />
             }
             style={styles.scrollView}
@@ -207,7 +206,7 @@ export default function TestingScreen() {
                 >
                   <View style={styles.officeHeaderLeft}>
                     <View style={styles.officeIconContainer}>
-                      <Icon name="Building2" size={18} color="#2563EB" />
+                      <Icon name="Building2" size={18} color="#1E40AF" />
                     </View>
                     <Text style={styles.officeName}>{group.name}</Text>
                     <View style={styles.countBadge}>
@@ -315,11 +314,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F1F5F9",
   },
+  filterHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
   filterTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 16,
     letterSpacing: -0.3,
   },
   periodRow: {
@@ -380,7 +384,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#1E40AF",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -496,9 +500,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   emptyIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 30,
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
@@ -506,20 +510,23 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "700",
+    fontWeight: "800",
     color: "#0F172A",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 15,
     color: "#64748B",
     textAlign: "center",
-    marginBottom: 32,
     lineHeight: 22,
+    marginBottom: 32,
+    fontWeight: "600",
   },
   emptyButton: {
-    borderRadius: 12,
-    width: "100%",
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    height: 48,
+    justifyContent: "center",
   },
   emptyButtonLabel: {
     fontSize: 16,

@@ -34,10 +34,18 @@ def get_offices(
     """
     Get all offices with optional search.
     """
-    if search:
-        return crud_emission.office.search(db, search_term=search, skip=skip, limit=limit)
-    
-    return crud_emission.office.get_multi_sync(db, skip=skip, limit=limit)
+    try:
+        if search:
+            return crud_emission.office.search(db, search_term=search, skip=skip, limit=limit)
+        
+        return crud_emission.office.get_multi_sync(db, skip=skip, limit=limit)
+    except Exception as e:
+        print(f"Error in get_offices: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
 
 
 @router.post("/offices", response_model=Office, status_code=status.HTTP_201_CREATED)
@@ -75,17 +83,25 @@ def get_office_compliance(
     """
     Get office compliance data aggregated from vehicles and tests.
     """
-    filters = {}
-    if search_term:
-        filters["search_term"] = search_term
-    if year:
-        filters["year"] = year
-    if quarter:
-        filters["quarter"] = quarter
-    
-    return crud_emission.office_compliance.get_office_compliance_data(
-        db, skip=skip, limit=limit, filters=filters
-    )
+    try:
+        filters = {}
+        if search_term:
+            filters["search_term"] = search_term
+        if year:
+            filters["year"] = year
+        if quarter:
+            filters["quarter"] = quarter
+        
+        return crud_emission.office_compliance.get_office_compliance_data(
+            db, skip=skip, limit=limit, filters=filters
+        )
+    except Exception as e:
+        print(f"Error in get_office_compliance: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
 
 
 @router.get("/offices/{office_id}", response_model=Office)
@@ -188,34 +204,42 @@ def get_vehicles(
     By default, excludes test data for better performance.
     Set include_test_data=true to include latest test results.
     """
-    if search:
-        return crud_emission.vehicle.search(db, search_term=search, skip=skip, limit=limit)
-    
-    filters = {}
-    if plate_number:
-        filters["plate_number"] = plate_number
-    if chassis_number:
-        filters["chassis_number"] = chassis_number
-    if registration_number:
-        filters["registration_number"] = registration_number
-    if driver_name:
-        filters["driver_name"] = driver_name
-    if office_name:
-        filters["office_name"] = office_name
-    if office_id:
-        filters["office_id"] = office_id
-    if vehicle_type:
-        filters["vehicle_type"] = vehicle_type
-    if engine_type:
-        filters["engine_type"] = engine_type
-    if wheels:
-        filters["wheels"] = wheels
-    
-    # Choose which method to use based on include_test_data parameter
-    if include_test_data:
-        return crud_emission.vehicle.get_multi_with_test_info(db, skip=skip, limit=limit, filters=filters)
-    else:
-        return crud_emission.vehicle.get_multi_optimized(db, skip=skip, limit=limit, filters=filters)
+    try:
+        if search:
+            return crud_emission.vehicle.search(db, search_term=search, skip=skip, limit=limit)
+        
+        filters = {}
+        if plate_number:
+            filters["plate_number"] = plate_number
+        if chassis_number:
+            filters["chassis_number"] = chassis_number
+        if registration_number:
+            filters["registration_number"] = registration_number
+        if driver_name:
+            filters["driver_name"] = driver_name
+        if office_name:
+            filters["office_name"] = office_name
+        if office_id:
+            filters["office_id"] = office_id
+        if vehicle_type:
+            filters["vehicle_type"] = vehicle_type
+        if engine_type:
+            filters["engine_type"] = engine_type
+        if wheels:
+            filters["wheels"] = wheels
+        
+        # Choose which method to use based on include_test_data parameter
+        if include_test_data:
+            return crud_emission.vehicle.get_multi_with_test_info(db, skip=skip, limit=limit, filters=filters)
+        else:
+            return crud_emission.vehicle.get_multi_optimized(db, skip=skip, limit=limit, filters=filters)
+    except Exception as e:
+        print(f"Error in get_vehicles: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
 
 
 @router.get("/vehicles/search/plate/{plate_number}", response_model=Vehicle)
@@ -425,7 +449,15 @@ def get_filter_options(
     """
     Get unique values for filter dropdowns.
     """
-    return crud_emission.vehicle.get_unique_values(db)
+    try:
+        return crud_emission.vehicle.get_unique_values(db)
+    except Exception as e:
+        print(f"Error in get_filter_options: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
 
 
 # Tests endpoints
@@ -442,21 +474,29 @@ def get_tests(
     """
     Get all tests or tests for a specific vehicle, optionally filtered by quarter and year.
     """
-    if vehicle_id:
-        return crud_emission.test.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
-    
-    # Query directly to avoid nested dictionary issues
-    query = db.query(TestModel)
-    
-    # Apply quarter and year filters if provided
-    if quarter is not None:
-        query = query.filter(TestModel.quarter == quarter)
-    if year is not None:
-        query = query.filter(TestModel.year == year)
-    
-    total = query.count()
-    tests = query.order_by(desc(TestModel.test_date)).offset(skip).limit(limit).all()
-    return {"tests": tests, "total": total}
+    try:
+        if vehicle_id:
+            return crud_emission.test.get_by_vehicle(db, vehicle_id=vehicle_id, skip=skip, limit=limit)
+        
+        # Query directly to avoid nested dictionary issues
+        query = db.query(TestModel)
+        
+        # Apply quarter and year filters if provided
+        if quarter is not None:
+            query = query.filter(TestModel.quarter == quarter)
+        if year is not None:
+            query = query.filter(TestModel.year == year)
+        
+        total = query.count()
+        tests = query.order_by(desc(TestModel.test_date)).offset(skip).limit(limit).all()
+        return {"tests": tests, "total": total}
+    except Exception as e:
+        print(f"Error in get_tests: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
 
 
 @router.post("/tests", response_model=Test, status_code=status.HTTP_201_CREATED)

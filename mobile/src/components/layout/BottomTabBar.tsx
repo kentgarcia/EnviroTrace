@@ -9,11 +9,8 @@ export default function CustomBottomTabBar({ state, descriptors, navigation }: B
     const theme = useTheme();
     const insets = useSafeAreaInsets();
 
-    // Check if Testing tab is active
-    const currentRoute = state.routes[state.index];
-    const isTestingActive = currentRoute.name === "Testing";
-
     // Check if any route has tabBarStyle with display: none
+    const currentRoute = state.routes[state.index];
     const { options } = descriptors[currentRoute.key];
     const tabBarStyle = options.tabBarStyle as any;
 
@@ -63,8 +60,8 @@ export default function CustomBottomTabBar({ state, descriptors, navigation }: B
                     };
 
     const IconComponent = options.tabBarIcon;
-                    const iconColor = isFocused ? "#2563EB" : "#94A3B8";
-                    const labelColor = isFocused ? "#2563EB" : "#94A3B8";
+                    const iconColor = isFocused ? "#1E40AF" : "#94A3B8";
+                    const labelColor = isFocused ? "#1E40AF" : "#94A3B8";
 
                     return (
                         <TouchableOpacity
@@ -104,23 +101,6 @@ export default function CustomBottomTabBar({ state, descriptors, navigation }: B
                     );
                 })}
             </View>
-
-            {/* Floating Action Button for Testing tab */}
-            {isTestingActive && (
-                <TouchableOpacity
-                    style={[
-                        styles.fab, 
-                        { 
-                            bottom: Math.max(insets.bottom, 8) + 80,
-                            backgroundColor: "#2563EB" 
-                        }
-                    ]}
-                    onPress={() => (navigation as any).navigate("Testing", { screen: "AddTest" })}
-                    activeOpacity={0.8}
-                >
-                    <Icon name="Plus" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-            )}
         </View>
     );
 }
@@ -157,16 +137,5 @@ const styles = StyleSheet.create({
         fontSize: 11,
         textAlign: "center",
         letterSpacing: -0.2,
-    },
-    fab: {
-        position: "absolute",
-        right: 24,
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.2)",
     },
 });

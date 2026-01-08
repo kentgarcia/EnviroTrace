@@ -187,6 +187,13 @@ export default function VehiclesScreen() {
     [filterVehicleType, filterEngineType, filterOffice]
   );
 
+  // Refetch data whenever screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
   const onRefresh = useCallback(async () => {
     await refetch();
   }, [refetch]);
@@ -239,7 +246,6 @@ export default function VehiclesScreen() {
         title: "Vehicles",
         subtitle: `${filteredVehicles.length} Total Fleet`,
         statusBarStyle: "dark",
-        backgroundColor: "#F8FAFC",
         rightActionIcon: "RefreshCw",
         onRightActionPress: () => refetch(),
         showProfileAction: true,
@@ -390,9 +396,6 @@ const VehicleCard = React.memo(
           {/* Header row with plate number */}
           <View style={styles.cardHeader}>
             <View style={styles.plateNumberContainer}>
-              <View style={styles.plateIcon}>
-                <Icon name="CreditCard" size={12} color="#1E40AF" />
-              </View>
               <Text style={styles.plateNumber}>
                 {vehicle.plate_number ||
                   vehicle.chassis_number ||
@@ -687,14 +690,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-  },
-  plateIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
   },
   plateNumber: {
     fontSize: 15,
