@@ -14,7 +14,6 @@ import HelpScreen from "../screens/roles/gov-emission/profile/HelpScreen";
 import VehicleDetailScreen from "../screens/roles/gov-emission/vehicles/VehicleDetailScreen";
 import AddVehicleScreen from "../screens/roles/gov-emission/vehicles/AddVehicleScreen";
 import AddTestScreen from "../screens/roles/gov-emission/test/AddTestScreen";
-import ReportsScreen from "../screens/roles/gov-emission/reports/ReportsScreen";
 import CustomBottomTabBar from "../components/layout/BottomTabBar";
 
 export type MainStackParamList = {
@@ -22,7 +21,6 @@ export type MainStackParamList = {
   Overview: undefined;
   Vehicles: undefined;
   Testing: undefined;
-  Reports: undefined;
   Offices: undefined;
   Profile: undefined;
   VehicleDetail: { vehicleId: string };
@@ -131,9 +129,6 @@ function MainTabs() {
             case "Offices":
               iconName = "Building2";
               break;
-            case "Reports":
-              iconName = "FileText";
-              break;
             default:
               iconName = "HelpCircle";
           }
@@ -199,6 +194,12 @@ function MainTabs() {
               : undefined,
           };
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Reset to root when tab is pressed
+            navigation.navigate("Testing", { screen: "TestingList" });
+          },
+        })}
       />
       <Tab.Screen
         name="Offices"
@@ -213,15 +214,6 @@ function MainTabs() {
               ? { display: "none" }
               : undefined,
           };
-        }}
-      />
-      <Tab.Screen
-        name="Reports"
-        component={ReportsScreen}
-        options={{
-          title: "Reports & Analytics",
-          tabBarLabel: "Reports",
-          headerShown: false,
         }}
       />
     </Tab.Navigator>

@@ -107,6 +107,30 @@ export default function VehicleDetailScreen() {
                       </View>
                     )}
 
+                    {vehicle.chassis_number && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="Hash" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Chassis Number</Text>
+                          <Text style={styles.infoValue}>{vehicle.chassis_number}</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {vehicle.registration_number && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="Hash" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Registration Number</Text>
+                          <Text style={styles.infoValue}>{vehicle.registration_number}</Text>
+                        </View>
+                      </View>
+                    )}
+
                     <View style={styles.infoRow}>
                       <View style={styles.infoIconContainer}>
                         <Icon name="User" size={14} color="#64748B" />
@@ -158,6 +182,40 @@ export default function VehicleDetailScreen() {
                         <Text style={styles.infoValue}>{vehicle.engine_type}</Text>
                       </View>
                     </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoIconContainer}>
+                        <Icon name="CirclePlus" size={14} color="#64748B" />
+                      </View>
+                      <View>
+                        <Text style={styles.infoLabel}>Wheels</Text>
+                        <Text style={styles.infoValue}>{vehicle.wheels}</Text>
+                      </View>
+                    </View>
+
+                    {vehicle.year_acquired && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="Calendar" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Year Acquired</Text>
+                          <Text style={styles.infoValue}>{vehicle.year_acquired}</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {vehicle.description && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.infoIconContainer}>
+                          <Icon name="FileText" size={14} color="#64748B" />
+                        </View>
+                        <View>
+                          <Text style={styles.infoLabel}>Description</Text>
+                          <Text style={styles.infoValue}>{vehicle.description}</Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -223,6 +281,13 @@ export default function VehicleDetailScreen() {
                             <Text style={styles.testQuarter}>
                               Q{test.quarter} {test.year}
                             </Text>
+                            {(test.co_level !== undefined || test.hc_level !== undefined) && (
+                              <Text style={styles.testLevels}>
+                                {test.co_level !== undefined && `CO: ${test.co_level}%`}
+                                {test.co_level !== undefined && test.hc_level !== undefined && ' • '}
+                                {test.hc_level !== undefined && `HC: ${test.hc_level} ppm`}
+                              </Text>
+                            )}
                           </View>
                           <View
                             style={[
@@ -450,6 +515,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     fontWeight: "500",
+  },
+  testLevels: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "600",
+    marginTop: 4,
   },
   divider: {
     backgroundColor: "#F1F5F9",

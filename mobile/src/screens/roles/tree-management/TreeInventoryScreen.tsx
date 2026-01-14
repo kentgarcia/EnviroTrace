@@ -174,7 +174,7 @@ export default function TreeInventoryScreen() {
   );
 
   const handleAddTree = () => {
-    navigation.navigate("TreeForm" as never);
+    navigation.navigate("TreeFieldCapture" as never);
   };
 
   const renderTreeCard = useCallback(

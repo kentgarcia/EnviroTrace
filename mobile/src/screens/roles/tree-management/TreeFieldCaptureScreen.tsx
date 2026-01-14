@@ -1,0 +1,1125 @@
+import React, { useState, useEffect } from "react";
+import {
+    View,
+    StyleSheet,
+    ScrollView,
+    TouchableOpacity,
+    Alert,
+    ActivityIndicator,
+    Modal,
+    Image,
+} from "react-native";
+import { Text, TextInput } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Dropdown } from "react-native-element-dropdown";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import Icon from "../../../components/icons/Icon";
+import StandardHeader from "../../../components/layout/StandardHeader";
+import GeotaggedCameraComponent from "../../../components/tree-management/GeotaggedCameraComponent";
+import { useGPSLocation } from "../../../hooks/useGPSLocation";
+import { useReverseGeocode } from "../../../hooks/useReverseGeocode";
+import {
+    treeInventoryApi,
+    TreeInventoryCreate,
+    TreeSpecies,
+} from "../../../core/api/tree-inventory-api";
+
+type Step = 1 | 2 | 3;
+
+interface GeotaggedPhoto {
+    uri: string;
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    timestamp: string;
+}
+
+export default function TreeFieldCaptureScreen() {
+    const navigation = useNavigation();
+    const queryClient = useQueryClient();
+
+    // Step management
+    const [currentStep, setCurrentStep] = useState<Step>(1);
+
+    // GPS Hook
+    const {
+        location: gpsLocation,
+        accuracy: gpsAccuracy,
+        isAcquiring: isAcquiringGPS,
+        hasPermission: hasGPSPermission,
+        error: gpsError,
+        requestPermission: requestGPSPermission,
+        startTracking: startGPSTracking,
+        stopTracking: stopGPSTracking,
+    } = useGPSLocation();
+
+    // Reverse Geocoding Hook
+    const {
+        result: geocodeResult,
+        isLoading: isGeocoding,
+        reverseGeocode,
+    } = useReverseGeocode();
+
+    // Form state
+    const [photo, setPhoto] = useState<GeotaggedPhoto | null>(null);
+    const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+    const [commonName, setCommonName] = useState("");
+    const [species, setSpecies] = useState("");
+    const [status, setStatus] = useState("alive");
+    const [health, setHealth] = useState("healthy");
+    const [address, setAddress] = useState("");
+    const [barangay, setBarangay] = useState("");
+    const [heightMeters, setHeightMeters] = useState("");
+    const [diameterCm, setDiameterCm] = useState("");
+    const [ageYears, setAgeYears] = useState("");
+    const [plantedDate, setPlantedDate] = useState<Date | undefined>();
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [managedBy, setManagedBy] = useState("");
+    const [notes, setNotes] = useState("");
+
+    // Camera modal
+    const [showCamera, setShowCamera] = useState(false);
+
+    // Fetch species list
+    const { data: speciesData, isLoading: loadingSpecies } = useQuery({
+        queryKey: ["species"],
+        queryFn: treeInventoryApi.getSpecies,
+    });
+
+    // Auto-start GPS on mount
+    useEffect(() => {
+        const initGPS = async () => {
+            const granted = await requestGPSPermission();
+            if (granted) {
+                await startGPSTracking();
+            } else {
+                Alert.alert(
+                    "GPS Required",
+                    "This field capture mode requires GPS to record tree locations accurately.",
+                    [
+                        { text: "Cancel", onPress: () => navigation.goBack() },
+                        { text: "Retry", onPress: initGPS },
+                    ]
+                );
+            }
+        };
+        initGPS();
+
+        return () => {
+            stopGPSTracking();
+        };
+    }, []);
+
+    // Auto reverse geocode when GPS location acquired
+    useEffect(() => {
+        if (gpsLocation && !geocodeResult && currentStep === 1) {
+            reverseGeocode(gpsLocation.coords.latitude, gpsLocation.coords.longitude);
+        }
+    }, [gpsLocation, currentStep]);
+
+    // Auto-populate address fields from geocode result
+    useEffect(() => {
+        if (geocodeResult) {
+            setAddress(geocodeResult.address);
+            setBarangay(geocodeResult.barangay);
+        }
+    }, [geocodeResult]);
+
+    // Create mutation
+    const createMutation = useMutation({
+        mutationFn: (data: TreeInventoryCreate) => treeInventoryApi.createTree(data),
+        onSuccess: (response) => {
+            queryClient.invalidateQueries({ queryKey: ["trees"] });
+            Alert.alert("Success", "Tree registered successfully!", [
+                {
+                    text: "View on Map",
+                    onPress: () => {
+                        // Go back to main tabs - user can then switch to Map tab
+                        navigation.goBack();
+                        // Note: After going back, user should navigate to Map tab to see the new tree
+                    },
+                },
+                {
+                    text: "Add Another",
+                    onPress: () => {
+                        // Reset form
+                        setCurrentStep(1);
+                        setPhoto(null);
+                        setUploadedPhotoUrl(null);
+                        setCommonName("");
+                        setSpecies("");
+                        setStatus("alive");
+                        setHealth("healthy");
+                        setHeightMeters("");
+                        setDiameterCm("");
+                        setAgeYears("");
+                        setPlantedDate(undefined);
+                        setManagedBy("");
+                        setNotes("");
+                        startGPSTracking();
+                    },
+                },
+                {
+                    text: "Done",
+                    onPress: () => navigation.goBack(),
+                },
+            ]);
+        },
+        onError: (error: any) => {
+            Alert.alert("Error", error.message || "Failed to register tree");
+        },
+    });
+
+    const handleCameraCapture = async (capturedPhoto: GeotaggedPhoto) => {
+        setPhoto(capturedPhoto);
+        setShowCamera(false);
+        
+        // Upload photo
+        try {
+            const formData = new FormData();
+            formData.append("files", {
+                uri: capturedPhoto.uri,
+                type: "image/jpeg",
+                name: `tree_${Date.now()}.jpg`,
+            } as any);
+
+            const response = await treeInventoryApi.uploadTreeImages(formData);
+            if (response.data.uploaded && response.data.uploaded.length > 0) {
+                setUploadedPhotoUrl(response.data.uploaded[0].url);
+            }
+        } catch (error) {
+            console.error("Error uploading photo:", error);
+            Alert.alert("Warning", "Photo captured but upload failed. You can retry later.");
+        }
+    };
+
+    const handleNext = () => {
+        if (currentStep === 1) {
+            // Validate GPS
+            if (!gpsLocation) {
+                Alert.alert("GPS Required", "Please wait for GPS to acquire your location.");
+                return;
+            }
+            if (gpsAccuracy && gpsAccuracy > 20) {
+                Alert.alert(
+                    "Poor GPS Accuracy",
+                    `Current accuracy is ±${gpsAccuracy.toFixed(0)}m. For best results, move to an open area. Continue anyway?`,
+                    [
+                        { text: "Wait", style: "cancel" },
+                        { text: "Continue", onPress: () => setCurrentStep(2) },
+                    ]
+                );
+                return;
+            }
+            setCurrentStep(2);
+        } else if (currentStep === 2) {
+            // Validate photo
+            if (!photo) {
+                Alert.alert("Photo Required", "Please take a photo of the tree.");
+                return;
+            }
+            setCurrentStep(3);
+        }
+    };
+
+    const handleBack = () => {
+        if (currentStep > 1) {
+            setCurrentStep((currentStep - 1) as Step);
+        } else {
+            Alert.alert(
+                "Cancel Registration",
+                "Are you sure you want to cancel tree registration?",
+                [
+                    { text: "No", style: "cancel" },
+                    { text: "Yes", onPress: () => navigation.goBack() },
+                ]
+            );
+        }
+    };
+
+    const handleSave = () => {
+        // Validation
+        if (!commonName.trim()) {
+            Alert.alert("Validation Error", "Common name is required");
+            return;
+        }
+        if (!gpsLocation) {
+            Alert.alert("Validation Error", "GPS location is required");
+            return;
+        }
+        if (!uploadedPhotoUrl) {
+            Alert.alert("Validation Error", "Photo upload is required");
+            return;
+        }
+
+        const data: TreeInventoryCreate = {
+            common_name: commonName.trim(),
+            species: species.trim() || undefined,
+            status,
+            health,
+            latitude: gpsLocation.coords.latitude,
+            longitude: gpsLocation.coords.longitude,
+            address: address.trim() || undefined,
+            barangay: barangay.trim() || undefined,
+            height_meters: heightMeters ? parseFloat(heightMeters) : undefined,
+            diameter_cm: diameterCm ? parseFloat(diameterCm) : undefined,
+            age_years: ageYears ? parseInt(ageYears) : undefined,
+            planted_date: plantedDate?.toISOString(),
+            managed_by: managedBy.trim() || undefined,
+            notes: notes.trim() || undefined,
+            photos: [uploadedPhotoUrl],
+        };
+
+        createMutation.mutate(data);
+    };
+
+    const statusOptions = [
+        { label: "🟢 Alive", value: "alive" },
+        { label: "🔴 Cut", value: "cut" },
+        { label: "⚫ Dead", value: "dead" },
+        { label: "🔵 Replaced", value: "replaced" },
+    ];
+
+    const healthOptions = [
+        { label: "💚 Healthy", value: "healthy" },
+        { label: "💛 Needs Attention", value: "needs_attention" },
+        { label: "🧡 Diseased", value: "diseased" },
+        { label: "⚫ Dead", value: "dead" },
+    ];
+
+    const speciesOptions = (speciesData?.data || []).map((s: TreeSpecies) => ({
+        label: s.common_name + (s.scientific_name ? ` (${s.scientific_name})` : ""),
+        value: s.scientific_name || s.common_name,
+        commonName: s.common_name,
+    }));
+
+    const handleSpeciesChange = (item: any) => {
+        setSpecies(item.value);
+        // Auto-populate common name if not already set
+        if (!commonName && item.commonName) {
+            setCommonName(item.commonName);
+        }
+    };
+
+    const renderStepIndicator = () => (
+        <View style={styles.stepIndicator}>
+            <View style={styles.stepItem}>
+                <View style={[styles.stepCircle, currentStep >= 1 && styles.stepCircleActive]}>
+                    {currentStep > 1 ? (
+                        <Icon name="Check" size={16} color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.stepNumber}>1</Text>
+                    )}
+                </View>
+                <Text style={styles.stepLabel}>Location</Text>
+            </View>
+            <View style={styles.stepLine} />
+            <View style={styles.stepItem}>
+                <View style={[styles.stepCircle, currentStep >= 2 && styles.stepCircleActive]}>
+                    {currentStep > 2 ? (
+                        <Icon name="Check" size={16} color="#FFFFFF" />
+                    ) : (
+                        <Text style={styles.stepNumber}>2</Text>
+                    )}
+                </View>
+                <Text style={styles.stepLabel}>Photo</Text>
+            </View>
+            <View style={styles.stepLine} />
+            <View style={styles.stepItem}>
+                <View style={[styles.stepCircle, currentStep >= 3 && styles.stepCircleActive]}>
+                    <Text style={styles.stepNumber}>3</Text>
+                </View>
+                <Text style={styles.stepLabel}>Details</Text>
+            </View>
+        </View>
+    );
+
+    const renderStep1 = () => (
+        <View style={styles.stepContent}>
+            <View style={styles.instructionCard}>
+                <Icon name="MapPin" size={48} color="#3B82F6" />
+                <Text style={styles.instructionTitle}>Stand at Tree Location</Text>
+                <Text style={styles.instructionText}>
+                    Position yourself at the tree's location. The app will automatically capture GPS
+                    coordinates.
+                </Text>
+            </View>
+
+            <View style={styles.gpsCard}>
+                {isAcquiringGPS ? (
+                    <View style={styles.gpsAcquiring}>
+                        <ActivityIndicator size="large" color="#3B82F6" />
+                        <Text style={styles.gpsAcquiringText}>Acquiring GPS location...</Text>
+                        <Text style={styles.gpsHint}>Please wait, this may take a moment</Text>
+                    </View>
+                ) : gpsLocation ? (
+                    <View style={styles.gpsSuccess}>
+                        <Icon name="CheckCircle2" size={32} color="#22c55e" />
+                        <Text style={styles.gpsSuccessTitle}>Location Acquired</Text>
+                        
+                        <View style={styles.gpsDetails}>
+                            <View style={styles.gpsDetailRow}>
+                                <Text style={styles.gpsDetailLabel}>Coordinates:</Text>
+                                <Text style={styles.gpsDetailValue}>
+                                    {gpsLocation.coords.latitude.toFixed(6)}°N, {gpsLocation.coords.longitude.toFixed(6)}°E
+                                </Text>
+                            </View>
+                            {gpsAccuracy && (
+                                <View style={styles.gpsDetailRow}>
+                                    <Text style={styles.gpsDetailLabel}>Accuracy:</Text>
+                                    <Text style={[
+                                        styles.gpsDetailValue,
+                                        gpsAccuracy > 20 && { color: "#f97316" }
+                                    ]}>
+                                        ±{gpsAccuracy.toFixed(0)}m {gpsAccuracy > 20 && "⚠️"}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {isGeocoding ? (
+                            <View style={styles.geocodingLoading}>
+                                <ActivityIndicator size="small" color="#6B7280" />
+                                <Text style={styles.geocodingText}>Getting address...</Text>
+                            </View>
+                        ) : geocodeResult ? (
+                            <View style={styles.addressPreview}>
+                                <Icon name="MapPin" size={16} color="#6B7280" />
+                                <Text style={styles.addressText} numberOfLines={2}>
+                                    {geocodeResult.address}
+                                </Text>
+                            </View>
+                        ) : null}
+
+                        <TouchableOpacity
+                            style={styles.refreshButton}
+                            onPress={startGPSTracking}
+                            disabled={isAcquiringGPS}
+                        >
+                            <Icon name="RefreshCw" size={16} color="#3B82F6" />
+                            <Text style={styles.refreshButtonText}>Refresh Location</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : gpsError ? (
+                    <View style={styles.gpsError}>
+                        <Icon name="XCircle" size={32} color="#ef4444" />
+                        <Text style={styles.gpsErrorText}>{gpsError}</Text>
+                        <TouchableOpacity
+                            style={styles.retryButton}
+                            onPress={startGPSTracking}
+                        >
+                            <Text style={styles.retryButtonText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : null}
+            </View>
+
+            {gpsAccuracy && gpsAccuracy > 20 && (
+                <View style={styles.warningCard}>
+                    <Icon name="AlertTriangle" size={20} color="#f97316" />
+                    <Text style={styles.warningText}>
+                        GPS accuracy is low. For better results, move to an open area away from buildings.
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
+
+    const renderStep2 = () => (
+        <ScrollView style={styles.stepContent}>
+            <View style={styles.instructionCard}>
+                <Icon name="Camera" size={48} color="#3B82F6" />
+                <Text style={styles.instructionTitle}>Capture Tree Photo</Text>
+                <Text style={styles.instructionText}>
+                    Take a clear photo of the tree. GPS coordinates will be embedded in the image.
+                </Text>
+            </View>
+
+            {photo ? (
+                <View style={styles.photoPreview}>
+                    <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                    <View style={styles.photoOverlay}>
+                        <Text style={styles.photoCoords}>
+                            📍 {photo.latitude.toFixed(6)}°N, {photo.longitude.toFixed(6)}°E
+                        </Text>
+                        <Text style={styles.photoAccuracy}>±{photo.accuracy.toFixed(0)}m</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.retakeButton}
+                        onPress={() => {
+                            setPhoto(null);
+                            setUploadedPhotoUrl(null);
+                            setShowCamera(true);
+                        }}
+                    >
+                        <Icon name="Camera" size={20} color="#FFFFFF" />
+                        <Text style={styles.retakeButtonText}>Retake Photo</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <TouchableOpacity
+                    style={styles.captureButton}
+                    onPress={() => setShowCamera(true)}
+                >
+                    <Icon name="Camera" size={32} color="#FFFFFF" />
+                    <Text style={styles.captureButtonText}>Open Camera</Text>
+                </TouchableOpacity>
+            )}
+        </ScrollView>
+    );
+
+    const renderStep3 = () => (
+        <ScrollView style={styles.stepContent} contentContainerStyle={styles.formContent}>
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Basic Information</Text>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>
+                        Common Name <Text style={styles.required}>*</Text>
+                    </Text>
+                    <TextInput
+                        mode="outlined"
+                        value={commonName}
+                        onChangeText={setCommonName}
+                        placeholder="e.g., Mango, Narra, Mahogany"
+                        style={styles.input}
+                    />
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Species (Scientific Name)</Text>
+                    <Dropdown
+                        data={speciesOptions}
+                        labelField="label"
+                        valueField="value"
+                        placeholder="Select or search species"
+                        searchPlaceholder="Search species..."
+                        value={species}
+                        onChange={handleSpeciesChange}
+                        search
+                        style={styles.dropdown}
+                        placeholderStyle={styles.dropdownPlaceholder}
+                        selectedTextStyle={styles.dropdownSelected}
+                        disable={loadingSpecies}
+                    />
+                </View>
+
+                <View style={styles.row}>
+                    <View style={[styles.field, styles.halfField]}>
+                        <Text style={styles.label}>Status</Text>
+                        <Dropdown
+                            data={statusOptions}
+                            labelField="label"
+                            valueField="value"
+                            value={status}
+                            onChange={(item) => setStatus(item.value)}
+                            style={styles.dropdown}
+                            placeholderStyle={styles.dropdownPlaceholder}
+                            selectedTextStyle={styles.dropdownSelected}
+                        />
+                    </View>
+
+                    <View style={[styles.field, styles.halfField]}>
+                        <Text style={styles.label}>Health</Text>
+                        <Dropdown
+                            data={healthOptions}
+                            labelField="label"
+                            valueField="value"
+                            value={health}
+                            onChange={(item) => setHealth(item.value)}
+                            style={styles.dropdown}
+                            placeholderStyle={styles.dropdownPlaceholder}
+                            selectedTextStyle={styles.dropdownSelected}
+                        />
+                    </View>
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Location Details</Text>
+
+                <View style={styles.gpsInfoBox}>
+                    <Icon name="MapPin" size={16} color="#3B82F6" />
+                    <Text style={styles.gpsInfoText}>
+                        {gpsLocation?.coords.latitude.toFixed(6)}°N, {gpsLocation?.coords.longitude.toFixed(6)}°E
+                    </Text>
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Address</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={address}
+                        onChangeText={setAddress}
+                        placeholder="Street address"
+                        style={styles.input}
+                    />
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Barangay</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={barangay}
+                        onChangeText={setBarangay}
+                        placeholder="Barangay name"
+                        style={styles.input}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Measurements (Optional)</Text>
+
+                <View style={styles.row}>
+                    <View style={[styles.field, styles.halfField]}>
+                        <Text style={styles.label}>Height (m)</Text>
+                        <TextInput
+                            mode="outlined"
+                            value={heightMeters}
+                            onChangeText={setHeightMeters}
+                            placeholder="0.00"
+                            keyboardType="decimal-pad"
+                            style={styles.input}
+                        />
+                    </View>
+
+                    <View style={[styles.field, styles.halfField]}>
+                        <Text style={styles.label}>Diameter (cm)</Text>
+                        <TextInput
+                            mode="outlined"
+                            value={diameterCm}
+                            onChangeText={setDiameterCm}
+                            placeholder="0.00"
+                            keyboardType="decimal-pad"
+                            style={styles.input}
+                        />
+                    </View>
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Age (years)</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={ageYears}
+                        onChangeText={setAgeYears}
+                        placeholder="0"
+                        keyboardType="number-pad"
+                        style={styles.input}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Additional Information</Text>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Planted Date</Text>
+                    <TouchableOpacity
+                        style={styles.dateButton}
+                        onPress={() => setShowDatePicker(true)}
+                    >
+                        <Icon name="Calendar" size={20} color="#6B7280" />
+                        <Text style={styles.dateButtonText}>
+                            {plantedDate
+                                ? plantedDate.toLocaleDateString()
+                                : "Select date"}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={plantedDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={(event, selectedDate) => {
+                                setShowDatePicker(false);
+                                if (selectedDate) {
+                                    setPlantedDate(selectedDate);
+                                }
+                            }}
+                        />
+                    )}
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Managed By</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={managedBy}
+                        onChangeText={setManagedBy}
+                        placeholder="Organization or department"
+                        style={styles.input}
+                    />
+                </View>
+
+                <View style={styles.field}>
+                    <Text style={styles.label}>Notes</Text>
+                    <TextInput
+                        mode="outlined"
+                        value={notes}
+                        onChangeText={setNotes}
+                        placeholder="Additional observations or remarks"
+                        multiline
+                        numberOfLines={3}
+                        style={[styles.input, styles.textArea]}
+                    />
+                </View>
+            </View>
+        </ScrollView>
+    );
+
+    return (
+        <SafeAreaView style={styles.container} edges={["top"]}>
+            <StandardHeader
+                title="Add Tree (Field Mode)"
+                subtitle={`Step ${currentStep} of 3`}
+                showBack
+                onBack={handleBack}
+            />
+
+            {renderStepIndicator()}
+
+            <View style={styles.content}>
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+            </View>
+
+            <View style={styles.footer}>
+                {currentStep < 3 ? (
+                    <TouchableOpacity
+                        style={[
+                            styles.nextButton,
+                            ((currentStep === 1 && !gpsLocation) || (currentStep === 2 && !photo)) &&
+                                styles.nextButtonDisabled,
+                        ]}
+                        onPress={handleNext}
+                        disabled={(currentStep === 1 && !gpsLocation) || (currentStep === 2 && !photo)}
+                    >
+                        <Text style={styles.nextButtonText}>Continue</Text>
+                        <Icon name="ChevronRight" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity
+                        style={[styles.saveButton, createMutation.isPending && styles.saveButtonDisabled]}
+                        onPress={handleSave}
+                        disabled={createMutation.isPending}
+                    >
+                        {createMutation.isPending ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                            <>
+                                <Icon name="Save" size={20} color="#FFFFFF" />
+                                <Text style={styles.saveButtonText}>Register Tree</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )}
+            </View>
+
+            <Modal visible={showCamera} animationType="slide" presentationStyle="fullScreen">
+                <GeotaggedCameraComponent
+                    onCapture={handleCameraCapture}
+                    onClose={() => setShowCamera(false)}
+                />
+            </Modal>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#F9FAFB",
+    },
+    content: {
+        flex: 1,
+    },
+    stepIndicator: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 20,
+        paddingHorizontal: 16,
+        backgroundColor: "#FFFFFF",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E5E7EB",
+    },
+    stepItem: {
+        alignItems: "center",
+    },
+    stepCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#E5E7EB",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 6,
+    },
+    stepCircleActive: {
+        backgroundColor: "#3B82F6",
+    },
+    stepNumber: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#6B7280",
+    },
+    stepLabel: {
+        fontSize: 12,
+        fontWeight: "500",
+        color: "#6B7280",
+    },
+    stepLine: {
+        flex: 1,
+        height: 2,
+        backgroundColor: "#E5E7EB",
+        marginHorizontal: 8,
+        marginBottom: 22,
+    },
+    stepContent: {
+        flex: 1,
+        padding: 16,
+    },
+    formContent: {
+        paddingBottom: 32,
+    },
+    instructionCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: 24,
+        alignItems: "center",
+        marginBottom: 16,
+    },
+    instructionTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#111827",
+        marginTop: 12,
+        marginBottom: 8,
+    },
+    instructionText: {
+        fontSize: 14,
+        color: "#6B7280",
+        textAlign: "center",
+        lineHeight: 20,
+    },
+    gpsCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: 24,
+        minHeight: 200,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    gpsAcquiring: {
+        alignItems: "center",
+    },
+    gpsAcquiringText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#3B82F6",
+        marginTop: 16,
+    },
+    gpsHint: {
+        fontSize: 13,
+        color: "#6B7280",
+        marginTop: 8,
+    },
+    gpsSuccess: {
+        alignItems: "center",
+        width: "100%",
+    },
+    gpsSuccessTitle: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#22c55e",
+        marginTop: 12,
+        marginBottom: 16,
+    },
+    gpsDetails: {
+        width: "100%",
+        backgroundColor: "#F9FAFB",
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 12,
+    },
+    gpsDetailRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 8,
+    },
+    gpsDetailLabel: {
+        fontSize: 13,
+        color: "#6B7280",
+        fontWeight: "500",
+    },
+    gpsDetailValue: {
+        fontSize: 13,
+        color: "#111827",
+        fontWeight: "600",
+        fontFamily: "monospace",
+    },
+    geocodingLoading: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    geocodingText: {
+        fontSize: 12,
+        color: "#6B7280",
+    },
+    addressPreview: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        backgroundColor: "#EFF6FF",
+        padding: 10,
+        borderRadius: 6,
+        width: "100%",
+    },
+    addressText: {
+        flex: 1,
+        fontSize: 12,
+        color: "#3B82F6",
+    },
+    refreshButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        backgroundColor: "#EFF6FF",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#3B82F6",
+        marginTop: 12,
+    },
+    refreshButtonText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#3B82F6",
+    },
+    gpsError: {
+        alignItems: "center",
+    },
+    gpsErrorText: {
+        fontSize: 14,
+        color: "#ef4444",
+        marginTop: 12,
+        textAlign: "center",
+    },
+    retryButton: {
+        marginTop: 16,
+        backgroundColor: "#3B82F6",
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    retryButtonText: {
+        color: "#FFFFFF",
+        fontWeight: "600",
+        fontSize: 14,
+    },
+    warningCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        backgroundColor: "#FEF3C7",
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 12,
+    },
+    warningText: {
+        flex: 1,
+        fontSize: 12,
+        color: "#92400E",
+    },
+    photoPreview: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: 16,
+        alignItems: "center",
+    },
+    photoImage: {
+        width: "100%",
+        height: 300,
+        borderRadius: 8,
+        backgroundColor: "#F3F4F6",
+    },
+    photoOverlay: {
+        position: "absolute",
+        bottom: 76,
+        left: 16,
+        right: 16,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        padding: 8,
+        borderRadius: 6,
+    },
+    photoCoords: {
+        fontSize: 11,
+        color: "#FFFFFF",
+        fontFamily: "monospace",
+    },
+    photoAccuracy: {
+        fontSize: 10,
+        color: "#D1D5DB",
+        marginTop: 2,
+    },
+    retakeButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: "#6B7280",
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginTop: 12,
+    },
+    retakeButtonText: {
+        color: "#FFFFFF",
+        fontWeight: "600",
+        fontSize: 14,
+    },
+    captureButton: {
+        backgroundColor: "#3B82F6",
+        borderRadius: 12,
+        paddingVertical: 48,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+    },
+    captureButtonText: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    section: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#111827",
+        marginBottom: 16,
+    },
+    field: {
+        marginBottom: 16,
+    },
+    halfField: {
+        flex: 1,
+    },
+    row: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    label: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: "#374151",
+        marginBottom: 6,
+    },
+    required: {
+        color: "#EF4444",
+    },
+    input: {
+        backgroundColor: "#FFFFFF",
+    },
+    textArea: {
+        minHeight: 80,
+        textAlignVertical: "top",
+    },
+    dropdown: {
+        borderWidth: 1,
+        borderColor: "#D1D5DB",
+        borderRadius: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: "#FFFFFF",
+    },
+    dropdownPlaceholder: {
+        fontSize: 14,
+        color: "#9CA3AF",
+    },
+    dropdownSelected: {
+        fontSize: 14,
+        color: "#111827",
+    },
+    gpsInfoBox: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        backgroundColor: "#EFF6FF",
+        padding: 12,
+        borderRadius: 6,
+        marginBottom: 12,
+    },
+    gpsInfoText: {
+        fontSize: 12,
+        fontFamily: "monospace",
+        color: "#3B82F6",
+        fontWeight: "500",
+    },
+    dateButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        borderWidth: 1,
+        borderColor: "#D1D5DB",
+        borderRadius: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 14,
+        backgroundColor: "#FFFFFF",
+    },
+    dateButtonText: {
+        fontSize: 14,
+        color: "#111827",
+    },
+    footer: {
+        padding: 16,
+        backgroundColor: "#FFFFFF",
+        borderTopWidth: 1,
+        borderTopColor: "#E5E7EB",
+    },
+    nextButton: {
+        backgroundColor: "#3B82F6",
+        borderRadius: 8,
+        paddingVertical: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    nextButtonDisabled: {
+        backgroundColor: "#9CA3AF",
+    },
+    nextButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+    saveButton: {
+        backgroundColor: "#22c55e",
+        borderRadius: 8,
+        paddingVertical: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    saveButtonDisabled: {
+        backgroundColor: "#9CA3AF",
+    },
+    saveButtonText: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
+});

@@ -25,6 +25,7 @@ export default function CameraScreen() {
             <GeotaggedCameraComponent
                 onCapture={handleCapture}
                 onClose={handleClose}
+                hideUploadButton={true}
             />
         </View>
     );

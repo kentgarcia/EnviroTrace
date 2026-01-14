@@ -14,6 +14,7 @@ import {
 import TreeInventoryScreen from "../screens/roles/tree-management/TreeInventoryScreen";
 import TreeDetailScreen from "../screens/roles/tree-management/TreeDetailScreen";
 import TreeFormScreen from "../screens/roles/tree-management/TreeFormScreen";
+import TreeFieldCaptureScreen from "../screens/roles/tree-management/TreeFieldCaptureScreen";
 import GreeningProjectsScreen from "../screens/roles/tree-management/GreeningProjectsScreen";
 import FeeRecordsScreen from "../screens/roles/tree-management/FeeRecordsScreen";
 import MapViewScreen from "../screens/roles/tree-management/MapViewScreen";
@@ -30,6 +31,7 @@ export type TreeManagementStackParamList = {
     TreeInventory: undefined;
     TreeDetail: { treeId: string };
     TreeForm: { treeId?: string };
+    TreeFieldCapture: undefined;
     MapView: undefined;
     Camera: undefined;
     TreeRequests: undefined;
@@ -186,6 +188,13 @@ export default function TreeManagementNavigator() {
             <RootStack.Screen
                 name="TreeForm"
                 component={TreeFormScreen}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <RootStack.Screen
+                name="TreeFieldCapture"
+                component={TreeFieldCaptureScreen}
                 options={{
                     headerShown: false,
                 }}

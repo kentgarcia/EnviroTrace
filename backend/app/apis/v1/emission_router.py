@@ -270,6 +270,14 @@ def create_vehicle(
     """
     Create new vehicle.
     """
+    # Convert empty strings to None for identification fields
+    if vehicle_in.plate_number == "":
+        vehicle_in.plate_number = None
+    if vehicle_in.chassis_number == "":
+        vehicle_in.chassis_number = None
+    if vehicle_in.registration_number == "":
+        vehicle_in.registration_number = None
+    
     # Check if office exists
     office = crud_emission.office.get_sync(db, id=vehicle_in.office_id)
     if not office:
@@ -350,6 +358,14 @@ def update_vehicle(
     """
     Update a vehicle.
     """
+    # Convert empty strings to None for identification fields
+    if vehicle_in.plate_number == "":
+        vehicle_in.plate_number = None
+    if vehicle_in.chassis_number == "":
+        vehicle_in.chassis_number = None
+    if vehicle_in.registration_number == "":
+        vehicle_in.registration_number = None
+    
     vehicle = crud_emission.vehicle.get_sync(db, id=vehicle_id)
     if not vehicle:
         raise HTTPException(

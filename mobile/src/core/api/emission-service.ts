@@ -24,6 +24,8 @@ export interface Vehicle {
   registration_number?: string;
   vehicle_type: string;
   wheels: number;
+  year_acquired?: number;
+  description?: string;
   created_at: string;
   updated_at: string;
   latest_test_result?: boolean | null;
@@ -35,11 +37,13 @@ export interface VehicleInput {
   contact_number?: string;
   engine_type: string;
   office_id: string;
-  plate_number?: string;
-  chassis_number?: string;
-  registration_number?: string;
+  plate_number?: string | null;
+  chassis_number?: string | null;
+  registration_number?: string | null;
   vehicle_type: string;
   wheels: number;
+  year_acquired?: number;
+  description?: string;
 }
 
 export interface VehicleFilters {
@@ -280,6 +284,8 @@ export interface EmissionTest {
   quarter: number;
   year: number;
   result: boolean | null;
+  co_level?: number;
+  hc_level?: number;
   remarks?: string;
   created_by: string;
   created_at: string;
@@ -292,6 +298,8 @@ export interface EmissionTestInput {
   quarter: number;
   year: number;
   result: boolean | null;
+  co_level?: number;
+  hc_level?: number;
   remarks?: string;
 }
 

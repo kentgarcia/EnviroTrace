@@ -233,11 +233,12 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     
     def search(self, db: Session, *, search_term: str, skip: int = 0, limit: int = 100):
         """Search vehicles by plate number, chassis number, registration number, driver name, or office"""
+        from sqlalchemy import func
         query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id).filter(
             or_(
-                Vehicle.plate_number.ilike(f"%{search_term}%"),
-                Vehicle.chassis_number.ilike(f"%{search_term}%"),
-                Vehicle.registration_number.ilike(f"%{search_term}%"),
+                func.coalesce(Vehicle.plate_number, '').ilike(f"%{search_term}%"),
+                func.coalesce(Vehicle.chassis_number, '').ilike(f"%{search_term}%"),
+                func.coalesce(Vehicle.registration_number, '').ilike(f"%{search_term}%"),
                 Vehicle.driver_name.ilike(f"%{search_term}%"),
                 Office.name.ilike(f"%{search_term}%")
             )

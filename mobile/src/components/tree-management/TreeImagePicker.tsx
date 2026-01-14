@@ -12,8 +12,10 @@ import {
 import { Text } from "react-native-paper";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system";
 import Icon from "../icons/Icon";
 import GeotaggedCameraComponent from "./GeotaggedCameraComponent";
+import { treeInventoryApi } from "../../core/api/tree-inventory-api";
 
 interface TreeImagePickerProps {
     images: string[];
@@ -23,8 +25,9 @@ interface TreeImagePickerProps {
 }
 
 interface ImageUploadState {
-    uri: string;
-    status: "pending" | "compressing" | "compressed" | "error";
+    localUri: string;
+    uploadedUrl?: string;
+    status: "pending" | "compressing" | "uploading" | "uploaded" | "error";
     error?: string;
 }
 
@@ -60,6 +63,39 @@ export default function TreeImagePicker({
             return result.uri;
         } catch (error) {
             console.error("Error compressing image:", error);
+            throw error;
+        }
+    };
+
+    const uploadImage = async (compressedUri: string): Promise<string> => {
+        try {
+            // Get file info
+            const fileInfo = await FileSystem.getInfoAsync(compressedUri);
+            if (!fileInfo.exists) {
+                throw new Error("File does not exist");
+            }
+
+            // Create filename from URI
+            const filename = compressedUri.split("/").pop() || `tree_${Date.now()}.jpg`;
+            
+            // Create FormData for upload
+            const formData = new FormData();
+            formData.append("files", {
+                uri: compressedUri,
+                type: "image/jpeg",
+                name: filename,
+            } as any);
+
+            // Upload to backend
+            const response = await treeInventoryApi.uploadTreeImages(formData);
+            
+            if (response.data.uploaded && response.data.uploaded.length > 0) {
+                return response.data.uploaded[0].url;
+            } else {
+                throw new Error("Upload failed - no URL returned");
+            }
+        } catch (error) {
+            console.error("Error uploading image:", error);
             throw error;
         }
     };
@@ -113,16 +149,17 @@ export default function TreeImagePicker({
 
                 // Initialize upload states
                 const initialStates: ImageUploadState[] = result.assets.map((asset) => ({
-                    uri: asset.uri,
+                    localUri: asset.uri,
                     status: "pending",
                 }));
                 setUploadStates(initialStates);
 
-                // Compress all images
-                const compressedUris: string[] = [];
+                // Compress and upload all images
+                const uploadedUrls: string[] = [];
                 for (let i = 0; i < result.assets.length; i++) {
                     const asset = result.assets[i];
                     
+                    // Compress
                     setUploadStates((prev) =>
                         prev.map((state, idx) =>
                             idx === i ? { ...state, status: "compressing" } : state
@@ -131,26 +168,54 @@ export default function TreeImagePicker({
 
                     try {
                         const compressed = await compressImage(asset.uri);
-                        compressedUris.push(compressed);
+                        
+                        // Upload
+                        setUploadStates((prev) =>
+                            prev.map((state, idx) =>
+                                idx === i ? { ...state, status: "uploading" } : state
+                            )
+                        );
+
+                        const uploadedUrl = await uploadImage(compressed);
+                        uploadedUrls.push(uploadedUrl);
                         
                         setUploadStates((prev) =>
                             prev.map((state, idx) =>
-                                idx === i ? { ...state, status: "compressed" } : state
+                                idx === i 
+                                    ? { ...state, status: "uploaded", uploadedUrl } 
+                                    : state
                             )
                         );
                     } catch (error) {
+                        console.error("Error processing image:", error);
                         setUploadStates((prev) =>
                             prev.map((state, idx) =>
                                 idx === i
-                                    ? { ...state, status: "error", error: "Compression failed" }
+                                    ? { 
+                                        ...state, 
+                                        status: "error", 
+                                        error: error instanceof Error ? error.message : "Upload failed" 
+                                    }
                                     : state
                             )
                         );
                     }
                 }
 
-                // Add compressed images to the list
-                onImagesChange([...images, ...compressedUris]);
+                // Add only successfully uploaded URLs to the list
+                if (uploadedUrls.length > 0) {
+                    onImagesChange([...images, ...uploadedUrls]);
+                }
+                
+                // Show summary if there were errors
+                const errorCount = uploadStates.filter(s => s.status === "error").length;
+                if (errorCount > 0) {
+                    Alert.alert(
+                        "Upload Complete", 
+                        `${uploadedUrls.length} image(s) uploaded successfully. ${errorCount} failed.`
+                    );
+                }
+
                 setUploading(false);
                 setUploadStates([]);
             }
@@ -173,14 +238,39 @@ export default function TreeImagePicker({
             setShowCamera(false);
             setUploading(true);
 
-            // Camera photo is already compressed and processed
-            // Just add it directly to images array
-            onImagesChange([...images, photo.uri]);
+            // Initialize upload state for camera photo
+            setUploadStates([{
+                localUri: photo.uri,
+                status: "compressing",
+            }]);
+
+            // Compress the camera photo
+            const compressed = await compressImage(photo.uri);
+            
+            // Upload to server
+            setUploadStates([{
+                localUri: photo.uri,
+                status: "uploading",
+            }]);
+
+            const uploadedUrl = await uploadImage(compressed);
+            
+            setUploadStates([{
+                localUri: photo.uri,
+                uploadedUrl,
+                status: "uploaded",
+            }]);
+
+            // Add uploaded URL to images array
+            onImagesChange([...images, uploadedUrl]);
+            
             setUploading(false);
+            setUploadStates([]);
         } catch (error) {
             console.error("Error processing camera photo:", error);
-            Alert.alert("Error", "Failed to process photo");
+            Alert.alert("Error", "Failed to upload photo");
             setUploading(false);
+            setUploadStates([]);
         }
     };
 
@@ -199,11 +289,17 @@ export default function TreeImagePicker({
                                 <Text style={styles.progressStatusText}>Compressing...</Text>
                             </View>
                         )}
-                        {state.status === "compressed" && (
+                        {state.status === "uploading" && (
+                            <View style={styles.progressStatus}>
+                                <ActivityIndicator size="small" color="#3B82F6" />
+                                <Text style={styles.progressStatusText}>Uploading...</Text>
+                            </View>
+                        )}
+                        {state.status === "uploaded" && (
                             <View style={styles.progressStatus}>
                                 <Icon name="CheckCircle2" size={16} color="#22c55e" />
                                 <Text style={[styles.progressStatusText, { color: "#22c55e" }]}>
-                                    Ready
+                                    Uploaded
                                 </Text>
                             </View>
                         )}
@@ -271,7 +367,7 @@ export default function TreeImagePicker({
 
             {/* Helper Text */}
             <Text style={styles.helperText}>
-                Images will be compressed to max 1MB and 1920px for optimal upload
+                Images will be compressed and uploaded to cloud storage automatically
             </Text>
 
             {/* Camera Modal */}

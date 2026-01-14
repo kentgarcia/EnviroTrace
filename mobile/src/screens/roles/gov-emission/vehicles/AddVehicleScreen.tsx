@@ -22,12 +22,16 @@ export default function AddVehicleScreen() {
   const params = route.params as { plateNumber?: string; fromPlateRecognition?: string } | undefined;
 
   const [plate, setPlate] = useState("");
+  const [chassisNumber, setChassisNumber] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [driver, setDriver] = useState("");
   const [contact, setContact] = useState("");
   const [officeId, setOfficeId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
   const [engineType, setEngineType] = useState("");
   const [wheels, setWheels] = useState("4");
+  const [yearAcquired, setYearAcquired] = useState("");
+  const [description, setDescription] = useState("");
 
   // Fetch data from API
   const { data: officesData, isLoading: loadingOffices } = useOffices();
@@ -51,8 +55,9 @@ export default function AddVehicleScreen() {
   }, [params?.plateNumber]);
 
   const isValid = useMemo(() => {
-    return plate.trim() && driver.trim() && engineType.trim() && officeId.trim() && vehicleType.trim();
-  }, [plate, driver, engineType, officeId, vehicleType]);
+    const hasIdentification = plate.trim() || chassisNumber.trim() || registrationNumber.trim();
+    return hasIdentification && driver.trim() && engineType.trim() && officeId.trim() && vehicleType.trim();
+  }, [plate, chassisNumber, registrationNumber, driver, engineType, officeId, vehicleType]);
 
   // Format data for Dropdown components
   const officeDropdownData = useMemo(() => {
@@ -98,9 +103,13 @@ export default function AddVehicleScreen() {
         contact_number: contact.trim() || undefined,
         engine_type: engineType.trim(),
         office_id: officeId.trim(),
-        plate_number: plate.trim(),
+        plate_number: plate.trim() || null,
+        chassis_number: chassisNumber.trim() || null,
+        registration_number: registrationNumber.trim() || null,
         vehicle_type: vehicleType.trim(),
         wheels: parseInt(wheels || "4", 10) || 4,
+        year_acquired: yearAcquired.trim() ? parseInt(yearAcquired, 10) : undefined,
+        description: description.trim() || undefined,
       };
 
       await addVehicleMutation.mutateAsync(vehicleData);
@@ -141,8 +150,12 @@ export default function AddVehicleScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Basic Information</Text>
 
+              <Text style={styles.identificationNote}>
+                * At least one vehicle identification is required
+              </Text>
+
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Plate Number *</Text>
+                <Text style={styles.label}>Plate Number</Text>
                 <TextInput
                   value={plate}
                   onChangeText={setPlate}
@@ -154,15 +167,48 @@ export default function AddVehicleScreen() {
                   placeholderTextColor="#94A3B8"
                   left={<TextInput.Icon icon={() => <Icon name="Car" size={16} color="#64748B" />} />}
                 />
-                <HelperText type="error" visible={!plate.trim()} style={styles.helperText}>
-                  Plate number is required
-                </HelperText>
                 {params?.fromPlateRecognition && (
                   <HelperText type="info" visible={true} style={styles.helperTextInfo}>
                     📷 Plate number detected from image
                   </HelperText>
                 )}
               </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Chassis Number</Text>
+                <TextInput
+                  value={chassisNumber}
+                  onChangeText={setChassisNumber}
+                  mode="outlined"
+                  placeholder="Enter chassis number"
+                  style={styles.input}
+                  outlineStyle={styles.inputOutline}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="Hash" size={16} color="#64748B" />} />}
+                />
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Registration Number</Text>
+                <TextInput
+                  value={registrationNumber}
+                  onChangeText={setRegistrationNumber}
+                  mode="outlined"
+                  placeholder="Enter registration number"
+                  style={styles.input}
+                  outlineStyle={styles.inputOutline}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="Hash" size={16} color="#64748B" />} />}
+                />
+              </View>
+
+              {!plate.trim() && !chassisNumber.trim() && !registrationNumber.trim() && (
+                <HelperText type="error" visible={true} style={styles.helperText}>
+                  Please provide at least one vehicle identification (plate, chassis, or registration number)
+                </HelperText>
+              )}
 
               <View style={styles.inputWrapper}>
                 <Text style={styles.label}>Driver Name *</Text>
@@ -318,6 +364,40 @@ export default function AddVehicleScreen() {
                   left={<TextInput.Icon icon={() => <Icon name="CirclePlus" size={16} color="#64748B" />} />}
                 />
               </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Year Acquired</Text>
+                <TextInput
+                  value={yearAcquired}
+                  onChangeText={setYearAcquired}
+                  keyboardType="number-pad"
+                  mode="outlined"
+                  placeholder="e.g., 2020"
+                  maxLength={4}
+                  style={styles.input}
+                  outlineStyle={styles.inputOutline}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="Calendar" size={16} color="#64748B" />} />}
+                />
+              </View>
+
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  mode="outlined"
+                  placeholder="Additional vehicle details"
+                  multiline
+                  numberOfLines={3}
+                  style={styles.input}
+                  outlineStyle={styles.inputOutline}
+                  textColor="#0F172A"
+                  placeholderTextColor="#94A3B8"
+                  left={<TextInput.Icon icon={() => <Icon name="FileText" size={16} color="#64748B" />} />}
+                />
+              </View>
             </View>
 
             {/* Save Button */}
@@ -366,6 +446,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
+    fontWeight: "600",
+    color: "#1E40AF",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  identificationNote: {
     fontWeight: "800",
     color: "#64748B",
     textTransform: "uppercase",

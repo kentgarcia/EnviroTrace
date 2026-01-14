@@ -6,8 +6,7 @@ import Constants from "expo-constants";
 // API base URL - reads from environment variable with fallback
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  Constants.expoConfig?.extra?.apiUrl ||
-  "https://envirotrace.up.railway.app/api/v1";
+  Constants.expoConfig?.extra?.apiUrl;
 
 console.log("🌐 Using API URL:", API_BASE_URL);
 console.log("📱 Environment:", __DEV__ ? "Development" : "Production");

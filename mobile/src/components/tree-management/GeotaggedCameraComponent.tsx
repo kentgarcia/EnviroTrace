@@ -15,6 +15,7 @@ import * as MediaLibrary from "expo-media-library";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { captureRef } from "react-native-view-shot";
 import Icon from "../icons/Icon";
+import { useReverseGeocode } from "../../hooks/useReverseGeocode";
 
 interface GeotaggedPhoto {
     uri: string;
@@ -29,9 +30,10 @@ interface GeotaggedPhoto {
 interface GeotaggedCameraComponentProps {
     onCapture: (photo: GeotaggedPhoto) => void;
     onClose: () => void;
+    hideUploadButton?: boolean;
 }
 
-export default function GeotaggedCameraComponent({ onCapture, onClose }: GeotaggedCameraComponentProps) {
+export default function GeotaggedCameraComponent({ onCapture, onClose, hideUploadButton = false }: GeotaggedCameraComponentProps) {
     const cameraRef = useRef<CameraView>(null);
     const previewContainerRef = useRef<View>(null);
     const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -52,6 +54,9 @@ export default function GeotaggedCameraComponent({ onCapture, onClose }: Geotagg
     const [uploading, setUploading] = useState(false);
     const [saved, setSaved] = useState(false);
     const [uploaded, setUploaded] = useState(false);
+
+    // Reverse geocoding
+    const { result: geocodeResult, reverseGeocode } = useReverseGeocode();
 
     useEffect(() => {
         requestPermissions();
@@ -124,6 +129,9 @@ export default function GeotaggedCameraComponent({ onCapture, onClose }: Geotagg
             setGpsAccuracy(loc.coords.accuracy || null);
             setAcquiringGPS(false);
 
+            // Get address from coordinates
+            reverseGeocode(loc.coords.latitude, loc.coords.longitude);
+
             // Continue updating location in background
             startLocationUpdates();
         } catch (error) {
@@ -190,8 +198,9 @@ export default function GeotaggedCameraComponent({ onCapture, onClose }: Geotagg
         const coords = formatCoordinates(location.coords.latitude, location.coords.longitude);
         const accuracy = gpsAccuracy ? `±${Math.round(gpsAccuracy)}m` : "";
         const dateTime = formatDateTime();
+        const address = geocodeResult?.address || "Fetching address...";
         
-        return `📍 ${coords} • ${accuracy} • ${dateTime}`;
+        return `📍 ${coords} • ${accuracy}\n${address}\n${dateTime}`;
     };
 
     const takePicture = async () => {
@@ -493,22 +502,24 @@ export default function GeotaggedCameraComponent({ onCapture, onClose }: Geotagg
                     )}
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.uploadButton, uploaded && styles.actionButtonSuccess]}
-                    onPress={handleUpload}
-                    disabled={uploading}
-                >
-                    {uploading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                        <>
-                            <Icon name={uploaded ? "CheckCircle2" : "Upload"} size={20} color="#FFFFFF" />
-                            <Text style={styles.actionButtonText}>
-                                {uploaded ? "✓ Uploaded" : "Upload"}
-                            </Text>
-                        </>
-                    )}
-                </TouchableOpacity>
+                {!hideUploadButton && (
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.uploadButton, uploaded && styles.actionButtonSuccess]}
+                        onPress={handleUpload}
+                        disabled={uploading}
+                    >
+                        {uploading ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                            <>
+                                <Icon name={uploaded ? "CheckCircle2" : "Upload"} size={20} color="#FFFFFF" />
+                                <Text style={styles.actionButtonText}>
+                                    {uploaded ? "✓ Uploaded" : "Upload"}
+                                </Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                     style={[styles.actionButton, styles.cancelButton]}

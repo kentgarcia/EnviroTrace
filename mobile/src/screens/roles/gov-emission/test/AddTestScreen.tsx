@@ -26,7 +26,9 @@ export default function AddTestScreen() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [quarter, setQuarter] = useState("" + (Math.floor((new Date().getMonth()) / 3) + 1));
   const [year, setYear] = useState("" + new Date().getFullYear());
-  const [result, setResult] = useState<"pass" | "fail" | "unknown">("pass");
+  const [result, setResult] = useState<"pass" | "fail">("pass");
+  const [coLevel, setCoLevel] = useState("");
+  const [hcLevel, setHcLevel] = useState("");
   const [remarks, setRemarks] = useState("");
 
   // Plate recognition states
@@ -82,7 +84,9 @@ export default function AddTestScreen() {
         test_date: new Date(date).toISOString(),
         quarter: parseInt(quarter, 10),
         year: parseInt(year, 10),
-        result: result === "unknown" ? null : result === "pass",
+        result: result === "pass",
+        co_level: coLevel.trim() ? parseFloat(coLevel) : undefined,
+        hc_level: hcLevel.trim() ? parseFloat(hcLevel) : undefined,
         remarks: remarks || undefined,
       };
 
@@ -288,7 +292,7 @@ export default function AddTestScreen() {
     // Map Vehicle to VehicleSearchResponse
     const vehicleResponse: VehicleSearchResponse = {
       id: vehicle.id,
-      plate_number: vehicle.plate_number,
+      plate_number: vehicle.plate_number || vehicle.chassis_number || vehicle.registration_number || "",
       driver_name: vehicle.driver_name,
       contact_number: vehicle.contact_number,
       engine_type: vehicle.engine_type,
@@ -308,22 +312,26 @@ export default function AddTestScreen() {
   };
 
   return (
-    <>
+    <SafeAreaView style={styles.outerContainer} edges={["top"]}>
       <StandardHeader
         title="Record Emission Test"
         showBack
         backgroundColor="#FFFFFF"
-        statusBarStyle="dark"
         titleSize={20}
         iconSize={20}
       />
-      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* Vehicle Selection Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Vehicle Selection</Text>
@@ -555,29 +563,45 @@ export default function AddTestScreen() {
                       Fail
                     </Text>
                   </TouchableOpacity>
+                </View>
+              </View>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.resultChip,
-                      result === "unknown" && styles.resultChipUnknown,
-                    ]}
-                    onPress={() => setResult("unknown")}
-                    activeOpacity={0.7}
-                  >
-                    <Icon
-                      name="HelpCircle"
-                      size={16}
-                      color={result === "unknown" ? "#D97706" : "#64748B"}
+              {/* Emission Levels */}
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>CO Level (%)</Text>
+                  <View style={styles.inputContainer}>
+                    <PaperInput
+                      value={coLevel}
+                      onChangeText={setCoLevel}
+                      placeholder="0.0"
+                      keyboardType="decimal-pad"
+                      style={styles.textInput}
+                      underlineColor="transparent"
+                      activeUnderlineColor="transparent"
+                      mode="flat"
+                      textColor="#0F172A"
+                      placeholderTextColor="#94A3B8"
                     />
-                    <Text
-                      style={[
-                        styles.resultChipText,
-                        result === "unknown" && styles.resultChipTextActive,
-                      ]}
-                    >
-                      Unknown
-                    </Text>
-                  </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1 }]}>
+                  <Text style={styles.inputLabel}>HC Level (ppm)</Text>
+                  <View style={styles.inputContainer}>
+                    <PaperInput
+                      value={hcLevel}
+                      onChangeText={setHcLevel}
+                      placeholder="0"
+                      keyboardType="decimal-pad"
+                      style={styles.textInput}
+                      underlineColor="transparent"
+                      activeUnderlineColor="transparent"
+                      mode="flat"
+                      textColor="#0F172A"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
                 </View>
               </View>
 
@@ -604,66 +628,57 @@ export default function AddTestScreen() {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              (!isValid || addTestMutation.isPending) && styles.saveButtonDisabled,
-            ]}
-            onPress={onSave}
-            disabled={!isValid || addTestMutation.isPending}
-            activeOpacity={0.7}
-          >
-            {addTestMutation.isPending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Icon name="Save" size={20} color="#FFFFFF" />
-            )}
-            <Text style={styles.saveButtonText}>
+          <View style={styles.buttonSection}>
+            <Button
+              mode="contained"
+              onPress={onSave}
+              disabled={!isValid || addTestMutation.isPending}
+              loading={addTestMutation.isPending}
+              style={styles.saveBtn}
+              buttonColor="#1E40AF"
+              labelStyle={styles.saveBtnLabel}
+            >
               {addTestMutation.isPending ? "Saving..." : "Save Test Record"}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Bottom Spacer */}
-          <View style={{ height: 120 }} />
+            </Button>
+          </View>
         </ScrollView>
+      </KeyboardAvoidingView>
+      
+      {/* Camera Modal */}
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <PlateCaptureCameraComponent
+          onCapture={handlePlateCapture}
+          onClose={() => setShowCamera(false)}
+          isProcessing={isProcessingPlate}
+        />
+      </Modal>
 
-        {/* Camera Modal */}
-        <Modal
-          visible={showCamera}
-          animationType="slide"
-          presentationStyle="fullScreen"
-        >
-          <PlateCaptureCameraComponent
-            onCapture={handlePlateCapture}
-            onClose={() => setShowCamera(false)}
-            isProcessing={isProcessingPlate}
-          />
-        </Modal>
-
-        {/* Manual Search Modal */}
-        <Modal
-          visible={plateSearchManual}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setPlateSearchManual(false)}
-        >
+      {/* Manual Search Modal */}
+      <Modal
+        visible={plateSearchManual}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPlateSearchManual(false)}
+      >
           <KeyboardAvoidingView
             style={styles.modalOverlay}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
           >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Search Vehicle by Plate Number</Text>
+              <Text style={styles.modalTitle}>Search Vehicle</Text>
 
               <View style={styles.modalInputContainer}>
                 <PaperInput
                   value={plateNumber}
                   onChangeText={setPlateNumber}
-                  placeholder="e.g., ABC123, XYZ789"
+                  placeholder="Enter plate, chassis, or registration number"
                   autoCapitalize="characters"
-                  maxLength={20}
+                  maxLength={30}
                   autoFocus
-                  returnKeyType="search"
-                  onSubmitEditing={handleManualPlateSearch}
                   style={styles.modalInput}
                   underlineColor="transparent"
                   activeUnderlineColor="transparent"
@@ -686,7 +701,9 @@ export default function AddTestScreen() {
                           <Icon name="Car" size={20} color="#02339C" />
                         </View>
                         <View style={styles.suggestionTextContainer}>
-                          <Text style={styles.suggestionPlate}>{vehicle.plate_number}</Text>
+                          <Text style={styles.suggestionPlate}>
+                            {vehicle.plate_number || vehicle.chassis_number || vehicle.registration_number || "N/A"}
+                          </Text>
                           <Text style={styles.suggestionDriver}>{vehicle.driver_name}</Text>
                         </View>
                       </View>
@@ -698,53 +715,45 @@ export default function AddTestScreen() {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={styles.modalCancelButton}
+                  style={styles.modalCancelButtonFull}
                   onPress={() => setPlateSearchManual(false)}
                   disabled={isProcessingPlate}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.modalCancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.modalSearchButton,
-                    (!plateNumber.trim() || isProcessingPlate) && styles.modalSearchButtonDisabled,
-                  ]}
-                  onPress={handleManualPlateSearch}
-                  disabled={!plateNumber.trim() || isProcessingPlate}
-                  activeOpacity={0.7}
-                >
-                  {isProcessingPlate ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.modalSearchText}>Search</Text>
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
           </KeyboardAvoidingView>
         </Modal>
       </SafeAreaView>
-    </>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  outerContainer: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    padding: 16,
+    paddingBottom: 32,
   },
 
   // Section Styles
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 12,
@@ -753,16 +762,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 12,
-    paddingLeft: 4,
   },
 
   // Card Styles
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: "#F1F5F9",
-    padding: 16,
   },
 
   // Primary Action Button (Scan Plate)
@@ -920,15 +928,13 @@ const styles = StyleSheet.create({
 
   // Input Styles
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#64748B",
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   inputContainer: {
     flexDirection: "row",
@@ -1037,25 +1043,17 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
 
-  // Save Button
-  saveButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#1E40AF",
-    borderRadius: 14,
-    paddingVertical: 16,
-    gap: 8,
+  // Button Section
+  buttonSection: {
     marginTop: 8,
   },
-  saveButtonDisabled: {
-    backgroundColor: "#94A3B8",
-    opacity: 0.6,
+  saveBtn: {
+    borderRadius: 14,
+    paddingVertical: 8,
   },
-  saveButtonText: {
+  saveBtnLabel: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FFFFFF",
   },
 
   // Modal Styles
@@ -1101,6 +1099,14 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelButtonFull: {
+    width: "100%",
     backgroundColor: "#F1F5F9",
     borderRadius: 12,
     paddingVertical: 14,
