@@ -286,14 +286,15 @@ def create_vehicle(
             detail="Office not found"
         )
     
-    # Check for duplicate plate number
-    existing = crud_emission.vehicle.get_by_plate_number(db, plate_number=vehicle_in.plate_number)
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A vehicle with this plate number already exists"
-        )
+    # Check for duplicate plate number only if plate number is provided
+    if vehicle_in.plate_number:
+        existing = crud_emission.vehicle.get_by_plate_number(db, plate_number=vehicle_in.plate_number)
+        
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A vehicle with this plate number already exists"
+            )
     try:
         # Create the vehicle using the CRUD method
         print("DEBUG: Creating vehicle")
