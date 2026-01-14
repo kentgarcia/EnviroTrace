@@ -37,8 +37,8 @@ class UrbanGreeningFeeRecordBase(BaseModel):
     amount: Decimal
     payer_name: str
     date: DateType
-    due_date: DateType
-    status: str  # paid, pending, overdue, cancelled
+    status: str  # paid, pending, cancelled
+    or_number: Optional[str] = None
     payment_date: Optional[DateType] = None
 
 class UrbanGreeningFeeRecordCreate(UrbanGreeningFeeRecordBase):
@@ -49,8 +49,8 @@ class UrbanGreeningFeeRecordUpdate(BaseModel):
     amount: Optional[Decimal] = None
     payer_name: Optional[str] = None
     date: Optional[DateType] = None
-    due_date: Optional[DateType] = None
     status: Optional[str] = None
+    or_number: Optional[str] = None
     payment_date: Optional[DateType] = None
 
 class UrbanGreeningFeeRecordInDB(BaseModel):
@@ -60,7 +60,6 @@ class UrbanGreeningFeeRecordInDB(BaseModel):
     amount: Decimal
     payer_name: str
     date: DateType
-    due_date: DateType
     status: str
     or_number: Optional[str] = None
     payment_date: Optional[DateType] = None

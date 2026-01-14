@@ -8,6 +8,8 @@ import {
   TableCell,
   WidthType,
   AlignmentType,
+  PageOrientation,
+  BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
 
@@ -23,90 +25,138 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
     const doc = parser.parseFromString(html, "text/html");
     const elements: any[] = [];
 
-    // Helper to parse background color from style string
-    const parseBackgroundColor = (styleStr: string): string | undefined => {
-      const match = styleStr.match(/background-color:\s*#([0-9a-fA-F]{6})/);
-      return match ? match[1] : undefined;
-    };
-
-    // Helper to check if text should be bold from style
-    const isBold = (styleStr: string): boolean => {
-      return styleStr.includes("font-weight: bold");
+    // Helper to parse background color from class or style
+    const getBackgroundColor = (element: HTMLElement): string | undefined => {
+      const styleAttr = element.getAttribute("style") || "";
+      const classAttr = element.getAttribute("class") || "";
+      
+      // Parse from style attribute
+      const match = styleAttr.match(/background-color:\s*#([0-9a-fA-F]{6})/);
+      if (match) return match[1];
+      
+      // Parse from class
+      if (classAttr.includes("table-header")) return "0033A0";
+      if (classAttr.includes("row-number")) return "FFFFFF";
+      if (classAttr.includes("data-cell")) return "E3F2FD";
+      
+      return undefined;
     };
 
     // Helper to get text color
-    const getTextColor = (styleStr: string): string | undefined => {
-      const match = styleStr.match(/color:\s*#([0-9a-fA-F]{6})/);
-      return match ? match[1] : undefined;
+    const getTextColor = (element: HTMLElement): string => {
+      const styleAttr = element.getAttribute("style") || "";
+      const classAttr = element.getAttribute("class") || "";
+      
+      // Parse from style
+      const match = styleAttr.match(/color:\s*#([0-9a-fA-F]{6})/);
+      if (match) return match[1];
+      
+      // Parse from class
+      if (classAttr.includes("table-header")) return "FFFFFF";
+      if (classAttr.includes("test-passed")) return "15803d";
+      if (classAttr.includes("test-failed")) return "b91c1c";
+      if (classAttr.includes("test-not-tested")) return "64748b";
+      
+      return "000000";
+    };
+
+    // Helper to check if bold
+    const isBold = (element: HTMLElement): boolean => {
+      const styleAttr = element.getAttribute("style") || "";
+      const classAttr = element.getAttribute("class") || "";
+      return styleAttr.includes("font-weight: bold") || 
+             styleAttr.includes("font-weight:bold") ||
+             classAttr.includes("table-header") ||
+             classAttr.includes("row-number") ||
+             element.tagName === "TH";
+    };
+
+    // Helper to get alignment
+    const getAlignment = (element: HTMLElement): AlignmentType => {
+      const styleAttr = element.getAttribute("style") || "";
+      const classAttr = element.getAttribute("class") || "";
+      
+      if (styleAttr.includes("text-align: center") || 
+          styleAttr.includes("text-align:center") ||
+          classAttr.includes("data-cell-center") ||
+          classAttr.includes("row-number") ||
+          element.tagName === "TH") {
+        return AlignmentType.CENTER;
+      }
+      
+      return AlignmentType.LEFT;
     };
 
     // Process table element
     const processTable = (table: HTMLTableElement) => {
       try {
-        const rows: TableRow[] = [];
+        const allRows: TableRow[] = [];
 
-        // Process thead
-        const thead = table.querySelector("thead");
-        if (thead) {
-          thead.querySelectorAll("tr").forEach((tr, trIndex) => {
-            const cells: TableCell[] = [];
-            tr.querySelectorAll("th, td").forEach((cell) => {
-              const cellElement = cell as HTMLElement;
-              const styleAttr = cellElement.getAttribute("style") || "";
-              // Parse background color, ensure it's a valid 6-digit hex
-              let bgColor = parseBackgroundColor(styleAttr);
-
-              // If no background color found, use a default dark color
-              if (!bgColor) {
-                bgColor = "1e3a8a"; // Default blue for headers
-              }
-
-              cells.push(
-                new TableCell({
+        // First, manually add header row
+        const headerRow = new TableRow({
+          children: [
+            "NO",
+            "DRIVER'S NAME",
+            "OFFICE",
+            "PLATE NUMBER",
+            "VEHICLE CATEGORY",
+            "VEHICLE DESCRIPTION",
+            "YEAR ACQUIRED",
+            "CO (%)",
+            "HC (ppm)",
+            "TEST RESULT",
+            "DATE",
+          ].map((headerText) =>
+            new TableCell({
+              children: [
+                new Paragraph({
                   children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: cellElement.textContent?.trim() || "",
-                          bold: true,
-                          color: "FFFFFF", // White text
-                          size: 22,
-                        }),
-                      ],
-                      alignment: AlignmentType.CENTER,
+                    new TextRun({
+                      text: headerText,
+                      bold: true,
+                      color: "FFFFFF",
+                      size: 18,
+                      font: "Arial",
                     }),
                   ],
-                  shading: {
-                    fill: bgColor,
-                    color: "auto",
-                  },
-                })
-              );
-            });
-            if (cells.length > 0) {
-              rows.push(
-                new TableRow({
-                  children: cells,
-                  tableHeader: true,
-                  cantSplit: true, // Prevent row from splitting across pages
-                })
-              );
-            }
-          });
-        }
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+              shading: {
+                fill: "0033A0",
+              },
+              margins: {
+                top: 100,
+                bottom: 100,
+                left: 80,
+                right: 80,
+              },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              },
+            })
+          ),
+          cantSplit: true,
+        });
+        
+        allRows.push(headerRow);
 
         // Process tbody
         const tbody = table.querySelector("tbody");
         if (tbody) {
           tbody.querySelectorAll("tr").forEach((tr) => {
             const cells: TableCell[] = [];
-            tr.querySelectorAll("td").forEach((cell) => {
+            tr.querySelectorAll("td").forEach((cell, cellIndex) => {
               const cellElement = cell as HTMLElement;
-              const styleAttr = cellElement.getAttribute("style") || "";
-              const bgColor = parseBackgroundColor(styleAttr);
-              const textColor = getTextColor(styleAttr) || "000000";
-              const bold = isBold(styleAttr);
-              const isCenter = styleAttr.includes("text-align: center");
+              const textColor = getTextColor(cellElement);
+              const bold = isBold(cellElement);
+              const alignment = getAlignment(cellElement);
+              
+              // First column (NO) gets white background, others get light blue
+              const bgColor = cellIndex === 0 ? "FFFFFF" : "E3F2FD";
 
               cells.push(
                 new TableCell({
@@ -117,44 +167,51 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
                           text: cellElement.textContent?.trim() || "",
                           bold: bold,
                           color: textColor,
-                          size: 20,
+                          size: 18,
+                          font: "Arial",
                         }),
                       ],
-                      alignment: isCenter
-                        ? AlignmentType.CENTER
-                        : AlignmentType.LEFT,
+                      alignment: alignment,
                     }),
                   ],
-                  shading: bgColor
-                    ? {
-                        fill: bgColor,
-                        color: "auto",
-                      }
-                    : undefined,
+                  shading: {
+                    fill: bgColor,
+                  },
+                  margins: {
+                    top: 80,
+                    bottom: 80,
+                    left: 60,
+                    right: 60,
+                  },
+                  borders: {
+                    top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                    bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                    left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                    right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+                  },
                 })
               );
             });
             if (cells.length > 0) {
-              rows.push(
+              allRows.push(
                 new TableRow({
                   children: cells,
-                  cantSplit: true, // Prevent row from splitting across pages
+                  cantSplit: true,
                 })
               );
             }
           });
         }
 
-        // Only create table if we have rows
-        if (rows.length === 0) {
+        if (allRows.length === 0) {
           console.warn("Table has no rows, skipping");
           return null;
         }
 
-        console.log(`Creating table with ${rows.length} rows`);
+        console.log(`Creating table with ${allRows.length} total rows (1 header + ${allRows.length - 1} data rows)`);
 
         return new Table({
-          rows,
+          rows: allRows,
           width: {
             size: 100,
             type: WidthType.PERCENTAGE,
@@ -166,171 +223,17 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
       }
     };
 
-    // Process all body children
-    doc.body.childNodes.forEach((node) => {
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as HTMLElement;
-        const tagName = element.tagName.toLowerCase();
-
-        switch (tagName) {
-          case "div":
-            // Process children of div
-            element.childNodes.forEach((child) => {
-              if (child.nodeType === Node.ELEMENT_NODE) {
-                const childEl = child as HTMLElement;
-                if (childEl.tagName.toLowerCase() === "h1") {
-                  elements.push(
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: childEl.textContent || "",
-                          bold: true,
-                          size: 56,
-                        }),
-                      ],
-                      alignment: AlignmentType.CENTER,
-                      spacing: { before: 400, after: 200 },
-                    })
-                  );
-                } else if (childEl.tagName.toLowerCase() === "p") {
-                  elements.push(
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: childEl.textContent || "",
-                          size: 24,
-                        }),
-                      ],
-                      alignment: AlignmentType.CENTER,
-                      spacing: { after: 100 },
-                    })
-                  );
-                }
-              }
-            });
-            break;
-
-          case "h1":
-            elements.push(
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: element.textContent || "",
-                    bold: true,
-                    size: 48,
-                  }),
-                ],
-                spacing: { before: 400, after: 200 },
-              })
-            );
-            break;
-
-          case "h2":
-            elements.push(
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: element.textContent || "",
-                    bold: true,
-                    size: 36,
-                  }),
-                ],
-                spacing: { before: 300, after: 150 },
-              })
-            );
-            break;
-
-          case "p":
-            const children: TextRun[] = [];
-            element.childNodes.forEach((child) => {
-              if (child.nodeType === Node.TEXT_NODE) {
-                const text = child.textContent?.trim();
-                if (text) {
-                  children.push(new TextRun({ text, size: 24 }));
-                }
-              } else if (child.nodeType === Node.ELEMENT_NODE) {
-                const childEl = child as HTMLElement;
-                if (childEl.tagName === "STRONG" || childEl.tagName === "B") {
-                  children.push(
-                    new TextRun({
-                      text: childEl.textContent || "",
-                      bold: true,
-                      size: 24,
-                    })
-                  );
-                } else if (
-                  childEl.tagName === "EM" ||
-                  childEl.tagName === "I"
-                ) {
-                  children.push(
-                    new TextRun({
-                      text: childEl.textContent || "",
-                      italics: true,
-                      size: 24,
-                    })
-                  );
-                } else {
-                  children.push(
-                    new TextRun({ text: childEl.textContent || "", size: 24 })
-                  );
-                }
-              }
-            });
-
-            if (children.length > 0 || element.textContent?.trim()) {
-              elements.push(
-                new Paragraph({
-                  children:
-                    children.length > 0
-                      ? children
-                      : [
-                          new TextRun({
-                            text: element.textContent || "",
-                            size: 24,
-                          }),
-                        ],
-                  spacing: { after: 120 },
-                })
-              );
-            }
-            break;
-
-          case "hr":
-            elements.push(
-              new Paragraph({
-                children: [new TextRun({ text: "" })],
-                border: {
-                  bottom: {
-                    color: "CCCCCC",
-                    space: 1,
-                    style: "single",
-                    size: 6,
-                  },
-                },
-                spacing: { before: 200, after: 200 },
-              })
-            );
-            break;
-
-          case "table":
-            const tableElement = processTable(element as HTMLTableElement);
-            if (tableElement) {
-              elements.push(tableElement);
-              elements.push(
-                new Paragraph({
-                  children: [new TextRun({ text: "" })],
-                  spacing: { after: 200 },
-                })
-              );
-            }
-            break;
-        }
+    // Process tables only
+    doc.querySelectorAll("table").forEach((table) => {
+      const tableElement = processTable(table as HTMLTableElement);
+      if (tableElement) {
+        elements.push(tableElement);
       }
     });
 
     console.log(`Processed ${elements.length} elements for Word export`);
 
-    // Create Word document
+    // Create Word document with landscape orientation
     const wordDoc = new Document({
       sections: [
         {
@@ -341,6 +244,9 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
                 right: 720,
                 bottom: 720,
                 left: 720,
+              },
+              size: {
+                orientation: PageOrientation.LANDSCAPE,
               },
             },
           },

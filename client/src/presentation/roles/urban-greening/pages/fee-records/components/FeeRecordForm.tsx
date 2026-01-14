@@ -29,8 +29,8 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
         amount: initialData?.amount || 0,
         payer_name: initialData?.payer_name || "",
         date: initialData?.date ? new Date(initialData.date) : new Date(),
-        due_date: initialData?.due_date ? new Date(initialData.due_date) : new Date(),
         status: initialData?.status || "pending",
+        or_number: initialData?.or_number || "",
         payment_date: initialData?.payment_date ? new Date(initialData.payment_date) : null,
     });
 
@@ -48,8 +48,8 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
             amount: formData.amount,
             payer_name: formData.payer_name,
             date: formData.date.toISOString().split('T')[0],
-            due_date: formData.due_date.toISOString().split('T')[0],
             status: formData.status,
+            or_number: formData.or_number || null,
             payment_date: formData.payment_date ? formData.payment_date.toISOString().split('T')[0] : null,
         };
 
@@ -124,19 +124,6 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
                     />
                 </div>
                 <div>
-                    <Label htmlFor="due_date">Due Date</Label>
-                    <Input
-                        type="date"
-                        value={formData.due_date.toISOString().split('T')[0]}
-                        onChange={(e) => setFormData({ ...formData, due_date: new Date(e.target.value) })}
-                        disabled={isReadOnly}
-                        className="rounded-lg"
-                    />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-                <div>
                     <Label htmlFor="status">Status</Label>
                     <Select
                         value={formData.status}
@@ -149,25 +136,37 @@ const FeeRecordForm: React.FC<FeeRecordFormProps> = ({
                         <SelectContent>
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="overdue">Overdue</SelectItem>
                             <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {formData.status === "paid" && (
+            <div className="grid grid-cols-2 gap-4">
                 <div>
-                    <Label htmlFor="payment_date">Payment Date</Label>
+                    <Label htmlFor="or_number">OR Number</Label>
                     <Input
-                        type="date"
-                        value={formData.payment_date ? formData.payment_date.toISOString().split('T')[0] : ""}
-                        onChange={(e) => setFormData({ ...formData, payment_date: e.target.value ? new Date(e.target.value) : null })}
+                        id="or_number"
+                        value={formData.or_number}
+                        onChange={(e) => setFormData({ ...formData, or_number: e.target.value })}
+                        placeholder="Official Receipt Number"
                         disabled={isReadOnly}
                         className="rounded-lg"
                     />
                 </div>
-            )}
+                {formData.status === "paid" && (
+                    <div>
+                        <Label htmlFor="payment_date">Payment Date</Label>
+                        <Input
+                            type="date"
+                            value={formData.payment_date ? formData.payment_date.toISOString().split('T')[0] : ""}
+                            onChange={(e) => setFormData({ ...formData, payment_date: e.target.value ? new Date(e.target.value) : null })}
+                            disabled={isReadOnly}
+                            className="rounded-lg"
+                        />
+                    </div>
+                )}
+            </div>
 
             {!isReadOnly && (
                 <div className="flex justify-end gap-3 pt-4 border-t">

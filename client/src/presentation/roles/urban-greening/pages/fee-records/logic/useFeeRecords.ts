@@ -17,8 +17,7 @@ export interface FeeRecord {
   amount: number;
   payer_name: string;
   date: string;
-  due_date: string;
-  status: "paid" | "pending" | "overdue" | "cancelled";
+  status: "paid" | "pending" | "cancelled";
   or_number?: string;
   payment_date?: string;
   created_at: string;
@@ -34,7 +33,6 @@ export const transformApiRecord = (
   amount: Number(record.amount), // Ensure amount is a number
   payer_name: record.payer_name,
   date: record.date,
-  due_date: record.due_date,
   status: record.status,
   or_number: record.or_number,
   payment_date: record.payment_date,

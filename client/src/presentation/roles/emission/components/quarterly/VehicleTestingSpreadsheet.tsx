@@ -88,19 +88,13 @@ const StatusCell = React.memo(({
     : "bg-slate-100 text-slate-500";
 
   return (
-    <div className="relative w-full group/cell" onDoubleClick={onDoubleClick}>
-      <select
-        value={status}
-        onChange={(e) => onChange(e.target.value as QuarterStatus)}
-        disabled={disabled || isPending}
-        className={`w-full h-7 rounded text-[11px] font-semibold uppercase appearance-none px-1 text-center focus:outline-none focus:ring-1 focus:ring-blue-400 transition-colors ${bgClass} ${
-          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:brightness-95"
-        }`}
-      >
-        <option value="pending" className="bg-white text-slate-500">PENDING</option>
-        <option value="pass" className="bg-white text-emerald-700">PASS</option>
-        <option value="fail" className="bg-white text-rose-700">FAIL</option>
-      </select>
+    <div 
+      className={`relative w-full group/cell cursor-pointer ${bgClass} rounded h-7 flex items-center justify-center transition-all hover:brightness-95`}
+      onClick={onDoubleClick}
+    >
+      <div className="text-[11px] font-semibold uppercase">
+        {status === "pass" ? "PASS" : status === "fail" ? "FAIL" : "PENDING"}
+      </div>
       {isPending && (
         <div className={`absolute inset-0 flex items-center justify-center rounded ${bgClass}`}>
           <Loader2 className="h-3 w-3 animate-spin" />
@@ -314,7 +308,7 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
                       key={i}
                       test={test}
                       quarter={i + 1}
-                      disabled={!onUpdateTest}
+                      disabled={!onLaunchQuickTest}
                       isPending={pendingCells.has(`${r.vehicleId}-${i + 1}`)}
                       onChange={(s) => handleStatusChange(r.vehicleId, i + 1, s)}
                       onDoubleClick={onLaunchQuickTest ? () => onLaunchQuickTest(r.vehicleId, i + 1, test) : undefined}
@@ -343,7 +337,7 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
       </div>
 
       <p className="text-[10px] text-slate-400 px-1">
-        Click status to cycle • Double-click for detailed entry
+        Click any quarter cell to enter detailed test results with CO/HC measurements
       </p>
     </div>
   );

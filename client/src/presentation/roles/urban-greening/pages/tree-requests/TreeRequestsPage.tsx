@@ -1,10 +1,17 @@
 // client/src/presentation/roles/urban-greening/pages/tree-requests/TreeRequestsPage.tsx
 /**
- * Tree Management Requests Page
- * For cutting/pruning/violation requests with tree linking and fee creation
+ * Tree Management Requests Page (DEPRECATED)
+ * 
+ * ⚠️ THIS PAGE HAS BEEN DEPRECATED ⚠️
+ * Please use the new ISO Tree Request Tracking System instead.
+ * This legacy page is maintained for historical reference only.
+ * 
+ * New system location: /urban-greening/tree-requests (ISOTreeRequestsPage)
+ * Features: 4-phase tracking, delay monitoring, ISO compliance
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -29,6 +36,7 @@ import {
   RefreshCw,
   Axe,
   Scissors,
+  AlertTriangle,
   AlertTriangle,
   FileText,
   Clock,
@@ -69,6 +77,7 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string }> = {
 };
 
 const TreeRequestsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<RequestType | "all">("all");
@@ -79,6 +88,15 @@ const TreeRequestsPage: React.FC = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<TreeManagementRequest | null>(null);
+  const [showDeprecationWarning, setShowDeprecationWarning] = useState(true);
+
+  // Show deprecation warning on mount
+  useEffect(() => {
+    const hasSeenWarning = sessionStorage.getItem('legacy-tree-requests-warning');
+    if (!hasSeenWarning) {
+      setShowDeprecationWarning(true);
+    }
+  }, []);
 
   // Generate year options (2020 to current year)
   const yearOptions = useMemo(() => {
@@ -253,11 +271,56 @@ const TreeRequestsPage: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopNavBarContainer dashboardType="urban-greening" />
 
+        {/* Deprecation Warning Banner */}
+        {showDeprecationWarning && (
+          <div className="bg-orange-50 border-b-2 border-orange-200 px-6 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="text-base font-semibold text-orange-900">
+                    ⚠️ This page has been deprecated
+                  </h2>
+                  <p className="text-sm text-orange-800 mt-1">
+                    The legacy Tree Request system is no longer maintained. Please use the new <strong>ISO Tree Request Tracking System</strong> which features:
+                  </p>
+                  <ul className="text-sm text-orange-800 mt-2 ml-4 list-disc space-y-1">
+                    <li>4-phase workflow (Receiving → Inspection → Requirements → Clearance)</li>
+                    <li>Automated delay monitoring and analytics</li>
+                    <li>ISO compliance and configurable processing standards</li>
+                    <li>Improved user interface and better reporting</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => navigate({ to: "/urban-greening/tree-requests" })}
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  Go to New System
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    sessionStorage.setItem('legacy-tree-requests-warning', 'true');
+                    setShowDeprecationWarning(false);
+                  }}
+                  className="border-orange-300"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Tree Management Requests</h1>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Tree Management Requests <Badge variant="outline" className="ml-2 bg-orange-100 text-orange-800 border-orange-300">LEGACY</Badge>
+              </h1>
               <p className="text-sm text-gray-500 mt-0.5">
                 Cutting permits, pruning requests, and violation reports
               </p>

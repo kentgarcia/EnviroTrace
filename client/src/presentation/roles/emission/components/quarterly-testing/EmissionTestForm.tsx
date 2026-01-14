@@ -28,12 +28,12 @@ const formSchema = z.object({
     vehicle_id: z.string().uuid(),
     test_date: z.string(),
     result: z.boolean(),
-    co_level: z.number().min(0).max(100),
-    hc_level: z.number().min(0).max(100),
+    co_level: z.number().min(0).max(100).optional(),
+    hc_level: z.number().min(0).max(10000).optional(),
     smoke_opacity: z.number().min(0).max(100).optional(),
     remarks: z.string().optional(),
-    technician_name: z.string().min(3),
-    testing_center: z.string().min(3),
+    technician_name: z.string().min(3).optional(),
+    testing_center: z.string().min(3).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;

@@ -40,6 +40,8 @@ class VehicleBase(BaseModel):
     registration_number: Optional[str] = None
     vehicle_type: str
     wheels: int
+    description: Optional[str] = None
+    year_acquired: Optional[int] = None
 
 class VehicleCreate(VehicleBase):
     pass
@@ -54,6 +56,8 @@ class VehicleUpdate(BaseModel):
     registration_number: Optional[str] = None
     vehicle_type: Optional[str] = None
     wheels: Optional[int] = None
+    description: Optional[str] = None
+    year_acquired: Optional[int] = None
 
 class VehicleInDB(VehicleBase):
     id: UUID4
@@ -80,6 +84,11 @@ class TestBase(BaseModel):
     year: int
     result: bool
     remarks: Optional[str] = None
+    co_level: Optional[float] = None  # Carbon monoxide level (percentage)
+    hc_level: Optional[float] = None  # Hydrocarbon level (ppm)
+    smoke_opacity: Optional[float] = None  # Smoke opacity percentage
+    technician_name: Optional[str] = None
+    testing_center: Optional[str] = None
 
 class TestCreate(TestBase):
     pass
@@ -90,6 +99,11 @@ class TestUpdate(BaseModel):
     year: Optional[int] = None
     result: Optional[bool] = None
     remarks: Optional[str] = None
+    co_level: Optional[float] = None
+    hc_level: Optional[float] = None
+    smoke_opacity: Optional[float] = None
+    technician_name: Optional[str] = None
+    testing_center: Optional[str] = None
 
 class TestInDB(TestBase):
     id: UUID4

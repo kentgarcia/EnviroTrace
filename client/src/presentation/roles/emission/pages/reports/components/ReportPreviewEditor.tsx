@@ -20,7 +20,6 @@ import {
     X,
     FileText,
     FileSpreadsheet,
-    Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import "./editor.css";
@@ -61,132 +60,6 @@ export const ReportPreviewEditor: React.FC<ReportPreviewEditorProps> = ({
         if (!editor) return;
         const htmlContent = editor.getHTML();
         onExport(reportFormat, htmlContent);
-    };
-
-    const handlePrint = () => {
-        if (!editor) return;
-
-        // Create a new window for printing
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            toast.error('Please allow popups to print the report');
-            return;
-        }
-
-        const htmlContent = editor.getHTML();
-
-        // Create a complete HTML document with styles for printing
-        const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Emission Report - Print</title>
-          <style>
-            @media print {
-              @page {
-                margin: 1in;
-                size: letter;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-              }
-            }
-            body {
-              font-family: 'Times New Roman', Times, serif;
-              line-height: 1.6;
-              color: #000;
-              max-width: 100%;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            h1 {
-              font-size: 28px;
-              font-weight: bold;
-              margin: 30px 0 20px 0;
-              text-align: center;
-            }
-            h2 {
-              font-size: 20px;
-              font-weight: 600;
-              margin: 20px 0 10px 0;
-            }
-            p {
-              margin: 10px 0;
-              font-size: 14px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-              font-size: 12px;
-              page-break-inside: auto;
-            }
-            table thead {
-              display: table-header-group;
-            }
-            table tbody {
-              display: table-row-group;
-            }
-            table tr {
-              page-break-inside: avoid;
-              page-break-after: auto;
-            }
-            table th {
-              background-color: #333 !important;
-              color: white !important;
-              padding: 12px 8px;
-              border: 1px solid #ddd;
-              text-align: center;
-              font-weight: bold;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            table td {
-              padding: 10px 8px;
-              border: 1px solid #ddd;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            hr {
-              border: none;
-              border-bottom: 1px solid #ccc;
-              margin: 40px 0;
-            }
-            /* Preserve background colors for test results */
-            [style*="background-color: #10b981"] {
-              background-color: #10b981 !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            [style*="background-color: #ef4444"] {
-              background-color: #ef4444 !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            [style*="background-color: #f3f4f6"] {
-              background-color: #f3f4f6 !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-          </style>
-        </head>
-        <body>
-          ${htmlContent}
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-        printWindow.document.write(printContent);
-        printWindow.document.close();
     };
 
     if (!editor) {
@@ -289,17 +162,10 @@ export const ReportPreviewEditor: React.FC<ReportPreviewEditorProps> = ({
                 <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                     <div className="text-sm text-gray-600">
                         <p>💡 Tip: You can edit the content directly in the preview</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Future: Letterhead and footer will be added here
-                        </p>
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={onClose}>
                             Cancel
-                        </Button>
-                        <Button variant="outline" onClick={handlePrint} className="gap-2">
-                            <Printer className="w-4 h-4" />
-                            Print
                         </Button>
                         <Button onClick={handleExport} className="gap-2">
                             {reportFormat === "word" ? (

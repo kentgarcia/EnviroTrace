@@ -21,7 +21,6 @@ export interface UrbanGreeningFeeRecord {
   amount: number;
   payer_name: string;
   date: string;
-  due_date: string;
   status: "paid" | "pending" | "overdue" | "cancelled";
   or_number?: string;
   payment_date?: string;
@@ -35,7 +34,6 @@ export interface UrbanGreeningFeeRecordCreate {
   amount: number;
   payer_name: string;
   date: string;
-  due_date: string;
   status: "paid" | "pending" | "overdue" | "cancelled";
   or_number?: string;
   payment_date?: string;
@@ -47,8 +45,7 @@ export interface UrbanGreeningFeeRecordUpdate {
   amount?: number;
   payer_name?: string;
   date?: string;
-  due_date?: string;
-  status?: "paid" | "pending" | "overdue" | "cancelled";
+  status?: "paid" | "pending" | "cancelled";
   or_number?: string;
   payment_date?: string;
 }

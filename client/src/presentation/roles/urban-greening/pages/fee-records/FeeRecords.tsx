@@ -34,7 +34,7 @@ const FeeRecords: React.FC = () => {
     const currentYear = new Date().getFullYear();
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"all" | "pending" | "overdue" | "paid">("pending");
+    const [activeTab, setActiveTab] = useState<"all" | "pending" | "paid">("pending");
     const [typeFilter, setTypeFilter] = useState("all");
     const [yearFilter, setYearFilter] = useState<number | "all">(currentYear); // Default to current year
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -43,8 +43,6 @@ const FeeRecords: React.FC = () => {
     const [selectedRowForDetails, setSelectedRowForDetails] = useState<FeeRecord | null>(null);
     const [isEditingDetails, setIsEditingDetails] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isMarkOverdueDialogOpen, setIsMarkOverdueDialogOpen] = useState(false);
-    const [overdueCount, setOverdueCount] = useState(0);
 
     const { updateMutation, createMutation, deleteMutation, fullUpdateMutation } = useFeeRecordMutations();
 
@@ -73,38 +71,18 @@ const FeeRecords: React.FC = () => {
             },
             { accessorKey: "date", header: "Date" },
             {
-                accessorKey: "due_date",
-                header: "Due Date",
-                cell: ({ getValue, row }: any) => {
-                    const dueDate = getValue() as string;
-                    const isOverdue = new Date(dueDate) < new Date() && (row.original.status === "pending" || row.original.status === "overdue");
-                    return (
-                        <span className={isOverdue && activeTab === "pending" ? "font-semibold text-red-600" : ""}>
-                            {dueDate}
-                            {isOverdue && activeTab === "pending" && (
-                                <Badge className="ml-2 bg-red-100 text-red-800 text-xs">OVERDUE</Badge>
-                            )}
-                        </span>
-                    );
-                },
-            },
-        ] as ColumnDef<FeeRecord>[];
-
-        // Add OR Number column if in Paid tab
-        if (activeTab === "paid") {
-            base.push({
                 accessorKey: "or_number",
                 header: "OR Number",
                 cell: ({ getValue }: any) => (
                     <span className="font-mono font-medium text-blue-700">{getValue() || "---"}</span>
                 ),
-            });
-            base.push({
+            },
+            {
                 accessorKey: "payment_date",
                 header: "Payment Date",
                 cell: ({ getValue }: any) => getValue() || "---",
-            });
-        }
+            },
+        ] as ColumnDef<FeeRecord>[];
 
         // Add Status column if not in specific status tabs
         if (activeTab === "all") {
@@ -119,8 +97,6 @@ const FeeRecords: React.FC = () => {
                                 return <CheckCircle className="w-4 h-4" />;
                             case "pending":
                                 return <Clock className="w-4 h-4" />;
-                            case "overdue":
-                                return <AlertTriangle className="w-4 h-4" />;
                             case "cancelled":
                                 return <XCircle className="w-4 h-4" />;
                             default:
@@ -192,36 +168,6 @@ const FeeRecords: React.FC = () => {
         setSelectedRecord(null);
     };
 
-    const handleMarkOverdue = () => {
-        const overdueRecords = filteredData.filter(record => 
-            record.status === "pending" && new Date(record.due_date) < new Date()
-        );
-        
-        if (overdueRecords.length === 0) {
-            toast.info("No overdue records to update");
-            return;
-        }
-
-        setOverdueCount(overdueRecords.length);
-        setIsMarkOverdueDialogOpen(true);
-    };
-
-    const confirmMarkOverdue = () => {
-        const overdueRecords = filteredData.filter(record => 
-            record.status === "pending" && new Date(record.due_date) < new Date()
-        );
-        
-        // Update each overdue record
-        overdueRecords.forEach(record => {
-            updateMutation.mutate({
-                id: record.id,
-                field: "status",
-                value: "overdue"
-            });
-        });
-        setIsMarkOverdueDialogOpen(false);
-    };
-
     // Generate year options dynamically from 2020 to current year
     const yearOptions = useMemo<number[]>(() => {
         const years: number[] = [];
@@ -233,35 +179,18 @@ const FeeRecords: React.FC = () => {
 
     // Filter data based on search and filters (year filtering now done on backend)
     const filteredData = useMemo(() => {
-        let filtered = filterRecords(
+        return filterRecords(
             allRecords,
             searchTerm,
             activeTab === "all" ? "all" : activeTab,
             typeFilter
         );
-        
-        // Sort pending records by due date (nearest first)
-        if (activeTab === "pending" || activeTab === "overdue") {
-            filtered = [...filtered].sort((a, b) => {
-                return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-            });
-        }
-        
-        return filtered;
     }, [allRecords, searchTerm, activeTab, typeFilter]);
 
     // Calculate statistics
     const statusCounts = useMemo(() => getStatusCounts(allRecords), [allRecords]);
     const totalAmount = useMemo(() => getTotalAmount(allRecords), [allRecords]);
     const paidAmount = useMemo(() => getPaidAmount(allRecords), [allRecords]);
-
-    // Check for overdue records in pending view
-    const overdueInPendingCount = useMemo(() => {
-        if (activeTab !== "pending") return 0;
-        return filteredData.filter(record => 
-            record.status === "pending" && new Date(record.due_date) < new Date()
-        ).length;
-    }, [activeTab, filteredData]);
 
     return (
         <div className="flex min-h-screen w-full">
@@ -342,19 +271,6 @@ const FeeRecords: React.FC = () => {
                                                 )}
                                             </button>
                                             <button
-                                                onClick={() => setActiveTab("overdue")}
-                                                className={`px-4 py-2 text-sm font-medium transition-colors relative ${
-                                                    activeTab === "overdue" 
-                                                    ? "text-blue-600" 
-                                                    : "text-gray-500 hover:text-gray-700"
-                                                }`}
-                                            >
-                                                Overdue
-                                                {activeTab === "overdue" && (
-                                                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
-                                                )}
-                                            </button>
-                                            <button
                                                 onClick={() => setActiveTab("paid")}
                                                 className={`px-4 py-2 text-sm font-medium transition-colors relative ${
                                                     activeTab === "paid" 
@@ -384,26 +300,6 @@ const FeeRecords: React.FC = () => {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    {/* Overdue Alert for Pending Tab */}
-                                    {activeTab === "pending" && overdueInPendingCount > 0 && (
-                                        <Alert className="border-orange-200 bg-orange-50 mb-4">
-                                            <AlertTriangle className="h-4 w-4 text-orange-600" />
-                                            <AlertDescription className="text-orange-800 flex items-center justify-between">
-                                                <span>
-                                                    You have <strong>{overdueInPendingCount}</strong> overdue record(s) in pending status.
-                                                </span>
-                                                <Button
-                                                    onClick={handleMarkOverdue}
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100 rounded-lg"
-                                                >
-                                                    Mark as Overdue
-                                                </Button>
-                                            </AlertDescription>
-                                        </Alert>
-                                    )}
-
                                     {/* Filters and Search */}
                                     <div className="flex flex-col sm:flex-row gap-4 mb-4 mt-2">
                                         <div className="flex-1">
@@ -521,10 +417,6 @@ const FeeRecords: React.FC = () => {
                                                 <Badge className="bg-yellow-100 text-yellow-800">{statusCounts.pending}</Badge>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Overdue:</span>
-                                                <Badge className="bg-red-100 text-red-800">{statusCounts.overdue}</Badge>
-                                            </div>
-                                            <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">Cancelled:</span>
                                                 <Badge className="bg-gray-100 text-gray-800">{statusCounts.cancelled}</Badge>
                                             </div>
@@ -583,38 +475,6 @@ const FeeRecords: React.FC = () => {
                                 className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
                             >
                                 Delete
-                            </Button>
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Mark Overdue Confirmation Dialog */}
-            <Dialog open={isMarkOverdueDialogOpen} onOpenChange={setIsMarkOverdueDialogOpen}>
-                <DialogContent className="sm:max-w-md rounded-2xl border-none p-0 overflow-hidden">
-                    <DialogHeader className="bg-orange-600 p-6 m-0 border-none">
-                        <DialogTitle className="text-xl font-bold text-white">Mark as Overdue</DialogTitle>
-                        <DialogDescription className="text-orange-100/80">
-                            Update status for overdue records.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="p-6 bg-white space-y-4">
-                        <p className="text-sm text-gray-700">
-                            Mark <strong>{overdueCount}</strong> overdue record(s) as OVERDUE?
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsMarkOverdueDialogOpen(false)}
-                                className="rounded-lg"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={confirmMarkOverdue}
-                                className="bg-orange-600 hover:bg-orange-700 text-white rounded-lg"
-                            >
-                                Mark as Overdue
                             </Button>
                         </div>
                     </div>

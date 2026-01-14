@@ -24,8 +24,13 @@ export function parseDate(dateValue?: string | number | null): Date | null {
       // If it's a valid number, treat as Unix timestamp in milliseconds
       date = new Date(numericValue);
     } else {
-      // Otherwise, try to parse as PostgreSQL timestamp
-      date = parsePgTimestamp(dateValue);
+      // Try ISO format first (e.g., "2026-01-14T00:00:00Z")
+      date = new Date(dateValue);
+      
+      // If that fails, try PostgreSQL timestamp format
+      if (isNaN(date.getTime())) {
+        date = parsePgTimestamp(dateValue);
+      }
     }
   } else {
     return null;

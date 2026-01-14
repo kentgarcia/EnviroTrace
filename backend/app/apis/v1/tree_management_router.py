@@ -1,11 +1,16 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import date
 from sqlalchemy.orm import Session
-from app.apis.deps import get_db
-from app.crud.crud_tree_management import tree_management_request
+from app.apis.deps import get_db, get_current_user
+from app.models.auth_models import User
+from app.crud.crud_tree_management import tree_management_request, tree_request, processing_standards, dropdown_options
 from app.schemas.tree_management_schemas import (
-    TreeManagementRequest, TreeManagementRequestCreate, TreeManagementRequestUpdate
+    TreeManagementRequest, TreeManagementRequestCreate, TreeManagementRequestUpdate,
+    TreeRequestCreate, TreeRequestUpdate, TreeRequestInDB,
+    UpdateReceivingPhase, UpdateInspectionPhase, UpdateRequirementsPhase, UpdateClearancePhase,
+    ProcessingStandardsCreate, ProcessingStandardsUpdate, ProcessingStandardsInDB,
+    DropdownOptionCreate, DropdownOptionUpdate, DropdownOptionInDB
 )
 
 router = APIRouter()
@@ -254,3 +259,196 @@ def get_tree_management_by_monitoring_request(
 #     Get overdue tree management requests.
 #     """
 #     return tree_management_request.get_overdue_requests(db)
+
+
+# ===== NEW ISO TREE REQUEST ENDPOINTS =====
+
+@router.post("/v2/requests", response_model=Dict[str, Any])
+def create_tree_request(
+    request_in: TreeRequestCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create new ISO-compliant tree request with all 4 phases"""
+    created_obj = tree_request.create_sync(db=db, obj_in=request_in, current_user_id=str(current_user.id))
+    return tree_request.get_with_analytics(db, str(created_obj.id))
+
+@router.get("/v2/requests", response_model=List[Dict[str, Any]])
+def read_tree_requests(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = Query(None, description="Filter by overall status"),
+    request_type: Optional[str] = Query(None, description="Filter by request type"),
+    year: Optional[int] = Query(None, description="Filter by year")
+):
+    """Get all tree requests with analytics"""
+    from sqlalchemy import extract
+    from app.models.urban_greening_models import TreeRequest
+    
+    query = db.query(tree_request.model)
+    
+    if year:
+        query = query.filter(extract('year', TreeRequest.created_at) == year)
+    if status:
+        query = query.filter(TreeRequest.overall_status == status)
+    if request_type:
+        query = query.filter(TreeRequest.request_type == request_type)
+    
+    requests = query.offset(skip).limit(limit).all()
+    
+    return [tree_request.get_with_analytics(db, str(req.id)) for req in requests]
+
+@router.get("/v2/requests/{request_id}", response_model=Dict[str, Any])
+def read_tree_request(request_id: str, db: Session = Depends(get_db)):
+    """Get tree request by ID with analytics"""
+    result = tree_request.get_with_analytics(db, request_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return result
+
+@router.put("/v2/requests/{request_id}", response_model=Dict[str, Any])
+def update_tree_request(
+    request_id: str, 
+    request_in: TreeRequestUpdate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update tree request"""
+    from app.models.urban_greening_models import TreeRequest
+    request_obj = db.query(TreeRequest).filter(TreeRequest.id == request_id).first()
+    if not request_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    
+    updated_obj = tree_request.update_sync(
+        db=db, 
+        db_obj=request_obj, 
+        obj_in=request_in,
+        current_user_id=str(current_user.id)
+    )
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
+@router.delete("/v2/requests/{request_id}")
+def delete_tree_request(request_id: str, db: Session = Depends(get_db)):
+    """Delete tree request"""
+    from app.models.urban_greening_models import TreeRequest
+    request_obj = db.query(TreeRequest).filter(TreeRequest.id == request_id).first()
+    if not request_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    
+    db.delete(request_obj)
+    db.commit()
+    return {"message": "Tree request deleted successfully"}
+
+# Phase-specific update endpoints
+@router.patch("/v2/requests/{request_id}/receiving", response_model=Dict[str, Any])
+def update_receiving_phase(request_id: str, phase_data: UpdateReceivingPhase, db: Session = Depends(get_db)):
+    """Update receiving phase of a tree request"""
+    updated_obj = tree_request.update_receiving_phase(db, request_id=request_id, phase_data=phase_data)
+    if not updated_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
+@router.patch("/v2/requests/{request_id}/inspection", response_model=Dict[str, Any])
+def update_inspection_phase(request_id: str, phase_data: UpdateInspectionPhase, db: Session = Depends(get_db)):
+    """Update inspection phase of a tree request"""
+    updated_obj = tree_request.update_inspection_phase(db, request_id=request_id, phase_data=phase_data)
+    if not updated_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
+@router.patch("/v2/requests/{request_id}/requirements", response_model=Dict[str, Any])
+def update_requirements_phase(request_id: str, phase_data: UpdateRequirementsPhase, db: Session = Depends(get_db)):
+    """Update requirements phase of a tree request"""
+    updated_obj = tree_request.update_requirements_phase(db, request_id=request_id, phase_data=phase_data)
+    if not updated_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
+@router.patch("/v2/requests/{request_id}/clearance", response_model=Dict[str, Any])
+def update_clearance_phase(request_id: str, phase_data: UpdateClearancePhase, db: Session = Depends(get_db)):
+    """Update clearance phase of a tree request"""
+    updated_obj = tree_request.update_clearance_phase(db, request_id=request_id, phase_data=phase_data)
+    if not updated_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
+# Analytics endpoints
+@router.get("/v2/analytics/delays", response_model=List[Dict[str, Any]])
+def get_delayed_requests(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    """Get all delayed requests"""
+    return tree_request.get_delayed_requests(db, skip=skip, limit=limit)
+
+@router.get("/v2/analytics/summary", response_model=Dict[str, Any])
+def get_analytics_summary(db: Session = Depends(get_db)):
+    """Get summary analytics for dashboard"""
+    return tree_request.get_analytics_summary(db)
+
+# Processing standards endpoints
+@router.get("/v2/processing-standards", response_model=List[ProcessingStandardsInDB])
+def get_all_processing_standards(db: Session = Depends(get_db)):
+    """Get all processing standards"""
+    return processing_standards.get_all_standards(db)
+
+@router.get("/v2/processing-standards/{request_type}", response_model=ProcessingStandardsInDB)
+def get_processing_standards_by_type(request_type: str, db: Session = Depends(get_db)):
+    """Get processing standards for a specific request type"""
+    standards = processing_standards.get_by_request_type(db, request_type=request_type)
+    if not standards:
+        raise HTTPException(status_code=404, detail="Processing standards not found for this request type")
+    return standards
+
+@router.put("/v2/processing-standards/{request_type}", response_model=ProcessingStandardsInDB)
+def update_processing_standards(
+    request_type: str,
+    standards_in: ProcessingStandardsUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update processing standards for a specific request type"""
+    updated_standards = processing_standards.update_standards(db, request_type=request_type, obj_in=standards_in)
+    if not updated_standards:
+        raise HTTPException(status_code=404, detail="Processing standards not found for this request type")
+    return updated_standards
+
+
+# ===== DROPDOWN OPTIONS ENDPOINTS =====
+
+@router.get("/v2/dropdown-options", response_model=List[DropdownOptionInDB])
+def get_all_dropdown_options(
+    field_name: Optional[str] = None,
+    active_only: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Get all dropdown options, optionally filtered by field name"""
+    if field_name:
+        return dropdown_options.get_by_field(db, field_name=field_name, active_only=active_only)
+    return dropdown_options.get_multi(db)
+
+@router.post("/v2/dropdown-options", response_model=DropdownOptionInDB)
+def create_dropdown_option(option_in: DropdownOptionCreate, db: Session = Depends(get_db)):
+    """Create a new dropdown option"""
+    return dropdown_options.create_option(db, obj_in=option_in)
+
+@router.put("/v2/dropdown-options/{option_id}", response_model=DropdownOptionInDB)
+def update_dropdown_option(
+    option_id: str,
+    option_in: DropdownOptionUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a dropdown option"""
+    updated_option = dropdown_options.update_option(db, id=option_id, obj_in=option_in)
+    if not updated_option:
+        raise HTTPException(status_code=404, detail="Dropdown option not found")
+    return updated_option
+
+@router.delete("/v2/dropdown-options/{option_id}")
+def delete_dropdown_option(option_id: str, db: Session = Depends(get_db)):
+    """Delete (soft delete) a dropdown option"""
+    success = dropdown_options.delete_option(db, id=option_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Dropdown option not found")
+    return {"message": "Dropdown option deleted successfully"}

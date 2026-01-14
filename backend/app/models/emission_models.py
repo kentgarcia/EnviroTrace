@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index, Numeric
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text
@@ -35,6 +35,8 @@ class Vehicle(Base):
     registration_number = Column(String(100), unique=True, nullable=True)
     vehicle_type = Column(String(100), nullable=False)
     wheels = Column(Integer, nullable=False)
+    description = Column(String, nullable=True)
+    year_acquired = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -107,6 +109,11 @@ class Test(Base):
     year = Column(Integer, nullable=False)
     result = Column(Boolean, nullable=False)  # Simple pass/fail
     remarks = Column(String(500), nullable=True)  # Optional remarks
+    co_level = Column(Numeric(5, 2), nullable=True)  # Carbon monoxide level (percentage, e.g., 1.93)
+    hc_level = Column(Numeric(10, 2), nullable=True)  # Hydrocarbon level (ppm, e.g., 1300)
+    smoke_opacity = Column(Numeric(5, 2), nullable=True)  # Smoke opacity percentage
+    technician_name = Column(String(255), nullable=True)  # Technician who performed the test
+    testing_center = Column(String(255), nullable=True)  # Testing center name
     created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("app_auth.users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

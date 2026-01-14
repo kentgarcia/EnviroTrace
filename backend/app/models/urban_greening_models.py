@@ -1,6 +1,7 @@
 # app/models/urban_greening_models.py
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Text, Index, Float
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import func, text
 from app.db.database import Base
 
@@ -19,8 +20,7 @@ class FeeRecord(Base):
     amount = Column(Numeric(10, 2), nullable=False)
     payer_name = Column(String(255), nullable=False)
     date = Column(Date, nullable=False)
-    due_date = Column(Date, nullable=False)
-    status = Column(String(50), nullable=False)  # paid, pending, overdue, cancelled
+    status = Column(String(50), nullable=False)  # paid, pending, cancelled
     or_number = Column(String(50), nullable=True)
     payment_date = Column(Date, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -127,6 +127,7 @@ class UrbanGreeningProject(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class TreeManagementRequest(Base):
+    """DEPRECATED - Use TreeRequest for new implementations"""
     __tablename__ = "tree_management_requests"
     __table_args__ = (
         Index("idx_urban_greening_tree_request_number", "request_number"),
@@ -171,6 +172,95 @@ class TreeManagementRequest(Base):
     
     # Notes
     notes = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class TreeRequestProcessingStandards(Base):
+    """Configurable processing timeframes for each phase of tree requests"""
+    __tablename__ = "tree_request_processing_standards"
+    __table_args__ = {"schema": "urban_greening"}
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    request_type = Column(String(50), nullable=False, unique=True)  # cutting, pruning, ball_out
+    receiving_standard_days = Column(Integer, nullable=False, default=3)
+    inspection_standard_days = Column(Integer, nullable=False, default=7)
+    requirements_standard_days = Column(Integer, nullable=False, default=10)
+    clearance_standard_days = Column(Integer, nullable=False, default=5)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class TreeRequestDropdownOption(Base):
+    """Configurable dropdown options for tree request fields"""
+    __tablename__ = "tree_request_dropdown_options"
+    __table_args__ = (
+        Index("idx_dropdown_option_field", "field_name"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    field_name = Column(String(100), nullable=False)  # 'received_through' or 'status'
+    option_value = Column(String(255), nullable=False)
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class TreeRequest(Base):
+    """New ISO-compliant tree request tracking system with 4 phases"""
+    __tablename__ = "tree_requests"
+    __table_args__ = (
+        Index("idx_tree_request_number", "request_number"),
+        Index("idx_tree_request_type", "request_type"),
+        Index("idx_tree_request_status", "overall_status"),
+        {"schema": "urban_greening"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    request_number = Column(String(50), unique=True, nullable=False)
+    request_type = Column(String(50), nullable=False)  # cutting, pruning, ball_out
+    overall_status = Column(String(50), nullable=False, default='receiving')  # receiving, inspection, requirements, clearance, completed, cancelled
+    
+    # ===== PHASE 1: RECEIVING =====
+    receiving_date_received = Column(Date, nullable=True)
+    receiving_month = Column(String(20), nullable=True)  # Month name
+    receiving_received_through = Column(String(100), nullable=True)  # Dropdown options + "Other"
+    receiving_date_received_by_dept_head = Column(Date, nullable=True)
+    receiving_name = Column(String(255), nullable=True)
+    receiving_address = Column(Text, nullable=True)
+    receiving_contact = Column(String(100), nullable=True)  # Contact Number/Email
+    receiving_request_status = Column(String(100), nullable=True)
+    
+    # ===== PHASE 2: INSPECTION =====
+    inspection_date_received_by_inspectors = Column(Date, nullable=True)  # Request Letter
+    inspection_date_of_inspection = Column(Date, nullable=True)
+    inspection_month = Column(String(20), nullable=True)  # Month name
+    inspection_proponent_present = Column(String(255), nullable=True)  # Name of Proponent Present
+    inspection_date_submitted_to_dept_head = Column(Date, nullable=True)  # Inspection Report
+    inspection_date_released_to_inspectors = Column(Date, nullable=True)  # Inspection Report
+    inspection_report_control_number = Column(String(50), nullable=True)
+    
+    # ===== PHASE 3: REQUIREMENTS =====
+    # JSON array of {requirement_name, is_checked, date_submitted}
+    requirements_checklist = Column(Text, nullable=True)  # JSON: [{name: "Application Letter", checked: true, date: "2025-01-01"}, ...]
+    requirements_remarks = Column(Text, nullable=True)  # Remarks and Recommendations
+    requirements_status = Column(String(100), nullable=True)
+    requirements_date_completion = Column(Date, nullable=True)  # Date of Completion Requirements
+    
+    # ===== PHASE 4: CLEARANCE =====
+    clearance_date_issued = Column(Date, nullable=True)
+    clearance_date_of_payment = Column(Date, nullable=True)
+    clearance_control_number = Column(String(50), nullable=True)
+    clearance_or_number = Column(String(50), nullable=True)  # OR Number
+    clearance_date_received = Column(Date, nullable=True)
+    clearance_status = Column(String(100), nullable=True)
+    
+    # ===== AUDIT TRACKING =====
+    created_by = Column(UUID(as_uuid=True), nullable=True)  # FK to users table
+    editors = Column(postgresql.JSONB, nullable=True)  # JSONB array of user IDs who edited the request
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

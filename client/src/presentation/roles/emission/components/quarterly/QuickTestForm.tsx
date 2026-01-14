@@ -20,6 +20,7 @@ import {
     FormMessage,
 } from "@/presentation/components/shared/ui/form";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
+import { Input } from "@/presentation/components/shared/ui/input";
 import {
     Select,
     SelectContent,
@@ -31,6 +32,9 @@ import { Vehicle, EmissionTest } from "@/core/api/emission-service";
 
 const testFormSchema = z.object({
     result: z.boolean(),
+    test_date: z.string(),
+    co_level: z.number().min(0).max(100).optional(),
+    hc_level: z.number().min(0).max(10000).optional(),
     remarks: z.string().optional(),
 });
 
@@ -61,6 +65,10 @@ export function QuickTestForm({
         resolver: zodResolver(testFormSchema),
         defaultValues: {
             result: testToEdit?.result || false,
+            test_date: testToEdit?.test_date ? new Date(testToEdit.test_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            co_level: testToEdit?.co_level,
+            hc_level: testToEdit?.hc_level,
+            remarks: testToEdit?.remarks,
         },
     });
 
@@ -68,11 +76,17 @@ export function QuickTestForm({
         if (isOpen && testToEdit) {
             form.reset({
                 result: testToEdit.result ?? false,
+                test_date: testToEdit.test_date ? new Date(testToEdit.test_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                co_level: testToEdit.co_level,
+                hc_level: testToEdit.hc_level,
                 remarks: testToEdit.remarks || "",
             });
         } else if (isOpen) {
             form.reset({
                 result: false,
+                test_date: new Date().toISOString().split('T')[0],
+                co_level: undefined,
+                hc_level: undefined,
                 remarks: "",
             });
         }
@@ -86,9 +100,10 @@ export function QuickTestForm({
             quarter,
             year,
             result: data.result,
+            test_date: data.test_date,
+            co_level: data.co_level,
+            hc_level: data.hc_level,
             remarks: data.remarks || "",
-            // Set current date automatically
-            test_date: new Date().toISOString().split('T')[0],
         };
 
         await onSubmit(submissionData);
@@ -100,14 +115,14 @@ export function QuickTestForm({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="px-6 pt-6">
-                    <DialogTitle className="text-xl font-bold text-slate-900">
+                <DialogHeader className="px-6 pt-6 bg-[#0033a0] -mx-0 -mt-0 pb-4">
+                    <DialogTitle className="text-xl font-bold text-white">
                         {testToEdit ? "Edit" : "Record"} {quarterName} Result
                     </DialogTitle>
-                    <DialogDescription className="text-slate-500 font-medium">
-                        Vehicle: <span className="text-slate-900 font-bold">{vehicle?.plate_number || vehicle?.chassis_number || vehicle?.registration_number}</span>
+                    <DialogDescription className="text-white/90 font-medium">
+                        Vehicle: <span className="text-white font-bold">{vehicle?.plate_number || vehicle?.chassis_number || vehicle?.registration_number}</span>
                         <br />
-                        Driver: <span className="text-slate-700">{vehicle?.driver_name || "N/A"}</span>
+                        Driver: <span className="text-white/95">{vehicle?.driver_name || "N/A"}</span>
                     </DialogDescription>
                 </DialogHeader>
 
@@ -149,6 +164,70 @@ export function QuickTestForm({
                             )}
                         />
 
+                        {/* Test Date */}
+                        <FormField
+                            control={form.control}
+                            name="test_date"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Date</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="date"
+                                            className="h-10 border-slate-200 focus:ring-blue-500"
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {/* Emission Measurements */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <FormField
+                                control={form.control}
+                                name="co_level"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">CO Level</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                className="h-10 border-slate-200 focus:ring-blue-500"
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                value={field.value ?? ''}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="hc_level"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">HC Level</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="number"
+                                                step="0.01"
+                                                className="h-10 border-slate-200 focus:ring-blue-500"
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                value={field.value ?? ''}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
                         {/* Remarks */}
                         <FormField
                             control={form.control}
@@ -161,6 +240,7 @@ export function QuickTestForm({
                                             placeholder="Enter any observations or reasons for failure..."
                                             className="resize-none min-h-[100px] border-slate-200 focus:ring-blue-500 bg-slate-50/50 focus:bg-white transition-all"
                                             {...field}
+                                            value={field.value ?? ''}
                                         />
                                     </FormControl>
                                     <FormMessage />

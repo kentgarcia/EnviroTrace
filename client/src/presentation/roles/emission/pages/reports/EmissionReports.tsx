@@ -4,15 +4,16 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
 import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
-import { Eye, Loader2 } from "lucide-react";
+import { Eye, Loader2, FileSpreadsheet, Printer } from "lucide-react";
 import { toast } from "sonner";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { useOffices, useVehicles, useEmissionTests } from "@/core/api/emission-service";
-import { generateReportHTML } from "./utils/reportHTMLGenerator";
+import { generateReportHTML, generateComprehensiveTestingReportHTML } from "./utils/reportHTMLGenerator";
+import { generateComprehensiveTestingReport } from "./utils/excelReportGenerator";
 import { exportHTMLToWord } from "./utils/htmlToWordConverter";
 import { ReportPreviewEditor } from "./components/ReportPreviewEditor";
 
-type ReportType = 'vehicle-registry' | 'testing-result' | 'office-compliance';
+type ReportType = 'vehicle-registry' | 'testing-result' | 'office-compliance' | 'comprehensive-testing';
 
 export const EmissionReports: React.FC = () => {
     const currentYear = new Date().getFullYear();
@@ -23,6 +24,10 @@ export const EmissionReports: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [previewContent, setPreviewContent] = useState<string>("");
+    
+    // Comprehensive report filters
+    const [comprehensiveStatus, setComprehensiveStatus] = useState<string>("all");
+    const [comprehensiveOffice, setComprehensiveOffice] = useState<string>("all");
 
     // Fetch data for report generation - fetch ALL vehicles (no limit)
     const { data: officesData } = useOffices();
@@ -44,6 +49,11 @@ export const EmissionReports: React.FC = () => {
             id: "office-compliance" as ReportType,
             label: "Office Compliance Summary",
             description: "Compliance rates by quarter and office",
+        },
+        {
+            id: "comprehensive-testing" as ReportType,
+            label: "Comprehensive Testing Report",
+            description: "Detailed emission testing report with CO/HC levels and vehicle information",
         },
     ];
 
@@ -84,20 +94,98 @@ export const EmissionReports: React.FC = () => {
         setIsGenerating(true);
 
         try {
-            const reportConfig = {
-                reportType,
-                year: parseInt(selectedYear),
-                quarter: selectedQuarter,
-                offices: officesData?.offices || [],
-                selectedOfficeIds: selectedOffices,
-                vehicles: vehiclesData?.vehicles || [],
-                emissionTests: emissionTests || [],
-            };
+            // Handle comprehensive testing report differently
+            if (reportType === "comprehensive-testing") {
+                // Create vehicle test map
+                const vehicleTestMap = new Map();
+                (emissionTests || []).forEach(test => {
+                    const existing = vehicleTestMap.get(test.vehicle_id);
+                    if (!existing || new Date(test.test_date) > new Date(existing.test_date)) {
+                        vehicleTestMap.set(test.vehicle_id, test);
+                    }
+                });
 
-            // Generate HTML for preview
-            const html = generateReportHTML(reportConfig);
-            setPreviewContent(html);
-            setShowPreview(true);
+                // Build report data
+                const reportData = (vehiclesData?.vehicles || [])
+                    .filter(v => {
+                        // Filter by year if selected
+                        if (selectedYear !== "all") {
+                            const test = vehicleTestMap.get(v.id);
+                            if (!test || new Date(test.test_date).getFullYear() !== parseInt(selectedYear)) {
+                                return false;
+                            }
+                        }
+
+                        // Filter by quarter if selected
+                        if (selectedQuarter !== "all") {
+                            const test = vehicleTestMap.get(v.id);
+                            if (!test) return false;
+                            const testQuarter = Math.ceil((new Date(test.test_date).getMonth() + 1) / 3);
+                            if (testQuarter !== parseInt(selectedQuarter.replace("Q", ""))) {
+                                return false;
+                            }
+                        }
+
+                        // Filter by office if selected
+                        if (comprehensiveOffice !== "all") {
+                            if (v.office_id !== comprehensiveOffice) return false;
+                        }
+
+                        // Filter by status if selected
+                        if (comprehensiveStatus !== "all") {
+                            const test = vehicleTestMap.get(v.id);
+                            if (comprehensiveStatus === "not-tested") return !test;
+                            if (comprehensiveStatus === "passed") return test?.result === true;
+                            if (comprehensiveStatus === "failed") return test?.result === false;
+                        }
+
+                        return true;
+                    })
+                    .map(v => {
+                        const test = vehicleTestMap.get(v.id);
+                        const identifier = v.plate_number || v.chassis_number || v.registration_number || "N/A";
+                        return {
+                            vehicleId: v.id,
+                            driverName: v.driver_name || "N/A",
+                            office: v.office?.name || "N/A",
+                            identifier,
+                            category: v.vehicle_type || "N/A",
+                            description: v.description || "",
+                            yearAcquired: v.year_acquired || null,
+                            co: test?.co_level ?? null,
+                            hc: test?.hc_level ?? null,
+                            testResult: (test?.result === true ? "PASSED" : test?.result === false ? "FAILED" : "NOT TESTED") as "PASSED" | "FAILED" | "NOT TESTED",
+                            testDate: test?.test_date ? new Date(test.test_date).toLocaleDateString() : null,
+                        };
+                    });
+
+                // Generate HTML for preview
+                const html = generateComprehensiveTestingReportHTML({
+                    year: selectedYear !== "all" ? parseInt(selectedYear) : undefined,
+                    quarter: selectedQuarter !== "all" ? parseInt(selectedQuarter.replace("Q", "")) : undefined,
+                    office: comprehensiveOffice !== "all" ? officesData?.offices.find(o => o.id === comprehensiveOffice)?.name : "All Offices",
+                    status: comprehensiveStatus,
+                    data: reportData,
+                });
+
+                setPreviewContent(html);
+                setShowPreview(true);
+            } else {
+                const reportConfig = {
+                    reportType,
+                    year: parseInt(selectedYear),
+                    quarter: selectedQuarter,
+                    offices: officesData?.offices || [],
+                    selectedOfficeIds: selectedOffices,
+                    vehicles: vehiclesData?.vehicles || [],
+                    emissionTests: emissionTests || [],
+                };
+
+                // Generate HTML for preview
+                const html = generateReportHTML(reportConfig);
+                setPreviewContent(html);
+                setShowPreview(true);
+            }
         } catch (error) {
             console.error("Error generating report:", error);
             toast.error("Failed to generate report. Please try again.");
@@ -118,12 +206,78 @@ export const EmissionReports: React.FC = () => {
         }
     };
 
+    const handleExportToExcel = async () => {
+        if (reportType !== "comprehensive-testing") {
+            toast.error("Excel export is only available for Comprehensive Testing Report");
+            return;
+        }
+
+        try {
+            // Create vehicle test map
+            const vehicleTestMap = new Map();
+            (emissionTests || []).forEach(test => {
+                const existing = vehicleTestMap.get(test.vehicle_id);
+                if (!existing || new Date(test.test_date) > new Date(existing.test_date)) {
+                    vehicleTestMap.set(test.vehicle_id, test);
+                }
+            });
+
+            // Filter vehicles
+            let filteredVehicles = vehiclesData?.vehicles || [];
+
+            if (selectedYear !== "all") {
+                filteredVehicles = filteredVehicles.filter(v => {
+                    const test = vehicleTestMap.get(v.id);
+                    return test && new Date(test.test_date).getFullYear() === parseInt(selectedYear);
+                });
+            }
+
+            if (selectedQuarter !== "all") {
+                filteredVehicles = filteredVehicles.filter(v => {
+                    const test = vehicleTestMap.get(v.id);
+                    if (!test) return false;
+                    const testQuarter = Math.ceil((new Date(test.test_date).getMonth() + 1) / 3);
+                    return testQuarter === parseInt(selectedQuarter.replace("Q", ""));
+                });
+            }
+
+            if (comprehensiveOffice !== "all") {
+                filteredVehicles = filteredVehicles.filter(v => v.office_id === comprehensiveOffice);
+            }
+
+            if (comprehensiveStatus !== "all") {
+                filteredVehicles = filteredVehicles.filter(v => {
+                    const test = vehicleTestMap.get(v.id);
+                    if (comprehensiveStatus === "not-tested") return !test;
+                    if (comprehensiveStatus === "passed") return test?.result === true;
+                    if (comprehensiveStatus === "failed") return test?.result === false;
+                    return true;
+                });
+            }
+
+            await generateComprehensiveTestingReport({
+                year: selectedYear !== "all" ? parseInt(selectedYear) : undefined,
+                quarter: selectedQuarter !== "all" ? parseInt(selectedQuarter.replace("Q", "")) : undefined,
+                office: comprehensiveOffice !== "all" ? comprehensiveOffice : undefined,
+                status: comprehensiveStatus,
+                vehicles: filteredVehicles,
+                tests: emissionTests || [],
+            });
+
+            toast.success("Excel report generated successfully");
+        } catch (error) {
+            console.error("Error exporting to Excel:", error);
+            toast.error("Failed to export to Excel");
+        }
+    };
+
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
     const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
     // Get available options based on report type
-    const showQuarterSelection = reportType === "office-compliance";
+    const showQuarterSelection = reportType === "office-compliance" || reportType === "comprehensive-testing";
     const showOfficeSelection = reportType === "testing-result" || reportType === "office-compliance";
+    const showComprehensiveFilters = reportType === "comprehensive-testing";
 
     return (
         <>
@@ -190,6 +344,9 @@ export const EmissionReports: React.FC = () => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
+                                                {reportType === "comprehensive-testing" && (
+                                                    <SelectItem value="all">All Years</SelectItem>
+                                                )}
                                                 {years.map(year => (
                                                     <SelectItem key={year} value={year.toString()}>
                                                         {year}
@@ -199,7 +356,7 @@ export const EmissionReports: React.FC = () => {
                                         </Select>
                                     </div>
 
-                                    {/* Quarter Selection - Only for Office Compliance */}
+                                    {/* Quarter Selection - Only for Office Compliance and Comprehensive Testing */}
                                     {showQuarterSelection && (
                                         <div className="space-y-2">
                                             <Label>Quarter</Label>
@@ -208,6 +365,9 @@ export const EmissionReports: React.FC = () => {
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
+                                                    {reportType === "comprehensive-testing" && (
+                                                        <SelectItem value="all">All Quarters</SelectItem>
+                                                    )}
                                                     {quarters.map(quarter => (
                                                         <SelectItem key={quarter} value={quarter}>
                                                             {quarter}
@@ -216,6 +376,43 @@ export const EmissionReports: React.FC = () => {
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                    )}
+
+                                    {/* Comprehensive Testing Filters */}
+                                    {showComprehensiveFilters && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label>Office Filter</Label>
+                                                <Select value={comprehensiveOffice} onValueChange={setComprehensiveOffice}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Offices</SelectItem>
+                                                        {officesData?.offices.map(office => (
+                                                            <SelectItem key={office.id} value={office.id}>
+                                                                {office.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Status Filter</Label>
+                                                <Select value={comprehensiveStatus} onValueChange={setComprehensiveStatus}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Vehicles</SelectItem>
+                                                        <SelectItem value="passed">Passed Only</SelectItem>
+                                                        <SelectItem value="failed">Failed Only</SelectItem>
+                                                        <SelectItem value="not-tested">Not Tested</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </>
                                     )}
 
                                     {/* Office Selection - For Testing Result and Office Compliance */}
@@ -258,24 +455,40 @@ export const EmissionReports: React.FC = () => {
                                     )}
 
                                     {/* Generate Button */}
-                                    <Button
-                                        className="w-full"
-                                        size="lg"
-                                        onClick={handleGenerateReport}
-                                        disabled={isGenerating}
-                                    >
-                                        {isGenerating ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Generating...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Eye className="w-4 h-4 mr-2" />
-                                                Preview Report
-                                            </>
+                                    <div className="space-y-2">
+                                        <Button
+                                            className="w-full"
+                                            size="lg"
+                                            onClick={handleGenerateReport}
+                                            disabled={isGenerating}
+                                        >
+                                            {isGenerating ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Eye className="w-4 h-4 mr-2" />
+                                                    Preview Report
+                                                </>
+                                            )}
+                                        </Button>
+
+                                        {/* Export to Excel Button - Only for Comprehensive Testing */}
+                                        {showComprehensiveFilters && (
+                                            <Button
+                                                className="w-full"
+                                                size="lg"
+                                                variant="outline"
+                                                onClick={handleExportToExcel}
+                                                disabled={isGenerating}
+                                            >
+                                                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                                                Export to Excel
+                                            </Button>
                                         )}
-                                    </Button>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>

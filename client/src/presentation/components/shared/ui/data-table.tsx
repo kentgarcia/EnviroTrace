@@ -170,39 +170,101 @@ export function DataTable<TData, TValue>({
                 ? "text-base"
                 : "text-sm"
           }
+          style={{ minWidth: '100%', width: 'max-content' }}
         >
           <TableHeader
             className={stickyHeader ? "sticky top-0 z-10" : ""}
             style={{ background: "var(--primary)", color: "white" }}
           >
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-                className={densityClasses[density]}
-              >
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className={`px-2 py-1 ${!disableSorting && header.column.getCanSort()
-                        ? "cursor-pointer select-none"
-                        : ""
-                      } bg-primary text-white`}
-                    onClick={
-                      !disableSorting && header.column.getCanSort()
-                        ? header.column.getToggleSortingHandler()
-                        : undefined
-                    }
+            {table.getHeaderGroups().map((headerGroup) => {
+              // Calculate column groups based on meta.group
+              const groupedHeaders: Array<{ group: string; colspan: number; startIndex: number }> = [];
+              let currentGroup: string | null = null;
+              let currentColspan = 0;
+              let startIndex = 0;
+
+              headerGroup.headers.forEach((header, index) => {
+                const group = (header.column.columnDef.meta as any)?.group || null;
+                
+                if (group !== currentGroup) {
+                  // Save the previous group
+                  if (currentGroup !== null) {
+                    groupedHeaders.push({ group: currentGroup, colspan: currentColspan, startIndex });
+                  }
+                  // Start a new group
+                  currentGroup = group;
+                  currentColspan = 1;
+                  startIndex = index;
+                } else {
+                  // Continue the current group
+                  currentColspan++;
+                }
+              });
+
+              // Don't forget the last group
+              if (currentGroup !== null) {
+                groupedHeaders.push({ group: currentGroup, colspan: currentColspan, startIndex });
+              }
+
+              return (
+                <React.Fragment key={headerGroup.id}>
+                  {/* Category Header Row */}
+                  {groupedHeaders.length > 0 && (
+                    <TableRow className="bg-primary hover:bg-primary">
+                      {groupedHeaders.map((groupInfo, idx) => (
+                        <TableHead
+                          key={`group-${idx}`}
+                          colSpan={groupInfo.colspan}
+                          className="px-2 py-2 text-center font-bold text-white border-r border-white/30 last:border-r-0"
+                        >
+                          {groupInfo.group}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  )}
+                  
+                  {/* Column Header Row */}
+                  <TableRow
+                    key={headerGroup.id}
+                    className={densityClasses[density]}
                   >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+                    {headerGroup.headers.map((header, idx) => {
+                      // Determine if this is the last column in its group
+                      const currentGroup = (header.column.columnDef.meta as any)?.group;
+                      const nextHeader = headerGroup.headers[idx + 1];
+                      const nextGroup = nextHeader ? (nextHeader.column.columnDef.meta as any)?.group : null;
+                      const isGroupEnd = currentGroup !== nextGroup;
+                      
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={`px-2 py-1 ${!disableSorting && header.column.getCanSort()
+                              ? "cursor-pointer select-none"
+                              : ""
+                            } bg-primary text-white ${isGroupEnd ? "border-r border-white/30" : ""}`}
+                          style={{ 
+                            width: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
+                            minWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto'
+                          }}
+                          onClick={
+                            !disableSorting && header.column.getCanSort()
+                              ? header.column.getToggleSortingHandler()
+                              : undefined
+                          }
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                </React.Fragment>
+              );
+            })}
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length ? (
@@ -215,7 +277,14 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() ? "selected" : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-2 py-1">
+                      <TableCell 
+                        key={cell.id} 
+                        className="px-2 py-1"
+                        style={{ 
+                          width: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto',
+                          minWidth: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto'
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()

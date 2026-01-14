@@ -65,6 +65,12 @@ const testFormSchema = z.object({
     .min(1, { message: "Quarter must be between 1 and 4" })
     .max(4, { message: "Quarter must be between 1 and 4" }),
   result: z.union([z.boolean(), z.null()]).optional(),
+  co_level: z.number().min(0).max(100).optional(),
+  hc_level: z.number().min(0).max(10000).optional(),
+  smoke_opacity: z.number().min(0).max(100).optional(),
+  remarks: z.string().optional(),
+  technician_name: z.string().min(3).optional(),
+  testing_center: z.string().min(3).optional(),
 });
 
 type TestFormValues = z.infer<typeof testFormSchema>;
@@ -118,6 +124,12 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
       scheduleQuarter ||
       Math.ceil((new Date().getMonth() + 1) / 3),
     result: initialValues?.result ?? null,
+    co_level: initialValues?.co_level,
+    hc_level: initialValues?.hc_level,
+    smoke_opacity: initialValues?.smoke_opacity,
+    remarks: initialValues?.remarks,
+    technician_name: initialValues?.technician_name,
+    testing_center: initialValues?.testing_center,
   };
 
   // Initialize form
@@ -318,6 +330,116 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
               <FormLabel>Test Date</FormLabel>
               <FormControl>
                 <Input type="date" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Emission Measurements */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="co_level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CO Level (%)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g., 1.93"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="hc_level"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>HC Level (ppm)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g., 1300"
+                    {...field}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                    value={field.value ?? ''}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="smoke_opacity"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Smoke Opacity (%) - Optional</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g., 25.5"
+                  {...field}
+                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                  value={field.value ?? ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="technician_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Technician Name - Optional</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., John Doe" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="testing_center"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Testing Center - Optional</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., LTO Testing Center" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="remarks"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Remarks - Optional</FormLabel>
+              <FormControl>
+                <Input placeholder="Additional notes" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>

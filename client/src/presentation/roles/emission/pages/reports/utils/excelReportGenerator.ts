@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import type { Office, Vehicle } from "@/core/api/emission-service";
+import type { Office, Vehicle, EmissionTest } from "@/core/api/emission-service";
 
 interface ReportConfig {
   year: number;
@@ -406,5 +406,218 @@ export const generateExcelReport = async (config: ReportConfig) => {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
   const fileName = `Emission_Report_${year}_${quarter}_${Date.now()}.xlsx`;
+  saveAs(blob, fileName);
+};
+
+// Comprehensive Testing Report with CO/HC data
+interface VehicleWithTestData extends Vehicle {
+  tests?: EmissionTest[];
+}
+
+interface ComprehensiveReportConfig {
+  year?: number;
+  quarter?: number;
+  office?: string;
+  status?: string; // "all" | "passed" | "failed" | "not-tested"
+  vehicles: VehicleWithTestData[];
+  tests: EmissionTest[];
+}
+
+export const generateComprehensiveTestingReport = async (
+  config: ComprehensiveReportConfig
+) => {
+  const { year, quarter, office, status, vehicles, tests } = config;
+
+  // Create a map of vehicle ID to latest test
+  const vehicleTestMap = new Map<string, EmissionTest>();
+  tests.forEach((test) => {
+    const existing = vehicleTestMap.get(test.vehicle_id);
+    if (
+      !existing ||
+      new Date(test.test_date) > new Date(existing.test_date)
+    ) {
+      vehicleTestMap.set(test.vehicle_id, test);
+    }
+  });
+
+  // Filter vehicles based on criteria
+  let filteredVehicles = vehicles;
+
+  if (year) {
+    filteredVehicles = filteredVehicles.filter((v) => {
+      const test = vehicleTestMap.get(v.id);
+      if (!test) return false;
+      return new Date(test.test_date).getFullYear() === year;
+    });
+  }
+
+  if (quarter) {
+    filteredVehicles = filteredVehicles.filter((v) => {
+      const test = vehicleTestMap.get(v.id);
+      if (!test) return false;
+      const testDate = new Date(test.test_date);
+      const testQuarter = Math.ceil((testDate.getMonth() + 1) / 3);
+      return testQuarter === quarter;
+    });
+  }
+
+  if (office && office !== "all") {
+    filteredVehicles = filteredVehicles.filter((v) => v.office_id === office);
+  }
+
+  if (status && status !== "all") {
+    filteredVehicles = filteredVehicles.filter((v) => {
+      const test = vehicleTestMap.get(v.id);
+      if (status === "not-tested") return !test;
+      if (status === "passed") return test?.result === true;
+      if (status === "failed") return test?.result === false;
+      return true;
+    });
+  }
+
+  // Create workbook
+  const workbook = XLSX.utils.book_new();
+
+  // Header row with blue background (#0033A0)
+  const headers = [
+    "NO",
+    "DRIVER'S NAME",
+    "OFFICE",
+    "PLATE NUMBER",
+    "VEHICLE CATEGORY",
+    "VEHICLE DESCRIPTION",
+    "YEAR ACQUIRED",
+    "CO (%)",
+    "HC (ppm)",
+    "TEST RESULT",
+    "DATE",
+  ];
+
+  // Build data rows
+  const dataRows: any[][] = [];
+  filteredVehicles.forEach((vehicle, index) => {
+    const test = vehicleTestMap.get(vehicle.id);
+    const identifier =
+      vehicle.plate_number ||
+      vehicle.chassis_number ||
+      vehicle.registration_number ||
+      "N/A";
+
+    dataRows.push([
+      index + 1, // NO
+      vehicle.driver_name || "N/A",
+      vehicle.office?.name || "N/A",
+      identifier,
+      vehicle.vehicle_type || "N/A",
+      vehicle.description || "",
+      vehicle.year_acquired || "",
+      test?.co_level?.toFixed(2) || "",
+      test?.hc_level ? Math.round(test.hc_level) : "",
+      test?.result === true ? "PASSED" : test?.result === false ? "FAILED" : "NOT TESTED",
+      test?.test_date
+        ? new Date(test.test_date).toLocaleDateString()
+        : "N/A",
+    ]);
+  });
+
+  // Combine headers and data
+  const sheetData = [headers, ...dataRows];
+  const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+
+  // Set column widths
+  worksheet["!cols"] = [
+    { wch: 6 },  // NO
+    { wch: 25 }, // DRIVER'S NAME
+    { wch: 30 }, // OFFICE
+    { wch: 15 }, // PLATE NUMBER
+    { wch: 20 }, // VEHICLE CATEGORY
+    { wch: 35 }, // VEHICLE DESCRIPTION
+    { wch: 12 }, // YEAR ACQUIRED
+    { wch: 10 }, // CO (%)
+    { wch: 10 }, // HC (ppm)
+    { wch: 12 }, // TEST RESULT
+    { wch: 12 }, // DATE
+  ];
+
+  // Apply styling to header row (row 1, cells A1-K1)
+  const headerRange = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+  for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+    if (!worksheet[cellAddress]) continue;
+
+    worksheet[cellAddress].s = {
+      fill: {
+        fgColor: { rgb: "0033A0" }, // Blue background
+      },
+      font: {
+        color: { rgb: "FFFFFF" }, // White text
+        bold: true,
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+      },
+    };
+  }
+
+  // Apply styling to NO column (column A, white background)
+  for (let row = 1; row <= dataRows.length; row++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+    if (!worksheet[cellAddress]) continue;
+
+    worksheet[cellAddress].s = {
+      fill: {
+        fgColor: { rgb: "FFFFFF" }, // White background
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+      },
+    };
+  }
+
+  // Apply light blue background to data cells (B2:K[n])
+  for (let row = 1; row <= dataRows.length; row++) {
+    for (let col = 1; col <= headerRange.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+      if (!worksheet[cellAddress]) continue;
+
+      worksheet[cellAddress].s = {
+        fill: {
+          fgColor: { rgb: "E3F2FD" }, // Light blue background
+        },
+        alignment: {
+          horizontal: col === 1 || col === 2 || col === 3 ? "left" : "center",
+          vertical: "center",
+        },
+      };
+    }
+  }
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Comprehensive Testing Report"
+  );
+
+  // Generate and download
+  const excelBuffer = XLSX.write(workbook, { 
+    bookType: "xlsx", 
+    type: "array",
+    cellStyles: true 
+  });
+  const blob = new Blob([excelBuffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  
+  const filterStr = [
+    year && `${year}`,
+    quarter && `Q${quarter}`,
+    office && office !== "all" ? office.substring(0, 10) : "All",
+  ]
+    .filter(Boolean)
+    .join("_");
+  
+  const fileName = `Comprehensive_Testing_Report_${filterStr || "All"}_${Date.now()}.xlsx`;
   saveAs(blob, fileName);
 };

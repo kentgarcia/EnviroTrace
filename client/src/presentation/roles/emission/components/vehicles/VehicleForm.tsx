@@ -71,6 +71,17 @@ const vehicleSchema = z.object({
     .int()
     .min(2, { message: "Wheels must be at least 2" })
     .max(18, { message: "Wheels must be at most 18" }),
+  description: z
+    .string()
+    .max(500, { message: "Description must be at most 500 characters" })
+    .optional()
+    .or(z.literal("")),
+  yearAcquired: z
+    .number()
+    .int()
+    .min(1900, { message: "Year must be 1900 or later" })
+    .max(2026, { message: "Year must be 2026 or earlier" })
+    .optional(),
 }).refine(
   (data) => data.plateNumber || data.chassisNumber || data.registrationNumber,
   {
@@ -115,6 +126,8 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
       : vehicleTypes[0] || "",
     engineType: initialValues ? initialValues.engineType : engineTypes[0] || "",
     wheels: initialValues ? initialValues.wheels : 4,
+    description: initialValues?.description || "",
+    yearAcquired: initialValues?.yearAcquired,
   };
 
   const form = useForm<VehicleFormValues>({
@@ -443,7 +456,51 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
               </FormItem>
             )}
           />
+          {/* Year Acquired */}
+          <FormField
+            control={form.control}
+            name="yearAcquired"
+            render={({ field }) => (
+              <FormItem className="space-y-1.5">
+                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Year Acquired</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1900}
+                    max={2026}
+                    {...field}
+                    value={field.value || ""}
+                    placeholder="Optional"
+                    className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      field.onChange(value ? Number(value) : undefined);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage className="text-[10px]" />
+              </FormItem>
+            )}
+          />
         </div>
+        {/* Description - Full Width */}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem className="space-y-1.5">
+              <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Description (Optional)</FormLabel>
+              <FormControl>
+                <textarea
+                  {...field}
+                  placeholder="Additional notes or description about the vehicle..."
+                  className="w-full min-h-[80px] px-3 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-[#0033a0] focus:border-[#0033a0] resize-none"
+                />
+              </FormControl>
+              <FormMessage className="text-[10px]" />
+            </FormItem>
+          )}
+        />
         <div className="flex justify-end gap-3 pt-6 border-t border-slate-100">
           <Button 
             type="button" 

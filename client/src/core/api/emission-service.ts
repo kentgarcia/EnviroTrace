@@ -24,6 +24,8 @@ export interface Vehicle {
   registration_number?: string;
   vehicle_type: string;
   wheels: number;
+  description?: string;
+  year_acquired?: number;
   created_at: string;
   updated_at: string;
   latest_test_result?: boolean | null; // Made optional since not always fetched
@@ -41,6 +43,8 @@ export interface VehicleInput {
   registration_number?: string;
   vehicle_type: string;
   wheels: number;
+  description?: string;
+  year_acquired?: number;
 }
 
 // UI-friendly vehicle input that uses office names instead of IDs
@@ -54,6 +58,8 @@ export interface VehicleFormInput {
   registrationNumber?: string;
   vehicleType: string;
   wheels: number;
+  description?: string;
+  yearAcquired?: number;
 }
 
 export interface VehicleFilters {
@@ -297,6 +303,11 @@ export interface EmissionTest {
   year: number;
   result: boolean | null;
   remarks?: string;
+  co_level?: number; // Carbon monoxide level (percentage)
+  hc_level?: number; // Hydrocarbon level (ppm)
+  smoke_opacity?: number; // Smoke opacity percentage
+  technician_name?: string;
+  testing_center?: string;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -309,6 +320,11 @@ export interface EmissionTestInput {
   year: number;
   result: boolean | null;
   remarks?: string;
+  co_level?: number;
+  hc_level?: number;
+  smoke_opacity?: number;
+  technician_name?: string;
+  testing_center?: string;
 }
 
 export interface TestSchedule {

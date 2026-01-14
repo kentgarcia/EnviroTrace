@@ -27,6 +27,11 @@ interface TestFormData {
     year: number;
     result: boolean;
     remarks?: string;
+    co_level?: number;
+    hc_level?: number;
+    smoke_opacity?: number;
+    technician_name?: string;
+    testing_center?: string;
 }
 
 export const useRevampedQuarterlyTesting = () => {
@@ -179,6 +184,11 @@ export const useRevampedQuarterlyTesting = () => {
                 quarter: data.quarter,
                 result: data.result,
                 remarks: data.remarks || "",
+                co_level: data.co_level,
+                hc_level: data.hc_level,
+                smoke_opacity: data.smoke_opacity,
+                technician_name: data.technician_name,
+                testing_center: data.testing_center,
             };
 
             if (testToEdit) {

@@ -352,3 +352,156 @@ const generateOfficeComplianceReport = (
 
   return html;
 };
+
+// Comprehensive Testing Report with CO/HC emission data
+interface ComprehensiveReportData {
+  vehicleId: string;
+  driverName: string;
+  office: string;
+  identifier: string;
+  category: string;
+  description: string;
+  yearAcquired: number | null;
+  co: number | null;
+  hc: number | null;
+  testResult: "PASSED" | "FAILED" | "NOT TESTED";
+  testDate: string | null;
+}
+
+interface ComprehensiveReportConfig {
+  year?: number;
+  quarter?: number;
+  office?: string;
+  status?: string;
+  data: ComprehensiveReportData[];
+}
+
+export const generateComprehensiveTestingReportHTML = (
+  config: ComprehensiveReportConfig
+): string => {
+  const { data } = config;
+
+  let html = `
+    <style>
+      @page {
+        size: landscape;
+        margin: 0.5in;
+      }
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+      }
+      .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9px;
+        font-family: Arial, sans-serif;
+      }
+      .table-header {
+        background-color: #0033A0;
+        color: #FFFFFF;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 9px;
+      }
+      .table-header th {
+        padding: 8px 6px;
+        border: 1px solid #0033A0;
+        text-align: center;
+        background-color: #0033A0;
+        color: #FFFFFF;
+      }
+      .row-number {
+        background-color: #FFFFFF;
+        text-align: center;
+        font-weight: 600;
+        color: #000000;
+        padding: 6px 4px;
+        border: 1px solid #CCCCCC;
+      }
+      .data-cell {
+        background-color: #E3F2FD;
+        padding: 6px 4px;
+        border: 1px solid #BBDEFB;
+      }
+      .data-cell-left {
+        text-align: left;
+      }
+      .data-cell-center {
+        text-align: center;
+      }
+      .test-passed {
+        color: #15803d;
+        font-weight: bold;
+      }
+      .test-failed {
+        color: #b91c1c;
+        font-weight: bold;
+      }
+      .test-not-tested {
+        color: #64748b;
+      }
+    </style>
+
+    <table class="report-table">
+      <thead class="table-header">
+        <tr>
+          <th style="width: 5%;">NO</th>
+          <th style="width: 15%;">DRIVER'S NAME</th>
+          <th style="width: 15%;">OFFICE</th>
+          <th style="width: 10%;">PLATE NUMBER</th>
+          <th style="width: 12%;">VEHICLE CATEGORY</th>
+          <th style="width: 15%;">VEHICLE DESCRIPTION</th>
+          <th style="width: 8%;">YEAR ACQUIRED</th>
+          <th style="width: 6%;">CO (%)</th>
+          <th style="width: 6%;">HC (ppm)</th>
+          <th style="width: 10%;">TEST RESULT</th>
+          <th style="width: 8%;">DATE</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  data.forEach((row, index) => {
+    const resultClass =
+      row.testResult === "PASSED"
+        ? "test-passed"
+        : row.testResult === "FAILED"
+        ? "test-failed"
+        : "test-not-tested";
+
+    html += `
+      <tr>
+        <td class="row-number">
+          ${index + 1}
+        </td>
+        <td class="data-cell data-cell-left">${row.driverName}</td>
+        <td class="data-cell data-cell-left">${row.office}</td>
+        <td class="data-cell data-cell-center">${row.identifier}</td>
+        <td class="data-cell data-cell-center">${row.category}</td>
+        <td class="data-cell data-cell-left">${row.description || "-"}</td>
+        <td class="data-cell data-cell-center">${row.yearAcquired || "-"}</td>
+        <td class="data-cell data-cell-center">${
+          row.co !== null ? row.co.toFixed(2) : "-"
+        }</td>
+        <td class="data-cell data-cell-center">${
+          row.hc !== null ? Math.round(row.hc) : "-"
+        }</td>
+        <td class="data-cell data-cell-center ${resultClass}">${
+      row.testResult
+    }</td>
+        <td class="data-cell data-cell-center">${row.testDate || "N/A"}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+      </tbody>
+    </table>
+  `;
+
+  return html;
+};

@@ -9,7 +9,6 @@ export const convertToCSV = (data: FeeRecord[]): string => {
     "Payer Name",
     "Amount",
     "Date",
-    "Due Date",
     "Status",
     "OR Number",
     "Payment Date",
@@ -25,7 +24,6 @@ export const convertToCSV = (data: FeeRecord[]): string => {
         `"${row.payer_name}"`,
         row.amount,
         `"${row.date}"`,
-        `"${row.due_date}"`,
         `"${row.status}"`,
         `"${row.or_number || ""}"`,
         `"${row.payment_date || ""}"`,
@@ -66,8 +64,6 @@ export const getStatusColor = (status: string): string => {
       return "bg-green-100 text-green-800";
     case "pending":
       return "bg-yellow-100 text-yellow-800";
-    case "overdue":
-      return "bg-red-100 text-red-800";
     case "cancelled":
       return "bg-gray-100 text-gray-800";
     default:
@@ -91,9 +87,4 @@ export const generateReferenceNumber = (type: string): string => {
     .toString()
     .padStart(3, "0");
   return `${prefix}-${year}-${random}`;
-};
-
-export const isOverdue = (dueDate: string, status: string): boolean => {
-  if (status === "paid" || status === "cancelled") return false;
-  return new Date(dueDate) < new Date();
 };

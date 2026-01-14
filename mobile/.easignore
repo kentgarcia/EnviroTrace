@@ -1,0 +1,29 @@
+# Tauri desktop app build outputs
+../client/src-tauri/target/**
+../client/target/**
+
+# Exclude sibling directories
+../backend
+../client
+../.git
+../node_modules
+
+# Node modules
+node_modules/**
+
+# Build outputs
+.expo/**
+dist/**
+build/**
+
+# iOS build
+ios/Pods/**
+
+# Android build
+android/app/build/**
+android/.gradle/**
+
+# Misc
+.git/**
+.DS_Store
+*.log

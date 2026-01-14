@@ -1,7 +1,236 @@
 from pydantic import BaseModel
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from uuid import UUID
+
+# ===== NEW ISO TREE REQUEST SCHEMAS =====
+
+class DropdownOptionBase(BaseModel):
+    """Base dropdown option fields"""
+    field_name: str  # 'received_through' or 'status'
+    option_value: str
+    display_order: int = 0
+    is_active: bool = True
+
+class DropdownOptionCreate(DropdownOptionBase):
+    pass
+
+class DropdownOptionUpdate(BaseModel):
+    option_value: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
+
+class DropdownOptionInDB(DropdownOptionBase):
+    id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class RequirementChecklistItem(BaseModel):
+    """Single requirement checklist item"""
+    requirement_name: str
+    is_checked: bool = False
+    date_submitted: Optional[str] = None  # String format: YYYY-MM-DD
+
+class ProcessingStandardsBase(BaseModel):
+    """Processing timeframes configuration"""
+    request_type: str  # cutting, pruning, ball_out
+    receiving_standard_days: int = 3
+    inspection_standard_days: int = 7
+    requirements_standard_days: int = 10
+    clearance_standard_days: int = 5
+
+class ProcessingStandardsCreate(ProcessingStandardsBase):
+    pass
+
+class ProcessingStandardsUpdate(BaseModel):
+    receiving_standard_days: Optional[int] = None
+    inspection_standard_days: Optional[int] = None
+    requirements_standard_days: Optional[int] = None
+    clearance_standard_days: Optional[int] = None
+
+class ProcessingStandardsInDB(ProcessingStandardsBase):
+    id: UUID
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class TreeRequestBase(BaseModel):
+    """Base tree request fields"""
+    request_type: str  # cutting, pruning, ball_out
+    overall_status: str = 'receiving'
+
+class TreeRequestCreate(BaseModel):
+    """Create new tree request"""
+    request_number: Optional[str] = None  # Auto-generated if not provided
+    request_type: str
+    overall_status: str = 'receiving'
+    created_by: Optional[UUID] = None  # User ID who created the request
+    
+    # Receiving phase
+    receiving_date_received: Optional[date] = None
+    receiving_month: Optional[str] = None
+    receiving_received_through: Optional[str] = None
+    receiving_date_received_by_dept_head: Optional[date] = None
+    receiving_name: Optional[str] = None
+    receiving_address: Optional[str] = None
+    receiving_contact: Optional[str] = None
+    receiving_request_status: Optional[str] = None
+    
+    # Inspection phase
+    inspection_date_received_by_inspectors: Optional[date] = None
+    inspection_date_of_inspection: Optional[date] = None
+    inspection_month: Optional[str] = None
+    inspection_proponent_present: Optional[str] = None
+    inspection_date_submitted_to_dept_head: Optional[date] = None
+    inspection_date_released_to_inspectors: Optional[date] = None
+    inspection_report_control_number: Optional[str] = None
+    
+    # Requirements phase
+    requirements_checklist: Optional[List[RequirementChecklistItem]] = None
+    requirements_remarks: Optional[str] = None
+    requirements_status: Optional[str] = None
+    requirements_date_completion: Optional[date] = None
+    
+    # Clearance phase
+    clearance_date_issued: Optional[date] = None
+    clearance_date_of_payment: Optional[date] = None
+    clearance_control_number: Optional[str] = None
+    clearance_or_number: Optional[str] = None
+    clearance_date_received: Optional[date] = None
+    clearance_status: Optional[str] = None
+
+class UpdateReceivingPhase(BaseModel):
+    """Update receiving phase only"""
+    receiving_date_received: Optional[date] = None
+    receiving_month: Optional[str] = None
+    receiving_received_through: Optional[str] = None
+    receiving_date_received_by_dept_head: Optional[date] = None
+    receiving_name: Optional[str] = None
+    receiving_address: Optional[str] = None
+    receiving_contact: Optional[str] = None
+    receiving_request_status: Optional[str] = None
+
+class UpdateInspectionPhase(BaseModel):
+    """Update inspection phase only"""
+    inspection_date_received_by_inspectors: Optional[date] = None
+    inspection_date_of_inspection: Optional[date] = None
+    inspection_month: Optional[str] = None
+    inspection_proponent_present: Optional[str] = None
+    inspection_date_submitted_to_dept_head: Optional[date] = None
+    inspection_date_released_to_inspectors: Optional[date] = None
+    inspection_report_control_number: Optional[str] = None
+
+class UpdateRequirementsPhase(BaseModel):
+    """Update requirements phase only"""
+    requirements_checklist: Optional[List[RequirementChecklistItem]] = None
+    requirements_remarks: Optional[str] = None
+    requirements_status: Optional[str] = None
+    requirements_date_completion: Optional[date] = None
+
+class UpdateClearancePhase(BaseModel):
+    """Update clearance phase only"""
+    clearance_date_issued: Optional[date] = None
+    clearance_date_of_payment: Optional[date] = None
+    clearance_control_number: Optional[str] = None
+    clearance_or_number: Optional[str] = None
+    clearance_date_received: Optional[date] = None
+    clearance_status: Optional[str] = None
+
+class TreeRequestUpdate(BaseModel):
+    """Update any tree request fields"""
+    request_type: Optional[str] = None
+    overall_status: Optional[str] = None
+    
+    receiving_date_received: Optional[date] = None
+    receiving_month: Optional[str] = None
+    receiving_received_through: Optional[str] = None
+    receiving_date_received_by_dept_head: Optional[date] = None
+    receiving_name: Optional[str] = None
+    receiving_address: Optional[str] = None
+    receiving_contact: Optional[str] = None
+    receiving_request_status: Optional[str] = None
+    
+    inspection_date_received_by_inspectors: Optional[date] = None
+    inspection_date_of_inspection: Optional[date] = None
+    inspection_month: Optional[str] = None
+    inspection_proponent_present: Optional[str] = None
+    inspection_date_submitted_to_dept_head: Optional[date] = None
+    inspection_date_released_to_inspectors: Optional[date] = None
+    inspection_report_control_number: Optional[str] = None
+    
+    requirements_checklist: Optional[List[RequirementChecklistItem]] = None
+    requirements_remarks: Optional[str] = None
+    requirements_status: Optional[str] = None
+    requirements_date_completion: Optional[date] = None
+    
+    clearance_date_issued: Optional[date] = None
+    clearance_date_of_payment: Optional[date] = None
+    clearance_control_number: Optional[str] = None
+    clearance_or_number: Optional[str] = None
+    clearance_date_received: Optional[date] = None
+    clearance_status: Optional[str] = None
+
+class TreeRequestInDB(TreeRequestBase):
+    """Tree request from database"""
+    id: UUID
+    request_number: str
+    created_by: Optional[UUID] = None  # User ID who created the request
+    editors: Optional[List[UUID]] = None  # List of user IDs who edited the request
+    
+    receiving_date_received: Optional[date] = None
+    receiving_month: Optional[str] = None
+    receiving_received_through: Optional[str] = None
+    receiving_date_received_by_dept_head: Optional[date] = None
+    receiving_name: Optional[str] = None
+    receiving_address: Optional[str] = None
+    receiving_contact: Optional[str] = None
+    receiving_request_status: Optional[str] = None
+    
+    inspection_date_received_by_inspectors: Optional[date] = None
+    inspection_date_of_inspection: Optional[date] = None
+    inspection_month: Optional[str] = None
+    inspection_proponent_present: Optional[str] = None
+    inspection_date_submitted_to_dept_head: Optional[date] = None
+    inspection_date_released_to_inspectors: Optional[date] = None
+    inspection_report_control_number: Optional[str] = None
+    
+    requirements_checklist: Optional[List[RequirementChecklistItem]] = None
+    requirements_remarks: Optional[str] = None
+    requirements_status: Optional[str] = None
+    requirements_date_completion: Optional[date] = None
+    
+    clearance_date_issued: Optional[date] = None
+    clearance_date_of_payment: Optional[date] = None
+    clearance_control_number: Optional[str] = None
+    clearance_or_number: Optional[str] = None
+    clearance_date_received: Optional[date] = None
+    clearance_status: Optional[str] = None
+    
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class TreeRequestWithAnalytics(TreeRequestInDB):
+    """Tree request with computed analytics"""
+    days_in_receiving: int = 0
+    days_in_inspection: int = 0
+    days_in_requirements: int = 0
+    days_in_clearance: int = 0
+    total_days: int = 0
+    is_delayed: bool = False
+    receiving_standard_days: Optional[int] = None
+    inspection_standard_days: Optional[int] = None
+    requirements_standard_days: Optional[int] = None
+    clearance_standard_days: Optional[int] = None
+
+# ===== LEGACY SCHEMAS (for backward compatibility) =====
 
 class NewTreeEntry(BaseModel):
     """New tree entry not yet in inventory"""

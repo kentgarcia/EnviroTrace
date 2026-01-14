@@ -4,7 +4,8 @@ import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
 import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
 import FeeRecords from "./pages/fee-records/FeeRecords";
 import TreeInventoryPage from "./pages/tree-inventory/TreeInventoryPage";
-import TreeRequestsPage from "./pages/tree-requests/TreeRequestsPage";
+import ISOTreeRequestsPage from "./pages/tree-requests/ISOTreeRequestsPage";
+import ProcessingStandardsSettings from "./pages/tree-requests/components/ProcessingStandardsSettings";
 import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
 
 const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
@@ -26,8 +27,11 @@ export const urbanGreeningRoute = [
   // Tree Inventory - central registry
   createUrbanGreeningRoute("/urban-greening/tree-inventory", TreeInventoryPage),
   
-  // Module 2: Tree Management Requests (cutting, pruning, violations)
-  createUrbanGreeningRoute("/urban-greening/tree-requests", TreeRequestsPage),
+  // Module 2: Tree Management Requests (ISO 4-phase tracking system)
+  createUrbanGreeningRoute("/urban-greening/tree-requests", ISOTreeRequestsPage),
+  
+  // Processing Standards Configuration (Admin)
+  createUrbanGreeningRoute("/urban-greening/processing-standards", ProcessingStandardsSettings),
   
   // Module 3: Urban Greening Projects (replacement & new planting)
   createUrbanGreeningRoute("/urban-greening/greening-projects", GreeningProjectsPage),

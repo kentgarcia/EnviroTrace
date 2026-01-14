@@ -191,7 +191,9 @@ export default function Vehicles() {
       office_id: officeId,
       plate_number: vehicleData.plateNumber,
       vehicle_type: vehicleData.vehicleType,
-      wheels: vehicleData.wheels
+      wheels: vehicleData.wheels,
+      description: vehicleData.description,
+      year_acquired: vehicleData.yearAcquired
     };
 
     try {
@@ -222,7 +224,9 @@ export default function Vehicles() {
       office_id: officeId,
       plate_number: vehicle.plateNumber,
       vehicle_type: vehicle.vehicleType,
-      wheels: vehicle.wheels
+      wheels: vehicle.wheels,
+      description: vehicle.description,
+      year_acquired: vehicle.yearAcquired
     };
 
     addVehicleMutation.mutate(apiVehicle, {
@@ -552,7 +556,8 @@ export default function Vehicles() {
                           office_id: officeId,
                           plate_number: data.plateNumber,
                           vehicle_type: data.vehicleType,
-                          wheels: data.wheels
+                          wheels: data.wheels,
+                          description: data.description
                         };
 
                         await updateVehicleMutation.mutateAsync({
