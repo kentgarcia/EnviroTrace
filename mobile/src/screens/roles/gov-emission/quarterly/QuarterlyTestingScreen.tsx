@@ -73,8 +73,6 @@ export default function QuarterlyTestingScreen() {
         subtitle="Schedule and manage emission tests"
         statusBarStyle="light"
         backgroundColor="#2563EB"
-        titleColor="#FFFFFF"
-        subtitleColor="rgba(255, 255, 255, 0.8)"
         borderColor="transparent"
         titleSize={22}
         subtitleSize={12}

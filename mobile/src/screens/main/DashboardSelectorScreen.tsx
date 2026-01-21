@@ -38,7 +38,7 @@ export default function DashboardSelectorScreen() {
 
     return (
         <>
-            <ScreenLayout edges={["top", "left", "right"]}>
+            <ScreenLayout>
                 {/* Header with Profile and Logout */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>

@@ -43,6 +43,15 @@
       "webviewInstallMode": {
         "type": "embedBootstrapper",
         "silent": true
+      },
+      "wix": {
+        "bannerPath": "icons/WixBanner.bmp",
+        "dialogPath": "icons/WixDialog.bmp"
+      },
+      "nsis": {
+        "headerImage": "icons/WixBanner.bmp",
+        "sidebarImage": "icons/WixDialog.bmp",
+        "installerIcon": "icons/icon.ico"
       }
     }
   }

@@ -276,7 +276,7 @@ export default function ChatbotScreen() {
     };
 
     return (
-        <ScreenLayout statusBarStyle="dark-content">
+        <ScreenLayout>
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerCenter}>

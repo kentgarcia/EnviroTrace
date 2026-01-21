@@ -7,6 +7,7 @@ import {
     Users,
     Monitor,
 } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 
 interface QuickActionProps {
@@ -47,26 +48,28 @@ const QuickActionCard: React.FC<QuickActionProps> = ({
 );
 
 export const AdminQuickActions: React.FC = () => {
+    const navigate = useNavigate();
+
     const quickActions = [
         {
             title: "Add New User",
             description: "Create a new user account and assign roles",
             icon: <UserPlus className="w-6 h-6 text-blue-600" />,
-            onClick: () => window.location.href = "/admin/user-management",
+            onClick: () => navigate({ to: "/admin/user-management" }),
             color: "bg-blue-100",
         },
         {
             title: "Manage Users",
             description: "View and manage existing user accounts",
             icon: <Users className="w-6 h-6 text-green-600" />,
-            onClick: () => window.location.href = "/admin/user-management",
+            onClick: () => navigate({ to: "/admin/user-management" }),
             color: "bg-green-100",
         },
         {
             title: "Session Management",
             description: "Monitor and control user login sessions",
             icon: <Monitor className="w-6 h-6 text-orange-600" />,
-            onClick: () => window.location.href = "/admin/session-management",
+            onClick: () => navigate({ to: "/admin/session-management" }),
             color: "bg-orange-100",
         },
         {

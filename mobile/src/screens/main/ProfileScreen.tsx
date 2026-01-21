@@ -33,7 +33,7 @@ export default function ProfileScreen() {
 
     return (
         <>
-            <ScreenLayout edges={["top", "left", "right"]}>
+            <ScreenLayout>
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
