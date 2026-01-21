@@ -111,6 +111,39 @@ export interface TreeSpecies {
     created_at: string;
 }
 
+export interface TreeSpeciesCreate {
+    scientific_name?: string;
+    common_name: string;
+    local_name?: string;
+    family?: string;
+    is_native?: boolean;
+    is_endangered?: boolean;
+    description?: string;
+    avg_mature_height_min_m?: number;
+    avg_mature_height_max_m?: number;
+    avg_mature_height_avg_m?: number;
+    avg_trunk_diameter_min_cm?: number;
+    avg_trunk_diameter_max_cm?: number;
+    wood_density_min?: number;
+    wood_density_max?: number;
+    wood_density_avg?: number;
+    growth_rate_m_per_year?: number;
+    co2_absorbed_kg_per_year?: number;
+    co2_stored_mature_min_kg?: number;
+    co2_stored_mature_max_kg?: number;
+    co2_stored_mature_avg_kg?: number;
+    decay_years_min?: number;
+    decay_years_max?: number;
+    carbon_fraction?: number;
+    lumber_carbon_retention_pct?: number;
+    burned_carbon_release_pct?: number;
+    growth_speed_label?: string;
+    is_active?: boolean;
+    notes?: string;
+}
+
+export interface TreeSpeciesUpdate extends Partial<TreeSpeciesCreate> {}
+
 // ==================== API Functions ====================
 
 /**
@@ -205,8 +238,45 @@ export const deleteTree = async (id: string) => {
 /**
  * Get all tree species
  */
-export const getSpecies = async () => {
-    const response = await apiClient.get<TreeSpecies[]>("/tree-inventory/species");
+export const getSpecies = async (search?: string) => {
+    const params = search ? { search } : undefined;
+    const response = await apiClient.get<TreeSpecies[]>("/tree-inventory/species", { params });
+    return { data: response.data };
+};
+
+/**
+ * Get tree species by ID
+ */
+export const getSpeciesById = async (id: string) => {
+    const response = await apiClient.get<TreeSpecies>(`/tree-inventory/species/${id}`);
+    return { data: response.data };
+};
+
+/**
+ * Create a new tree species
+ */
+export const createSpecies = async (data: TreeSpeciesCreate) => {
+    const response = await apiClient.post<TreeSpecies>("/tree-inventory/species", data);
+    return { data: response.data };
+};
+
+/**
+ * Update a tree species
+ */
+export const updateSpecies = async (id: string, data: TreeSpeciesUpdate) => {
+    const response = await apiClient.put<TreeSpecies>(`/tree-inventory/species/${id}`, data);
+    return { data: response.data };
+};
+
+/**
+ * Delete a tree species
+ */
+export const deleteSpecies = async (id: string) => {
+    const response = await apiClient.delete<{
+        message: string;
+        trees_using_species: number;
+        species_name: string;
+    }>(`/tree-inventory/species/${id}`);
     return { data: response.data };
 };
 
@@ -238,5 +308,9 @@ export const treeInventoryApi = {
     updateTree,
     deleteTree,
     getSpecies,
+    getSpeciesById,
+    createSpecies,
+    updateSpecies,
+    deleteSpecies,
     uploadTreeImages,
 };

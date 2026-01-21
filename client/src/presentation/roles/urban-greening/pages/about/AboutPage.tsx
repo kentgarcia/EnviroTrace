@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
-import { Trees, Sprout, wind, CloudRain } from "lucide-react";
+import { Trees, Sprout, Wind, CloudRain } from "lucide-react";
 
 const AboutPage: React.FC = () => {
   return (

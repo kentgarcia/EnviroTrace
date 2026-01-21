@@ -9,7 +9,7 @@ import {
     Modal,
     Image,
 } from "react-native";
-import { Text, TextInput } from "react-native-paper";
+import { Text, TextInput, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -85,7 +85,7 @@ export default function TreeFieldCaptureScreen() {
     // Fetch species list
     const { data: speciesData, isLoading: loadingSpecies } = useQuery({
         queryKey: ["species"],
-        queryFn: treeInventoryApi.getSpecies,
+        queryFn: () => treeInventoryApi.getSpecies(),
     });
 
     // Auto-start GPS on mount
@@ -249,9 +249,17 @@ export default function TreeFieldCaptureScreen() {
             Alert.alert("Validation Error", "GPS location is required");
             return;
         }
-        if (!uploadedPhotoUrl) {
-            Alert.alert("Validation Error", "Photo upload is required");
-            return;
+        // if (!uploadedPhotoUrl) {
+        //     Alert.alert("Validation Error", "Photo upload is required");
+        //     return;
+        // }
+
+        let formattedDate = undefined;
+        if (plantedDate) {
+            const year = plantedDate.getFullYear();
+            const month = String(plantedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(plantedDate.getDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
         }
 
         const data: TreeInventoryCreate = {
@@ -266,10 +274,10 @@ export default function TreeFieldCaptureScreen() {
             height_meters: heightMeters ? parseFloat(heightMeters) : undefined,
             diameter_cm: diameterCm ? parseFloat(diameterCm) : undefined,
             age_years: ageYears ? parseInt(ageYears) : undefined,
-            planted_date: plantedDate?.toISOString(),
+            planted_date: formattedDate,
             managed_by: managedBy.trim() || undefined,
             notes: notes.trim() || undefined,
-            photos: [uploadedPhotoUrl],
+            photos: uploadedPhotoUrl ? [uploadedPhotoUrl] : [],
         };
 
         createMutation.mutate(data);
@@ -310,7 +318,7 @@ export default function TreeFieldCaptureScreen() {
                     {currentStep > 1 ? (
                         <Icon name="Check" size={16} color="#FFFFFF" />
                     ) : (
-                        <Text style={styles.stepNumber}>1</Text>
+                        <Text style={[styles.stepNumber, currentStep >= 1 && { color: "#FFFFFF" }]}>1</Text>
                     )}
                 </View>
                 <Text style={styles.stepLabel}>Location</Text>
@@ -321,7 +329,7 @@ export default function TreeFieldCaptureScreen() {
                     {currentStep > 2 ? (
                         <Icon name="Check" size={16} color="#FFFFFF" />
                     ) : (
-                        <Text style={styles.stepNumber}>2</Text>
+                        <Text style={[styles.stepNumber, currentStep >= 2 && { color: "#FFFFFF" }]}>2</Text>
                     )}
                 </View>
                 <Text style={styles.stepLabel}>Photo</Text>
@@ -329,17 +337,44 @@ export default function TreeFieldCaptureScreen() {
             <View style={styles.stepLine} />
             <View style={styles.stepItem}>
                 <View style={[styles.stepCircle, currentStep >= 3 && styles.stepCircleActive]}>
-                    <Text style={styles.stepNumber}>3</Text>
+                    <Text style={[styles.stepNumber, currentStep >= 3 && { color: "#FFFFFF" }]}>3</Text>
                 </View>
                 <Text style={styles.stepLabel}>Details</Text>
             </View>
         </View>
     );
 
+    const renderChevronIcon = () => <Icon name="ChevronDown" size={18} color="#64748B" />;
+
+    const renderDropdownItem = (item: { label: string; value: string }) => (
+        <View style={styles.dropdownItem}>
+            <Text style={styles.dropdownItemText}>{item.label}</Text>
+        </View>
+    );
+
+    const handleSkipPhoto = () => {
+        Alert.alert(
+            "Skip Photo?",
+            "Are you sure you want to skip adding a photo? You can add one later.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Skip",
+                    style: "default",
+                    onPress: () => {
+                        setPhoto(null);
+                        setUploadedPhotoUrl(null);
+                        setCurrentStep(3);
+                    },
+                },
+            ]
+        );
+    };
+
     const renderStep1 = () => (
         <View style={styles.stepContent}>
             <View style={styles.instructionCard}>
-                <Icon name="MapPin" size={48} color="#3B82F6" />
+                <Icon name="MapPin" size={48} color="#1E40AF" />
                 <Text style={styles.instructionTitle}>Stand at Tree Location</Text>
                 <Text style={styles.instructionText}>
                     Position yourself at the tree's location. The app will automatically capture GPS
@@ -350,7 +385,7 @@ export default function TreeFieldCaptureScreen() {
             <View style={styles.gpsCard}>
                 {isAcquiringGPS ? (
                     <View style={styles.gpsAcquiring}>
-                        <ActivityIndicator size="large" color="#3B82F6" />
+                        <ActivityIndicator size="large" color="#1E40AF" />
                         <Text style={styles.gpsAcquiringText}>Acquiring GPS location...</Text>
                         <Text style={styles.gpsHint}>Please wait, this may take a moment</Text>
                     </View>
@@ -381,12 +416,12 @@ export default function TreeFieldCaptureScreen() {
 
                         {isGeocoding ? (
                             <View style={styles.geocodingLoading}>
-                                <ActivityIndicator size="small" color="#6B7280" />
+                                <ActivityIndicator size="small" color="#64748B" />
                                 <Text style={styles.geocodingText}>Getting address...</Text>
                             </View>
                         ) : geocodeResult ? (
                             <View style={styles.addressPreview}>
-                                <Icon name="MapPin" size={16} color="#6B7280" />
+                                <Icon name="MapPin" size={16} color="#64748B" />
                                 <Text style={styles.addressText} numberOfLines={2}>
                                     {geocodeResult.address}
                                 </Text>
@@ -398,7 +433,7 @@ export default function TreeFieldCaptureScreen() {
                             onPress={startGPSTracking}
                             disabled={isAcquiringGPS}
                         >
-                            <Icon name="RefreshCw" size={16} color="#3B82F6" />
+                            <Icon name="RefreshCw" size={16} color="#1E40AF" />
                             <Text style={styles.refreshButtonText}>Refresh Location</Text>
                         </TouchableOpacity>
                     </View>
@@ -430,7 +465,7 @@ export default function TreeFieldCaptureScreen() {
     const renderStep2 = () => (
         <ScrollView style={styles.stepContent}>
             <View style={styles.instructionCard}>
-                <Icon name="Camera" size={48} color="#3B82F6" />
+                <Icon name="Camera" size={48} color="#1E40AF" />
                 <Text style={styles.instructionTitle}>Capture Tree Photo</Text>
                 <Text style={styles.instructionText}>
                     Take a clear photo of the tree. GPS coordinates will be embedded in the image.
@@ -459,13 +494,24 @@ export default function TreeFieldCaptureScreen() {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <TouchableOpacity
-                    style={styles.captureButton}
-                    onPress={() => setShowCamera(true)}
-                >
-                    <Icon name="Camera" size={32} color="#FFFFFF" />
-                    <Text style={styles.captureButtonText}>Open Camera</Text>
-                </TouchableOpacity>
+                <View style={{ gap: 16 }}>
+                    <TouchableOpacity
+                        style={styles.captureButton}
+                        onPress={() => setShowCamera(true)}
+                    >
+                        <Icon name="Camera" size={32} color="#FFFFFF" />
+                        <Text style={styles.captureButtonText}>Open Camera</Text>
+                    </TouchableOpacity>
+
+                    <Button
+                        mode="text"
+                        onPress={handleSkipPhoto}
+                        textColor="#64748B"
+                        labelStyle={{ fontSize: 14, fontWeight: "600" }}
+                    >
+                        Skip Photo Setup
+                    </Button>
+                </View>
             )}
         </ScrollView>
     );
@@ -485,6 +531,10 @@ export default function TreeFieldCaptureScreen() {
                         onChangeText={setCommonName}
                         placeholder="e.g., Mango, Narra, Mahogany"
                         style={styles.input}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="Leaf" size={16} color="#64748B" />} />}
                     />
                 </View>
 
@@ -502,7 +552,11 @@ export default function TreeFieldCaptureScreen() {
                         style={styles.dropdown}
                         placeholderStyle={styles.dropdownPlaceholder}
                         selectedTextStyle={styles.dropdownSelected}
+                        containerStyle={styles.dropdownContainer}
                         disable={loadingSpecies}
+                        renderRightIcon={renderChevronIcon}
+                        renderItem={renderDropdownItem}
+                        activeColor="#EFF6FF"
                     />
                 </View>
 
@@ -518,6 +572,10 @@ export default function TreeFieldCaptureScreen() {
                             style={styles.dropdown}
                             placeholderStyle={styles.dropdownPlaceholder}
                             selectedTextStyle={styles.dropdownSelected}
+                            containerStyle={styles.dropdownContainer}
+                            renderRightIcon={renderChevronIcon}
+                            renderItem={renderDropdownItem}
+                            activeColor="#EFF6FF"
                         />
                     </View>
 
@@ -532,6 +590,10 @@ export default function TreeFieldCaptureScreen() {
                             style={styles.dropdown}
                             placeholderStyle={styles.dropdownPlaceholder}
                             selectedTextStyle={styles.dropdownSelected}
+                            containerStyle={styles.dropdownContainer}
+                            renderRightIcon={renderChevronIcon}
+                            renderItem={renderDropdownItem}
+                            activeColor="#EFF6FF"
                         />
                     </View>
                 </View>
@@ -541,7 +603,7 @@ export default function TreeFieldCaptureScreen() {
                 <Text style={styles.sectionTitle}>Location Details</Text>
 
                 <View style={styles.gpsInfoBox}>
-                    <Icon name="MapPin" size={16} color="#3B82F6" />
+                    <Icon name="MapPin" size={16} color="#1E40AF" />
                     <Text style={styles.gpsInfoText}>
                         {gpsLocation?.coords.latitude.toFixed(6)}°N, {gpsLocation?.coords.longitude.toFixed(6)}°E
                     </Text>
@@ -555,6 +617,10 @@ export default function TreeFieldCaptureScreen() {
                         onChangeText={setAddress}
                         placeholder="Street address"
                         style={styles.input}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="MapPin" size={16} color="#64748B" />} />}
                     />
                 </View>
 
@@ -566,6 +632,10 @@ export default function TreeFieldCaptureScreen() {
                         onChangeText={setBarangay}
                         placeholder="Barangay name"
                         style={styles.input}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="Map" size={16} color="#64748B" />} />}
                     />
                 </View>
             </View>
@@ -583,6 +653,10 @@ export default function TreeFieldCaptureScreen() {
                             placeholder="0.00"
                             keyboardType="decimal-pad"
                             style={styles.input}
+                            outlineStyle={styles.inputOutline}
+                            textColor="#0F172A"
+                            placeholderTextColor="#94A3B8"
+                            left={<TextInput.Icon icon={() => <Icon name="ArrowUpCircle" size={16} color="#64748B" />} />}
                         />
                     </View>
 
@@ -595,6 +669,10 @@ export default function TreeFieldCaptureScreen() {
                             placeholder="0.00"
                             keyboardType="decimal-pad"
                             style={styles.input}
+                            outlineStyle={styles.inputOutline}
+                            textColor="#0F172A"
+                            placeholderTextColor="#94A3B8"
+                            left={<TextInput.Icon icon={() => <Icon name="Circle" size={16} color="#64748B" />} />}
                         />
                     </View>
                 </View>
@@ -608,6 +686,10 @@ export default function TreeFieldCaptureScreen() {
                         placeholder="0"
                         keyboardType="number-pad"
                         style={styles.input}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="Calendar" size={16} color="#64748B" />} />}
                     />
                 </View>
             </View>
@@ -621,7 +703,7 @@ export default function TreeFieldCaptureScreen() {
                         style={styles.dateButton}
                         onPress={() => setShowDatePicker(true)}
                     >
-                        <Icon name="Calendar" size={20} color="#6B7280" />
+                        <Icon name="Calendar" size={20} color="#64748B" />
                         <Text style={styles.dateButtonText}>
                             {plantedDate
                                 ? plantedDate.toLocaleDateString()
@@ -652,6 +734,10 @@ export default function TreeFieldCaptureScreen() {
                         onChangeText={setManagedBy}
                         placeholder="Organization or department"
                         style={styles.input}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="Building" size={16} color="#64748B" />} />}
                     />
                 </View>
 
@@ -665,6 +751,10 @@ export default function TreeFieldCaptureScreen() {
                         multiline
                         numberOfLines={3}
                         style={[styles.input, styles.textArea]}
+                        outlineStyle={styles.inputOutline}
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                        left={<TextInput.Icon icon={() => <Icon name="FileText" size={16} color="#64748B" />} />}
                     />
                 </View>
             </View>
@@ -691,33 +781,32 @@ export default function TreeFieldCaptureScreen() {
 
             <View style={styles.footer}>
                 {currentStep < 3 ? (
-                    <TouchableOpacity
-                        style={[
-                            styles.nextButton,
-                            ((currentStep === 1 && !gpsLocation) || (currentStep === 2 && !photo)) &&
-                                styles.nextButtonDisabled,
-                        ]}
+                    <Button
+                        mode="contained"
                         onPress={handleNext}
                         disabled={(currentStep === 1 && !gpsLocation) || (currentStep === 2 && !photo)}
+                        style={styles.nextButton}
+                        contentStyle={{ height: 50, flexDirection: 'row-reverse' }}
+                        labelStyle={styles.nextButtonText}
+                        icon={({ size, color }) => <Icon name="ChevronRight" size={size} color={color} />} 
+                        buttonColor="#1E40AF"
                     >
-                        <Text style={styles.nextButtonText}>Continue</Text>
-                        <Icon name="ChevronRight" size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
+                        Continue
+                    </Button>
                 ) : (
-                    <TouchableOpacity
-                        style={[styles.saveButton, createMutation.isPending && styles.saveButtonDisabled]}
+                    <Button
+                        mode="contained"
                         onPress={handleSave}
                         disabled={createMutation.isPending}
+                        loading={createMutation.isPending}
+                        style={styles.saveButton}
+                        contentStyle={{ height: 50 }}
+                        labelStyle={styles.saveButtonText}
+                        icon={({ size, color }) => <Icon name="Save" size={size} color={color} />}
+                        buttonColor="#22c55e"
                     >
-                        {createMutation.isPending ? (
-                            <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                            <>
-                                <Icon name="Save" size={20} color="#FFFFFF" />
-                                <Text style={styles.saveButtonText}>Register Tree</Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                        Register Tree
+                    </Button>
                 )}
             </View>
 
@@ -734,7 +823,7 @@ export default function TreeFieldCaptureScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "#F8FAFC",
     },
     content: {
         flex: 1,
@@ -747,7 +836,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
-        borderBottomColor: "#E5E7EB",
+        borderBottomColor: "#E2E8F0",
     },
     stepItem: {
         alignItems: "center",
@@ -756,28 +845,28 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: "#E5E7EB",
+        backgroundColor: "#F1F5F9",
         alignItems: "center",
         justifyContent: "center",
         marginBottom: 6,
     },
     stepCircleActive: {
-        backgroundColor: "#3B82F6",
+        backgroundColor: "#1E40AF",
     },
     stepNumber: {
         fontSize: 16,
         fontWeight: "700",
-        color: "#6B7280",
+        color: "#64748B",
     },
     stepLabel: {
         fontSize: 12,
         fontWeight: "500",
-        color: "#6B7280",
+        color: "#64748B",
     },
     stepLine: {
         flex: 1,
         height: 2,
-        backgroundColor: "#E5E7EB",
+        backgroundColor: "#E2E8F0",
         marginHorizontal: 8,
         marginBottom: 22,
     },
@@ -790,31 +879,35 @@ const styles = StyleSheet.create({
     },
     instructionCard: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 24,
         alignItems: "center",
         marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
     },
     instructionTitle: {
         fontSize: 18,
         fontWeight: "700",
-        color: "#111827",
+        color: "#0F172A",
         marginTop: 12,
         marginBottom: 8,
     },
     instructionText: {
         fontSize: 14,
-        color: "#6B7280",
+        color: "#64748B",
         textAlign: "center",
         lineHeight: 20,
     },
     gpsCard: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 24,
         minHeight: 200,
         justifyContent: "center",
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
     },
     gpsAcquiring: {
         alignItems: "center",
@@ -822,12 +915,12 @@ const styles = StyleSheet.create({
     gpsAcquiringText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#3B82F6",
+        color: "#1E40AF",
         marginTop: 16,
     },
     gpsHint: {
         fontSize: 13,
-        color: "#6B7280",
+        color: "#64748B",
         marginTop: 8,
     },
     gpsSuccess: {
@@ -843,8 +936,8 @@ const styles = StyleSheet.create({
     },
     gpsDetails: {
         width: "100%",
-        backgroundColor: "#F9FAFB",
-        borderRadius: 8,
+        backgroundColor: "#F8FAFC",
+        borderRadius: 12,
         padding: 12,
         marginBottom: 12,
     },
@@ -855,12 +948,12 @@ const styles = StyleSheet.create({
     },
     gpsDetailLabel: {
         fontSize: 13,
-        color: "#6B7280",
+        color: "#64748B",
         fontWeight: "500",
     },
     gpsDetailValue: {
         fontSize: 13,
-        color: "#111827",
+        color: "#0F172A",
         fontWeight: "600",
         fontFamily: "monospace",
     },
@@ -871,7 +964,7 @@ const styles = StyleSheet.create({
     },
     geocodingText: {
         fontSize: 12,
-        color: "#6B7280",
+        color: "#64748B",
     },
     addressPreview: {
         flexDirection: "row",
@@ -879,13 +972,15 @@ const styles = StyleSheet.create({
         gap: 6,
         backgroundColor: "#EFF6FF",
         padding: 10,
-        borderRadius: 6,
+        borderRadius: 8,
         width: "100%",
+        borderWidth: 1,
+        borderColor: "#DBEAFE",
     },
     addressText: {
         flex: 1,
         fontSize: 12,
-        color: "#3B82F6",
+        color: "#1E40AF",
     },
     refreshButton: {
         flexDirection: "row",
@@ -895,15 +990,15 @@ const styles = StyleSheet.create({
         backgroundColor: "#EFF6FF",
         paddingVertical: 10,
         paddingHorizontal: 16,
-        borderRadius: 8,
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#3B82F6",
+        borderColor: "#1E40AF",
         marginTop: 12,
     },
     refreshButtonText: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#3B82F6",
+        color: "#1E40AF",
     },
     gpsError: {
         alignItems: "center",
@@ -916,10 +1011,10 @@ const styles = StyleSheet.create({
     },
     retryButton: {
         marginTop: 16,
-        backgroundColor: "#3B82F6",
+        backgroundColor: "#1E40AF",
         paddingHorizontal: 24,
         paddingVertical: 10,
-        borderRadius: 8,
+        borderRadius: 12,
     },
     retryButtonText: {
         color: "#FFFFFF",
@@ -942,14 +1037,16 @@ const styles = StyleSheet.create({
     },
     photoPreview: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
         alignItems: "center",
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
     },
     photoImage: {
         width: "100%",
         height: 300,
-        borderRadius: 8,
+        borderRadius: 12,
         backgroundColor: "#F3F4F6",
     },
     photoOverlay: {
@@ -959,7 +1056,7 @@ const styles = StyleSheet.create({
         right: 16,
         backgroundColor: "rgba(0, 0, 0, 0.7)",
         padding: 8,
-        borderRadius: 6,
+        borderRadius: 8,
     },
     photoCoords: {
         fontSize: 11,
@@ -975,10 +1072,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        backgroundColor: "#6B7280",
+        backgroundColor: "#64748B",
         paddingHorizontal: 20,
         paddingVertical: 10,
-        borderRadius: 8,
+        borderRadius: 12,
         marginTop: 12,
     },
     retakeButtonText: {
@@ -987,8 +1084,8 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     captureButton: {
-        backgroundColor: "#3B82F6",
-        borderRadius: 12,
+        backgroundColor: "#1E40AF",
+        borderRadius: 16,
         paddingVertical: 48,
         alignItems: "center",
         justifyContent: "center",
@@ -1000,19 +1097,24 @@ const styles = StyleSheet.create({
         color: "#FFFFFF",
     },
     section: {
+        marginBottom: 24,
         backgroundColor: "#FFFFFF",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
-        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#111827",
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1E40AF",
         marginBottom: 16,
+        paddingHorizontal: 4,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     field: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     halfField: {
         flex: 1,
@@ -1023,35 +1125,59 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 13,
-        fontWeight: "600",
-        color: "#374151",
-        marginBottom: 6,
+        fontWeight: "700",
+        color: "#0F172A",
+        marginBottom: 8,
     },
     required: {
         color: "#EF4444",
     },
     input: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8FAFC",
+    },
+    inputOutline: {
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        borderWidth: 1,
     },
     textArea: {
         minHeight: 80,
         textAlignVertical: "top",
     },
     dropdown: {
+        backgroundColor: "#F8FAFC",
         borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: "#FFFFFF",
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        minHeight: 50,
     },
     dropdownPlaceholder: {
         fontSize: 14,
-        color: "#9CA3AF",
+        color: "#94A3B8",
+        fontWeight: "500",
     },
     dropdownSelected: {
         fontSize: 14,
-        color: "#111827",
+        color: "#0F172A",
+        fontWeight: "600",
+    },
+    dropdownContainer: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        overflow: "hidden",
+    },
+    dropdownItem: {
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        color: "#0F172A",
+        fontWeight: "500",
     },
     gpsInfoBox: {
         flexDirection: "row",
@@ -1059,68 +1185,57 @@ const styles = StyleSheet.create({
         gap: 8,
         backgroundColor: "#EFF6FF",
         padding: 12,
-        borderRadius: 6,
+        borderRadius: 8,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#DBEAFE",
     },
     gpsInfoText: {
         fontSize: 12,
         fontFamily: "monospace",
-        color: "#3B82F6",
-        fontWeight: "500",
+        color: "#1E40AF",
+        fontWeight: "600",
     },
     dateButton: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
         borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 4,
-        paddingHorizontal: 12,
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        paddingHorizontal: 16,
         paddingVertical: 14,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8FAFC",
     },
     dateButtonText: {
         fontSize: 14,
-        color: "#111827",
+        color: "#0F172A",
+        fontWeight: "500",
     },
     footer: {
         padding: 16,
         backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
-        borderTopColor: "#E5E7EB",
+        borderTopColor: "#E2E8F0",
     },
     nextButton: {
-        backgroundColor: "#3B82F6",
-        borderRadius: 8,
-        paddingVertical: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
+        borderRadius: 14,
     },
     nextButtonDisabled: {
-        backgroundColor: "#9CA3AF",
+        backgroundColor: "#94A3B8",
     },
     nextButtonText: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#FFFFFF",
+        fontWeight: "700",
     },
     saveButton: {
-        backgroundColor: "#22c55e",
-        borderRadius: 8,
-        paddingVertical: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
+        borderRadius: 14,
     },
     saveButtonDisabled: {
-        backgroundColor: "#9CA3AF",
+        backgroundColor: "#94A3B8",
     },
     saveButtonText: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#FFFFFF",
+        fontWeight: "700",
     },
 });

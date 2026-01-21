@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, func
 from uuid import UUID
 import traceback
 from app.crud.base_crud import CRUDBase
@@ -106,11 +106,14 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         # Apply filters if provided
         if filters:
             if filters.get("plate_number"):
-                query = query.filter(Vehicle.plate_number.ilike(f"%{filters['plate_number']}%"))
+                term = filters['plate_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("chassis_number"):
-                query = query.filter(Vehicle.chassis_number.ilike(f"%{filters['chassis_number']}%"))
+                term = filters['chassis_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("registration_number"):
-                query = query.filter(Vehicle.registration_number.ilike(f"%{filters['registration_number']}%"))
+                term = filters['registration_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("driver_name"):
                 query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
             if filters.get("office_name"):
@@ -152,11 +155,14 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         # Apply filters if provided
         if filters:
             if filters.get("plate_number"):
-                query = query.filter(Vehicle.plate_number.ilike(f"%{filters['plate_number']}%"))
+                term = filters['plate_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("chassis_number"):
-                query = query.filter(Vehicle.chassis_number.ilike(f"%{filters['chassis_number']}%"))
+                term = filters['chassis_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("registration_number"):
-                query = query.filter(Vehicle.registration_number.ilike(f"%{filters['registration_number']}%"))
+                term = filters['registration_number'].replace('-', '')
+                query = query.filter(func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{term}%"))
             if filters.get("driver_name"):
                 query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
             if filters.get("office_name"):
@@ -234,11 +240,15 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     def search(self, db: Session, *, search_term: str, skip: int = 0, limit: int = 100):
         """Search vehicles by plate number, chassis number, registration number, driver name, or office"""
         from sqlalchemy import func
+        
+        # Clean search term to remove dashes for identification fields
+        clean_term = search_term.replace('-', '')
+        
         query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id).filter(
             or_(
-                func.coalesce(Vehicle.plate_number, '').ilike(f"%{search_term}%"),
-                func.coalesce(Vehicle.chassis_number, '').ilike(f"%{search_term}%"),
-                func.coalesce(Vehicle.registration_number, '').ilike(f"%{search_term}%"),
+                func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{clean_term}%"),
+                func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{clean_term}%"),
+                func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{clean_term}%"),
                 Vehicle.driver_name.ilike(f"%{search_term}%"),
                 Office.name.ilike(f"%{search_term}%")
             )
@@ -256,7 +266,13 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     
     def get_by_plate_number(self, db: Session, *, plate_number: str) -> Optional[Vehicle]:
         """Get vehicle by plate number"""
-        vehicle = db.query(Vehicle).filter(Vehicle.plate_number == plate_number).first()
+        from sqlalchemy import func
+        clean = plate_number.replace('-', '')
+        
+        vehicle = db.query(Vehicle).filter(
+            func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(clean)
+        ).first()
+        
         if not vehicle:
             return None
 

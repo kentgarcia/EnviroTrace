@@ -19,9 +19,13 @@ import GreeningProjectsScreen from "../screens/roles/tree-management/GreeningPro
 import FeeRecordsScreen from "../screens/roles/tree-management/FeeRecordsScreen";
 import MapViewScreen from "../screens/roles/tree-management/MapViewScreen";
 import CameraScreen from "../screens/roles/tree-management/CameraScreen";
+import SpeciesManagementScreen from "../screens/roles/tree-management/SpeciesManagementScreen";
+import SpeciesFormScreen from "../screens/roles/tree-management/SpeciesFormScreen";
 
 // Import shared screens (profile, etc.)
 import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
+import AboutScreen from "../screens/roles/gov-emission/profile/AboutScreen";
+import HelpScreen from "../screens/roles/gov-emission/profile/HelpScreen";
 import CustomBottomTabBar from "../components/layout/BottomTabBar";
 
 export type TreeManagementStackParamList = {
@@ -34,6 +38,8 @@ export type TreeManagementStackParamList = {
     TreeFieldCapture: undefined;
     MapView: undefined;
     Camera: undefined;
+    SpeciesManagement: undefined;
+    SpeciesForm: { speciesId?: string };
     TreeRequests: undefined;
     GreeningProjects: undefined;
     FeeRecords: undefined;
@@ -83,6 +89,16 @@ function StatisticsStack() {
     );
 }
 
+function ProfileStack() {
+    return (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+            <Stack.Screen name="About" component={AboutScreen} />
+            <Stack.Screen name="Help" component={HelpScreen} />
+        </Stack.Navigator>
+    );
+}
+
 function MainTabs() {
     return (
         <Tab.Navigator
@@ -101,8 +117,8 @@ function MainTabs() {
                         case "MapView":
                             iconName = "MapPin";
                             break;
-                        case "Camera":
-                            iconName = "Camera";
+                        case "SpeciesManagement":
+                            iconName = "Sprout"; // Or Leaf, Flower
                             break;
                         case "TreeRequests":
                             iconName = "FileText";
@@ -162,11 +178,11 @@ function MainTabs() {
                 }}
             />
             <Tab.Screen
-                name="Camera"
-                component={CameraScreen}
+                name="SpeciesManagement"
+                component={SpeciesManagementScreen}
                 options={{
-                    title: "Camera",
-                    tabBarLabel: "Camera",
+                    title: "Species",
+                    tabBarLabel: "Species",
                     headerShown: false,
                 }}
             />
@@ -200,8 +216,16 @@ export default function TreeManagementNavigator() {
                 }}
             />
             <RootStack.Screen
+                name="SpeciesForm"
+                component={SpeciesFormScreen}
+                options={{
+                    presentation: "modal",
+                    headerShown: false,
+                }}
+            />
+            <RootStack.Screen
                 name="Profile"
-                component={ProfileScreen}
+                component={ProfileStack}
                 options={{
                     presentation: "modal",
                     headerShown: false,

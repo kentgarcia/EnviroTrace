@@ -69,25 +69,41 @@ export const useGPSLocation = (): UseGPSLocationResult => {
                 setHasPermission(true);
             }
 
+            let hasLocation = false;
+
             // Try to get last known location for faster response
             const lastKnown = await Location.getLastKnownPositionAsync();
             if (lastKnown) {
                 setLocation(lastKnown);
                 setAccuracy(lastKnown.coords.accuracy || null);
+                hasLocation = true;
             }
 
             // Get current high-accuracy location
-            const currentLocation = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-                timeInterval: 5000,
-                distanceInterval: 10,
-            });
+            try {
+                const currentLocation = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced, // Try balanced first for speed/reliability
+                });
 
-            setLocation(currentLocation);
-            setAccuracy(currentLocation.coords.accuracy || null);
-            setIsAcquiring(false);
+                setLocation(currentLocation);
+                setAccuracy(currentLocation.coords.accuracy || null);
+                hasLocation = true;
+            } catch (posError) {
+                console.warn("Initial position acquisition failed, falling back to watcher:", posError);
+                // Don't fail completely, let the watcher try
+            }
+
+            // Only stop acquiring/loading state if we actually have a location
+            // Otherwise keep spinning until the watcher gives us something
+            if (hasLocation) {
+                 setIsAcquiring(false);
+            }
 
             // Start continuous updates
+            if (watchSubscription.current) {
+                watchSubscription.current.remove();
+            }
+
             watchSubscription.current = await Location.watchPositionAsync(
                 {
                     accuracy: Location.Accuracy.High,
@@ -97,6 +113,7 @@ export const useGPSLocation = (): UseGPSLocationResult => {
                 (newLocation) => {
                     setLocation(newLocation);
                     setAccuracy(newLocation.coords.accuracy || null);
+                    setIsAcquiring(false); // Stop loading once we get a fix
                 }
             );
         } catch (err) {

@@ -8,6 +8,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Modal,
 } from "react-native";
 import {
   Text,
@@ -17,6 +18,7 @@ import {
   Portal,
   Divider,
   useTheme,
+  ActivityIndicator,
 } from "react-native-paper";
 import { Dropdown } from "react-native-element-dropdown";
 import Icon from "../../../../components/icons/Icon";
@@ -24,6 +26,8 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import ScreenLayout from "../../../../components/layout/ScreenLayout";
 import FloatingActionButton from "../../../../components/FloatingActionButton";
 import { cardStyles } from "../../../../styles/cardStyles";
+import PlateCaptureCameraComponent from "../../../../components/camera/PlateCaptureCameraComponent";
+import { PlateRecognitionService } from "../../../../core/api/plate-recognition-service";
 
 import {
   useVehicles,
@@ -68,6 +72,37 @@ export default function VehiclesScreen() {
   const [filterVehicleType, setFilterVehicleType] = useState<string>("");
   const [filterEngineType, setFilterEngineType] = useState<string>("");
   const [filterOffice, setFilterOffice] = useState<string>("");
+
+  // Camera states
+  const [showCamera, setShowCamera] = useState(false);
+  const [isProcessingPlate, setIsProcessingPlate] = useState(false);
+
+  const handlePlateCapture = async (imageData: string, mimeType: string) => {
+    setIsProcessingPlate(true);
+    try {
+      const response = await PlateRecognitionService.recognizePlate({
+        image_data: imageData,
+        mime_type: mimeType
+      });
+
+      if (response.plate_number) {
+        // Format: All Caps and No Spaces as requested
+        const formattedPlate = response.plate_number.toUpperCase().replace(/\s/g, '');
+        
+        setSearchQuery(formattedPlate);
+        setShowCamera(false);
+        
+        Alert.alert("Success", `Plate recognized: ${formattedPlate}`);
+      } else {
+         Alert.alert("No identification detected", "Could not detect a license plate in the image.");
+      }
+    } catch (error: any) {
+       console.error("Plate recognition error:", error);
+       Alert.alert("Error", "Failed to process image. Please try again.");
+    } finally {
+      setIsProcessingPlate(false);
+    }
+  };
 
   // Build filters object for API
   const filters: VehicleFilters = useMemo(() => {
@@ -206,7 +241,9 @@ export default function VehiclesScreen() {
   );
 
   const handleAddVehicle = () => {
-    (navigation as any).navigate("AddVehicle");
+    (navigation as any).navigate("AddVehicle", {
+      plateNumber: searchQuery || undefined
+    });
   };
 
   const renderVehicleCard = useCallback(
@@ -224,19 +261,17 @@ export default function VehiclesScreen() {
       <Text style={styles.emptyTitle}>No vehicles found</Text>
       <Text style={styles.emptyText}>
         {searchQuery
-          ? "Try adjusting your search or filters"
+          ? `No vehicle found with plate "${searchQuery}".`
           : "Add your first vehicle to start tracking emissions"}
       </Text>
-      {!searchQuery && (
-        <Button
-          mode="contained"
-          onPress={handleAddVehicle}
-          style={styles.emptyButton}
-          buttonColor="#1E40AF"
-        >
-          Add Vehicle
-        </Button>
-      )}
+      <Button
+        mode="contained"
+        onPress={handleAddVehicle}
+        style={styles.emptyButton}
+        buttonColor="#1E40AF"
+      >
+        {searchQuery ? "Register this Vehicle" : "Add Vehicle"}
+      </Button>
     </View>
   );
 
@@ -270,8 +305,16 @@ export default function VehiclesScreen() {
               </TouchableOpacity>
             )}
           </View>
+          
           <TouchableOpacity
-            style={styles.filterButton}
+            style={styles.actionButton}
+            onPress={() => setShowCamera(true)}
+          >
+            <Icon name="Camera" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => setFilterModalVisible(true)}
           >
             <Icon name="Filter" size={20} color="#FFFFFF" />
@@ -367,6 +410,19 @@ export default function VehiclesScreen() {
         />
 
         <FloatingActionButton onPress={handleAddVehicle} />
+
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowCamera(false)}
+      >
+        <PlateCaptureCameraComponent
+          onCapture={handlePlateCapture}
+          onClose={() => setShowCamera(false)}
+          isProcessing={isProcessingPlate}
+        />
+      </Modal>
 
       <FilterDialog
         visible={filterModalVisible}
@@ -606,7 +662,7 @@ const styles = StyleSheet.create({
     padding: 0,
     fontWeight: "600",
   },
-  filterButton: {
+  actionButton: {
     width: 44,
     height: 44,
     borderRadius: 12,

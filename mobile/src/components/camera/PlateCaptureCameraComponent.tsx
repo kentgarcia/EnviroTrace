@@ -29,6 +29,7 @@ export default function PlateCaptureCameraComponent({
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const cameraRef = useRef<CameraView>(null);
+    const guideRef = useRef<View>(null);
     const [cameraType, setCameraType] = useState<CameraType>("back");
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
@@ -46,25 +47,78 @@ export default function PlateCaptureCameraComponent({
         try {
             setIsCapturing(true);
 
-            const photo = await cameraRef.current.takePictureAsync({
-                quality: 0.7, // Reduced quality for faster processing
-                base64: true,
-                skipProcessing: false,
+            // 1. Get Guide Layout relative to Screen/CameraView
+            const guideMeasurements = await new Promise<{ pageX: number, pageY: number, width: number, height: number } | null>((resolve) => {
+                if (guideRef.current) {
+                    guideRef.current.measure((x, y, width, height, pageX, pageY) => {
+                        resolve({ pageX, pageY, width, height });
+                    });
+                } else {
+                    resolve(null);
+                }
             });
 
-            if (!photo?.base64) {
+            const photo = await cameraRef.current.takePictureAsync({
+                quality: 1, // Higher quality for OCR
+                base64: true,
+                skipProcessing: true,
+            });
+
+            if (!photo?.uri) {
                 Alert.alert("Error", "Failed to capture image");
                 return;
             }
 
-            // Process image with optimized settings for faster license plate recognition
+            // 2. Calculate Crop Coordinates
+            let cropRegion = { originX: 0, originY: 0, width: photo.width, height: photo.height };
+
+            if (guideMeasurements) {
+                // Calculate scale factors (Assuming Aspect Fill behavior of CameraView)
+                const previewRatio = screenWidth / screenHeight;
+                const photoRatio = photo.width / photo.height;
+                
+                let scale = 1;
+                let offsetX = 0;
+                let offsetY = 0;
+
+                if (photoRatio > previewRatio) {
+                    scale = photo.height / screenHeight;
+                    offsetX = (photo.width - (screenWidth * scale)) / 2;
+                } else {
+                    scale = photo.width / screenWidth;
+                    offsetY = (photo.height - (screenHeight * scale)) / 2;
+                }
+
+                // Map Guide Rect to Photo Rect
+                const cropX = (guideMeasurements.pageX * scale) + offsetX;
+                const cropY = (guideMeasurements.pageY * scale) + offsetY;
+                const cropW = guideMeasurements.width * scale;
+                const cropH = guideMeasurements.height * scale;
+
+                cropRegion = {
+                    originX: Math.max(0, cropX),
+                    originY: Math.max(0, cropY),
+                    width: Math.min(photo.width - Math.max(0, cropX), cropW),
+                    height: Math.min(photo.height - Math.max(0, cropY), cropH)
+                };
+            }
+
+            // 3. Process image: Crop -> Resize -> Compress
+            const actions: ImageManipulator.Action[] = [];
+            
+            // Only crop if we have valid dimensions
+            if (guideMeasurements && cropRegion.width > 0 && cropRegion.height > 0) {
+                 actions.push({ crop: cropRegion });
+            }
+
+            // Resize after crop (optional, to reduce upload size)
+            actions.push({ resize: { width: 800 } });
+
             const manipulatedImage = await ImageManipulator.manipulateAsync(
                 photo.uri,
-                [
-                    { resize: { width: 800 } }, // Reduced size for faster processing while maintaining readability
-                ],
+                actions,
                 {
-                    compress: 0.7, // Balanced compression for speed vs quality
+                    compress: 0.8,
                     format: ImageManipulator.SaveFormat.JPEG,
                     base64: true,
                 }
@@ -139,7 +193,10 @@ export default function PlateCaptureCameraComponent({
                 {/* Overlay with guide */}
                 <View style={styles.overlay}>
                     <View style={styles.guideContainer}>
-                        <View style={[styles.plateGuide, { borderColor: colors.primary }]}>
+                        <View 
+                            ref={guideRef}
+                            style={[styles.plateGuide, { borderColor: colors.primary }]}
+                        >
                             <Text style={styles.guideText}>
                                 Center the license plate in this frame
                             </Text>

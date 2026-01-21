@@ -31,6 +31,15 @@ def get_all_species(
     return crud.get_all_species(db, search, include_inactive)
 
 
+@router.get("/species/{species_id}", response_model=TreeSpeciesResponse)
+def get_species_by_id(species_id: UUID, db: Session = Depends(get_db)):
+    """Get a specific tree species by ID"""
+    species = crud.get_species_by_id(db, species_id)
+    if not species:
+        raise HTTPException(status_code=404, detail="Species not found")
+    return species
+
+
 @router.post("/species", response_model=TreeSpeciesResponse, status_code=201)
 def create_species(species_data: TreeSpeciesCreate, db: Session = Depends(get_db)):
     """Add a new tree species to the database"""

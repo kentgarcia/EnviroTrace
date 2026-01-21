@@ -8,7 +8,7 @@ import {
     KeyboardAvoidingView,
     Platform,
 } from "react-native";
-import { Text, TextInput, ActivityIndicator } from "react-native-paper";
+import { Text, TextInput, ActivityIndicator, Button, HelperText, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -134,7 +134,7 @@ export default function TreeFormScreen() {
     // Fetch species list
     const { data: speciesData, isLoading: loadingSpecies } = useQuery({
         queryKey: ["species"],
-        queryFn: treeInventoryApi.getSpecies,
+        queryFn: () => treeInventoryApi.getSpecies(),
     });
 
     // Populate form when editing
@@ -187,6 +187,20 @@ export default function TreeFormScreen() {
         },
     });
 
+    const renderChevronIcon = useCallback(
+        () => <Icon name="ChevronDown" size={18} color="#6B7280" />,
+        []
+    );
+
+    const renderDropdownItem = useCallback(
+        (item: { label: string; value: string }) => (
+            <View style={styles.dropdownItem}>
+                <Text style={styles.dropdownItemText}>{item.label}</Text>
+            </View>
+        ),
+        []
+    );
+
     const handleMapMessage = useCallback((event: any) => {
         try {
             const message = JSON.parse(event.nativeEvent.data);
@@ -206,6 +220,14 @@ export default function TreeFormScreen() {
             return;
         }
 
+        let formattedDate = undefined;
+        if (plantedDate) {
+            const year = plantedDate.getFullYear();
+            const month = String(plantedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(plantedDate.getDate()).padStart(2, '0');
+            formattedDate = `${year}-${month}-${day}`;
+        }
+
         const data: TreeInventoryCreate | TreeInventoryUpdate = {
             common_name: commonName.trim(),
             species: species.trim() || undefined,
@@ -217,7 +239,7 @@ export default function TreeFormScreen() {
             barangay: barangay.trim() || undefined,
             height_meters: heightMeters ? parseFloat(heightMeters) : undefined,
             diameter_cm: diameterCm ? parseFloat(diameterCm) : undefined,
-            planted_date: plantedDate?.toISOString(),
+            planted_date: formattedDate,
             managed_by: managedBy.trim() || undefined,
             contact_person: contactPerson.trim() || undefined,
             contact_number: contactNumber.trim() || undefined,
@@ -257,7 +279,7 @@ export default function TreeFormScreen() {
     if (loadingTree) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#3B82F6" />
+                <ActivityIndicator size="large" color="#1E40AF" />
                 <Text style={styles.loadingText}>Loading tree data...</Text>
             </SafeAreaView>
         );
@@ -267,282 +289,324 @@ export default function TreeFormScreen() {
         <SafeAreaView style={styles.container} edges={["top"]}>
             <StandardHeader
                 title={isEditMode ? "Edit Tree" : "Add New Tree"}
-                subtitle={isEditMode ? treeData?.data.tree_code : "Create tree record"}
-                titleSize={22}
+                subtitle={isEditMode ? treeData?.data.tree_code : undefined}
                 showBack
                 onBack={() => navigation.goBack()}
-                rightActionIcon="Save"
-                onRightActionPress={handleSave}
+                backgroundColor="#FFFFFF"
+                titleSize={20}
+                iconSize={20}
             />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-                style={styles.keyboardAvoid}
-            >
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    keyboardShouldPersistTaps="handled"
+            <SafeAreaView style={styles.container} edges={["bottom"]}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                    style={styles.keyboardAvoid}
                 >
-                    {/* Basic Information */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Basic Information</Text>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>
-                                Common Name <Text style={styles.required}>*</Text>
-                            </Text>
-                            <TextInput
-                                mode="outlined"
-                                value={commonName}
-                                onChangeText={setCommonName}
-                                placeholder="e.g., Mango, Narra, Mahogany"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Species (Scientific Name)</Text>
-                            <Dropdown
-                                data={speciesOptions}
-                                labelField="label"
-                                valueField="value"
-                                placeholder="Select or search species"
-                                searchPlaceholder="Search species..."
-                                value={species}
-                                onChange={(item) => setSpecies(item.value)}
-                                search
-                                style={styles.dropdown}
-                                placeholderStyle={styles.dropdownPlaceholder}
-                                selectedTextStyle={styles.dropdownSelected}
-                                disable={loadingSpecies}
-                            />
-                        </View>
-
-                        <View style={styles.row}>
-                            <View style={[styles.field, styles.halfField]}>
-                                <Text style={styles.label}>Status</Text>
-                                <Dropdown
-                                    data={statusOptions}
-                                    labelField="label"
-                                    valueField="value"
-                                    value={status}
-                                    onChange={(item) => setStatus(item.value)}
-                                    style={styles.dropdown}
-                                    placeholderStyle={styles.dropdownPlaceholder}
-                                    selectedTextStyle={styles.dropdownSelected}
-                                />
-                            </View>
-
-                            <View style={[styles.field, styles.halfField]}>
-                                <Text style={styles.label}>Health</Text>
-                                <Dropdown
-                                    data={healthOptions}
-                                    labelField="label"
-                                    valueField="value"
-                                    value={health}
-                                    onChange={(item) => setHealth(item.value)}
-                                    style={styles.dropdown}
-                                    placeholderStyle={styles.dropdownPlaceholder}
-                                    selectedTextStyle={styles.dropdownSelected}
-                                />
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Location */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Location</Text>
-
-                        <View style={styles.mapContainer}>
-                            <WebView
-                                source={{
-                                    html: generateMapPickerHTML(mapCenter.lat, mapCenter.lng, hasMarker),
-                                }}
-                                style={styles.map}
-                                onMessage={handleMapMessage}
-                                javaScriptEnabled
-                            />
-                        </View>
-
-                        {hasMarker && (
-                            <View style={styles.coordinatesContainer}>
-                                <Icon name="MapPin" size={16} color="#3B82F6" />
-                                <Text style={styles.coordinatesText}>
-                                    {latitude?.toFixed(6)}, {longitude?.toFixed(6)}
-                                </Text>
-                            </View>
-                        )}
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Address</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={address}
-                                onChangeText={setAddress}
-                                placeholder="Street address"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Barangay</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={barangay}
-                                onChangeText={setBarangay}
-                                placeholder="Barangay name"
-                                style={styles.input}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Measurements */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Measurements</Text>
-
-                        <View style={styles.row}>
-                            <View style={[styles.field, styles.halfField]}>
-                                <Text style={styles.label}>Height (m)</Text>
-                                <TextInput
-                                    mode="outlined"
-                                    value={heightMeters}
-                                    onChangeText={setHeightMeters}
-                                    placeholder="0.00"
-                                    keyboardType="decimal-pad"
-                                    style={styles.input}
-                                />
-                            </View>
-
-                            <View style={[styles.field, styles.halfField]}>
-                                <Text style={styles.label}>Diameter (cm)</Text>
-                                <TextInput
-                                    mode="outlined"
-                                    value={diameterCm}
-                                    onChangeText={setDiameterCm}
-                                    placeholder="0.00"
-                                    keyboardType="decimal-pad"
-                                    style={styles.input}
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Planted Date</Text>
-                            <TouchableOpacity
-                                style={styles.dateButton}
-                                onPress={() => setShowDatePicker(true)}
-                            >
-                                <Icon name="Calendar" size={20} color="#6B7280" />
-                                <Text style={styles.dateButtonText}>
-                                    {plantedDate
-                                        ? plantedDate.toLocaleDateString()
-                                        : "Select date"}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {showDatePicker && (
-                                <DateTimePicker
-                                    value={plantedDate || new Date()}
-                                    mode="date"
-                                    display="default"
-                                    onChange={(event, selectedDate) => {
-                                        setShowDatePicker(false);
-                                        if (selectedDate) {
-                                            setPlantedDate(selectedDate);
-                                        }
-                                    }}
-                                />
-                            )}
-                        </View>
-                    </View>
-
-                    {/* Management */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Management</Text>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Managed By</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={managedBy}
-                                onChangeText={setManagedBy}
-                                placeholder="Organization or department"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Contact Person</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={contactPerson}
-                                onChangeText={setContactPerson}
-                                placeholder="Name of contact person"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <View style={styles.field}>
-                            <Text style={styles.label}>Contact Number</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={contactNumber}
-                                onChangeText={setContactNumber}
-                                placeholder="+63 XXX XXX XXXX"
-                                keyboardType="phone-pad"
-                                style={styles.input}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Photos */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Photos</Text>
-                        <TreeImagePicker
-                            images={photos}
-                            onImagesChange={setPhotos}
-                            maxImages={10}
-                        />
-                    </View>
-
-                    {/* Notes */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Notes</Text>
-                        <TextInput
-                            mode="outlined"
-                            value={notes}
-                            onChangeText={setNotes}
-                            placeholder="Additional information, observations, or remarks"
-                            multiline
-                            numberOfLines={4}
-                            style={[styles.input, styles.textArea]}
-                        />
-                    </View>
-
-                    {/* Save Button */}
-                    <TouchableOpacity
-                        style={[
-                            styles.saveButton,
-                            (createMutation.isPending || updateMutation.isPending) &&
-                                styles.saveButtonDisabled,
-                        ]}
-                        onPress={handleSave}
-                        disabled={createMutation.isPending || updateMutation.isPending}
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        {createMutation.isPending || updateMutation.isPending ? (
-                            <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                            <>
-                                <Icon name="Save" size={20} color="#FFFFFF" />
-                                <Text style={styles.saveButtonText}>
-                                    {isEditMode ? "Update Tree" : "Create Tree"}
+                        {/* Basic Information */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Basic Information</Text>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>
+                                    Common Name <Text style={styles.required}>*</Text>
                                 </Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                                <TextInput
+                                    mode="outlined"
+                                    value={commonName}
+                                    onChangeText={setCommonName}
+                                    placeholder="e.g., Mango, Narra, Mahogany"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="Leaf" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Species (Scientific Name)</Text>
+                                <Dropdown
+                                    data={speciesOptions}
+                                    labelField="label"
+                                    valueField="value"
+                                    placeholder="Select or search species"
+                                    searchPlaceholder="Search species..."
+                                    value={species}
+                                    onChange={(item) => setSpecies(item.value)}
+                                    search
+                                    style={styles.dropdown}
+                                    placeholderStyle={styles.dropdownPlaceholder}
+                                    selectedTextStyle={styles.dropdownSelected}
+                                    containerStyle={styles.dropdownContainer}
+                                    disable={loadingSpecies}
+                                    renderRightIcon={renderChevronIcon}
+                                    renderItem={renderDropdownItem}
+                                    activeColor="#EFF6FF"
+                                />
+                            </View>
+
+                            <View style={styles.row}>
+                                <View style={[styles.field, styles.halfField]}>
+                                    <Text style={styles.label}>Status</Text>
+                                    <Dropdown
+                                        data={statusOptions}
+                                        labelField="label"
+                                        valueField="value"
+                                        value={status}
+                                        onChange={(item) => setStatus(item.value)}
+                                        style={styles.dropdown}
+                                        placeholderStyle={styles.dropdownPlaceholder}
+                                        selectedTextStyle={styles.dropdownSelected}
+                                        containerStyle={styles.dropdownContainer}
+                                        renderRightIcon={renderChevronIcon}
+                                        renderItem={renderDropdownItem}
+                                        activeColor="#EFF6FF"
+                                    />
+                                </View>
+
+                                <View style={[styles.field, styles.halfField]}>
+                                    <Text style={styles.label}>Health</Text>
+                                    <Dropdown
+                                        data={healthOptions}
+                                        labelField="label"
+                                        valueField="value"
+                                        value={health}
+                                        onChange={(item) => setHealth(item.value)}
+                                        style={styles.dropdown}
+                                        placeholderStyle={styles.dropdownPlaceholder}
+                                        selectedTextStyle={styles.dropdownSelected}
+                                        containerStyle={styles.dropdownContainer}
+                                        renderRightIcon={renderChevronIcon}
+                                        renderItem={renderDropdownItem}
+                                        activeColor="#EFF6FF"
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Location */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Location</Text>
+
+                            <View style={styles.mapContainer}>
+                                <WebView
+                                    source={{
+                                        html: generateMapPickerHTML(mapCenter.lat, mapCenter.lng, hasMarker),
+                                    }}
+                                    style={styles.map}
+                                    onMessage={handleMapMessage}
+                                    javaScriptEnabled
+                                />
+                            </View>
+
+                            {hasMarker && (
+                                <View style={styles.coordinatesContainer}>
+                                    <Icon name="MapPin" size={16} color="#1E40AF" />
+                                    <Text style={styles.coordinatesText}>
+                                        {latitude?.toFixed(6)}, {longitude?.toFixed(6)}
+                                    </Text>
+                                </View>
+                            )}
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Address</Text>
+                                <TextInput
+                                    mode="outlined"
+                                    value={address}
+                                    onChangeText={setAddress}
+                                    placeholder="Street address"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="MapPin" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Barangay</Text>
+                                <TextInput
+                                    mode="outlined"
+                                    value={barangay}
+                                    onChangeText={setBarangay}
+                                    placeholder="Barangay name"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="Map" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Measurements */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Measurements</Text>
+
+                            <View style={styles.row}>
+                                <View style={[styles.field, styles.halfField]}>
+                                    <Text style={styles.label}>Height (m)</Text>
+                                    <TextInput
+                                        mode="outlined"
+                                        value={heightMeters}
+                                        onChangeText={setHeightMeters}
+                                        placeholder="0.00"
+                                        keyboardType="decimal-pad"
+                                        style={styles.input}
+                                        outlineStyle={styles.inputOutline}
+                                        textColor="#0F172A"
+                                        placeholderTextColor="#94A3B8"
+                                        left={<TextInput.Icon icon={() => <Icon name="ArrowUpCircle" size={16} color="#64748B" />} />}
+                                    />
+                                </View>
+
+                                <View style={[styles.field, styles.halfField]}>
+                                    <Text style={styles.label}>Diameter (cm)</Text>
+                                    <TextInput
+                                        mode="outlined"
+                                        value={diameterCm}
+                                        onChangeText={setDiameterCm}
+                                        placeholder="0.00"
+                                        keyboardType="decimal-pad"
+                                        style={styles.input}
+                                        outlineStyle={styles.inputOutline}
+                                        textColor="#0F172A"
+                                        placeholderTextColor="#94A3B8"
+                                        left={<TextInput.Icon icon={() => <Icon name="Circle" size={16} color="#64748B" />} />}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Planted Date</Text>
+                                <TouchableOpacity
+                                    style={styles.dateButton}
+                                    onPress={() => setShowDatePicker(true)}
+                                >
+                                    <Icon name="Calendar" size={20} color="#64748B" />
+                                    <Text style={styles.dateButtonText}>
+                                        {plantedDate
+                                            ? plantedDate.toLocaleDateString()
+                                            : "Select date"}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {showDatePicker && (
+                                    <DateTimePicker
+                                        value={plantedDate || new Date()}
+                                        mode="date"
+                                        display="default"
+                                        onChange={(event, selectedDate) => {
+                                            setShowDatePicker(false);
+                                            if (selectedDate) {
+                                                setPlantedDate(selectedDate);
+                                            }
+                                        }}
+                                    />
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Management */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Management</Text>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Managed By</Text>
+                                <TextInput
+                                    mode="outlined"
+                                    value={managedBy}
+                                    onChangeText={setManagedBy}
+                                    placeholder="Organization or department"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="Building" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Contact Person</Text>
+                                <TextInput
+                                    mode="outlined"
+                                    value={contactPerson}
+                                    onChangeText={setContactPerson}
+                                    placeholder="Name of contact person"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="User" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Contact Number</Text>
+                                <TextInput
+                                    mode="outlined"
+                                    value={contactNumber}
+                                    onChangeText={setContactNumber}
+                                    placeholder="+63 XXX XXX XXXX"
+                                    keyboardType="phone-pad"
+                                    style={styles.input}
+                                    outlineStyle={styles.inputOutline}
+                                    textColor="#0F172A"
+                                    placeholderTextColor="#94A3B8"
+                                    left={<TextInput.Icon icon={() => <Icon name="Phone" size={16} color="#64748B" />} />}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Photos */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Photos</Text>
+                            <TreeImagePicker
+                                images={photos}
+                                onImagesChange={setPhotos}
+                                maxImages={10}
+                            />
+                        </View>
+
+                        {/* Notes */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Notes</Text>
+                            <TextInput
+                                mode="outlined"
+                                value={notes}
+                                onChangeText={setNotes}
+                                placeholder="Additional information, observations, or remarks"
+                                multiline
+                                numberOfLines={4}
+                                style={[styles.input, styles.textArea]}
+                                outlineStyle={styles.inputOutline}
+                                textColor="#0F172A"
+                                placeholderTextColor="#94A3B8"
+                                left={<TextInput.Icon icon={() => <Icon name="FileText" size={16} color="#64748B" />} />}
+                            />
+                        </View>
+
+                        {/* Save Button */}
+                        <View style={styles.buttonSection}>
+                            <Button
+                                mode="contained"
+                                onPress={handleSave}
+                                disabled={createMutation.isPending || updateMutation.isPending}
+                                loading={createMutation.isPending || updateMutation.isPending}
+                                style={styles.saveBtn}
+                                buttonColor="#1E40AF"
+                                labelStyle={styles.saveBtnLabel}
+                            >
+                                {isEditMode ? "Update Tree" : "Create Tree"}
+                            </Button>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
         </SafeAreaView>
     );
 }
@@ -550,18 +614,18 @@ export default function TreeFormScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "#F8FAFC",
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "#F8FAFC",
     },
     loadingText: {
         marginTop: 12,
         fontSize: 14,
-        color: "#6B7280",
+        color: "#64748B",
     },
     keyboardAvoid: {
         flex: 1,
@@ -574,19 +638,24 @@ const styles = StyleSheet.create({
         paddingBottom: 32,
     },
     section: {
+        marginBottom: 24,
         backgroundColor: "#FFFFFF",
-        borderRadius: 12,
+        borderRadius: 16,
         padding: 16,
-        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: "#F1F5F9",
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: "700",
-        color: "#111827",
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#1E40AF",
         marginBottom: 16,
+        paddingHorizontal: 4,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
     field: {
-        marginBottom: 16,
+        marginBottom: 12,
     },
     halfField: {
         flex: 1,
@@ -600,42 +669,66 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 13,
-        fontWeight: "600",
-        color: "#374151",
-        marginBottom: 6,
+        fontWeight: "700",
+        color: "#0F172A",
+        marginBottom: 8,
     },
     required: {
         color: "#EF4444",
     },
     input: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8FAFC",
+    },
+    inputOutline: {
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        borderWidth: 1,
     },
     textArea: {
         minHeight: 100,
         textAlignVertical: "top",
     },
     dropdown: {
+        backgroundColor: "#F8FAFC",
         borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 4,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: "#FFFFFF",
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        minHeight: 50,
     },
     dropdownPlaceholder: {
         fontSize: 14,
-        color: "#9CA3AF",
+        color: "#94A3B8",
+        fontWeight: "500",
     },
     dropdownSelected: {
         fontSize: 14,
-        color: "#111827",
+        color: "#0F172A",
+        fontWeight: "600",
+    },
+    dropdownContainer: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        overflow: "hidden",
+    },
+    dropdownItem: {
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+    },
+    dropdownItemText: {
+        fontSize: 14,
+        color: "#0F172A",
+        fontWeight: "500",
     },
     mapContainer: {
         height: 250,
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: "hidden",
         borderWidth: 1,
-        borderColor: "#E5E7EB",
+        borderColor: "#E2E8F0",
         marginBottom: 12,
     },
     map: {
@@ -645,48 +738,45 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
-        padding: 8,
+        padding: 10,
         backgroundColor: "#EFF6FF",
-        borderRadius: 6,
+        borderRadius: 8,
         marginBottom: 12,
+        borderWidth: 1,
+        borderColor: "#DBEAFE",
     },
     coordinatesText: {
         fontSize: 12,
         fontFamily: "monospace",
-        color: "#3B82F6",
-        fontWeight: "500",
+        color: "#1E40AF",
+        fontWeight: "600",
     },
     dateButton: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
         borderWidth: 1,
-        borderColor: "#D1D5DB",
-        borderRadius: 4,
-        paddingHorizontal: 12,
+        borderColor: "#E2E8F0",
+        borderRadius: 12,
+        paddingHorizontal: 16,
         paddingVertical: 14,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "#F8FAFC",
     },
     dateButtonText: {
         fontSize: 14,
-        color: "#111827",
+        color: "#0F172A",
+        fontWeight: "500",
     },
-    saveButton: {
-        backgroundColor: "#3B82F6",
-        borderRadius: 8,
-        paddingVertical: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8,
+    buttonSection: {
         marginTop: 8,
     },
-    saveButtonDisabled: {
-        backgroundColor: "#9CA3AF",
+    saveBtn: {
+        borderRadius: 14,
+        paddingVertical: 6,
     },
-    saveButtonText: {
+    saveBtnLabel: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#FFFFFF",
+        fontWeight: "700",
+        paddingVertical: 4,
     },
 });
