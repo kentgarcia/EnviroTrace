@@ -8,7 +8,7 @@ from app.crud.crud_tree_management import tree_management_request, tree_request,
 from app.schemas.tree_management_schemas import (
     TreeManagementRequest, TreeManagementRequestCreate, TreeManagementRequestUpdate,
     TreeRequestCreate, TreeRequestUpdate, TreeRequestInDB,
-    UpdateReceivingPhase, UpdateInspectionPhase, UpdateRequirementsPhase, UpdateClearancePhase,
+    UpdateReceivingPhase, UpdateInspectionPhase, UpdateRequirementsPhase, UpdateClearancePhase, UpdateDENRPhase,
     ProcessingStandardsCreate, ProcessingStandardsUpdate, ProcessingStandardsInDB,
     DropdownOptionCreate, DropdownOptionUpdate, DropdownOptionInDB
 )
@@ -280,13 +280,17 @@ def read_tree_requests(
     limit: int = 100,
     status: Optional[str] = Query(None, description="Filter by overall status"),
     request_type: Optional[str] = Query(None, description="Filter by request type"),
-    year: Optional[int] = Query(None, description="Filter by year")
+    year: Optional[int] = Query(None, description="Filter by year"),
+    is_archived: bool = Query(False, description="Filter by archived status")
 ):
     """Get all tree requests with analytics"""
     from sqlalchemy import extract
     from app.models.urban_greening_models import TreeRequest
     
     query = db.query(tree_request.model)
+    
+    # Filter by archived status
+    query = query.filter(TreeRequest.is_archived == is_archived)
     
     if year:
         query = query.filter(extract('year', TreeRequest.created_at) == year)
@@ -373,6 +377,14 @@ def update_clearance_phase(request_id: str, phase_data: UpdateClearancePhase, db
         raise HTTPException(status_code=404, detail="Tree request not found")
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
+@router.patch("/v2/requests/{request_id}/denr", response_model=Dict[str, Any])
+def update_denr_phase(request_id: str, phase_data: UpdateDENRPhase, db: Session = Depends(get_db)):
+    """Update DENR phase of a tree request"""
+    updated_obj = tree_request.update_denr_phase(db, request_id=request_id, phase_data=phase_data)
+    if not updated_obj:
+        raise HTTPException(status_code=404, detail="Tree request not found")
+    return tree_request.get_with_analytics(db, str(updated_obj.id))
+
 # Analytics endpoints
 @router.get("/v2/analytics/delays", response_model=List[Dict[str, Any]])
 def get_delayed_requests(
@@ -409,10 +421,32 @@ def update_processing_standards(
     db: Session = Depends(get_db)
 ):
     """Update processing standards for a specific request type"""
+    # Check if exists
+    existing = processing_standards.get_by_request_type(db, request_type=request_type)
+    if not existing:
+        # Create
+        create_data = ProcessingStandardsCreate(
+            request_type=request_type,
+            **standards_in.model_dump(exclude_unset=True)
+        )
+        # Apply default values if fields are missing in update/create payload
+        if create_data.receiving_standard_days is None: create_data.receiving_standard_days = 3
+        if create_data.inspection_standard_days is None: create_data.inspection_standard_days = 7
+        if create_data.requirements_standard_days is None: create_data.requirements_standard_days = 10
+        if create_data.clearance_standard_days is None: create_data.clearance_standard_days = 5
+        
+        return processing_standards.create_sync(db, obj_in=create_data)
+        
     updated_standards = processing_standards.update_standards(db, request_type=request_type, obj_in=standards_in)
-    if not updated_standards:
-        raise HTTPException(status_code=404, detail="Processing standards not found for this request type")
     return updated_standards
+
+@router.delete("/v2/processing-standards/{request_type}")
+def delete_processing_standards(request_type: str, db: Session = Depends(get_db)):
+    """Delete processing standards for a specific request type"""
+    success = processing_standards.remove_by_request_type(db, request_type=request_type)
+    if not success:
+        raise HTTPException(status_code=404, detail="Processing standards not found")
+    return {"message": "Processing standards deleted successfully"}
 
 
 # ===== DROPDOWN OPTIONS ENDPOINTS =====

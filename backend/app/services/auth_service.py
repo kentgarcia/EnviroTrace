@@ -69,6 +69,13 @@ class AuthService:
             ip_address=ip_address,
             user_agent=user_agent
         )
+
+        # Update last_sign_in_at
+        from datetime import datetime
+        user.last_sign_in_at = datetime.utcnow()
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
         
         return Token(access_token=session.session_token, token_type="bearer")
 

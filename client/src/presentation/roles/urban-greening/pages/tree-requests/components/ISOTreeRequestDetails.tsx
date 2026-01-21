@@ -42,16 +42,18 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-  Copy
+  Copy,
+  Building
 } from "lucide-react";
 import { cn } from "@/core/utils/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { calculateTreeRequestDays } from "@/core/utils/tree-request-utils";
+import { CreatableCombobox, ComboboxItem } from "@/presentation/components/shared/ui/creatable-combobox";
 
 // ==================== Constants ====================
 
-const REQUEST_TYPES: { value: ISORequestType; label: string }[] = [
+const REQUEST_TYPES: ComboboxItem[] = [
   { value: "cutting", label: "Tree Cutting" },
   { value: "pruning", label: "Tree Pruning" },
   { value: "ball_out", label: "Tree Ball-out" },
@@ -113,7 +115,7 @@ interface FieldRendererProps {
   fieldKey: string;
   value: any;
   fieldState?: 'idle' | 'saving' | 'saved' | 'error';
-  type?: 'text' | 'date' | 'select' | 'textarea';
+  type?: 'text' | 'date' | 'select' | 'textarea' | 'creatable-select';
   options?: any[];
   onChange: (field: any, value: any) => void;
 }
@@ -144,7 +146,15 @@ const FieldRenderer = React.memo(({
           </span>
         )}
       </div>
-      {type === 'select' && options ? (
+      {type === 'creatable-select' && options ? (
+        <CreatableCombobox
+          items={options as ComboboxItem[]}
+          value={value?.toString() || ""}
+          onChange={(val) => onChange(fieldKey, val)}
+          placeholder={`Select or enter ${label.toLowerCase()}`}
+          className="h-8"
+        />
+      ) : type === 'select' && options ? (
         <Select
           value={value?.toString() || ""}
           onValueChange={(val) => onChange(fieldKey, val)}
@@ -216,6 +226,16 @@ const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo((
     queryFn: () => fetchDropdownOptions("status"),
     staleTime: 1000 * 60 * 30, // 30 mins
   });
+
+  const statusComboboxItems: ComboboxItem[] = useMemo(() => statusOptions.map((opt: any) => ({
+    value: opt.option_value,
+    label: opt.option_value
+  })), [statusOptions]);
+
+  const receivedThroughComboboxItems: ComboboxItem[] = useMemo(() => receivedThroughOptions.map((opt: any) => ({
+    value: opt.option_value,
+    label: opt.option_value
+  })), [receivedThroughOptions]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<TreeRequestCreate>) => updateTreeRequest(request.id, data),
@@ -524,21 +544,12 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                       </span>
                     )}
                   </div>
-                  <Select
+                  <CreatableCombobox
+                    items={REQUEST_TYPES}
                     value={getValue('request_type')?.toString() || ""}
-                    onValueChange={(value) => handleInputChange('request_type', value)}
-                  >
-                    <SelectTrigger className="rounded-lg">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REQUEST_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => handleInputChange('request_type', value)}
+                    placeholder="Select or enter request type"
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">Current Phase</Label>
@@ -588,12 +599,12 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                         <FieldRenderer label="Date Received" fieldKey="receiving_date_received" type="date" value={getValue("receiving_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_date_received"]} />
                         <FieldRenderer label="Month" fieldKey="receiving_month" type="select" options={MONTHS} value={getValue("receiving_month")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_month"]} />
-                        <FieldRenderer label="Received Through" fieldKey="receiving_received_through" type="select" options={receivedThroughOptions} value={getValue("receiving_received_through")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_received_through"]} />
+                        <FieldRenderer label="Received Through" fieldKey="receiving_received_through" type="creatable-select" options={receivedThroughComboboxItems} value={getValue("receiving_received_through")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_received_through"]} />
                         <FieldRenderer label="Date Received by Dept. Head" fieldKey="receiving_date_received_by_dept_head" type="date" value={getValue("receiving_date_received_by_dept_head")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_date_received_by_dept_head"]} />
                         <FieldRenderer label="Name" fieldKey="receiving_name" type="text" value={getValue("receiving_name")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_name"]} />
                         <FieldRenderer label="Address" fieldKey="receiving_address" type="text" value={getValue("receiving_address")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_address"]} />
                         <FieldRenderer label="Contact" fieldKey="receiving_contact" type="text" value={getValue("receiving_contact")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_contact"]} />
-                        <FieldRenderer label="Status" fieldKey="receiving_request_status" type="select" options={statusOptions} value={getValue("receiving_request_status")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_request_status"]} />
+                        <FieldRenderer label="Status" fieldKey="receiving_request_status" type="creatable-select" options={statusComboboxItems} value={getValue("receiving_request_status")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_request_status"]} />
                       </div>
                     </div>
                   </div>
@@ -662,7 +673,7 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                       </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-3">
                         <FieldRenderer label="Remarks" fieldKey="requirements_remarks" type="textarea" value={getValue("requirements_remarks")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_remarks"]} />
-                        <FieldRenderer label="Status" fieldKey="requirements_status" type="select" options={statusOptions} value={getValue("requirements_status")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_status"]} />
+                        <FieldRenderer label="Status" fieldKey="requirements_status" type="creatable-select" options={statusComboboxItems} value={getValue("requirements_status")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_status"]} />
                         <FieldRenderer label="Date of Completion" fieldKey="requirements_date_completion" type="date" value={getValue("requirements_date_completion")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_date_completion"]} />
                       </div>
                       
@@ -704,6 +715,7 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
 
                 {/* Phase 4: Clearance */}
                 <div className="relative">
+                  <div className="absolute left-6 top-12 bottom-0 w-0.5 bg-gray-200" />
                   <div className="flex gap-4">
                     <div className={cn(
                       "relative z-10 flex items-center justify-center w-12 h-12 rounded-full border-2",
@@ -733,7 +745,35 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                         <FieldRenderer label="Control Number" fieldKey="clearance_control_number" type="text" value={getValue("clearance_control_number")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_control_number"]} />
                         <FieldRenderer label="OR Number" fieldKey="clearance_or_number" type="text" value={getValue("clearance_or_number")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_or_number"]} />
                         <FieldRenderer label="Date Received" fieldKey="clearance_date_received" type="date" value={getValue("clearance_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_date_received"]} />
-                        <FieldRenderer label="Status" fieldKey="clearance_status" type="select" options={statusOptions} value={getValue("clearance_status")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_status"]} />
+                        <FieldRenderer label="Status" fieldKey="clearance_status" type="creatable-select" options={statusComboboxItems} value={getValue("clearance_status")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_status"]} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Phase 5: DENR */}
+                <div className="relative">
+                  <div className="flex gap-4">
+                    <div className={cn(
+                      "relative z-10 flex items-center justify-center w-12 h-12 rounded-full border-2",
+                      request.overall_status === "denr" || request.denr_date_received
+                        ? "bg-slate-700 border-slate-700 text-white" 
+                        : request.overall_status === "completed"
+                        ? "bg-green-500 border-green-500 text-white"
+                        : "bg-gray-100 border-gray-300 text-gray-400"
+                    )}>
+                      <Building className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-lg font-semibold">DENR</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <FieldRenderer label="Date Received by Inspectors" fieldKey="denr_date_received_by_inspectors" type="date" value={getValue("denr_date_received_by_inspectors")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_received_by_inspectors"]} />
+                        <FieldRenderer label="Date Submitted to Dept. Head" fieldKey="denr_date_submitted_to_dept_head" type="date" value={getValue("denr_date_submitted_to_dept_head")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_submitted_to_dept_head"]} />
+                         <FieldRenderer label="Date Released to Inspectors" fieldKey="denr_date_released_to_inspectors" type="date" value={getValue("denr_date_released_to_inspectors")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_released_to_inspectors"]} />
+                        <FieldRenderer label="Date Received" fieldKey="denr_date_received" type="date" value={getValue("denr_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_received"]} />
+                        <FieldRenderer label="Status" fieldKey="denr_status" type="creatable-select" options={statusComboboxItems} value={getValue("denr_status")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_status"]} />
                       </div>
                     </div>
                   </div>

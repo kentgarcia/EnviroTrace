@@ -63,12 +63,14 @@ class TreeRequestBase(BaseModel):
     """Base tree request fields"""
     request_type: str  # cutting, pruning, ball_out
     overall_status: str = 'receiving'
+    is_archived: bool = False
 
 class TreeRequestCreate(BaseModel):
     """Create new tree request"""
     request_number: Optional[str] = None  # Auto-generated if not provided
     request_type: str
     overall_status: str = 'receiving'
+    is_archived: bool = False
     created_by: Optional[UUID] = None  # User ID who created the request
     
     # Receiving phase
@@ -103,6 +105,13 @@ class TreeRequestCreate(BaseModel):
     clearance_or_number: Optional[str] = None
     clearance_date_received: Optional[date] = None
     clearance_status: Optional[str] = None
+    
+    # DENR phase (if letter only)
+    denr_date_received_by_inspectors: Optional[date] = None
+    denr_date_submitted_to_dept_head: Optional[date] = None
+    denr_date_released_to_inspectors: Optional[date] = None
+    denr_date_received: Optional[date] = None
+    denr_status: Optional[str] = None
 
 class UpdateReceivingPhase(BaseModel):
     """Update receiving phase only"""
@@ -141,10 +150,19 @@ class UpdateClearancePhase(BaseModel):
     clearance_date_received: Optional[date] = None
     clearance_status: Optional[str] = None
 
+class UpdateDENRPhase(BaseModel):
+    """Update DENR phase only"""
+    denr_date_received_by_inspectors: Optional[date] = None
+    denr_date_submitted_to_dept_head: Optional[date] = None
+    denr_date_released_to_inspectors: Optional[date] = None
+    denr_date_received: Optional[date] = None
+    denr_status: Optional[str] = None
+
 class TreeRequestUpdate(BaseModel):
     """Update any tree request fields"""
     request_type: Optional[str] = None
     overall_status: Optional[str] = None
+    is_archived: Optional[bool] = None
     
     receiving_date_received: Optional[date] = None
     receiving_month: Optional[str] = None
@@ -174,6 +192,12 @@ class TreeRequestUpdate(BaseModel):
     clearance_or_number: Optional[str] = None
     clearance_date_received: Optional[date] = None
     clearance_status: Optional[str] = None
+    
+    denr_date_received_by_inspectors: Optional[date] = None
+    denr_date_submitted_to_dept_head: Optional[date] = None
+    denr_date_released_to_inspectors: Optional[date] = None
+    denr_date_received: Optional[date] = None
+    denr_status: Optional[str] = None
 
 class TreeRequestInDB(TreeRequestBase):
     """Tree request from database"""
@@ -210,6 +234,12 @@ class TreeRequestInDB(TreeRequestBase):
     clearance_or_number: Optional[str] = None
     clearance_date_received: Optional[date] = None
     clearance_status: Optional[str] = None
+    
+    denr_date_received_by_inspectors: Optional[date] = None
+    denr_date_submitted_to_dept_head: Optional[date] = None
+    denr_date_released_to_inspectors: Optional[date] = None
+    denr_date_received: Optional[date] = None
+    denr_status: Optional[str] = None
     
     created_at: datetime
     updated_at: Optional[datetime] = None

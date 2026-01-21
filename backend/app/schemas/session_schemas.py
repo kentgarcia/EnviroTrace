@@ -1,8 +1,9 @@
 # app/schemas/session_schemas.py
 import uuid
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Union, Any
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address
 from app.models.auth_models import DeviceTypeEnum
 
 class SessionBase(BaseModel):
@@ -37,6 +38,15 @@ class SessionPublic(SessionBase):
     
     class Config:
         from_attributes = True
+
+    @field_validator('ip_address', mode='before')
+    @classmethod
+    def serialize_ip(cls, v: Any) -> Optional[str]:
+        if v is None:
+            return None
+        if isinstance(v, (IPv4Address, IPv6Address)):
+            return str(v)
+        return str(v)
 
 
 class SessionWithUser(SessionPublic):

@@ -110,7 +110,7 @@ export const RecentActivity: React.FC = () => {
             id: "1",
             user: "John Admin",
             action: "Created new user",
-            description: "Added Maria Santos with air_quality role",
+            description: "Added Maria Santos with urban_greening role",
             timestamp: "2 min ago",
             type: "user",
             severity: "low",

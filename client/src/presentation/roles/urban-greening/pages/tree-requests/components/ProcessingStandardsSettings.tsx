@@ -22,6 +22,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchAllProcessingStandards,
   updateProcessingStandards,
+  deleteProcessingStandards,
   ProcessingStandards,
   ISORequestType,
   fetchDropdownOptions,
@@ -33,7 +34,7 @@ import {
   DropdownOptionUpdate,
 } from "@/core/api/tree-management-request-api";
 import { toast } from "sonner";
-import { Settings, Save, Clock, Plus, Trash2, GripVertical, List } from "lucide-react";
+import { Settings, Save, Clock, Plus, Trash2, GripVertical, List, Pencil, AlertTriangle, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -94,18 +95,22 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdi
       <TableCell>{option.option_value}</TableCell>
       <TableCell className="text-right space-x-2">
         <Button
-          size="sm"
-          variant="outline"
+          size="icon"
+          variant="ghost"
           onClick={() => onEdit(option)}
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          title="Edit option"
         >
-          Edit
+          <Pencil className="w-4 h-4" />
         </Button>
         <Button
-          size="sm"
-          variant="destructive"
+          size="icon"
+          variant="ghost"
           onClick={() => onDelete(option.id)}
+          className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+          title="Delete option"
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-4 h-4" />
         </Button>
       </TableCell>
     </TableRow>
@@ -116,10 +121,24 @@ const ProcessingStandardsSettings: React.FC = () => {
   const queryClient = useQueryClient();
   const [editingStandards, setEditingStandards] = useState<Record<string, Partial<ProcessingStandards>>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddStandardOpen, setIsAddStandardOpen] = useState(false);
+  const [newStandardName, setNewStandardName] = useState("");
   const [editingOption, setEditingOption] = useState<DropdownOption | null>(null);
   const [selectedField, setSelectedField] = useState<'received_through' | 'status'>('received_through');
-  const [formData, setFormData] = useState({ option_value: '' });
-  
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    type: 'standard' | 'option';
+    id: string;
+    title: string;
+    description: string;
+  }>({
+    isOpen: false,
+    type: 'standard',
+    id: '',
+    title: '',
+    description: '',
+  });
+
   // Drag and drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -154,6 +173,18 @@ const ProcessingStandardsSettings: React.FC = () => {
     },
     onError: (error: any) => {
       toast.error(`Failed to update standards: ${error.message}`);
+    },
+  });
+
+  const deleteStandardMutation = useMutation({
+    mutationFn: (requestType: ISORequestType) => deleteProcessingStandards(requestType),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["processing-standards"] });
+      queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
+      toast.success("Processing standards deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to delete standards: ${error.message}`);
     },
   });
 
@@ -195,8 +226,46 @@ const ProcessingStandardsSettings: React.FC = () => {
       toast.error(`Failed to delete option: ${error.message}`);
     },
   });
+
+  const confirmDelete = () => {
+    if (deleteDialog.type === 'standard') {
+      deleteStandardMutation.mutate(deleteDialog.id as ISORequestType);
+    } else {
+      deleteOptionMutation.mutate(deleteDialog.id);
+    }
+    setDeleteDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleDeleteStandard = (requestType: ISORequestType) => {
+    setDeleteDialog({
+      isOpen: true,
+      type: 'standard',
+      id: requestType,
+      title: "Delete Processing Standard",
+      description: `Are you sure you want to delete processing standards for "${requestType}"? This will remove standard processing day constraints for this request type.`
+    });
+  };
   
   // Handle drag end for reordering
+  const handleAddStandard = () => {
+    if (!newStandardName.trim()) {
+      toast.error("Request type name is required");
+      return;
+    }
+
+    updateMutation.mutate({
+      requestType: newStandardName.trim() as ISORequestType,
+      data: {
+        receiving_standard_days: 3,
+        inspection_standard_days: 7,
+        requirements_standard_days: 10,
+        clearance_standard_days: 5,
+      },
+    });
+    setIsAddStandardOpen(false);
+    setNewStandardName("");
+  };
+
   const handleDragEnd = (event: DragEndEvent, fieldName: 'received_through' | 'status') => {
     const { active, over } = event;
 
@@ -294,9 +363,13 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleDeleteOption = (id: string) => {
-    if (confirm("Are you sure you want to delete this option?")) {
-      deleteOptionMutation.mutate(id);
-    }
+    setDeleteDialog({
+      isOpen: true,
+      type: 'option',
+      id: id,
+      title: "Delete Option",
+      description: "Are you sure you want to delete this option? This action cannot be undone."
+    });
   };
 
   return (
@@ -315,101 +388,143 @@ const ProcessingStandardsSettings: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Standard Processing Days by Request Type
-          </CardTitle>
-          <CardDescription>
-            Set the expected number of days for each processing phase. Requests exceeding these timeframes will be flagged as delayed.
-          </CardDescription>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Standard Processing Days by Request Type
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Requests exceeding these timeframes will be flagged as delayed.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setIsAddStandardOpen(true)}
+              className="w-full md:w-auto"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Request Type
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground flex flex-col items-center gap-2">
+              <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground/50" />
+              <p>Loading standards configuration...</p>
+            </div>
           ) : standards && standards.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Request Type</TableHead>
-                  <TableHead className="text-center">Receiving Phase (days)</TableHead>
-                  <TableHead className="text-center">Inspection Phase (days)</TableHead>
-                  <TableHead className="text-center">Requirements Phase (days)</TableHead>
-                  <TableHead className="text-center">Clearance Phase (days)</TableHead>
-                  <TableHead className="text-center">Total Days</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {standards.map((standard) => {
-                  const receiving = getDisplayValue(standard, 'receiving_standard_days');
-                  const inspection = getDisplayValue(standard, 'inspection_standard_days');
-                  const requirements = getDisplayValue(standard, 'requirements_standard_days');
-                  const clearance = getDisplayValue(standard, 'clearance_standard_days');
-                  const total = receiving + inspection + requirements + clearance;
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="w-[200px]">Request Type</TableHead>
+                    <TableHead className="text-center w-[140px]">Receiving (days)</TableHead>
+                    <TableHead className="text-center w-[140px]">Inspection (days)</TableHead>
+                    <TableHead className="text-center w-[140px]">Requirements (days)</TableHead>
+                    <TableHead className="text-center w-[140px]">Clearance (days)</TableHead>
+                    <TableHead className="text-center w-[100px]">Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {standards.map((standard) => {
+                    const receiving = getDisplayValue(standard, 'receiving_standard_days');
+                    const inspection = getDisplayValue(standard, 'inspection_standard_days');
+                    const requirements = getDisplayValue(standard, 'requirements_standard_days');
+                    const clearance = getDisplayValue(standard, 'clearance_standard_days');
+                    const total = receiving + inspection + requirements + clearance;
+                    const isChanged = hasChanges(standard.request_type);
 
-                  return (
-                    <TableRow key={standard.id}>
-                      <TableCell className="font-medium capitalize">
-                        {standard.request_type}
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={receiving}
-                          onChange={(e) => handleFieldChange(standard.request_type, 'receiving_standard_days', e.target.value)}
-                          className="w-20 mx-auto text-center"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={inspection}
-                          onChange={(e) => handleFieldChange(standard.request_type, 'inspection_standard_days', e.target.value)}
-                          className="w-20 mx-auto text-center"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={requirements}
-                          onChange={(e) => handleFieldChange(standard.request_type, 'requirements_standard_days', e.target.value)}
-                          className="w-20 mx-auto text-center"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={clearance}
-                          onChange={(e) => handleFieldChange(standard.request_type, 'clearance_standard_days', e.target.value)}
-                          className="w-20 mx-auto text-center"
-                        />
-                      </TableCell>
-                      <TableCell className="text-center font-semibold">
-                        {total}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleSave(standard)}
-                          disabled={!hasChanges(standard.request_type) || updateMutation.isPending}
-                        >
-                          <Save className="w-4 h-4 mr-2" />
-                          Save
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                    return (
+                      <TableRow key={standard.id} className={isChanged ? "bg-muted/30" : ""}>
+                        <TableCell className="font-medium capitalize py-4">
+                          <div className="flex items-center gap-2">
+                            {standard.request_type}
+                            {isChanged && <span className="w-2 h-2 rounded-full bg-yellow-500" title="Unsaved changes" />}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={receiving}
+                            onChange={(e) => handleFieldChange(standard.request_type, 'receiving_standard_days', e.target.value)}
+                            className="w-20 mx-auto text-center h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={inspection}
+                            onChange={(e) => handleFieldChange(standard.request_type, 'inspection_standard_days', e.target.value)}
+                            className="w-20 mx-auto text-center h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={requirements}
+                            onChange={(e) => handleFieldChange(standard.request_type, 'requirements_standard_days', e.target.value)}
+                            className="w-20 mx-auto text-center h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={clearance}
+                            onChange={(e) => handleFieldChange(standard.request_type, 'clearance_standard_days', e.target.value)}
+                            className="w-20 mx-auto text-center h-8"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center font-semibold text-muted-foreground">
+                          {total}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {isChanged ? (
+                              <Button
+                                size="sm"
+                                onClick={() => handleSave(standard)}
+                                disabled={updateMutation.isPending}
+                                className="h-8"
+                              >
+                                <Save className="w-3.5 h-3.5 mr-1" />
+                                Save
+                              </Button>
+                            ) : (
+                                <div className="w-[68px]" /> // Spacer to keep layout stable when save button hides
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteStandard(standard.request_type)}
+                              disabled={deleteStandardMutation.isPending}
+                              className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                              title="Delete Configuration"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No processing standards found
+            <div className="text-center py-12 border border-dashed rounded-lg">
+              <p className="text-muted-foreground mb-4">No processing standards found</p>
+              <Button onClick={() => setIsAddStandardOpen(true)} variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Request Type
+              </Button>
             </div>
           )}
         </CardContent>
@@ -553,6 +668,35 @@ const ProcessingStandardsSettings: React.FC = () => {
             </Button>
             <Button onClick={handleSaveOption}>
               {editingOption ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddStandardOpen} onOpenChange={setIsAddStandardOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Request Type Standard</DialogTitle>
+            <DialogDescription>
+              Add a configuration for a new request type. Default values will be set and can be modified later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Request Type Name</Label>
+              <Input
+                value={newStandardName}
+                onChange={(e) => setNewStandardName(e.target.value)}
+                placeholder="Enter request type (e.g., Bamboo Planting)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddStandardOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddStandard}>
+              Add Request Type
             </Button>
           </DialogFooter>
         </DialogContent>

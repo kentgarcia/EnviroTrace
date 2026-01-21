@@ -439,7 +439,7 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl p-0 rounded-2xl border-none overflow-hidden max-h-[90vh] flex flex-col">
           <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
-            <DialogTitle className="text-xl font-bold text-white">
+            <DialogTitle>
               {formMode === "add"
                 ? "Add Tree Species"
                 : `Edit Species: ${selectedSpecies?.common_name}`}

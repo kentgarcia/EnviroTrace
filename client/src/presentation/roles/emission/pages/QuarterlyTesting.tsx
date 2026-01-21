@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { BarChart3, Settings, Table, Users, RefreshCw } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { cn } from "@/core/utils/utils";
 import { Card } from "@/presentation/components/shared/ui/card";
 import {
@@ -64,10 +63,7 @@ export default function QuarterlyTesting() {
 
   return (
     <>
-      <div className="flex min-h-screen w-full">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <TopNavBarContainer dashboardType="government-emission" />
-
+      <div className="flex flex-col h-full overflow-hidden">
           {/* Header Section */}
           <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
             <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
@@ -198,7 +194,6 @@ export default function QuarterlyTesting() {
               </Tabs>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Quick Test Form Dialog */}

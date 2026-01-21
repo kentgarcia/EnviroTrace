@@ -6,7 +6,6 @@ import { useOverviewData } from "./logic/useOverviewData";
 import { PlantingSummary } from "./components/PlantingSummary";
 import { FeeManagement } from "./components/FeeManagement";
 import { ChartsOverview } from "./components/ChartsOverview";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import UGKeyStatsCards from "./components/UGKeyStatsCards";
 import UGVisualDashboard from "./components/UGVisualDashboard";
 
@@ -51,12 +50,9 @@ export const UrbanGreeningOverview: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen w-full">
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TopNavBarContainer dashboardType="urban-greening" />
-
-                <div className="bg-white px-6 py-3 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
+        <div className="flex flex-col h-full bg-[#F9FBFC]">
+            <div className="bg-white px-6 py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold text-gray-900">Urban Greening Dashboard</h1>
                         <div className="flex items-center gap-3">
                             <Button
@@ -95,6 +91,5 @@ export const UrbanGreeningOverview: React.FC = () => {
                     />
                 </div>
             </div>
-        </div>
     );
 };

@@ -10,14 +10,26 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Card, CardContent, CardHeader } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   fetchTreeRequests,
+  updateTreeRequest,
+  updateReceivingPhase,
+  updateRequirementsPhase,
+  updateClearancePhase,
+  updateDENRPhase,
   TreeRequestWithAnalytics,
   ISOOverallStatus,
   ISORequestType,
 } from "@/core/api/tree-management-request-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/presentation/components/shared/ui/dialog";
 import { 
   Plus, 
   Search, 
@@ -33,7 +45,9 @@ import {
   Scissors,
   Axe,
   TreePine,
-  Settings
+  Settings,
+  Archive,
+  ArchiveRestore
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import ISOTreeRequestForm from "./components/ISOTreeRequestForm";
@@ -64,6 +78,12 @@ const STATUS_CONFIG: Record<ISOOverallStatus, { label: string; color: string }> 
   cancelled: { label: "Cancelled", color: "bg-red-100 text-red-800" },
 };
 
+const RECEIVING_STATUS_OPTIONS = ["Pending", "Received", "Forwarded", "Returned"];
+const REQUIREMENTS_STATUS_OPTIONS = ["Pending", "Incomplete", "Complete", "Verified"];
+const CLEARANCE_STATUS_OPTIONS = ["Pending", "Issued", "Released", "Claimed"];
+const DENR_STATUS_OPTIONS = ["Pending", "Submitted", "Released", "Received"];
+
+
 const ISOTreeRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [view, setView] = useState<"list" | "dashboard" | "settings">("list");
@@ -71,14 +91,51 @@ const ISOTreeRequestsPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<TreeRequestWithAnalytics | null>(null);
   const [statusFilter, setStatusFilter] = useState<ISOOverallStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<ISORequestType | "all">("all");
+  const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isArchiveConfirmationOpen, setIsArchiveConfirmationOpen] = useState(false);
+  const [requestToArchive, setRequestToArchive] = useState<TreeRequestWithAnalytics | null>(null);
 
   const { data: requests, isLoading, refetch } = useQuery({
-    queryKey: ["tree-requests", statusFilter, typeFilter],
+    queryKey: ["tree-requests", statusFilter, typeFilter, showArchived],
     queryFn: () => fetchTreeRequests({
       status: statusFilter !== "all" ? statusFilter : undefined,
       request_type: typeFilter !== "all" ? typeFilter : undefined,
+      is_archived: showArchived,
     }),
+  });
+
+  const updateTypeMutation = useMutation({
+    mutationFn: ({ id, type }: { id: string; type: ISORequestType }) => updateTreeRequest(id, { request_type: type }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tree-requests"] }),
+  });
+
+  const updateArchiveMutation = useMutation({
+    mutationFn: ({ id, is_archived }: { id: string; is_archived: boolean }) => updateTreeRequest(id, { is_archived }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["tree-requests-dashboard"] });
+    },
+  });
+
+  const updateReceivingMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateReceivingPhase(id, { receiving_request_status: status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tree-requests"] }),
+  });
+
+  const updateRequirementsMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateRequirementsPhase(id, { requirements_status: status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tree-requests"] }),
+  });
+
+  const updateClearanceMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateClearancePhase(id, { clearance_status: status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tree-requests"] }),
+  });
+
+  const updateDENRMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => updateDENRPhase(id, { denr_status: status }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tree-requests"] }),
   });
 
   // Handle view changes with data refresh
@@ -191,15 +248,15 @@ const ISOTreeRequestsPage: React.FC = () => {
       {
         accessorKey: "request_type",
         header: "Type of Request",
-        size: 140,
+        size: 150,
         cell: ({ getValue }) => {
           const type = getValue() as ISORequestType;
           const config = REQUEST_TYPE_CONFIG[type];
           return (
-            <Badge className={config.color}>
-              {config.icon}
-              <span className="ml-1">{config.label}</span>
-            </Badge>
+            <div className={`flex items-center gap-2 px-2 py-1 rounded-md ${config?.color || "text-gray-600"}`}>
+                {config?.icon}
+                <span className="text-sm font-medium">{config?.label || type}</span>
+            </div>
           );
         },
         meta: { group: "Receiving" },
@@ -208,7 +265,7 @@ const ISOTreeRequestsPage: React.FC = () => {
         accessorKey: "receiving_request_status",
         header: "Status of Request",
         size: 140,
-        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "—"}</span>,
+        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "Pending"}</span>,
         meta: { group: "Receiving" },
       },
       
@@ -376,8 +433,8 @@ const ISOTreeRequestsPage: React.FC = () => {
       {
         accessorKey: "requirements_status",
         header: "Status",
-        size: 120,
-        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "—"}</span>,
+        size: 140,
+        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "Pending"}</span>,
         meta: { group: "Requirements" },
       },
       {
@@ -439,19 +496,91 @@ const ISOTreeRequestsPage: React.FC = () => {
       {
         accessorKey: "clearance_status",
         header: "Status",
-        size: 120,
-        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "—"}</span>,
+        size: 140,
+        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "Pending"}</span>,
         meta: { group: "Clearance" },
       },
+
+      // ===== DENR (if letter only) =====
+      {
+        accessorKey: "denr_date_received_by_inspectors",
+        header: "Date Received by Inspectors",
+        size: 160,
+        cell: ({ getValue }) => {
+          const val = getValue() as string;
+          return val ? new Date(val).toLocaleDateString() : "—";
+        },
+        meta: { group: "DENR" },
+      },
+      {
+        accessorKey: "denr_date_submitted_to_dept_head",
+        header: "Date Submitted to Dept. Head (DENR Letter)",
+        size: 200,
+        cell: ({ getValue }) => {
+          const val = getValue() as string;
+          return val ? new Date(val).toLocaleDateString() : "—";
+        },
+        meta: { group: "DENR" },
+      },
+      {
+        accessorKey: "denr_date_released_to_inspectors",
+        header: "Date Released to Inspectors",
+        size: 160,
+        cell: ({ getValue }) => {
+          const val = getValue() as string;
+          return val ? new Date(val).toLocaleDateString() : "—";
+        },
+        meta: { group: "DENR" },
+      },
+      {
+        accessorKey: "denr_date_received",
+        header: "Date Received",
+        size: 120,
+        cell: ({ getValue }) => {
+          const val = getValue() as string;
+          return val ? new Date(val).toLocaleDateString() : "—";
+        },
+        meta: { group: "DENR" },
+      },
+      {
+        accessorKey: "denr_status",
+        header: "Status",
+        size: 140,
+        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "Pending"}</span>,
+        meta: { group: "DENR" },
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        size: 80,
+        cell: ({ row }) => (
+          <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setRequestToArchive(row.original);
+                setIsArchiveConfirmationOpen(true);
+              }}
+              title={row.original.is_archived ? "Restore request" : "Archive request"}
+            >
+              {row.original.is_archived ? (
+                <ArchiveRestore className="h-4 w-4" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        ),
+        meta: { group: "Actions" },
+      },
     ],
-    []
+    [updateTypeMutation, updateReceivingMutation, updateRequirementsMutation, updateClearanceMutation, updateDENRMutation, updateArchiveMutation]
   );
 
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNavBarContainer dashboardType="urban-greening" />
-
+    <div className="flex flex-col h-full bg-[#F9FBFC]">
         {/* Header */}
         <div className="bg-white px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -542,6 +671,23 @@ const ISOTreeRequestsPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant={showArchived ? "secondary" : "outline"}
+                        onClick={() => setShowArchived(!showArchived)}
+                        className="h-9 gap-2"
+                      >
+                        {showArchived ? (
+                          <>
+                            <ArchiveRestore className="w-4 h-4" />
+                            Archived
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="w-4 h-4" />
+                            Active
+                          </>
+                        )}
+                      </Button>
                       <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value as ISORequestType | "all")}
@@ -581,7 +727,6 @@ const ISOTreeRequestsPage: React.FC = () => {
             </>
           )}
         </div>
-      </div>
 
       {/* Dialogs */}
       {showCreateForm && (
@@ -602,6 +747,34 @@ const ISOTreeRequestsPage: React.FC = () => {
           onUpdate={handleCloseDetails}
         />
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={isArchiveConfirmationOpen} onOpenChange={setIsArchiveConfirmationOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{requestToArchive?.is_archived ? "Restore Request" : "Archive Request"}</DialogTitle>
+                <DialogDescription>
+                    Are you sure you want to {requestToArchive?.is_archived ? "restore" : "archive"} request <strong>{requestToArchive?.request_number ?? ""}</strong>?
+                    {!requestToArchive?.is_archived && " It will be moved to the archived list and hidden from the main table."}
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsArchiveConfirmationOpen(false)}>Cancel</Button>
+                <Button variant={requestToArchive?.is_archived ? "default" : "destructive"} onClick={() => {
+                    if (requestToArchive) {
+                         updateArchiveMutation.mutate({ 
+                            id: requestToArchive.id, 
+                            is_archived: !requestToArchive.is_archived 
+                          });
+                          setIsArchiveConfirmationOpen(false);
+                          setRequestToArchive(null);
+                    }
+                }}>
+                    {requestToArchive?.is_archived ? "Restore" : "Archive"}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

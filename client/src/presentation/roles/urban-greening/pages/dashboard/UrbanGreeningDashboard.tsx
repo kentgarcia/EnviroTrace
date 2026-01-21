@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { useTreeStats } from "../tree-inventory/logic/useTreeInventory";
 
 // Quick Action Card Component
@@ -101,10 +100,7 @@ const UrbanGreeningDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNavBarContainer dashboardType="urban-greening" />
-
+    <div className="flex flex-col h-full bg-[#F9FBFC]">
         {/* Header */}
         <div className="bg-white px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -374,7 +370,6 @@ const UrbanGreeningDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
     </div>
   );
 };

@@ -12,7 +12,6 @@ import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   TreePine,
   Plus,
@@ -189,10 +188,7 @@ const TreeInventoryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNavBarContainer dashboardType="urban-greening" />
-
+    <div className="flex flex-col h-full bg-[#F9FBFC]">
         {/* Header Section */}
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
@@ -427,7 +423,7 @@ const TreeInventoryPage: React.FC = () => {
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
           <DialogContent className="max-w-2xl p-0 rounded-2xl border-none overflow-hidden max-h-[90vh] flex flex-col">
             <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
-              <DialogTitle className="text-xl font-bold text-white">
+              <DialogTitle>
                 {formMode === "add" ? "Add Tree to Inventory" : "Edit Tree"}
               </DialogTitle>
             </DialogHeader>
@@ -441,7 +437,6 @@ const TreeInventoryPage: React.FC = () => {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   );
 };

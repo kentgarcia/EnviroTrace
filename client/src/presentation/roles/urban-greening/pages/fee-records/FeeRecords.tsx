@@ -7,7 +7,6 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/presentation/components/shared/ui/dialog";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { Plus, Search, CheckCircle, Clock, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import FeeRecordForm from "./components/FeeRecordForm";
 
@@ -193,13 +192,10 @@ const FeeRecords: React.FC = () => {
     const paidAmount = useMemo(() => getPaidAmount(allRecords), [allRecords]);
 
     return (
-        <div className="flex min-h-screen w-full">
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TopNavBarContainer dashboardType="urban-greening" />
-                
-                {/* Header Section */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-                    <div className="px-6 py-4 flex items-center justify-between">
+        <div className="flex flex-col h-full bg-[#F9FBFC]">
+            {/* Header Section */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="px-6 py-4 flex items-center justify-between">
                         <div>
                             <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Fee Records</h1>
                             <p className="text-xs text-muted-foreground mt-0.5">Manage and track environmental compliance fees</p>
@@ -427,7 +423,6 @@ const FeeRecords: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
 
             {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

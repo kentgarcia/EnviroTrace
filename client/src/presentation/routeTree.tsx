@@ -18,11 +18,25 @@ import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
 import { urbanGreeningRoute } from "./roles/urban-greening/urban-greening.routes";
 import Unauthorized from "./pages/public/Unauthorized";
+import TitleBar from "@/presentation/components/shared/layout/TitleBar";
 
 // Create a root route
 const rootRoute = createRootRoute({
   component: () => {
-    return <Outlet />;
+    return (
+      <>
+        <TitleBar />
+        <div
+          style={{
+            paddingTop: 40,
+            overflow: "hidden",
+            height: "100vh",
+          }}
+        >
+          <Outlet />
+        </div>
+      </>
+    );
   },
 });
 

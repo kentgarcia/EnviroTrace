@@ -129,7 +129,7 @@ export default function TopNavBarContainer({
   const dashboardRoleMap = [
     { role: "admin", label: "Admin Dashboard", path: "/admin/overview" },
     {
-      role: "tree_management",
+      role: "urban_greening",
       label: "Urban Greening",
       path: "/urban-greening/overview",
     },

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { format } from "date-fns";
-import { NetworkStatus } from "@/presentation/components/shared/layout/NetworkStatus";
 import { formatDate } from "@/core/utils/dateUtils";
 import {
   useVehicles,
@@ -15,7 +14,6 @@ import {
   VehicleFormInput,
 } from "@/core/api/emission-service";
 import { useDebounce } from "@/core/hooks/useDebounce";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   VehicleTable,
   VehicleTableSkeleton,
@@ -74,10 +72,17 @@ export default function Vehicles() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Pagination state
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 25, // Increased from 10 to 25 for better scalability
+  const [pagination, setPagination] = useState(() => {
+    const saved = localStorage.getItem("vehiclesPageSize");
+    return {
+      pageIndex: 0,
+      pageSize: saved ? Number(saved) : 25,
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem("vehiclesPageSize", String(pagination.pageSize));
+  }, [pagination.pageSize]);
 
   // Filter states
   const [search, setSearch] = useState("");
@@ -333,10 +338,7 @@ export default function Vehicles() {
 
   return (
     <>
-      <div className="flex min-h-screen w-full">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <TopNavBarContainer dashboardType="government-emission" />
-
+      <div className="flex flex-col h-full overflow-hidden">
           {/* Header Section */}
           <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
             <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
@@ -382,117 +384,6 @@ export default function Vehicles() {
           {/* Body Section */}
           <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
             <div className="p-8">
-              {/* Controls Row: Search left, Filters right */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-                {/* Search (left) */}
-                <div className="relative flex items-center w-full lg:w-96">
-                  <Input
-                    placeholder="Search by plate, driver, or office..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
-                  />
-                  <span className="absolute left-3 text-slate-400">
-                    {search && search !== debouncedSearch ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                  </span>
-                  {search && (
-                    <button
-                      onClick={() => setSearch("")}
-                      className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Filters (right) */}
-                <div className="flex flex-wrap gap-2 items-center lg:justify-end">
-                  {(office || vehicleType || engineType || search) && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={resetFilters}
-                      className="text-slate-500 hover:text-slate-900 text-xs font-medium h-8 px-2"
-                    >
-                      Clear all
-                    </Button>
-                  )}
-                  
-                  {/* Office Filter Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[140px]"
-                      >
-                        <span className="truncate">{office ? office : "All Offices"}</span>
-                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-1">
-                      <DropdownMenuItem onClick={() => setOffice("")} className="rounded-md cursor-pointer">
-                        All Offices
-                      </DropdownMenuItem>
-                      {offices.map((o) => (
-                        <DropdownMenuItem key={o} onClick={() => setOffice(o)} className="rounded-md cursor-pointer">
-                          {o}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Vehicle Type Filter Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
-                      >
-                        <span className="truncate">{vehicleType ? vehicleType : "All Types"}</span>
-                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 p-1">
-                      <DropdownMenuItem onClick={() => setVehicleType("")} className="rounded-md cursor-pointer">
-                        All Types
-                      </DropdownMenuItem>
-                      {vehicleTypes.map((t) => (
-                        <DropdownMenuItem key={t} onClick={() => setVehicleType(t)} className="rounded-md cursor-pointer">
-                          {t}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {/* Engine Type Filter Dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
-                      >
-                        <span className="truncate">{engineType ? engineType : "All Engines"}</span>
-                        <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 p-1">
-                      <DropdownMenuItem onClick={() => setEngineType("")} className="rounded-md cursor-pointer">
-                        All Engines
-                      </DropdownMenuItem>
-                      {engineTypes.map((e) => (
-                        <DropdownMenuItem key={e} onClick={() => setEngineType(e)} className="rounded-md cursor-pointer">
-                          {e}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
             {/* Error Notice */}
             {error && (
               <Alert
@@ -541,6 +432,117 @@ export default function Vehicles() {
             {/* Vehicles Table */}
             <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
               <div className="p-6">
+                {/* Controls Row: Search left, Filters right */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                  {/* Search (left) */}
+                  <div className="relative flex items-center w-full lg:w-96">
+                    <Input
+                      placeholder="Search by plate, driver, or office..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                    />
+                    <span className="absolute left-3 text-slate-400">
+                      {search && search !== debouncedSearch ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                    </span>
+                    {search && (
+                      <button
+                        onClick={() => setSearch("")}
+                        className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filters (right) */}
+                  <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+                    {(office || vehicleType || engineType || search) && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetFilters}
+                        className="text-slate-500 hover:text-slate-900 text-xs font-medium h-8 px-2"
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                    
+                    {/* Office Filter Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[140px]"
+                        >
+                          <span className="truncate">{office ? office : "All Offices"}</span>
+                          <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-1">
+                        <DropdownMenuItem onClick={() => setOffice("")} className="rounded-md cursor-pointer">
+                          All Offices
+                        </DropdownMenuItem>
+                        {offices.map((o) => (
+                          <DropdownMenuItem key={o} onClick={() => setOffice(o)} className="rounded-md cursor-pointer">
+                            {o}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Vehicle Type Filter Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                        >
+                          <span className="truncate">{vehicleType ? vehicleType : "All Types"}</span>
+                          <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 p-1">
+                        <DropdownMenuItem onClick={() => setVehicleType("")} className="rounded-md cursor-pointer">
+                          All Types
+                        </DropdownMenuItem>
+                        {vehicleTypes.map((t) => (
+                          <DropdownMenuItem key={t} onClick={() => setVehicleType(t)} className="rounded-md cursor-pointer">
+                            {t}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Engine Type Filter Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                        >
+                          <span className="truncate">{engineType ? engineType : "All Engines"}</span>
+                          <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 p-1">
+                        <DropdownMenuItem onClick={() => setEngineType("")} className="rounded-md cursor-pointer">
+                          All Engines
+                        </DropdownMenuItem>
+                        {engineTypes.map((e) => (
+                          <DropdownMenuItem key={e} onClick={() => setEngineType(e)} className="rounded-md cursor-pointer">
+                            {e}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
                 {isLoading ? (
                     <VehicleTableSkeleton />
                   ) : (
@@ -583,8 +585,7 @@ export default function Vehicles() {
             </Card>
           </div>
         </div>
-      </div>
-    </div>      {/* Modals and Dialogs */}
+      </div>      {/* Modals and Dialogs */}
       <VehicleModals
         isAddModalOpen={addModalOpen}
         onAddModalClose={() => setAddModalOpen(false)}
@@ -634,8 +635,6 @@ export default function Vehicles() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <NetworkStatus />
     </>
   );
 }

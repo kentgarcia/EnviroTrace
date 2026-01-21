@@ -53,7 +53,6 @@ import {
     User
 } from "@/core/api/admin-api";
 import { useForm } from "react-hook-form";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 
 interface UserFormData {
     email: string;
@@ -252,19 +251,15 @@ export function UserManagement() {
     }
 
     return (
-        <div className="flex min-h-screen w-full">
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TopNavBarContainer dashboardType="admin" />
-
-
-                <div className="bg-white px-6 py-3 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                        <p className="text-gray-600">Manage users, roles, and permissions</p>
-                    </div>
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="bg-white px-6 py-3 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
+                    <p className="text-gray-600">Manage users, roles, and permissions</p>
                 </div>
+            </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <DialogTrigger asChild>
                             <Button>
@@ -481,8 +476,6 @@ export function UserManagement() {
                         </CardContent>
                     </Card>
                 </div>
-
-            </div>
 
 
 

@@ -21,7 +21,6 @@ import {
   AlertDialogTitle,
 } from "@/presentation/components/shared/ui/alert-dialog";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   Plus,
   Search,
@@ -340,10 +339,7 @@ const GreeningProjectsPage: React.FC = () => {
 
   return (
     <>
-    <div className="flex min-h-screen w-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNavBarContainer dashboardType="urban-greening" />
-
+    <div className="flex flex-col h-full bg-[#F9FBFC]">
         {/* Header */}
         <div className="bg-white px-6 py-4 ">
           <div className="flex items-center justify-between">
@@ -713,7 +709,6 @@ const GreeningProjectsPage: React.FC = () => {
             <SpeciesManagement />
           )}
         </div>
-      </div>
     </div>
 
     {/* Project Form Dialog */}

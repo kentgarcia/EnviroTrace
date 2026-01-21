@@ -6,7 +6,6 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Card, CardContent } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { useVehicles } from "@/core/api/emission-service";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -58,29 +57,21 @@ const VehiclesDetailPage: React.FC = () => {
 
     if (error) {
         return (
-            <div className="flex min-h-screen w-full">
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <TopNavBarContainer dashboardType="government-emission" />
-                    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-8">
-                        <Card className="border border-red-200 bg-red-50">
-                            <CardContent className="p-6">
-                                <div className="text-red-600 font-medium">Error loading vehicles data</div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+            <div className="p-8">
+                <Card className="border border-red-200 bg-red-50">
+                    <CardContent className="p-6">
+                        <div className="text-red-600 font-medium">Error loading vehicles data</div>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen w-full">
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <TopNavBarContainer dashboardType="government-emission" />
-
-                {/* Header Section */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-                    <div className="px-6 py-4">
+        <div className="flex flex-col h-full bg-[#F8FAFC]">
+            {/* Header Section */}
+            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="px-6 py-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <Button
@@ -273,7 +264,6 @@ const VehiclesDetailPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
     );
 };
 

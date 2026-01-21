@@ -5,8 +5,7 @@ import apiClient from "./api-client";
 // Types
 export type UserRole =
   | "admin"
-  | "air_quality"
-  | "tree_management"
+  | "urban_greening"
   | "government_emission"
   | "user"
   | "revoked";

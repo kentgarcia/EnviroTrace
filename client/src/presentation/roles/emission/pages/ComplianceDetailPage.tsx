@@ -6,7 +6,6 @@ import { Input } from "@/presentation/components/shared/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { useOfficeCompliance } from "@/core/api/emission-service";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { EChartsBarChart } from "@/presentation/components/shared/dashboard/EChartsBarChart";
 
 const ComplianceDetailPage: React.FC = () => {
@@ -55,24 +54,16 @@ const ComplianceDetailPage: React.FC = () => {
 
     if (error) {
         return (
-            <div className="flex min-h-screen w-full">
-                <div className="flex-1 overflow-auto">
-                    <TopNavBarContainer dashboardType="government-emission" />
-                    <div className="p-6">
-                        <div className="text-red-600">Error loading compliance data</div>
-                    </div>
-                </div>
+            <div className="p-6">
+                <div className="text-red-600">Error loading compliance data</div>
             </div>
         );
     }
 
     return (
-        <div className="flex min-h-screen w-full">
-            <div className="flex-1 overflow-auto">
-                <TopNavBarContainer dashboardType="government-emission" />
-
-                {/* Header */}
-                <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4">
                     <div className="flex items-center gap-4">
                         <Button
                             variant="ghost"
@@ -257,7 +248,6 @@ const ComplianceDetailPage: React.FC = () => {
                     )}
                 </div>
             </div>
-        </div>
     );
 };
 

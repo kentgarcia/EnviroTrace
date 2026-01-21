@@ -13,6 +13,7 @@ from app.schemas.tree_management_schemas import (
     UpdateInspectionPhase,
     UpdateRequirementsPhase,
     UpdateClearancePhase,
+    UpdateDENRPhase,
     ProcessingStandardsCreate,
     ProcessingStandardsUpdate,
     TreeRequestWithAnalytics,
@@ -289,6 +290,25 @@ class CRUDTreeRequest(CRUDBase[TreeRequest, TreeRequestCreate, TreeRequestUpdate
         db.refresh(obj)
         return obj
     
+    def update_denr_phase(self, db: Session, *, request_id: str, phase_data: UpdateDENRPhase) -> Optional[TreeRequest]:
+        """Update DENR phase of a request"""
+        obj = db.query(TreeRequest).filter(TreeRequest.id == request_id).first()
+        if not obj:
+            return None
+        
+        update_data = phase_data.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(obj, field, value)
+        
+        # Auto-advance status if DENR is complete
+        # Logic: If received back from DENR, maybe completed? 
+        # Or if status is specifically set to 'completed' via explicit update, handled elsewhere.
+        # Minimal auto-logic here for now.
+        
+        db.commit()
+        db.refresh(obj)
+        return obj
+    
     def get_by_request_number(self, db: Session, *, request_number: str) -> Optional[TreeRequest]:
         """Get request by request number"""
         return db.query(TreeRequest).filter(TreeRequest.request_number == request_number).first()
@@ -389,6 +409,11 @@ class CRUDTreeRequest(CRUDBase[TreeRequest, TreeRequestCreate, TreeRequestUpdate
             'clearance_or_number': obj.clearance_or_number,
             'clearance_date_received': obj.clearance_date_received,
             'clearance_status': obj.clearance_status,
+            'denr_date_received_by_inspectors': obj.denr_date_received_by_inspectors,
+            'denr_date_submitted_to_dept_head': obj.denr_date_submitted_to_dept_head,
+            'denr_date_released_to_inspectors': obj.denr_date_released_to_inspectors,
+            'denr_date_received': obj.denr_date_received,
+            'denr_status': obj.denr_status,
             'created_by': str(obj.created_by) if obj.created_by else None,
             'editors': obj.editors if obj.editors else [],
             'created_at': obj.created_at,
@@ -399,6 +424,7 @@ class CRUDTreeRequest(CRUDBase[TreeRequest, TreeRequestCreate, TreeRequestUpdate
             'days_in_clearance': days_in_clearance,
             'total_days': total_days,
             'is_delayed': is_delayed,
+            'is_archived': obj.is_archived,
             'receiving_standard_days': standards.receiving_standard_days if standards else None,
             'inspection_standard_days': standards.inspection_standard_days if standards else None,
             'requirements_standard_days': standards.requirements_standard_days if standards else None,
@@ -452,6 +478,14 @@ class CRUDProcessingStandards(CRUDBase[TreeRequestProcessingStandards, Processin
         """Get all processing standards"""
         return db.query(TreeRequestProcessingStandards).all()
     
+    def create_sync(self, db: Session, *, obj_in: ProcessingStandardsCreate) -> TreeRequestProcessingStandards:
+        """Synchronous version of create for use with sync sessions"""
+        db_obj = TreeRequestProcessingStandards(**obj_in.model_dump())
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+    
     def update_standards(self, db: Session, *, request_type: str, obj_in: ProcessingStandardsUpdate) -> Optional[TreeRequestProcessingStandards]:
         """Update standards for a specific request type"""
         obj = self.get_by_request_type(db, request_type=request_type)
@@ -465,6 +499,16 @@ class CRUDProcessingStandards(CRUDBase[TreeRequestProcessingStandards, Processin
         db.commit()
         db.refresh(obj)
         return obj
+
+    def remove_by_request_type(self, db: Session, *, request_type: str) -> bool:
+        """Remove standards for a specific request type"""
+        obj = self.get_by_request_type(db, request_type=request_type)
+        if not obj:
+            return False
+        
+        db.delete(obj)
+        db.commit()
+        return True
 
 
 class CRUDDropdownOption(CRUDBase[TreeRequestDropdownOption, DropdownOptionCreate, DropdownOptionUpdate]):

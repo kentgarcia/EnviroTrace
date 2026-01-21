@@ -31,7 +31,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/presentation/components/shared/ui/tabs";
-import { FileText, ClipboardCheck, CheckCircle, DollarSign } from "lucide-react";
+import { FileText, ClipboardCheck, CheckCircle, DollarSign, Building } from "lucide-react";
 import {
   TreeRequestCreate,
   TreeRequestWithAnalytics,
@@ -42,6 +42,7 @@ import {
 import { createTreeRequest, updateTreeRequest } from "@/core/api/tree-management-request-api";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CreatableCombobox, ComboboxItem } from "@/presentation/components/shared/ui/creatable-combobox";
 
 interface ISOTreeRequestFormProps {
   mode: "add" | "edit";
@@ -50,7 +51,7 @@ interface ISOTreeRequestFormProps {
   onSuccess: () => void;
 }
 
-const REQUEST_TYPES: { value: ISORequestType; label: string }[] = [
+const REQUEST_TYPES: ComboboxItem[] = [
   { value: "cutting", label: "Tree Cutting" },
   { value: "pruning", label: "Tree Pruning" },
   { value: "ball_out", label: "Tree Ball-out" },
@@ -90,6 +91,16 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
     queryKey: ["dropdown-options", "status"],
     queryFn: () => fetchDropdownOptions("status"),
   });
+
+  const statusComboboxItems: ComboboxItem[] = statusOptions.map(opt => ({
+    value: opt.option_value,
+    label: opt.option_value
+  }));
+
+  const receivedThroughComboboxItems: ComboboxItem[] = receivedThroughOptions.map(opt => ({
+    value: opt.option_value,
+    label: opt.option_value
+  }));
   
   // Initialize form data
   const [formData, setFormData] = useState<TreeRequestCreate>(() => {
@@ -122,6 +133,13 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
         clearance_or_number: initialData.clearance_or_number,
         clearance_date_received: initialData.clearance_date_received,
         clearance_status: initialData.clearance_status,
+
+        // DENR Phase
+        denr_date_received_by_inspectors: initialData.denr_date_received_by_inspectors,
+        denr_date_submitted_to_dept_head: initialData.denr_date_submitted_to_dept_head,
+        denr_date_released_to_inspectors: initialData.denr_date_released_to_inspectors,
+        denr_date_received: initialData.denr_date_received,
+        denr_status: initialData.denr_status,
       };
     }
     // Initialize with default requirements checklist for new requests
@@ -243,27 +261,19 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
           {/* Request Type */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Request Type *</Label>
-            <Select
+            <CreatableCombobox
+              items={REQUEST_TYPES}
               value={formData.request_type}
-              onValueChange={(value) => handleInputChange('request_type', value as ISORequestType)}
+              onChange={(value) => handleInputChange('request_type', value as ISORequestType)}
+              placeholder="Select or enter request type"
+              emptyMessage="No request type found."
               disabled={mode === "edit"}
-            >
-              <SelectTrigger className="rounded-lg">
-                <SelectValue placeholder="Select request type" />
-              </SelectTrigger>
-              <SelectContent>
-                {REQUEST_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           {/* Multi-phase Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="receiving" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Receiving
@@ -279,6 +289,10 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
               <TabsTrigger value="clearance" className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4" />
                 Clearance
+              </TabsTrigger>
+              <TabsTrigger value="denr" className="flex items-center gap-2">
+                <Building className="w-4 h-4" />
+                DENR
               </TabsTrigger>
             </TabsList>
 
@@ -321,21 +335,12 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Received Through</Label>
-                    <Select
+                    <CreatableCombobox
+                      items={receivedThroughComboboxItems}
                       value={formData.receiving_received_through || ""}
-                      onValueChange={(value) => handleInputChange('receiving_received_through', value)}
-                    >
-                      <SelectTrigger className="rounded-lg">
-                        <SelectValue placeholder="Select option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {receivedThroughOptions.map((option) => (
-                          <SelectItem key={option.id} value={option.option_value}>
-                            {option.option_value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(value) => handleInputChange('receiving_received_through', value)}
+                      placeholder="Select or enter option"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -381,21 +386,12 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status of Request</Label>
-                    <Select
+                    <CreatableCombobox
+                      items={statusComboboxItems}
                       value={formData.receiving_request_status || ""}
-                      onValueChange={(value) => handleInputChange('receiving_request_status', value)}
-                    >
-                      <SelectTrigger className="rounded-lg">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.id} value={option.option_value}>
-                            {option.option_value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(value) => handleInputChange('receiving_request_status', value)}
+                      placeholder="Select or enter status"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -538,11 +534,11 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status</Label>
-                    <Input
-                      className="rounded-lg"
+                    <CreatableCombobox
+                      items={statusComboboxItems}
                       value={formData.requirements_status || ""}
-                      onChange={(e) => handleInputChange('requirements_status', e.target.value)}
-                      placeholder="Requirements status"
+                      onChange={(value) => handleInputChange('requirements_status', value)}
+                      placeholder="Select or enter status"
                     />
                   </div>
 
@@ -619,11 +615,73 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
 
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status</Label>
-                    <Input
-                      className="rounded-lg"
+                    <CreatableCombobox
+                      items={statusComboboxItems}
                       value={formData.clearance_status || ""}
-                      onChange={(e) => handleInputChange('clearance_status', e.target.value)}
-                      placeholder="Clearance status"
+                      onChange={(value) => handleInputChange('clearance_status', value)}
+                      placeholder="Select or enter status"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Phase 5: DENR */}
+            <TabsContent value="denr" className="space-y-4 mt-4">
+              <Card className="border-gray-200">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base font-semibold">Phase 5: DENR</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Date Received by Inspectors</Label>
+                      <Input
+                        type="date"
+                        className="rounded-lg"
+                        value={formData.denr_date_received_by_inspectors || ""}
+                        onChange={(e) => handleInputChange('denr_date_received_by_inspectors', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Date Submitted to Dept. Head</Label>
+                      <Input
+                        type="date"
+                        className="rounded-lg"
+                        value={formData.denr_date_submitted_to_dept_head || ""}
+                        onChange={(e) => handleInputChange('denr_date_submitted_to_dept_head', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                      <Label className="text-sm font-medium">Date Released to Inspectors</Label>
+                      <Input
+                        type="date"
+                        className="rounded-lg"
+                        value={formData.denr_date_released_to_inspectors || ""}
+                        onChange={(e) => handleInputChange('denr_date_released_to_inspectors', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Date Received</Label>
+                      <Input
+                        type="date"
+                        className="rounded-lg"
+                        value={formData.denr_date_received || ""}
+                        onChange={(e) => handleInputChange('denr_date_received', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Status</Label>
+                    <CreatableCombobox
+                      items={statusComboboxItems}
+                      value={formData.denr_status || ""}
+                      onChange={(value) => handleInputChange('denr_status', value)}
+                      placeholder="Select or enter status"
                     />
                   </div>
                 </CardContent>

@@ -13,7 +13,6 @@ import { YearSelector } from "@/presentation/roles/emission/components/offices/Y
 import { OfficeComplianceTable } from "@/presentation/roles/emission/components/offices/OfficeComplianceTable";
 import { OfficeManagementTable } from "@/presentation/roles/emission/components/offices/OfficeManagementTable";
 import { OfficeModal } from "@/presentation/roles/emission/components/offices/OfficeModal";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { useOffices } from "@/core/hooks/offices/useOffices";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
@@ -96,9 +95,7 @@ export default function OfficesPage() {
 
   return (
     <>
-      <div className="flex min-h-screen w-full">
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <TopNavBarContainer dashboardType="government-emission" />
+      <div className="flex flex-col h-full overflow-hidden">
           
           {/* Header Section */}
           <Tabs
@@ -233,7 +230,6 @@ export default function OfficesPage() {
               </div>
             </div>
           </Tabs>
-        </div>
       </div>
 
       {/* Office Modal */}

@@ -1,5 +1,6 @@
-import { createRoute, RouteComponent } from "@tanstack/react-router";
+import { createRoute } from "@tanstack/react-router";
 import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
+import DashboardLayout from "@/presentation/components/shared/layout/DashboardLayout";
 
 import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
 import FeeRecords from "./pages/fee-records/FeeRecords";
@@ -8,34 +9,60 @@ import ISOTreeRequestsPage from "./pages/tree-requests/ISOTreeRequestsPage";
 import ProcessingStandardsSettings from "./pages/tree-requests/components/ProcessingStandardsSettings";
 import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
 
-const createUrbanGreeningRoute = (path: string, component: RouteComponent) => {
-  return createRoute({
+const urbanGreeningLayout = createRoute({
     getParentRoute: () => rootRoute,
-    path,
+    path: "/urban-greening",
+    component: () => <DashboardLayout dashboardType="urban-greening" />,
     beforeLoad: () => {
-      requireAuth();
-      requireRole(["admin", "urban_greening"]);
+        requireAuth();
+        requireRole(["admin", "urban_greening"]);
     },
-    component,
-  });
-};
+});
 
-export const urbanGreeningRoute = [
-  // Main dashboard - new streamlined view
-  createUrbanGreeningRoute("/urban-greening/overview", UrbanGreeningOverview),
-  
-  // Tree Inventory - central registry
-  createUrbanGreeningRoute("/urban-greening/tree-inventory", TreeInventoryPage),
-  
-  // Module 2: Tree Management Requests (ISO 4-phase tracking system)
-  createUrbanGreeningRoute("/urban-greening/tree-requests", ISOTreeRequestsPage),
-  
-  // Processing Standards Configuration (Admin)
-  createUrbanGreeningRoute("/urban-greening/processing-standards", ProcessingStandardsSettings),
-  
-  // Module 3: Urban Greening Projects (replacement & new planting)
-  createUrbanGreeningRoute("/urban-greening/greening-projects", GreeningProjectsPage),
-  
-  // Supporting modules
-  createUrbanGreeningRoute("/urban-greening/fee-records", FeeRecords),
-];
+const overviewRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "overview",
+    component: UrbanGreeningOverview,
+});
+
+const treeInventoryRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "tree-inventory",
+    component: TreeInventoryPage,
+});
+
+const treeRequestsRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "tree-requests",
+    component: ISOTreeRequestsPage,
+});
+
+const processingStandardsRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "processing-standards",
+    component: ProcessingStandardsSettings,
+});
+
+const greeningProjectsRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "greening-projects",
+    component: GreeningProjectsPage,
+});
+
+const feeRecordsRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "fee-records",
+    component: FeeRecords,
+});
+
+urbanGreeningLayout.addChildren([
+    overviewRoute,
+    treeInventoryRoute,
+    treeRequestsRoute,
+    processingStandardsRoute,
+    greeningProjectsRoute,
+    feeRecordsRoute
+]);
+
+export const urbanGreeningRoute = [urbanGreeningLayout];
+

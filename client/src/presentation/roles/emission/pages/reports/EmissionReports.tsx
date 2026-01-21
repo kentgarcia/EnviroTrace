@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
 import { Eye, Loader2, FileSpreadsheet, Printer } from "lucide-react";
 import { toast } from "sonner";
-import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import { useOffices, useVehicles, useEmissionTests } from "@/core/api/emission-service";
 import { generateReportHTML, generateComprehensiveTestingReportHTML } from "./utils/reportHTMLGenerator";
 import { generateComprehensiveTestingReport } from "./utils/excelReportGenerator";
@@ -293,10 +292,6 @@ export const EmissionReports: React.FC = () => {
 
             {/* Desktop Version */}
             <div className="hidden md:block min-h-screen bg-gray-50">
-                <div className="sticky top-0 z-10 bg-white shadow-sm border-b">
-                    <TopNavBarContainer dashboardType="government-emission" />
-                </div>
-
                 <div className="p-6">
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold text-gray-900">Emission Reports</h1>
@@ -649,8 +644,6 @@ export const EmissionReports: React.FC = () => {
 
             {/* Mobile Version */}
             <div className="md:hidden min-h-screen bg-gray-50">
-                <TopNavBarContainer dashboardType="government-emission" />
-
                 <div className="p-4 space-y-4">
                     <div className="mb-4">
                         <h1 className="text-xl font-bold text-gray-900">Emission Reports</h1>

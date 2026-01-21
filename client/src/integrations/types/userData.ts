@@ -1,6 +1,6 @@
 export type UserRole =
   | "admin"
-  | "tree_management"
+  | "urban_greening"
   | "government_emission";
 
 export interface UserData {

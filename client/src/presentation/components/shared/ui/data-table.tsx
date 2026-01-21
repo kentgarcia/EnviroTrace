@@ -161,7 +161,7 @@ export function DataTable<TData, TValue>({
       )}
 
       {/* Main Table */}
-      <div className="border overflow-x-auto bg-white">
+      <div className="border overflow-x-auto bg-white rounded-lg">
         <Table
           className={
             density === "compact"
@@ -226,7 +226,7 @@ export function DataTable<TData, TValue>({
                   {/* Column Header Row */}
                   <TableRow
                     key={headerGroup.id}
-                    className={densityClasses[density]}
+                    className={`${densityClasses[density]} hover:bg-transparent`}
                   >
                     {headerGroup.headers.map((header, idx) => {
                       // Determine if this is the last column in its group

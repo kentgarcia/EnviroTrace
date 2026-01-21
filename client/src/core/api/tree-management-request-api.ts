@@ -220,7 +220,7 @@ export const deleteTreeManagementRequest = async (id: string): Promise<void> => 
 
 // ==================== NEW ISO TREE REQUEST API ====================
 
-export type ISORequestType = 'cutting' | 'pruning' | 'ball_out';
+export type ISORequestType = 'cutting' | 'pruning' | 'ball_out' | string;
 export type ISOOverallStatus = 'receiving' | 'inspection' | 'requirements' | 'clearance' | 'completed' | 'cancelled';
 
 export interface RequirementChecklistItem {
@@ -268,6 +268,15 @@ export interface TreeRequest {
   clearance_date_received?: string;
   clearance_status?: string;
   
+  // DENR Phase
+  denr_date_received_by_inspectors?: string;
+  denr_date_submitted_to_dept_head?: string;
+  denr_date_released_to_inspectors?: string;
+  denr_date_received?: string;
+  denr_status?: string;
+  
+  is_archived: boolean;
+
   created_at: string;
   updated_at?: string;
 }
@@ -281,6 +290,7 @@ export interface TreeRequestWithAnalytics extends TreeRequest {
   days_in_clearance: number;
   total_days: number;
   is_delayed: boolean;
+  is_archived: boolean;
   receiving_standard_days?: number;
   inspection_standard_days?: number;
   requirements_standard_days?: number;
@@ -290,6 +300,7 @@ export interface TreeRequestWithAnalytics extends TreeRequest {
 export interface TreeRequestCreate {
   request_type: ISORequestType;
   overall_status?: ISOOverallStatus;
+  is_archived?: boolean;
   
   // Receiving Phase
   receiving_date_received?: string;
@@ -323,6 +334,13 @@ export interface TreeRequestCreate {
   clearance_or_number?: string;
   clearance_date_received?: string;
   clearance_status?: string;
+  
+  // DENR Phase
+  denr_date_received_by_inspectors?: string;
+  denr_date_submitted_to_dept_head?: string;
+  denr_date_released_to_inspectors?: string;
+  denr_date_received?: string;
+  denr_status?: string;
 }
 
 export interface UpdateReceivingPhase {
@@ -362,6 +380,14 @@ export interface UpdateClearancePhase {
   clearance_status?: string;
 }
 
+export interface UpdateDENRPhase {
+  denr_date_received_by_inspectors?: string;
+  denr_date_submitted_to_dept_head?: string;
+  denr_date_released_to_inspectors?: string;
+  denr_date_received?: string;
+  denr_status?: string;
+}
+
 export interface ProcessingStandards {
   id: string;
   request_type: ISORequestType;
@@ -393,6 +419,7 @@ export const fetchTreeRequests = async (params?: {
   skip?: number;
   limit?: number;
   year?: number;
+  is_archived?: boolean;
 }): Promise<TreeRequestWithAnalytics[]> => {
   try {
     const queryParams = new URLSearchParams();
@@ -401,6 +428,7 @@ export const fetchTreeRequests = async (params?: {
     if (params?.skip !== undefined) queryParams.append('skip', params.skip.toString());
     if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
     if (params?.year !== undefined) queryParams.append('year', params.year.toString());
+    if (params?.is_archived !== undefined) queryParams.append('is_archived', params.is_archived.toString());
     
     const url = `/tree-management/v2/requests${queryParams.toString() ? `?${queryParams}` : ''}`;
     const response = await apiClient.get(url);
@@ -453,6 +481,11 @@ export const updateRequirementsPhase = async (id: string, data: UpdateRequiremen
 
 export const updateClearancePhase = async (id: string, data: UpdateClearancePhase): Promise<TreeRequestWithAnalytics> => {
   const response = await apiClient.patch(`/tree-management/v2/requests/${id}/clearance`, data);
+  return response.data;
+};
+
+export const updateDENRPhase = async (id: string, data: UpdateDENRPhase): Promise<TreeRequestWithAnalytics> => {
+  const response = await apiClient.patch(`/tree-management/v2/requests/${id}/denr`, data);
   return response.data;
 };
 
@@ -516,6 +549,10 @@ export const updateProcessingStandards = async (
 ): Promise<ProcessingStandards> => {
   const response = await apiClient.put(`/tree-management/v2/processing-standards/${requestType}`, data);
   return response.data;
+};
+
+export const deleteProcessingStandards = async (requestType: ISORequestType): Promise<void> => {
+  await apiClient.delete(`/tree-management/v2/processing-standards/${requestType}`);
 };
 
 

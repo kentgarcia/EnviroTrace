@@ -223,6 +223,7 @@ class TreeRequest(Base):
     request_number = Column(String(50), unique=True, nullable=False)
     request_type = Column(String(50), nullable=False)  # cutting, pruning, ball_out
     overall_status = Column(String(50), nullable=False, default='receiving')  # receiving, inspection, requirements, clearance, completed, cancelled
+    is_archived = Column(Boolean, nullable=False, default=False)
     
     # ===== PHASE 1: RECEIVING =====
     receiving_date_received = Column(Date, nullable=True)
@@ -257,6 +258,13 @@ class TreeRequest(Base):
     clearance_or_number = Column(String(50), nullable=True)  # OR Number
     clearance_date_received = Column(Date, nullable=True)
     clearance_status = Column(String(100), nullable=True)
+    
+    # ===== PHASE 5: DENR (if letter only) =====
+    denr_date_received_by_inspectors = Column(Date, nullable=True)
+    denr_date_submitted_to_dept_head = Column(Date, nullable=True)
+    denr_date_released_to_inspectors = Column(Date, nullable=True)
+    denr_date_received = Column(Date, nullable=True)
+    denr_status = Column(String(100), nullable=True)
     
     # ===== AUDIT TRACKING =====
     created_by = Column(UUID(as_uuid=True), nullable=True)  # FK to users table

@@ -192,6 +192,7 @@
   body {
     @reference bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overscroll-behavior: none;
   }
 
   h1,
