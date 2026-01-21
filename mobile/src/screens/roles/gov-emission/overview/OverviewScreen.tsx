@@ -170,6 +170,8 @@ export default function OverviewScreen() {
         subtitle: "Emission Management",
         statusBarStyle: "dark",
         showProfileAction: true,
+                titleSize: 22,
+
       }}
     >
       <ScrollView

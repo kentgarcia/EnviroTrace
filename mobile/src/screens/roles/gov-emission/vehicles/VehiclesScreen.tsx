@@ -245,6 +245,8 @@ export default function VehiclesScreen() {
       header={{
         title: "Vehicles",
         subtitle: `${filteredVehicles.length} Total Fleet`,
+                titleSize: 22,
+
         statusBarStyle: "dark",
         rightActionIcon: "RefreshCw",
         onRightActionPress: () => refetch(),

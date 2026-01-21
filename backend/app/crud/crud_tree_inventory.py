@@ -192,7 +192,13 @@ def create_tree(db: Session, tree_data: TreeInventoryCreate) -> TreeInventory:
     tree_code = tree_data.tree_code or generate_tree_code(db)
     
     # Convert photos list to JSON string
-    photos_json = json.dumps(tree_data.photos) if tree_data.photos else None
+    photos_json = None
+    if tree_data.photos:
+        photos_list = [
+            p.model_dump() if hasattr(p, "model_dump") else p 
+            for p in tree_data.photos
+        ]
+        photos_json = json.dumps(photos_list)
     
     db_tree = TreeInventory(
         tree_code=tree_code,

@@ -12,14 +12,15 @@ import {
 import { WebView } from "react-native-webview";
 import { Chip } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
+import * as Location from "expo-location";
 import Icon from "../../../components/icons/Icon";
 import ScreenLayout from "../../../components/layout/ScreenLayout";
 import { treeInventoryApi, TreeMapItem, TreeInventory, BoundsParams } from "../../../core/api/tree-inventory-api";
 import { useSmartTreesInBounds } from "../../../hooks/useSmartTreesInBounds";
 import { useSmartTreeClusters } from "../../../hooks/useSmartTreeClusters";
 
-// Default center - San Fernando, Pampanga (Philippines)
-const DEFAULT_CENTER = { lat: 15.0287, lng: 120.6880 };
+// Default center - Muntinlupa, Philippines (Fallback)
+const DEFAULT_CENTER = { lat: 14.4081, lng: 121.0415 };
 const DEFAULT_ZOOM = 14;
 const CLUSTER_ZOOM_THRESHOLD = 16; // Desktop uses 16 as threshold
 
@@ -304,6 +305,28 @@ export default function MapViewScreen() {
     const isLoading = useClusters ? loadingClusters : loadingTrees;
     const isFetching = useClusters ? fetchingClusters : fetchingTrees;
     const isUsingCache = useClusters ? usingClusterCache : usingTreeCache;
+
+    // Default to user location if available
+    useEffect(() => {
+        (async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+
+                const location = await Location.getCurrentPositionAsync({});
+                const { latitude, longitude } = location.coords;
+
+                if (webViewRef.current) {
+                    webViewRef.current.injectJavaScript(`
+                        map.setView([${latitude}, ${longitude}], ${DEFAULT_ZOOM});
+                        true;
+                    `);
+                }
+            } catch (error) {
+                console.log("Could not retireve user location, staying at default.");
+            }
+        })();
+    }, []);
 
     // Debug logging
     useEffect(() => {

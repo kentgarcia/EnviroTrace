@@ -268,6 +268,7 @@ export default function TreeFormScreen() {
             <StandardHeader
                 title={isEditMode ? "Edit Tree" : "Add New Tree"}
                 subtitle={isEditMode ? treeData?.data.tree_code : "Create tree record"}
+                titleSize={22}
                 showBack
                 onBack={() => navigation.goBack()}
                 rightActionIcon="Save"

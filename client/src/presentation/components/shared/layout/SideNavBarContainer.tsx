@@ -17,7 +17,9 @@ import {
   ArrowRightLeft,
   Settings,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Info,
+  HelpCircle
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -118,6 +120,16 @@ function getMenuItems(
         label: "Fees",
         path: `${basePath}/fee-records`,
         icon: <Banknote size={18} />,
+      },
+      {
+        label: "About",
+        path: `${basePath}/about`,
+        icon: <Info size={18} />,
+      },
+      {
+        label: "Help & Support",
+        path: `${basePath}/help-support`,
+        icon: <HelpCircle size={18} />,
       },
     ];
   }

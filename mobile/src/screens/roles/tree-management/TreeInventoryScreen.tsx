@@ -226,6 +226,7 @@ export default function TreeInventoryScreen() {
       header={{
         title: "Tree Inventory",
         subtitle: isLoading ? "Loading..." : `${trees.length} Total Trees`,
+                titleSize: 22,
         statusBarStyle: "dark",
         rightActionIcon: "RefreshCw",
         onRightActionPress: () => refetch(),

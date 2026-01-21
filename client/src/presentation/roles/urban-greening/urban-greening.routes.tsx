@@ -8,6 +8,8 @@ import TreeInventoryPage from "./pages/tree-inventory/TreeInventoryPage";
 import ISOTreeRequestsPage from "./pages/tree-requests/ISOTreeRequestsPage";
 import ProcessingStandardsSettings from "./pages/tree-requests/components/ProcessingStandardsSettings";
 import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
+import AboutPage from "./pages/about/AboutPage";
+import HelpSupportPage from "./pages/help/HelpSupportPage";
 
 const urbanGreeningLayout = createRoute({
     getParentRoute: () => rootRoute,
@@ -55,13 +57,27 @@ const feeRecordsRoute = createRoute({
     component: FeeRecords,
 });
 
+const aboutRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "about",
+    component: AboutPage,
+});
+
+const helpSupportRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "help-support",
+    component: HelpSupportPage,
+});
+
 urbanGreeningLayout.addChildren([
     overviewRoute,
     treeInventoryRoute,
     treeRequestsRoute,
     processingStandardsRoute,
     greeningProjectsRoute,
-    feeRecordsRoute
+    feeRecordsRoute,
+    aboutRoute,
+    helpSupportRoute
 ]);
 
 export const urbanGreeningRoute = [urbanGreeningLayout];

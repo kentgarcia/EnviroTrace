@@ -90,6 +90,8 @@ export default function TestingScreen() {
       header={{
         title: "Emission Testing",
         subtitle: `${items.length} Total Tests Recorded`,
+                titleSize: 22,
+
         statusBarStyle: "dark",
         rightActionIcon: "RefreshCw",
         onRightActionPress: () => refetchTests(),

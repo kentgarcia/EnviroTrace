@@ -678,6 +678,7 @@ export default function TreeFieldCaptureScreen() {
                 subtitle={`Step ${currentStep} of 3`}
                 showBack
                 onBack={handleBack}
+                titleSize={22}
             />
 
             {renderStepIndicator()}

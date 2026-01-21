@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.0-flash-lite"
     
+    # OCR Configuration
+    OCR_PROVIDER: str = "gemini"  # "gemini" or "ocr_space"
+    OCR_SPACE_API_KEY: Optional[str] = None
+    
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None
       # CORS settings

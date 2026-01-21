@@ -5,7 +5,9 @@ from sqlalchemy.orm import Session
 import base64
 import json
 import logging
+import httpx
 
+from app.core.config import settings
 from app.schemas.gemini_schemas import (
     GeminiTextRequest,
     GeminiImageRequest,
@@ -374,6 +376,43 @@ async def count_tokens(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def recognize_with_ocr_space(image_data: str, mime_type: str) -> str:
+    if not settings.OCR_SPACE_API_KEY:
+        raise Exception("OCR_SPACE_API_KEY is not set")
+    
+    async with httpx.AsyncClient() as client:
+        # OCR.Space expects data URI scheme
+        base64_image = f"data:{mime_type};base64,{image_data}"
+        
+        response = await client.post(
+            "https://api.ocr.space/parse/image",
+            data={
+                "apikey": settings.OCR_SPACE_API_KEY,
+                "base64Image": base64_image,
+                "language": "eng",
+                "isOverlayRequired": "false",
+                "detectOrientation": "true",
+                "scale": "true",
+                "OCREngine": "2"  # Engine 2 is better for number plates/digits
+            },
+            timeout=30.0
+        )
+        
+        if response.status_code != 200:
+             raise Exception(f"OCR.Space API error: {response.status_code} {response.text}")
+             
+        result = response.json()
+        
+        if result.get("IsErroredOnProcessing"):
+            raise Exception(f"OCR.Space processing error: {result.get('ErrorMessage')}")
+            
+        if not result.get("ParsedResults"):
+            return "NOT_FOUND"
+            
+        parsed_text = result["ParsedResults"][0]["ParsedText"]
+        return parsed_text if parsed_text else "NOT_FOUND"
+
+
 @router.post("/recognize-plate", response_model=PlateRecognitionResponse)
 async def recognize_license_plate(
     request: PlateRecognitionRequest,
@@ -396,47 +435,59 @@ async def recognize_license_plate(
                 detail="image_data is required"
             )
         # Create a specialized prompt for license plate recognition
-        plate_recognition_prompt = """
-        Extract license plate number from this image.
+        recognized_text = ""
+        ai_response_content = ""
 
-        TASK: Find visible license plate and return ONLY the alphanumeric characters.
+        if settings.OCR_PROVIDER == "ocr_space":
+            logger.info("Using OCR.Space for license plate recognition")
+            recognized_text = await recognize_with_ocr_space(image_data, mime_type)
+            ai_response_content = recognized_text
+            # Normalize text
+            recognized_text = recognized_text.strip().upper()
+        else:
+            # Create a specialized prompt for license plate recognition
+            plate_recognition_prompt = """
+            Extract license plate number from this image.
 
-        INSTRUCTIONS:
-        - Look for rectangular plates on vehicles
-        - Extract letters and numbers only
-        - If no plate visible, return "NOT_FOUND"
-        - Return ONLY the plate characters, no explanation
+            TASK: Find visible license plate and return ONLY the alphanumeric characters.
 
-        EXAMPLES: ABC123, 123ABC, AB123CD
-        """
-        
-        # Create request for Gemini with optimized settings
-        request = GeminiImageRequest(
-            prompt=plate_recognition_prompt,
-            image_data=image_data,
-            mime_type=mime_type,
-            model="gemini-2.0-flash-lite",
-            temperature=0.0,  # Zero temperature for fastest processing
-            max_tokens=20  # Reduced tokens for faster response
-        )
-        
-        # Get plate recognition result
-        result = await gemini_service.analyze_image(request)
-        recognized_text = result.content.strip().upper()
+            INSTRUCTIONS:
+            - Look for rectangular plates on vehicles
+            - Extract letters and numbers only
+            - If no plate visible, return "NOT_FOUND"
+            - Return ONLY the plate characters, no explanation
+
+            EXAMPLES: ABC123, 123ABC, AB123CD
+            """
+            
+            # Create request for Gemini with optimized settings
+            request = GeminiImageRequest(
+                prompt=plate_recognition_prompt,
+                image_data=image_data,
+                mime_type=mime_type,
+                model="gemini-2.0-flash-lite",
+                temperature=0.0,  # Zero temperature for fastest processing
+                max_tokens=20  # Reduced tokens for faster response
+            )
+            
+            # Get plate recognition result
+            result = await gemini_service.analyze_image(request)
+            recognized_text = result.content.strip().upper()
+            ai_response_content = result.content
         
         # Debug logging to see what Gemini actually returned
-        logger.info(f"Gemini raw response: '{result.content}'")
+        logger.info(f"OCR raw response: '{ai_response_content}'")
         logger.info(f"Processed text: '{recognized_text}'")
         
         # Check if plate was found
         if recognized_text == "NOT_FOUND" or not recognized_text:
-            logger.warning(f"No license plate detected. Gemini response was: '{result.content}'")
+            logger.warning(f"No license plate detected. Response was: '{ai_response_content}'")
             return {
                 "plate_number": None,
                 "confidence": 0.0,
                 "vehicle_exists": False,
                 "message": "No license plate found in the image",
-                "ai_response": result.content[:100]
+                "ai_response": ai_response_content[:100]
             }
         
         # Clean up the recognized plate number
