@@ -125,6 +125,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   const [newStandardName, setNewStandardName] = useState("");
   const [editingOption, setEditingOption] = useState<DropdownOption | null>(null);
   const [selectedField, setSelectedField] = useState<'received_through' | 'status'>('received_through');
+  const [formData, setFormData] = useState({ option_value: '' });
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
     type: 'standard' | 'option';
@@ -533,7 +534,7 @@ const ProcessingStandardsSettings: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Received Through Options */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <List className="w-5 h-5" />
@@ -542,12 +543,13 @@ const ProcessingStandardsSettings: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => handleOpenDialog('received_through')}
+                className="h-8"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Option
               </Button>
             </div>
-            <CardDescription>
+            <CardDescription className="mt-1">
               Manage dropdown options for how requests are received. Drag items to reorder.
             </CardDescription>
           </CardHeader>
@@ -557,38 +559,48 @@ const ProcessingStandardsSettings: React.FC = () => {
               collisionDetection={closestCenter}
               onDragEnd={(event) => handleDragEnd(event, 'received_through')}
             >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>Option</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <SortableContext
-                    items={receivedThroughOptions.map(o => o.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {receivedThroughOptions.map((option) => (
-                      <SortableItem
-                        key={option.id}
-                        id={option.id}
-                        option={option}
-                        onDelete={handleDeleteOption}
-                        onEdit={(opt) => handleOpenDialog('received_through', opt)}
-                      />
-                    ))}
-                  </SortableContext>
-                </TableBody>
-              </Table>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead>Option</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={receivedThroughOptions.map(o => o.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {receivedThroughOptions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                            No options configured
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        receivedThroughOptions.map((option) => (
+                          <SortableItem
+                            key={option.id}
+                            id={option.id}
+                            option={option}
+                            onDelete={handleDeleteOption}
+                            onEdit={(opt) => handleOpenDialog('received_through', opt)}
+                          />
+                        ))
+                      )}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </div>
             </DndContext>
           </CardContent>
         </Card>
 
         {/* Status Options */}
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <List className="w-5 h-5" />
@@ -597,12 +609,13 @@ const ProcessingStandardsSettings: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => handleOpenDialog('status')}
+                className="h-8"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add Option
               </Button>
             </div>
-            <CardDescription>
+            <CardDescription className="mt-1">
               Manage dropdown options for request status. Drag items to reorder.
             </CardDescription>
           </CardHeader>
@@ -612,36 +625,76 @@ const ProcessingStandardsSettings: React.FC = () => {
               collisionDetection={closestCenter}
               onDragEnd={(event) => handleDragEnd(event, 'status')}
             >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>Option</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <SortableContext
-                    items={statusOptions.map(o => o.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {statusOptions.map((option) => (
-                      <SortableItem
-                        key={option.id}
-                        id={option.id}
-                        option={option}
-                        onDelete={handleDeleteOption}
-                        onEdit={(opt) => handleOpenDialog('status', opt)}
-                      />
-                    ))}
-                  </SortableContext>
-                </TableBody>
-              </Table>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="w-10"></TableHead>
+                      <TableHead>Option</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={statusOptions.map(o => o.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {statusOptions.length === 0 ? (
+                         <TableRow>
+                           <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                             No options configured
+                           </TableCell>
+                         </TableRow>
+                      ) : (
+                        statusOptions.map((option) => (
+                          <SortableItem
+                            key={option.id}
+                            id={option.id}
+                            option={option}
+                            onDelete={handleDeleteOption}
+                            onEdit={(opt) => handleOpenDialog('status', opt)}
+                          />
+                        ))
+                      )}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </div>
             </DndContext>
           </CardContent>
         </Card>
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Guidelines</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <strong className="text-foreground block mb-1">Receiving Phase</strong>
+              Time from initial receipt to forwarding to inspectors
+            </div>
+            <div>
+              <strong className="text-foreground block mb-1">Inspection Phase</strong>
+              Time for site inspection and report submission
+            </div>
+            <div>
+              <strong className="text-foreground block mb-1">Requirements Phase</strong>
+              Time for applicant to submit all required documents
+            </div>
+            <div>
+              <strong className="text-foreground block mb-1">Clearance Phase</strong>
+              Time for final approval and clearance issuance
+            </div>
+          </div>
+          <div className="pt-4 mt-4 border-t">
+            <strong className="text-foreground">Note:</strong> These standards are based on the Citizen's Charter and should be updated according to official policy changes.
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Option Editor Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -652,8 +705,8 @@ const ProcessingStandardsSettings: React.FC = () => {
               {editingOption ? 'Update the option value below' : 'Add a new option to the dropdown. Use drag and drop to reorder options.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
               <Label>Option Value</Label>
               <Input
                 value={formData.option_value}
@@ -673,6 +726,7 @@ const ProcessingStandardsSettings: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Add Standard Dialog */}
       <Dialog open={isAddStandardOpen} onOpenChange={setIsAddStandardOpen}>
         <DialogContent>
           <DialogHeader>
@@ -681,8 +735,8 @@ const ProcessingStandardsSettings: React.FC = () => {
               Add a configuration for a new request type. Default values will be set and can be modified later.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
               <Label>Request Type Name</Label>
               <Input
                 value={newStandardName}
@@ -702,28 +756,34 @@ const ProcessingStandardsSettings: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Guidelines</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div>
-            <strong className="text-foreground">Receiving Phase:</strong> Time from initial receipt to forwarding to inspectors
-          </div>
-          <div>
-            <strong className="text-foreground">Inspection Phase:</strong> Time for site inspection and report submission
-          </div>
-          <div>
-            <strong className="text-foreground">Requirements Phase:</strong> Time for applicant to submit all required documents
-          </div>
-          <div>
-            <strong className="text-foreground">Clearance Phase:</strong> Time for final approval and clearance issuance
-          </div>
-          <div className="pt-3 border-t">
-            <strong className="text-foreground">Note:</strong> These standards are based on the Citizen's Charter and should be updated according to official policy changes.
-          </div>
-        </CardContent>
-      </Card>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog.isOpen} onOpenChange={(open) => !open && setDeleteDialog(prev => ({ ...prev, isOpen: false }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              {deleteDialog.title}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog(prev => ({ ...prev, isOpen: false }))}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
