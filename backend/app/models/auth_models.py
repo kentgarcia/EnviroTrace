@@ -7,8 +7,7 @@ from app.db.database import Base # Use the Base from database.py
 
 class UserRoleEnum(str, enum.Enum):
     admin = "admin"
-    air_quality = "air_quality"
-    tree_management = "tree_management"
+    urban_greening = "urban_greening"
     government_emission = "government_emission"
 
 class User(Base):

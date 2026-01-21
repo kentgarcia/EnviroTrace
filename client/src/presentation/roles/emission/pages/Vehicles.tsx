@@ -14,7 +14,7 @@ import {
   VehicleFilters,
   VehicleFormInput,
 } from "@/core/api/emission-service";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/core/hooks/useDebounce";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
 import {
   VehicleTable,
@@ -118,8 +118,14 @@ export default function Vehicles() {
   } = useFilterOptions();
 
   // Get offices for office name/ID conversion
-  const { data: officesData } = useOffices();
+  const { data: officesData, refetch: refetchOffices } = useOffices();
   const officesList = officesData?.offices || [];
+  
+  // Create list of office names for the modal dropdown
+  const availableOfficeNames = useMemo(() => {
+    return officesList.map(o => o.name).sort();
+  }, [officesList]);
+
   // Use mutation hooks for CRUD operations
   const addVehicleMutation = useAddVehicle();
   const updateVehicleMutation = useUpdateVehicle();
@@ -593,7 +599,8 @@ export default function Vehicles() {
         vehicleTypes={vehicleTypes}
         engineTypes={engineTypes}
         wheelCounts={wheelCounts.map((w) => w.toString())}
-        offices={offices}
+        offices={availableOfficeNames}
+        onRefreshOffices={refetchOffices}
       />      <VehicleDetails
         vehicle={selectedVehicle}
         isOpen={viewModalOpen}

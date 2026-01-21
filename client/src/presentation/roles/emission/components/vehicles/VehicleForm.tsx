@@ -25,7 +25,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/presentation/components/shared/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, RefreshCw } from "lucide-react";
 import { cn } from "@/core/utils/utils";
 
 // Form schema with validation
@@ -101,6 +101,7 @@ interface VehicleFormProps {
   engineTypes: string[];
   wheelCounts: string[];
   offices: string[];
+  onRefreshOffices?: () => void;
 }
 
 export const VehicleForm: React.FC<VehicleFormProps> = ({
@@ -112,6 +113,7 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
   engineTypes,
   wheelCounts,
   offices,
+  onRefreshOffices,
 }) => {
   // Set default values
   const defaultValues: VehicleFormValues = {
@@ -221,7 +223,25 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
             name="officeName"
             render={({ field }) => (
               <FormItem className="space-y-1.5">
-                <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Office</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel className="text-[10px] font-bold uppercase tracking-wider text-slate-500 ml-1">Office</FormLabel>
+                   {onRefreshOffices && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onRefreshOffices();
+                      }}
+                      className="h-5 w-5 p-0 hover:bg-transparent"
+                      title="Refresh offices"
+                    >
+                      <RefreshCw className="h-3 w-3 text-slate-400 hover:text-[#0033a0]" />
+                    </Button>
+                  )}
+                </div>
                 <FormControl>
                   <Popover open={openOffice} onOpenChange={setOpenOffice}>
                     <PopoverTrigger asChild>
@@ -229,13 +249,15 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                         variant="outline"
                         role="combobox"
                         aria-expanded={openOffice}
-                        className="w-full justify-between rounded-lg border-slate-200 text-slate-700 font-medium"
+                        className="w-full justify-between rounded-lg border-slate-200 text-slate-700 font-medium px-3"
                       >
-                        {field.value || "Select office..."}
+                        <span className="truncate flex-1 text-left">
+                          {field.value || "Select office..."}
+                        </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0 rounded-xl border-slate-200 shadow-lg">
+                    <PopoverContent className="w-[280px] p-0 rounded-xl border-slate-200 shadow-lg" align="start">
                       <Command>
                         <CommandInput
                           placeholder="Search or type office..."
@@ -267,13 +289,13 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                             >
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "mr-2 h-4 w-4 shrink-0",
                                   field.value === office
                                     ? "opacity-100"
                                     : "opacity-0"
                                 )}
                               />
-                              {office}
+                              <span className="truncate">{office}</span>
                             </CommandItem>
                           ))}
                         </CommandGroup>

@@ -131,7 +131,7 @@ class CRUDSession(CRUDBase[UserSession, SessionCreate, SessionUpdate]):
                     )
                 )
         
-        query = query.order_by(desc(UserSession.created_at)).offset(skip).limit(limit)
+        query = query.order_by(desc(UserSession.is_active), desc(UserSession.created_at)).offset(skip).limit(limit)
         
         result = await db.execute(query)
         sessions = result.scalars().all()

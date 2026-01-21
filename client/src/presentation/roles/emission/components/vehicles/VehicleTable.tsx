@@ -251,7 +251,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       id: "actions",
       header: () => <div className="text-right text-white font-bold uppercase text-[10px] tracking-wider">Actions</div>,
       cell: ({ row }) => (
-        <div className="text-right">
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -263,17 +263,30 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setDetailsVehicle(row.original)}>
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDetailsVehicle(row.original);
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 <span>View Details</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(row.original);
+                }}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 <span>Edit</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => onDelete(row.original)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(row.original);
+                }}
                 className="text-red-600"
               >
                 <Trash2 className="mr-2 h-4 w-4" />

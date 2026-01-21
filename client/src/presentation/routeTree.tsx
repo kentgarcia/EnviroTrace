@@ -15,7 +15,6 @@ import { UserRole } from "@/integrations/types/userData";
 import { redirect } from "@tanstack/react-router";
 import { Outlet } from "@tanstack/react-router";
 import { adminRoutes } from "@/presentation/roles/admin/admin.routes";
-// import { smokeBelchingRoute } from "./roles/belching/belching.routes";
 import { govEmissionRoute } from "./roles/emission/emission.routes";
 import { urbanGreeningRoute } from "./roles/urban-greening/urban-greening.routes";
 import Unauthorized from "./pages/public/Unauthorized";
@@ -107,7 +106,6 @@ export const routeTree = rootRoute.addChildren([
   termsRoute,
   privacyRoute,
   ...adminRoutes,
-  // ...smokeBelchingRoute,
   ...govEmissionRoute,
   ...urbanGreeningRoute,
   unauthorizedRoute,

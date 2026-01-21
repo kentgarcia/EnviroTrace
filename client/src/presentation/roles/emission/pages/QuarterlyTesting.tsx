@@ -94,19 +94,17 @@ export default function QuarterlyTesting() {
             </div>
 
             {/* Toolbar / Tabs */}
-            <div className="px-6 pb-0 flex flex-col gap-4 w-full">
+            <div className="px-6 pb-0 flex flex-col gap-4 w-full mb-4">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-transparent p-0 h-auto gap-8">
+                <TabsList>
                   <TabsTrigger 
                     value="overview" 
-                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
                   >
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Overview
                   </TabsTrigger>
                   <TabsTrigger 
                     value="testing" 
-                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
                     disabled={selectedOffices.length === 0 || (!selectedOffices.includes("all") && selectedOffices.length === 0)}
                   >
                     <Table className="h-4 w-4 mr-2" />
@@ -114,7 +112,6 @@ export default function QuarterlyTesting() {
                   </TabsTrigger>
                   <TabsTrigger 
                     value="quarters" 
-                    className="px-0 py-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none bg-transparent shadow-none transition-all hover:text-slate-900"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Settings

@@ -38,20 +38,37 @@ import {
     UserSession
 } from "@/core/api/session-api";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/presentation/components/shared/ui/pagination";
 
 export function SessionManagement() {
     const [deviceFilter, setDeviceFilter] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("");
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
     const { toast } = useToast();
 
     // Parse filters for API
     const deviceType = deviceFilter === "all" || !deviceFilter ? undefined : deviceFilter;
     const isActive = statusFilter === "all" || !statusFilter ? undefined : statusFilter === "active";
 
+    // Reset page when filters change
+    React.useEffect(() => {
+        setPage(1);
+    }, [deviceFilter, statusFilter]);
+
     // Queries
     const { data: sessions = [], isLoading, error } = useAllSessions({
         device_type: deviceType,
         is_active: isActive,
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
     });
 
     // Mutations
@@ -340,6 +357,28 @@ export function SessionManagement() {
                                     </TableBody>
                                 </Table>
                             )}
+
+                            <div className="mt-4 flex justify-center">
+                                <Pagination>
+                                    <PaginationContent>
+                                        <PaginationItem>
+                                            <PaginationPrevious 
+                                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                            />
+                                        </PaginationItem>
+                                        <PaginationItem>
+                                            <PaginationLink isActive>{page}</PaginationLink>
+                                        </PaginationItem>
+                                        <PaginationItem>
+                                            <PaginationNext 
+                                                onClick={() => setPage(p => p + 1)}
+                                                className={sessions.length < pageSize ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                            />
+                                        </PaginationItem>
+                                    </PaginationContent>
+                                </Pagination>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

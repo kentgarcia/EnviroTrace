@@ -50,27 +50,6 @@ export interface UrbanGreeningFeeRecordUpdate {
   payment_date?: string;
 }
 
-// Air Quality Fee API functions
-export const fetchFees = async () => {
-  const res = await apiClient.get("/air-quality/fees");
-  return res.data;
-};
-
-export const createFee = async (fee: FeeCreate) => {
-  const res = await apiClient.post("/air-quality/fees", fee);
-  return res.data;
-};
-
-export const updateFee = async (fee_id: string, fee: FeeUpdate) => {
-  const res = await apiClient.put(`/air-quality/fees/${fee_id}`, fee);
-  return res.data;
-};
-
-export const deleteFee = async (fee_id: string) => {
-  const res = await apiClient.delete(`/air-quality/fees/${fee_id}`);
-  return res.data;
-};
-
 // Urban Greening Fee Record API functions
 export const fetchUrbanGreeningFeeRecords = async (year?: number): Promise<
   UrbanGreeningFeeRecord[]

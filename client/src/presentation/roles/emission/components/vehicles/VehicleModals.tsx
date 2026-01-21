@@ -28,6 +28,7 @@ interface VehicleModalsProps {
   engineTypes: string[];
   wheelCounts: string[];
   offices: string[];
+  onRefreshOffices: () => void;
 }
 
 export const VehicleModals: React.FC<VehicleModalsProps> = ({
@@ -43,6 +44,7 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
   engineTypes,
   wheelCounts,
   offices,
+  onRefreshOffices,
 }) => {
   // Prepare the initial values for edit form
   const getInitialValues = (): VehicleFormInput | undefined => {
@@ -70,14 +72,14 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
         open={isAddModalOpen}
         onOpenChange={(open) => !open && onAddModalClose()}
       >
-        <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
-            <DialogTitle className="text-xl font-bold text-white">Add New Vehicle</DialogTitle>
-            <DialogDescription className="text-blue-100/80">
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add New Vehicle</DialogTitle>
+            <DialogDescription className="text-white/90">
               Enter the details of the new vehicle to add to the database.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-6 bg-white">
+          <div className="py-4">
             <VehicleForm
               onSubmit={onAddVehicle}
               onCancel={onAddModalClose}
@@ -86,6 +88,7 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
               engineTypes={engineTypes}
               wheelCounts={wheelCounts}
               offices={offices}
+              onRefreshOffices={onRefreshOffices}
             />
           </div>
         </DialogContent>
@@ -96,14 +99,14 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
         open={isEditModalOpen}
         onOpenChange={(open) => !open && onEditModalClose()}
       >
-        <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
-            <DialogTitle className="text-xl font-bold text-white">Edit Vehicle</DialogTitle>
-            <DialogDescription className="text-blue-100/80">
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Vehicle</DialogTitle>
+            <DialogDescription className="text-white/90">
               Update the details of the vehicle.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-6 bg-white">
+          <div className="py-4">
             <VehicleForm
               initialValues={getInitialValues()}
               onSubmit={onEditVehicle}
@@ -113,6 +116,7 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
               engineTypes={engineTypes}
               wheelCounts={wheelCounts}
               offices={offices}
+              onRefreshOffices={onRefreshOffices}
             />
           </div>
         </DialogContent>

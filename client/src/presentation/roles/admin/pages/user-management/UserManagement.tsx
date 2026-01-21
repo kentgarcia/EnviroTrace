@@ -231,8 +231,7 @@ export function UserManagement() {
     const getRoleColor = (role: string) => {
         const colors: Record<string, string> = {
             admin: "bg-red-100 text-red-800",
-            air_quality: "bg-blue-100 text-blue-800",
-            tree_management: "bg-green-100 text-green-800",
+            urban_greening: "bg-green-100 text-green-800",
             government_emission: "bg-purple-100 text-purple-800",
         };
         return colors[role] || "bg-gray-100 text-gray-800";

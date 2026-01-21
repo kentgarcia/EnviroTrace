@@ -4,33 +4,6 @@ from typing import Optional
 from decimal import Decimal
 from uuid import UUID
 
-class AirQualityFeeBase(BaseModel):
-    category: str
-    rate: int  # stored as cents
-    date_effective: DateType
-    level: int
-
-class AirQualityFeeCreate(AirQualityFeeBase):
-    fee_id: str
-
-class AirQualityFeeUpdate(BaseModel):
-    category: Optional[str] = None
-    rate: Optional[int] = None
-    date_effective: Optional[DateType] = None
-    level: Optional[int] = None
-
-class AirQualityFeeInDB(AirQualityFeeBase):
-    fee_id: str
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True
-
-class AirQualityFee(AirQualityFeeInDB):
-    pass
-
-
 # Urban Greening Fee Record Schemas
 class UrbanGreeningFeeRecordBase(BaseModel):
     type: str  # cutting_permit, pruning_permit, violation_fine

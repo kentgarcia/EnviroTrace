@@ -229,7 +229,7 @@ export default function DashboardSelection() {
             </motion.div>
           )}
 
-          {hasRole("urban_greening") && (
+          {hasRole("tree_management") && (
             <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="Urban Greening"
@@ -241,7 +241,7 @@ export default function DashboardSelection() {
             </motion.div>
           )}
 
-          {hasRole("government_emission") && (
+        {!hasRole("admin") && !hasRole("tree_management") && !hasRole("government_emission") && (
             <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="Fleet Emissions"
@@ -254,7 +254,7 @@ export default function DashboardSelection() {
           )}
         </motion.div>
 
-        {!hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
+        {!hasRole("admin") && !hasRole("tree_management") && !hasRole("government_emission") && (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
             <ShieldCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-slate-900">No Dashboards Available</h4>

@@ -9,27 +9,27 @@ import ScreenLayout from "../../components/layout/ScreenLayout";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
-    tree_management: "Tree Management",
+    urban_greening: "Urban Greening",
 };
 
 export default function DashboardSelectorScreen() {
     const navigation = useNavigation();
     const { user, getUserRoles, setSelectedDashboard, logout } = useAuthStore();
     const allRoles = useMemo(() => getUserRoles(), [getUserRoles]);
-    // If admin, show all dashboards; otherwise filter out admin and air_quality roles
+    // If admin, show all dashboards; otherwise filter out admin
     const roles = useMemo(() => {
         const isAdmin = allRoles.includes('admin');
         if (isAdmin) {
-            return ['government_emission', 'tree_management'];
+            return ['government_emission', 'urban_greening'];
         }
-        return allRoles.filter(role => role !== 'admin' && role !== 'air_quality');
+        return allRoles.filter(role => role !== 'admin');
     }, [allRoles]);
     const [logoutVisible, setLogoutVisible] = useState(false);
     const insets = useSafeAreaInsets();
 
     const roleImageMap: Record<string, any> = {
         government_emission: require("../../../assets/images/bg_govemissions.jpg"),
-        tree_management: require("../../../assets/images/bg_envicompliance.jpg"),
+        urban_greening: require("../../../assets/images/bg_envicompliance.jpg"),
     };
 
     const handleSelect = async (role: string) => {
@@ -95,11 +95,11 @@ export default function DashboardSelectorScreen() {
                             <View style={styles.grid}>
                                 {roles.map((r) => {
                                     const icon = r === "government_emission" ? "Car" :
-                                        r === "tree_management" ? "TreePalm" : "LayoutDashboard";
+                                        r === "urban_greening" ? "TreePalm" : "LayoutDashboard";
 
                                     const description = r === "government_emission"
                                         ? "Vehicles, testing, and offices"
-                                        : r === "tree_management"
+                                        : r === "urban_greening"
                                             ? "Urban greening and requests"
                                             : undefined;
 

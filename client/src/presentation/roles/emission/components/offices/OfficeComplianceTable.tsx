@@ -28,7 +28,7 @@ import {
 import { SortingState, ColumnDef, Row } from "@tanstack/react-table";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { EmissionTest, useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
-import { OfficeWithCompliance } from "@/hooks/offices/useOffices";
+import { OfficeWithCompliance } from "@/core/hooks/offices/useOffices";
 
 // Augment the @tanstack/react-table module to include 'align' in ColumnMeta
 declare module "@tanstack/react-table" {

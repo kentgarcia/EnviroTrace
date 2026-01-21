@@ -63,7 +63,7 @@ export default function AppNavigator() {
             gestureEnabled: false, // Prevent going back to selector
           }}
         />
-      ) : selectedDashboard === "tree_management" ? (
+      ) : selectedDashboard === "urban_greening" ? (
         <Stack.Screen
           name="TreeManagement"
           component={TreeManagementNavigator}

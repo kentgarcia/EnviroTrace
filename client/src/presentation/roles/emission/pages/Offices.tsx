@@ -14,7 +14,7 @@ import { OfficeComplianceTable } from "@/presentation/roles/emission/components/
 import { OfficeManagementTable } from "@/presentation/roles/emission/components/offices/OfficeManagementTable";
 import { OfficeModal } from "@/presentation/roles/emission/components/offices/OfficeModal";
 import TopNavBarContainer from "@/presentation/components/shared/layout/TopNavBarContainer";
-import { useOffices } from "@/hooks/offices/useOffices";
+import { useOffices } from "@/core/hooks/offices/useOffices";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
@@ -145,17 +145,15 @@ export default function OfficesPage() {
                 </div>
               </div>
 
-              <div className="px-6 pb-0">
-                <TabsList className="bg-transparent p-0 gap-8 h-12 w-full justify-start border-b-0 rounded-none">
+              <div className="px-6 pb-4">
+                <TabsList>
                   <TabsTrigger 
                     value="overview"
-                    className="rounded-none border-b-2 border-transparent px-0 h-12 data-[state=active]:bg-transparent data-[state=active]:text-[#0033a0] data-[state=active]:border-[#0033a0] data-[state=active]:shadow-none font-semibold transition-all text-sm"
                   >
                     Overview
                   </TabsTrigger>
                   <TabsTrigger 
                     value="management"
-                    className="rounded-none border-b-2 border-transparent px-0 h-12 data-[state=active]:bg-transparent data-[state=active]:text-[#0033a0] data-[state=active]:border-[#0033a0] data-[state=active]:shadow-none font-semibold transition-all text-sm"
                   >
                     Office Management
                   </TabsTrigger>

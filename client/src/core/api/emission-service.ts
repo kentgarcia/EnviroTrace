@@ -288,7 +288,40 @@ export function useDeleteVehicle() {
       await apiClient.delete(`${API_ENDPOINTS.VEHICLES}/${id}`);
       return id;
     },
-    onSuccess: () => {
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["vehicles"] });
+
+      // Snapshot the previous value
+      const previousVehicles = queryClient.getQueriesData({
+        queryKey: ["vehicles"],
+      });
+
+      // Optimistically update to remove the vehicle
+      queryClient.setQueriesData(
+        { queryKey: ["vehicles"] },
+        (old: VehiclesResponse | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            vehicles: old.vehicles.filter((vehicle) => vehicle.id !== deletedId),
+            total: Math.max(0, old.total - 1),
+          };
+        }
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousVehicles };
+    },
+    onError: (err, newTodo, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousVehicles) {
+        context.previousVehicles.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
     },
   });

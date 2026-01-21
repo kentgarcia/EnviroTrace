@@ -57,9 +57,9 @@ export function OfficeModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px] p-0 border-none overflow-hidden rounded-xl">
-                <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
-                    <DialogTitle className="text-white text-xl font-bold">
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>
                         {isEditMode ? "Edit Office" : "Add New Office"}
                     </DialogTitle>
                     <DialogDescription className="text-blue-100/80 mt-1">
@@ -69,7 +69,7 @@ export function OfficeModal({
                         }
                     </DialogDescription>
                 </DialogHeader>
-                <div className="p-6">
+                <div>
                     <OfficeForm
                         initialValues={office || undefined}
                         onSubmit={handleSubmit}

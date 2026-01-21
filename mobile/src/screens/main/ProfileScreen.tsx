@@ -9,13 +9,13 @@ import ScreenLayout from "../../components/layout/ScreenLayout";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
-    tree_management: "Tree Management",
+    urban_greening: "Urban Greening",
     admin: "Administrator",
 };
 
 const roleIcons: Record<string, string> = {
     government_emission: "Car",
-    tree_management: "TreePalm",
+    urban_greening: "TreePalm",
     admin: "ShieldCheck",
 };
 

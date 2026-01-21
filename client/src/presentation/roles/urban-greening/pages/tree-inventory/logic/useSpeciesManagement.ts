@@ -12,7 +12,7 @@ import {
   TreeSpecies,
   TreeSpeciesCreate,
 } from "@/core/api/tree-inventory-api";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useDebounce } from "@/core/hooks/useDebounce";
 
 export const useSpeciesManagement = (searchTerm: string = "") => {
   const queryClient = useQueryClient();

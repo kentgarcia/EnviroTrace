@@ -7,13 +7,12 @@ A comprehensive **multi-role environmental management system** designed for envi
 The EnviroTrace System is built around a **role-based architecture** supporting multiple environmental domains:
 
 - **Admin**: System administration and user management
-- **Air Quality Monitoring**: Real-time air quality data collection and analysis
 - **Tree Management**: Urban forestry and green space management
 - **Government Emission**: Vehicle emission testing and compliance tracking
 
 ### Key Features
 
-- 🏢 **Multi-schema PostgreSQL database** with domain separation (`auth`, `emission`, `belching`, `urban_greening`)
+- 🏢 **Multi-schema PostgreSQL database** with domain separation (`auth`, `emission`, `urban_greening`)
 - 🔐 **Role-based access control** with JWT authentication
 - 📱 **Cross-platform support**: Desktop (Tauri), Mobile (React Native)
 - 🌐 **RESTful API** built with FastAPI
@@ -140,8 +139,6 @@ client/
 │   │   ├── components/   # Shared UI components
 │   │   └── roles/        # Role-based pages and components
 │   │       ├── admin/
-│   │       ├── air_quality/
-│   │       ├── belching/
 │   │       └── tree_management/
 │   └── hooks/            # Custom React hooks
 └── src-tauri/            # Tauri desktop app configuration
@@ -182,8 +179,7 @@ The system uses **JWT-based authentication** with role-based access control:
 - `admin` - Full system access
 - `air_quality` - Air quality monitoring features
 - `tree_management` - Urban greening and forestry
-- `government_emission` - Vehicle emission tracking
-
+- `
 ### Route Protection
 
 All routes require dual authorization checks:
@@ -205,8 +201,7 @@ The system uses **PostgreSQL with schema separation**:
 - `belching` - Smoke belching violations and payments
 - `urban_greening` - Tree management and green spaces
 
-### Key Patterns
-
+###
 - **UUID primary keys** with `uuid_generate_v4()`
 - **Cross-schema foreign keys**: `ForeignKey("auth.users.id")`
 - **Soft deletes** via `deleted_at` timestamp

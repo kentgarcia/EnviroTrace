@@ -40,7 +40,7 @@ async def test_connection():
             result = await conn.execute(text("""
                 SELECT schema_name 
                 FROM information_schema.schemata 
-                WHERE schema_name IN ('air_quality', 'emission', 'urban_greening', 'app_auth')
+                WHERE schema_name IN ('emission', 'urban_greening', 'app_auth')
                 ORDER BY schema_name
             """))
             schemas = result.fetchall()
@@ -56,7 +56,7 @@ async def test_connection():
                     schemaname,
                     COUNT(*) as table_count
                 FROM pg_tables 
-                WHERE schemaname IN ('air_quality', 'emission', 'urban_greening', 'app_auth')
+                WHERE schemaname IN ('emission', 'urban_greening', 'app_auth')
                 GROUP BY schemaname
                 ORDER BY schemaname
             """))

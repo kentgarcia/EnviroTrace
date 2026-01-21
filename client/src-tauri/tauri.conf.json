@@ -45,8 +45,9 @@
         "silent": true
       },
       "wix": {
+        "language": "en-US",
         "bannerPath": "icons/WixBanner.bmp",
-        "dialogPath": "icons/WixDialog.bmp"
+        "dialogImagePath": "icons/WixDialog.bmp"
       },
       "nsis": {
         "headerImage": "icons/WixBanner.bmp",

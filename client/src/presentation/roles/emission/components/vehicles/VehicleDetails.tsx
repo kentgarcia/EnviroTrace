@@ -147,24 +147,21 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
       </div>
 
       <Tabs defaultValue="info" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-6 bg-slate-100/50 p-1 rounded-xl">
+        <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger 
             value="info" 
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0033a0] data-[state=active]:shadow-none"
           >
             Information
           </TabsTrigger>
           <TabsTrigger
             value="history"
             disabled={fullVehicle?.id.startsWith("pending-")}
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0033a0] data-[state=active]:shadow-none"
           >
             Test History
           </TabsTrigger>
           <TabsTrigger
             value="drivers"
             disabled={fullVehicle?.id.startsWith("pending-")}
-            className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0033a0] data-[state=active]:shadow-none"
           >
             Drivers
           </TabsTrigger>

@@ -28,7 +28,7 @@ export default function RoleNavBar({
 
     const roleLabelMap: Record<string, string> = {
         government_emission: "Gov. Emission",
-        tree_management: "Tree Management",
+        urban_greening: "Urban Greening",
     };
 
     return (
@@ -68,7 +68,7 @@ export default function RoleNavBar({
                                 name={
                                     selectedDashboard === "government_emission"
                                         ? "car"
-                                        : selectedDashboard === "tree_management"
+                                        : selectedDashboard === "urban_greening"
                                             ? "tree"
                                             : "shield"
                                 }
