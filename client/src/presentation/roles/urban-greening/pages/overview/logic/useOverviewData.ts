@@ -14,7 +14,8 @@ export const useOverviewData = () => {
   // Fetch planting statistics
   const {
     data: plantingStats,
-  // ... (rest of hook body)
+    isLoading: plantingStatsLoading,
+    error: plantingStatsError,
   } = useQuery({
     queryKey: ["urban-greening-statistics"],
     queryFn: fetchUrbanGreeningStatistics,
@@ -72,7 +73,7 @@ export const useOverviewData = () => {
     error: feeRecordsError,
   } = useQuery({
     queryKey: ["fee-records-overview"],
-    queryFn: fetchUrbanGreeningFeeRecords,
+    queryFn: () => fetchUrbanGreeningFeeRecords(new Date().getFullYear()),
     staleTime: 5 * 60 * 1000,
   });
 
