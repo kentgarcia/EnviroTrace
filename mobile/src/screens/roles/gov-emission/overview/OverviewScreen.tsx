@@ -1,49 +1,29 @@
-import React, { useState, useMemo } from "react";
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  RefreshControl,
-  TouchableOpacity,
-  Dimensions,
-} from "react-native";
-import { Text, Surface } from "react-native-paper";
+import React, { useState } from "react";
+import { View, ScrollView, StyleSheet, RefreshControl, TouchableOpacity, Image } from "react-native";
+import { Card, Text, Chip, Button, Divider } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
-import ScreenLayout from "../../../../components/layout/ScreenLayout";
-import Svg, {
-  Defs,
-  LinearGradient,
-  Stop,
-  Circle,
-  Path,
-  G,
-  Rect,
-} from "react-native-svg";
-import {
-  PieChart,
-  LineChart,
-  BarChart,
-} from "react-native-chart-kit";
+import StandardHeader from "../../../../components/layout/StandardHeader";
+import Svg, { Defs, LinearGradient, Stop, Rect, Line } from "react-native-svg";
 
 import { useDashboardData } from "../../../../hooks/useDashboardData";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { useAuthStore } from "../../../../core/stores/authStore";
+import StatsCard from "../../../../components/StatsCard";
 
 export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(
-    Math.floor(new Date().getMonth() / 3) + 1
-  );
-  const [showYearPicker, setShowYearPicker] = useState(false);
-  
   const navigation = useNavigation();
-  const { data, loading, refetch } = useDashboardData(selectedYear, selectedQuarter);
+  const { user } = useAuthStore();
+  const { data, loading, refetch, isFromCache } = useDashboardData();
+  const [headerDims, setHeaderDims] = useState({ width: 0, height: 0 });
 
-  // Generate year options (last 5 years)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.full_name) return user.full_name;
+    if (user?.username) return user.username;
+    return "User";
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -56,596 +36,622 @@ export default function OverviewScreen() {
     }
   };
 
-  const FilterChip = ({ 
-    label, 
-    active, 
-    onPress 
-  }: { 
-    label: string; 
-    active: boolean; 
-    onPress: () => void; 
-  }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.filterChip,
-        active && styles.filterChipActive
-      ]}
-    >
-      <Text style={[
-        styles.filterChipText,
-        active && styles.filterChipTextActive
-      ]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  // Circular Progress Component for Hero Card
-  const ComplianceCircle = ({ percentage }: { percentage: number }) => {
-    const size = 100;
-    const strokeWidth = 10;
-    const radius = (size - strokeWidth) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
-
-    return (
-      <View style={styles.circleContainer}>
-        <Svg width={size} height={size}>
-          <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke="rgba(255, 255, 255, 0.2)"
-              strokeWidth={strokeWidth}
-              fill="none"
-            />
-            <Circle
-              cx={size / 2}
-              cy={size / 2}
-              r={radius}
-              stroke="#FFFFFF"
-              strokeWidth={strokeWidth}
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              fill="none"
-            />
-          </G>
-        </Svg>
-        <View style={styles.circleTextContainer}>
-          <Text style={styles.circlePercentage}>{percentage}%</Text>
-        </View>
-      </View>
-    );
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
-  const StatCard = ({
-    label,
-    value,
-    icon,
-    color,
-    bg,
-  }: {
-    label: string;
-    value: number | string;
-    icon: string;
-    color: string;
-    bg: string;
-  }) => (
-    <View style={styles.statCard}>
-      <View style={[styles.statIconBox, { backgroundColor: bg }]}>
-        <Icon name={icon} size={20} color={color} />
-      </View>
-      <View style={styles.statTextContainer}>
-        <Text style={styles.statValue} numberOfLines={1} ellipsizeMode="tail">
-          {value}
-        </Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-    </View>
-  );
-
-  const chartConfig = {
-    backgroundGradientFrom: "#ffffff",
-    backgroundGradientTo: "#ffffff",
-    color: (opacity = 1) => `rgba(30, 64, 175, ${opacity})`,
-    strokeWidth: 2,
-    barPercentage: 0.7,
-    useShadowColorFromDataset: false,
-    decimalPlaces: 0,
-    labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-    propsForDots: {
-      r: "4",
-      strokeWidth: "2",
-      stroke: "#1E40AF",
-    },
+  const getTimeAgo = (dateString?: string) => {
+    if (!dateString) return "Never";
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return formatDate(dateString);
   };
 
   return (
-    <ScreenLayout
-      header={{
-        title: "Dashboard",
-        subtitle: "Emission Management",
-        statusBarStyle: "dark",
-        showProfileAction: true,
-                titleSize: 22,
+    <View style={styles.root}>
+      {/* Background Image */}
+      <View style={styles.backgroundImageWrapper} pointerEvents="none">
+        <Image
+          source={require("../../../../../assets/images/bg_login.png")}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+      </View>
 
-      }}
-    >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#1E40AF"]}
-            tintColor="#1E40AF"
-          />
-        }
-      >
-        {/* Filters */}
-        <View style={styles.filterContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-            <FilterChip 
-              label="All Year" 
-              active={selectedQuarter === undefined} 
-              onPress={() => setSelectedQuarter(undefined)} 
+      <StandardHeader
+        title="Overview"
+        subtitle="Government Emission Dashboard"
+        statusBarStyle="dark"
+        backgroundColor="rgba(255, 255, 255, 0.95)"
+        borderColor="#E5E7EB"
+        titleSize={22}
+        subtitleSize={12}
+        iconSize={20}
+      />
+
+      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#111827"]}
+              tintColor="#111827"
             />
-            {[1, 2, 3, 4].map(q => (
-              <FilterChip 
-                key={q}
-                label={`Q${q}`} 
-                active={selectedQuarter === q} 
-                onPress={() => setSelectedQuarter(q)} 
-              />
-            ))}
-            <View style={styles.verticalDivider} />
-            <TouchableOpacity
-              onPress={() => setShowYearPicker(!showYearPicker)}
-              style={[styles.filterChip, styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
-                {selectedYear}
-              </Text>
-              <Icon 
-                name={showYearPicker ? "ChevronDown" : "ChevronRight"} 
-                size={14} 
-                color="#FFFFFF" 
-              />
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
-        {/* Year Picker Dropdown */}
-        {showYearPicker && (
-          <View style={styles.yearPickerContainer}>
-            <Text style={styles.yearPickerTitle}>Select Year</Text>
-            <View style={styles.yearOptionsGrid}>
-              {yearOptions.map(year => (
-                <TouchableOpacity
-                  key={year}
-                  onPress={() => {
-                    setSelectedYear(year);
-                    setShowYearPicker(false);
-                  }}
-                  style={[
-                    styles.yearOption,
-                    selectedYear === year && styles.yearOptionActive
-                  ]}
-                >
-                  <Text style={[
-                    styles.yearOptionText,
-                    selectedYear === year && styles.yearOptionTextActive
-                  ]}>
-                    {year}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Hero KPI Card */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate("Reports" as never)}
-          style={styles.heroCard}
+          }
         >
-          <View style={styles.heroBg}>
-            <Svg width="100%" height="100%">
-              <Defs>
-                <LinearGradient id="heroGrad" x1="0" y1="0" x2="1" y2="1">
-                  <Stop offset="0" stopColor="#1E40AF" stopOpacity={1} />
-                  <Stop offset="1" stopColor="#3B82F6" stopOpacity={1} />
-                </LinearGradient>
-              </Defs>
-              <Rect width="100%" height="100%" fill="url(#heroGrad)" />
-              <Path
-                d="M-20 120 Q 100 60 200 140 T 400 100"
-                fill="none"
-                stroke="white"
-                strokeOpacity={0.1}
-                strokeWidth={60}
-              />
-            </Svg>
-          </View>
+          {/* Header Section */}
+          <View
+            style={styles.headerCard}
+            onLayout={(e) => setHeaderDims({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+          >
+            {/* Gradient background with subtle grid */}
+            <View style={styles.headerBg}>
+              {headerDims.width > 0 && headerDims.height > 0 && (
+                <Svg width={headerDims.width} height={headerDims.height}>
+                  <Defs>
+                    <LinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+                      <Stop offset="0" stopColor="#111827" stopOpacity={1} />
+                      <Stop offset="1" stopColor="#111827" stopOpacity={0.85} />
+                    </LinearGradient>
+                  </Defs>
+                  <Rect x={0} y={0} width={headerDims.width} height={headerDims.height} fill="url(#grad)" />
+                  {/* Grid lines */}
+                  {Array.from({ length: Math.ceil(headerDims.width / 20) + 1 }).map((_, i) => (
+                    <Line
+                      key={`v-${i}`}
+                      x1={i * 20}
+                      y1={0}
+                      x2={i * 20}
+                      y2={headerDims.height}
+                      stroke="#FFFFFF"
+                      strokeOpacity={0.08}
+                      strokeWidth={1}
+                    />
+                  ))}
+                  {Array.from({ length: Math.ceil(headerDims.height / 20) + 1 }).map((_, i) => (
+                    <Line
+                      key={`h-${i}`}
+                      x1={0}
+                      y1={i * 20}
+                      x2={headerDims.width}
+                      y2={i * 20}
+                      stroke="#FFFFFF"
+                      strokeOpacity={0.08}
+                      strokeWidth={1}
+                    />
+                  ))}
+                </Svg>
+              )}
+            </View>
 
-          <View style={styles.heroContent}>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroLabel}>Overall Compliance • 2025</Text>
-              <Text style={styles.heroTitle}>Fleet Performance</Text>
-              <View style={styles.heroBadge}>
-                <Icon name="TrendingUp" size={14} color="#FFFFFF" />
-                <Text style={styles.heroBadgeText}>
-                  {data?.complianceRate >= 80 ? "Above Target" : "Needs Attention"}
+            <View style={styles.headerContent}>
+              <View style={styles.welcomeSection}>
+                <View style={styles.welcomeHeader}>
+                  <Text style={styles.welcomeTitle}>
+                    Welcome, {getUserDisplayName()}
+                  </Text>
+                  <View style={styles.headerBadges}>
+                    {loading && (
+                      <View style={styles.loadingBadge}>
+                        <Icon name="RefreshCw" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                    {data?.pendingSyncCount > 0 && (
+                      <Chip
+                        icon={() => <Icon name="RefreshCw" size={12} color="#FFFFFF" />}
+                        style={styles.syncChip}
+                        textStyle={styles.syncChipText}
+                      >
+                        {data.pendingSyncCount} Pending
+                      </Chip>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.welcomeSubtitle}>
+                  Government Emission Monitoring Dashboard
                 </Text>
               </View>
             </View>
-            <ComplianceCircle percentage={data?.complianceRate || 0} />
           </View>
-        </TouchableOpacity>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGridContainer}>
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Total Vehicles"
-              value={data?.totalVehicles || 0}
-              icon="Car"
-              color="#1E40AF"
-              bg="#EFF6FF"
-            />
-            <StatCard
-              label="Offices"
-              value={data?.departments || 0}
-              icon="Building2"
-              color="#7C3AED"
-              bg="#F5F3FF"
-            />
+          {/* Statistics Grid */}
+          <View style={styles.statsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Key Metrics</Text>
+              {data?.lastTestDate && (
+                <Text style={styles.lastUpdatedText}>
+                  Last test: {getTimeAgo(data.lastTestDate)}
+                </Text>
+              )}
+            </View>
+            <View style={styles.statsGrid}>
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("Vehicles" as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#EEF2FF" }]}>
+                    <Icon name="Car" size={18} color="#111827" />
+                  </View>
+                  <View style={styles.statTrend}>
+                    <Icon name="TrendingUp" size={12} color="#10B981" />
+                    <Text style={styles.statTrendText}>+12%</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{data?.totalVehicles || 0}</Text>
+                  <Text style={styles.statLabel}>Total Vehicles</Text>
+                  <Text style={styles.statSubtitle}>Registered fleet</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("Testing" as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#DCFCE7" }]}>
+                    <Icon name="CheckCircle2" size={18} color="#059669" />
+                  </View>
+                  <View style={styles.statTrend}>
+                    <Icon name="TrendingUp" size={12} color="#10B981" />
+                    <Text style={styles.statTrendText}>+8%</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{data?.testedVehicles || 0}</Text>
+                  <Text style={styles.statLabel}>Tested Vehicles</Text>
+                  <Text style={styles.statSubtitle}>This month</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("Testing" as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#FEF3C7" }]}>
+                    <Icon name="TrendingUp" size={18} color="#D97706" />
+                  </View>
+                  <View style={[styles.statTrend, { backgroundColor: "#FEE2E2" }]}>
+                    <Icon name="TrendingDown" size={12} color="#DC2626" />
+                    <Text style={[styles.statTrendText, { color: "#DC2626" }]}>-3%</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{`${data?.complianceRate || 0}%`}</Text>
+                  <Text style={styles.statLabel}>Compliance Rate</Text>
+                  <Text style={styles.statSubtitle}>Pass rate average</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => navigation.navigate("Offices" as never)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.statCardHeader}>
+                  <View style={[styles.statIconContainer, { backgroundColor: "#EDE9FE" }]}>
+                    <Icon name="Building2" size={18} color="#7C3AED" />
+                  </View>
+                  <View style={styles.statBadge}>
+                    <Text style={styles.statBadgeText}>Active</Text>
+                  </View>
+                </View>
+                <View style={styles.statCardBody}>
+                  <Text style={styles.statValue}>{data?.departments || 0}</Text>
+                  <Text style={styles.statLabel}>Government Offices</Text>
+                  <Text style={styles.statSubtitle}>Registered units</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Passed Tests"
-              value={data?.passedTests || 0}
-              icon="CheckCircle"
-              color="#16A34A"
-              bg="#F0FDF4"
-            />
-            <StatCard
-              label="Failed Tests"
-              value={data?.failedTests || 0}
-              icon="XCircle"
-              color="#DC2626"
-              bg="#FEF2F2"
-            />
+
+          {/* Quick Actions */}
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionsRow}>
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => (navigation as any).navigate("Vehicles", { screen: "AddVehicle" })}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="Car" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Add Vehicle</Text>
+              </View>
+
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => (navigation as any).navigate("Testing", { screen: "AddTest", params: {} })}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="ClipboardPlus" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Record Test</Text>
+              </View>
+
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("QuarterlyTesting" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="Calendar" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Quarterly</Text>
+              </View>
+
+              <View style={styles.actionItem}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate("Reports" as never)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="FileText" size={20} color="#111827" />
+                </TouchableOpacity>
+                <Text style={styles.actionTitle}>Reports</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.statsRow}>
-            <StatCard
-              label="Pending Tests"
-              value={data?.pendingTests || 0}
-              icon="Clock"
-              color="#F59E0B"
-              bg="#FFFBEB"
-            />
-            <StatCard
-              label="Top Office"
-              value={data?.topPerformingOffice?.name || "N/A"}
-              icon="Award"
-              color="#DB2777"
-              bg="#FDF2F8"
-            />
+
+          {/* Recent Activity */}
+          <View style={styles.recentActivitySection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Testing" as never)}>
+                <Text style={styles.viewAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Card style={styles.activityCard} mode="outlined">
+              {data?.recentTests && data.recentTests.length > 0 ? (
+                data.recentTests.map((test, index) => (
+                  <React.Fragment key={test.id}>
+                    <TouchableOpacity 
+                      style={styles.activityItem}
+                      onPress={() => (navigation as any).navigate("Testing", { screen: "TestDetails", params: { testId: test.id } })}
+                    >
+                      <View style={[styles.activityIcon, { backgroundColor: test.result ? "#DCFCE7" : "#FEE2E2" }]}>
+                        <Icon 
+                          name={test.result ? "CheckCircle2" : "XCircle"} 
+                          size={16} 
+                          color={test.result ? "#059669" : "#DC2626"} 
+                        />
+                      </View>
+                      <View style={styles.activityInfo}>
+                        <Text style={styles.activityTitle}>{test.vehicle_plate}</Text>
+                        <Text style={styles.activitySubtitle}>
+                          {test.result ? "Passed" : "Failed"} • {formatDate(test.test_date)}
+                        </Text>
+                      </View>
+                      <Icon name="ChevronRight" size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                    {index < data.recentTests.length - 1 && <Divider style={styles.divider} />}
+                  </React.Fragment>
+                ))
+              ) : (
+                <View style={styles.emptyActivity}>
+                  <Icon name="ClipboardList" size={32} color="#D1D5DB" />
+                  <Text style={styles.emptyActivityText}>No recent tests recorded</Text>
+                </View>
+              )}
+            </Card>
           </View>
-        </View>
 
-        {/* Charts Section */}
-        
-        {/* Monthly Testing Trends */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Monthly Testing Trends</Text>
-          {data?.monthlyTrendsData?.labels?.length > 0 ? (
-            <LineChart
-              data={data.monthlyTrendsData}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-            />
-          ) : (
-            <Text style={styles.noDataText}>No trend data available</Text>
-          )}
-        </View>
-
-        {/* Vehicle Type Distribution */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Vehicle Type Distribution</Text>
-          {data?.vehicleTypeData?.length > 0 ? (
-            <PieChart
-              data={data.vehicleTypeData}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              chartConfig={chartConfig}
-              accessor={"population"}
-              backgroundColor={"transparent"}
-              paddingLeft={"15"}
-              center={[10, 0]}
-              absolute
-            />
-          ) : (
-            <Text style={styles.noDataText}>No vehicle type data available</Text>
-          )}
-        </View>
-
-        {/* Quarterly Test Results */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Quarterly Test Results</Text>
-          {data?.quarterlyData?.labels?.length > 0 ? (
-            <BarChart
-              data={data.quarterlyData}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Green bars
-              }}
-              style={styles.chart}
-              showValuesOnTopOfBars
-            />
-          ) : (
-            <Text style={styles.noDataText}>No quarterly data available</Text>
-          )}
-        </View>
-
-        {/* Engine Type Performance */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Engine Type Performance</Text>
-          {data?.engineTypeData?.labels?.length > 0 ? (
-            <BarChart
-              data={data.engineTypeData}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, // Purple bars
-              }}
-              style={styles.chart}
-              showValuesOnTopOfBars
-              verticalLabelRotation={30}
-            />
-          ) : (
-            <Text style={styles.noDataText}>No engine data available</Text>
-          )}
-        </View>
-
-        <View style={styles.bottomSpacer} />
-      </ScrollView>
-    </ScreenLayout>
+          {/* Bottom spacing for floating navbar */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  backgroundImageWrapper: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  backgroundImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
+    paddingHorizontal: 28,
+    paddingTop: 12,
   },
-  heroCard: {
-    height: 160,
-    borderRadius: 24,
+
+  // Header Section
+  headerCard: {
+    marginBottom: 16,
+    borderRadius: 12,
     overflow: "hidden",
-    marginBottom: 24,
-    backgroundColor: "#1E40AF",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  heroBg: {
+  headerBg: {
     ...StyleSheet.absoluteFillObject,
   },
-  heroContent: {
-    flex: 1,
+  headerContent: {
+    padding: 20,
+  },
+  welcomeSection: {
+    marginBottom: 16,
+  },
+  welcomeHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: 24,
+    alignItems: "center",
+    marginBottom: 4,
   },
-  heroInfo: {
-    flex: 1,
-  },
-  heroLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "rgba(255, 255, 255, 0.8)",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  heroTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginVertical: 4,
-    letterSpacing: -0.5,
-  },
-  heroBadge: {
+  headerBadges: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  loadingBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginTop: 8,
-    gap: 4,
-  },
-  heroBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  circleContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
-  circleTextContainer: {
-    position: "absolute",
-  },
-  circlePercentage: {
-    fontSize: 20,
+  welcomeTitle: {
+    fontSize: 19,
     fontWeight: "800",
     color: "#FFFFFF",
+    letterSpacing: -0.4,
   },
-  statsGridContainer: {
+  syncChip: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    height: 24,
+  },
+  syncChipText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: "#E5E7EB",
+    fontWeight: "500",
+  },
+
+  // Stats Section
+  statsSection: {
     marginBottom: 24,
-    gap: 12,
   },
-  statsRow: {
+  sectionTitle: {
+    color: "#1F2937",
+    fontWeight: "700",
+    marginBottom: 16,
+    fontSize: 17,
+    letterSpacing: -0.3,
+  },
+  sectionHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  lastUpdatedText: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  viewAllText: {
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   statCard: {
     flex: 1,
+    minWidth: "47%",
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    minHeight: 72,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
   },
-  statIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  statCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    borderWidth: 1.5,
+    borderColor: "rgba(0, 0, 0, 0.05)",
   },
-  statTextContainer: {
-    flex: 1,
-    minWidth: 0,
+  statTrend: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statTrendText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#10B981",
+    letterSpacing: -0.2,
+  },
+  statBadge: {
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#059669",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  statCardBody: {
+    gap: 3,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "800",
-    color: "#0F172A",
+    color: "#111827",
+    letterSpacing: -1,
+    lineHeight: 32,
   },
   statLabel: {
+    fontSize: 13,
+    color: "#1F2937",
+    fontWeight: "700",
+    letterSpacing: -0.2,
+  },
+  statSubtitle: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+
+  // Quick Actions Section
+  quickActionsSection: {
+    marginBottom: 24,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  actionItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  actionButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    backgroundColor: "rgba(17, 24, 39, 0.1)",
+    borderColor: "#E5E7EB",
+  },
+  actionTitle: {
+    marginTop: 8,
     fontSize: 11,
     fontWeight: "600",
-    color: "#64748B",
+    textAlign: "center",
+    color: "#1F2937",
+    letterSpacing: -0.2,
   },
-  chartContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
+
+  // Recent Activity Section
+  recentActivitySection: {
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: "#F1F5F9",
-    alignItems: "center",
   },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 16,
-    alignSelf: "flex-start",
-  },
-  chart: {
+  activityCard: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 16,
-    marginVertical: 8,
+    borderColor: "#E5E7EB",
+    borderWidth: 1.5,
   },
-  noDataText: {
-    color: "#94A3B8",
-    fontStyle: "italic",
-    marginVertical: 20,
+  activityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
   },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  activitySubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  divider: {
+    backgroundColor: "#F3F4F6",
+    height: 1,
+  },
+  emptyActivity: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyActivityText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontWeight: "500",
+  },
+
+  // Bottom Spacer for floating navbar
   bottomSpacer: {
     height: 100,
   },
-  filterContainer: {
-    marginBottom: 16,
-  },
-  filterScroll: {
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  filterChipActive: {
-    backgroundColor: "#1E40AF",
-    borderColor: "#1E40AF",
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  filterChipTextActive: {
-    color: "#FFFFFF",
-  },
-  verticalDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: "#CBD5E1",
-    marginHorizontal: 4,
-    alignSelf: "center",
-  },
-  yearPickerContainer: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  yearPickerTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 12,
-  },
-  yearOptionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  yearOption: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  yearOptionActive: {
-    backgroundColor: "#1E40AF",
-    borderColor: "#1E40AF",
-  },
-  yearOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  yearOptionTextActive: {
-    color: "#FFFFFF",
-  },
 });
-
-

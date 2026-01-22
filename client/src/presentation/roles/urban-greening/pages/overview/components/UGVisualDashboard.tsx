@@ -208,12 +208,14 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
         }
         const map = new Map<string, { key: string; label: string; total: number; lastDate: Date }>();
         for (const s of recentSaplings || []) {
-            const cd = (s as any)?.collection_date;
+            // Support both old SaplingCollection (collection_date) and new SaplingRequest (date_received)
+            const cd = (s as any)?.collection_date || (s as any)?.date_received;
             if (!cd) continue;
             const d = new Date(cd);
             const key = monthKey(d);
             const label = monthLabel(d);
-            const qty = Number((s as any)?.quantity_collected || 0);
+            // Support both old quantity_collected and new total_qty
+            const qty = Number((s as any)?.quantity_collected || (s as any)?.total_qty || 0);
             const prev = map.get(key);
             if (prev) {
                 prev.total += qty;

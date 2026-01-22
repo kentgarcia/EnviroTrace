@@ -19,7 +19,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Info,
-  HelpCircle
+  HelpCircle,
+  Leaf
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -117,19 +118,24 @@ function getMenuItems(
         icon: <Sprout size={18} />,
       },
       {
+        label: "Sapling Requests",
+        path: `${basePath}/sapling-requests`,
+        icon: <Sprout size={18} />,
+      },
+      {
+        label: "Species Management",
+        path: `${basePath}/species`,
+        icon: <Leaf size={18} />,
+      },
+      {
         label: "Fees",
         path: `${basePath}/fee-records`,
         icon: <Banknote size={18} />,
       },
       {
-        label: "About",
-        path: `${basePath}/about`,
-        icon: <Info size={18} />,
-      },
-      {
-        label: "Help & Support",
-        path: `${basePath}/help-support`,
-        icon: <HelpCircle size={18} />,
+        label: "Settings",
+        path: `${basePath}/settings`,
+        icon: <Settings size={18} />,
       },
     ];
   }

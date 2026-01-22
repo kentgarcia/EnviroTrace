@@ -377,7 +377,6 @@ const FeeRecords: React.FC = () => {
                                                 <div className="flex justify-between"><span className="text-gray-600">Payer</span><span className="font-medium">{selectedRowForDetails.payer_name}</span></div>
                                                 <div className="flex justify-between"><span className="text-gray-600">Amount</span><span className="font-medium">{formatCurrency(selectedRowForDetails.amount)}</span></div>
                                                 <div className="flex justify-between"><span className="text-gray-600">Date</span><span className="font-medium">{selectedRowForDetails.date}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Due</span><span className="font-medium">{selectedRowForDetails.due_date}</span></div>
                                                 <div className="flex justify-between"><span className="text-gray-600">Status</span><Badge className={getStatusColor(selectedRowForDetails.status)}>{selectedRowForDetails.status.toUpperCase()}</Badge></div>
                                                 {selectedRowForDetails.or_number && (
                                                     <div className="flex justify-between"><span className="text-gray-600">OR #</span><span className="font-medium">{selectedRowForDetails.or_number}</span></div>

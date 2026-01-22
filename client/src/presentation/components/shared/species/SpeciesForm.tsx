@@ -119,6 +119,7 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
     common_name: initialData?.common_name || "",
     local_name: initialData?.local_name || "",
     family: initialData?.family || "",
+    is_tree: initialData?.is_tree ?? true,
     is_native: initialData?.is_native || false,
     is_endangered: initialData?.is_endangered || false,
     description: initialData?.description || "",
@@ -302,7 +303,20 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
         </div>
 
         {/* Checkboxes */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="is_tree"
+              name="is_tree"
+              checked={formData.is_tree}
+              onChange={handleChange}
+              className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
+            />
+            <Label htmlFor="is_tree" className="text-sm font-medium cursor-pointer">
+              Is Tree
+            </Label>
+          </div>
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

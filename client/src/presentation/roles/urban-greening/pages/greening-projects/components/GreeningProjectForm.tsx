@@ -1,3 +1,4 @@
+
 // client/src/presentation/roles/urban-greening/pages/greening-projects/components/GreeningProjectForm.tsx
 /**
  * Form for creating/editing Urban Greening Projects
@@ -28,19 +29,10 @@ import {
   TabsTrigger,
 } from "@/presentation/components/shared/ui/tabs";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/presentation/components/shared/ui/select";
-import {
   Plus,
   Trash2,
   Search,
   TreePine,
-  Leaf,
-  Flower2,
   MapPin,
   Sprout,
   Calendar,
@@ -49,14 +41,13 @@ import {
   Loader2,
   X,
   Link as LinkIcon,
+  Copy,
 } from "lucide-react";
 import {
   UrbanGreeningProject,
   UrbanGreeningProjectCreate,
   ProjectType,
   PlantType,
-  ProjectPlant,
-  ProjectStatus,
 } from "@/core/api/urban-greening-project-api";
 import { useUrbanGreeningProjectMutations } from "../logic/useUrbanGreeningProjects";
 import { useTreeInventory, useTreeSpecies } from "@/presentation/roles/urban-greening/pages/tree-inventory/logic/useTreeInventory";
@@ -76,6 +67,8 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-geosearch/dist/geosearch.css";
 import L from "leaflet";
 import { barangays } from "phil-reg-prov-mun-brgy";
+import { CreatableCombobox } from "@/presentation/components/shared/ui/creatable-combobox";
+import { Control } from "react-hook-form";
 
 // Fix leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -158,18 +151,33 @@ const LocationPicker: React.FC<{
   return position ? <Marker position={position} /> : null;
 };
 
-const PLANT_TYPES: { value: PlantType; label: string; icon: React.ReactNode }[] = [
-  { value: "tree", label: "Trees", icon: <TreePine className="w-4 h-4" /> },
-  { value: "ornamental", label: "Ornamental Plants", icon: <Flower2 className="w-4 h-4" /> },
-  { value: "ornamental_private", label: "Ornamental Plants (Private)", icon: <Flower2 className="w-4 h-4" /> },
-  { value: "seeds", label: "Seeds", icon: <Sprout className="w-4 h-4" /> },
-  { value: "seeds_private", label: "Seeds (Private)", icon: <Sprout className="w-4 h-4" /> },
-  { value: "other", label: "Other", icon: <Leaf className="w-4 h-4" /> },
+const PROJECT_TYPE_OPTIONS = [
+    { value: "replacement", label: "Replacement" },
+    { value: "new_greening", label: "New Greening" },
+    { value: "reforestation", label: "Reforestation" },
+    { value: "beautification", label: "Beautification" },
+];
+
+const STATUS_OPTIONS = [
+    { value: "planning", label: "Planning" },
+    { value: "procurement", label: "Procurement" },
+    { value: "ready", label: "Ready" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "completed", label: "Completed" },
+    { value: "cancelled", label: "Cancelled" },
+];
+
+const PLANT_TYPE_OPTIONS = [
+  { value: "tree", label: "Trees" },
+  { value: "ornamental", label: "Ornamental Plants" },
+  { value: "ornamental_private", label: "Ornamental Plants (Private)" },
+  { value: "seeds", label: "Seeds" },
+  { value: "seeds_private", label: "Seeds (Private)" },
 ];
 
 const projectSchema = z.object({
-  project_type: z.enum(["replacement", "new_greening", "reforestation", "beautification", "other"]),
-  status: z.enum(["planning", "procurement", "ready", "in_progress", "completed", "cancelled"]),
+  project_type: z.string().min(1, "Project type is required"),
+  status: z.string().min(1, "Status is required"),
   note: z.string().optional(),
   contact_number: z.string().optional(),
   location: z.string().min(1, "Location is required"),
@@ -177,19 +185,223 @@ const projectSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   planting_date: z.string().optional(),
+  date_received: z.string().optional(),
+  date_of_inspection: z.string().optional(),
   project_lead: z.string().optional(),
   organization: z.string().optional(),
   linked_request_ids: z.array(z.string()).optional(),
-  plants: z.array(
+  categories: z.array(
     z.object({
-      plant_type: z.enum(["tree", "ornamental", "ornamental_private", "seeds", "seeds_private", "other"]),
-      species_name: z.string().min(1, "Species name is required"),
-      quantity: z.number().min(1, "Quantity must be at least 1"),
+      name: z.string().optional(),
+      plant_type: z.string().min(1, "Plant type is required"),
+      plants: z.array(
+        z.object({
+          species_name: z.string().min(1, "Species name is required"),
+          quantity: z.number().min(1, "Quantity must be at least 1"),
+        })
+      ).min(1, "At least one plant is required"),
     })
-  ).min(1, "At least one plant entry is required"),
+  ).min(1, "At least one category is required"),
 });
 
 type ProjectFormData = z.infer<typeof projectSchema>;
+
+// Category Item Component
+const CategoryItem = ({ 
+  index, 
+  control, 
+  remove, 
+  species, 
+  onAddSpecies 
+}: { 
+  index: number; 
+  control: Control<ProjectFormData>; 
+  remove: (index: number) => void; 
+  species: any[];
+  onAddSpecies: (index: number, subIndex: number, currentName: string) => void;
+}) => {
+  const { fields, append, remove: removePlant } = useFieldArray({
+    control,
+    name: `categories.${index}.plants`,
+  });
+
+  const [showDropdown, setShowDropdown] = useState<number | null>(null);
+
+  // Click outside handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = () => setShowDropdown(null);
+    if (showDropdown !== null) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [showDropdown]);
+
+  return (
+    <Card className="border shadow-sm mb-4">
+      <CardContent className="p-4 bg-gray-50/50">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex-1 max-w-xs">
+            <FormField
+              control={control}
+              name={`categories.${index}.plant_type`}
+              render={({ field }) => (
+                <FormItem className="space-y-0">
+                  <FormControl>
+                    <CreatableCombobox
+                      items={PLANT_TYPE_OPTIONS}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Select Plant Type..."
+                      className="bg-white font-medium"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => remove(index)}
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-4"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            Remove Category
+          </Button>
+        </div>
+
+        <div className="space-y-3 pl-4 border-l-2 border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="grid grid-cols-[1fr,100px,32px] gap-2 w-full pr-[140px] text-sm text-gray-500 font-medium">
+                <div>Species</div>
+                <div>Quantity</div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => append({ species_name: "", quantity: 1 })}
+              className="h-7 text-xs absolute right-8"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add Species
+            </Button>
+          </div>
+          
+          {fields.map((plant, pIndex) => (
+            <div key={plant.id} className="flex gap-2 items-start">
+               <div className="flex-1">
+               <FormField
+                  control={control}
+                  name={`categories.${index}.plants.${pIndex}.species_name`}
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            placeholder="Species Name"
+                            className="bg-white"
+                            onFocus={(e) => {
+                              e.stopPropagation();
+                              setShowDropdown(pIndex);
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowDropdown(pIndex);
+                            }}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setShowDropdown(pIndex);
+                            }}
+                          />
+                          {showDropdown === pIndex && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto left-0">
+                              {species
+                                .filter((s) =>
+                                  s.common_name.toLowerCase().includes((field.value || "").toLowerCase()) ||
+                                  (s.scientific_name && s.scientific_name.toLowerCase().includes((field.value || "").toLowerCase()))
+                                )
+                                .slice(0, 10)
+                                .map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      field.onChange(s.common_name);
+                                      setShowDropdown(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm border-b border-gray-100"
+                                  >
+                                    <div className="font-medium">{s.common_name}</div>
+                                    {s.scientific_name && (
+                                      <div className="text-xs text-gray-500 italic">{s.scientific_name}</div>
+                                    )}
+                                  </button>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddSpecies(index, pIndex, field.value);
+                                    setShowDropdown(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left hover:bg-blue-50 text-sm bg-blue-50/50 text-blue-600 font-medium"
+                                >
+                                  <Plus className="w-4 h-4 inline mr-2" />
+                                  Add "{field.value}" as new species
+                                </button>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                </div>
+
+                <div className="w-[100px]">
+                <FormField
+                  control={control}
+                  name={`categories.${index}.plants.${pIndex}.quantity`}
+                  render={({ field }) => (
+                    <FormItem className="space-y-0">
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          className="bg-white"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removePlant(pIndex)}
+                  className="h-10 w-8 text-gray-400 hover:text-red-500 flex-shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 
 interface GreeningProjectFormProps {
   mode: "add" | "edit";
@@ -217,9 +429,8 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
   >([]);
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [barangaySearch, setBarangaySearch] = useState("");
-  const [showSpeciesDropdown, setShowSpeciesDropdown] = useState<number | null>(null);
+  const [addSpeciesTarget, setAddSpeciesTarget] = useState<{catIndex: number, pIndex: number} | null>(null);
   const [isAddSpeciesOpen, setIsAddSpeciesOpen] = useState(false);
-  const [currentPlantIndex, setCurrentPlantIndex] = useState<number | null>(null);
   const [newSpeciesForm, setNewSpeciesForm] = useState<TreeSpeciesCreate>({
     common_name: "",
     scientific_name: "",
@@ -235,8 +446,8 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
     mutationFn: createTreeSpecies,
     onSuccess: (newSpecies) => {
       queryClient.invalidateQueries({ queryKey: ["tree-species"] });
-      if (currentPlantIndex !== null) {
-        form.setValue(`plants.${currentPlantIndex}.species_name`, newSpecies.common_name);
+      if (addSpeciesTarget) {
+        form.setValue(`categories.${addSpeciesTarget.catIndex}.plants.${addSpeciesTarget.pIndex}.species_name`, newSpecies.common_name);
       }
       toast({
         title: "Success",
@@ -244,7 +455,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       });
       setIsAddSpeciesOpen(false);
       setNewSpeciesForm({ common_name: "", scientific_name: "", description: "" });
-      setCurrentPlantIndex(null);
+      setAddSpeciesTarget(null);
     },
     onError: (error: any) => {
       toast({
@@ -278,14 +489,16 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       latitude: undefined,
       longitude: undefined,
       planting_date: "",
+      date_received: new Date().toISOString().split("T")[0],
+      date_of_inspection: "",
       project_lead: "",
       organization: "",
       linked_request_ids: linkedRequestId ? [linkedRequestId] : [],
-      plants: [
+      categories: [
         {
+          name: "Main Area",
           plant_type: "tree",
-          species_name: "",
-          quantity: 1,
+          plants: [{ species_name: "", quantity: 1 }],
         },
       ],
     },
@@ -293,7 +506,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "plants",
+    name: "categories",
   });
 
   const projectType = form.watch("project_type");
@@ -301,6 +514,32 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
   // Initialize form with existing data
   useEffect(() => {
     if (mode === "edit" && initialData) {
+       // Group plants by category (if available) or plant_type
+      const categorizedPlants: Record<string, { type: string; plants: any[] }> = {};
+      
+      if (initialData.plants?.length) {
+        initialData.plants.forEach((p: any) => {
+           // Use category name if present, otherwise group by Plant Type
+           const key = p.category || p.plant_type || "Uncategorized";
+           if (!categorizedPlants[key]) {
+             categorizedPlants[key] = {
+               type: p.plant_type,
+               plants: []
+             };
+           }
+           categorizedPlants[key].plants.push({
+             species_name: p.species || p.common_name || "",
+             quantity: p.quantity
+           });
+        });
+      }
+
+      const categories = Object.entries(categorizedPlants).map(([name, data]) => ({
+        name: name === data.type ? "" : name, // If name matches type, treat as default/no name
+        plant_type: data.type,
+        plants: data.plants
+      }));
+
       form.reset({
         project_type: initialData.project_type,
         status: initialData.status || "planning",
@@ -311,22 +550,18 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
         latitude: initialData.latitude,
         longitude: initialData.longitude,
         planting_date: (initialData as any).planting_date?.split("T")[0] || "",
+        date_received: (initialData as any).date_received?.split("T")[0] || "",
+        date_of_inspection: (initialData as any).date_of_inspection?.split("T")[0] || "",
         project_lead: initialData.project_lead || "",
         organization: initialData.organization || "",
         linked_request_ids: initialData.linked_cutting_request_id ? [initialData.linked_cutting_request_id] : [],
-        plants: initialData.plants?.length
-          ? initialData.plants.map((p) => ({
-              plant_type: p.plant_type,
-              species_name: p.species || p.common_name || "",
-              quantity: p.quantity,
-            }))
-          : [
-              {
-                plant_type: "tree" as PlantType,
-                species_name: "",
-                quantity: 1,
-              },
-            ],
+        categories: categories.length > 0 ? categories : [
+          {
+            name: "Main Area",
+            plant_type: "tree",
+            plants: [{ species_name: "", quantity: 1 }],
+          },
+        ],
       });
     }
   }, [mode, initialData, form]);
@@ -443,17 +678,19 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
     setSelectedReplacementTrees(selectedReplacementTrees.filter((t) => t.id !== treeId));
   };
 
-  const handleSpeciesSelect = (index: number, speciesId: string) => {
-    const selectedSpecies = species.find((s) => s.id === speciesId);
-    if (selectedSpecies) {
-      form.setValue(`plants.${index}.species_id`, speciesId);
-      form.setValue(`plants.${index}.species_name`, selectedSpecies.scientific_name);
-      form.setValue(`plants.${index}.common_name`, selectedSpecies.common_name || "");
-    }
-  };
-
   const onSubmit = async (data: ProjectFormData) => {
     try {
+      // Flatten categories to plants list
+      const plants = data.categories.flatMap((cat) => 
+        cat.plants.map((p) => ({
+          plant_type: cat.plant_type,
+          species: p.species_name,
+          common_name: p.species_name,
+          quantity: p.quantity,
+          category: cat.name || cat.plant_type,
+        }))
+      );
+
       const payload: UrbanGreeningProjectCreate = {
         project_type: data.project_type,
         status: data.status,
@@ -463,6 +700,8 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
         latitude: data.latitude,
         longitude: data.longitude,
         planting_date: data.planting_date,
+        date_received: data.date_received,
+        date_of_inspection: data.date_of_inspection,
         project_lead: data.project_lead,
         organization: data.organization,
         linked_cutting_request_id: data.linked_request_ids?.[0],
@@ -470,12 +709,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
           projectType === "replacement"
             ? selectedReplacementTrees.map((t) => t.id)
             : undefined,
-        plants: data.plants.map((p) => ({
-          plant_type: p.plant_type,
-          species: p.species_name,
-          common_name: p.species_name,
-          quantity: p.quantity,
-        })),
+        plants: plants,
         contact_number: data.contact_number,
       } as any;
 
@@ -493,14 +727,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = () => setShowSpeciesDropdown(null);
-    if (showSpeciesDropdown !== null) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [showSpeciesDropdown]);
+
 
   const handleCreateSpecies = (e: React.FormEvent) => {
     e.preventDefault();
@@ -596,58 +823,96 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
               </div>
             )}
 
-            <FormField
-              control={form.control}
-              name="project_type"
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="project_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Type *</FormLabel>
+                      <FormControl>
+                        <CreatableCombobox
+                          items={PROJECT_TYPE_OPTIONS}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Select or type..."
+                          className="bg-white"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+              <FormField
+                control={form.control}
+                name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Project Type *</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="replacement">Replacement</SelectItem>
-                        <SelectItem value="new_greening">New Greening</SelectItem>
-                        <SelectItem value="reforestation">Reforestation</SelectItem>
-                        <SelectItem value="beautification">Beautification</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Status *</FormLabel>
+                    <FormControl>
+                      <CreatableCombobox
+                        items={STATUS_OPTIONS}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select status..."
+                        className="bg-white"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="date_received"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Date Received
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="date_of_inspection"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        Date of Inspection
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
 
             <FormField
               control={form.control}
-              name="status"
+              name="planting_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status *</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="planning">Planning</SelectItem>
-                      <SelectItem value="procurement">Procurement</SelectItem>
-                      <SelectItem value="ready">Ready</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    Planting Date
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -771,23 +1036,6 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
               </Card>
             )}
 
-            <FormField
-              control={form.control}
-              name="planting_date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    Planting Date
-                  </FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -841,165 +1089,48 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
           {/* Plants Tab */}
           <TabsContent value="plants" className="space-y-4 mt-4">
             <div className="flex items-center justify-between">
-              <Label>Plants to be Added *</Label>
+              <div>
+                <Label className="text-base font-semibold">Project Plants & Categories</Label>
+                <div className="text-sm text-gray-500">
+                   Group plants by category (e.g., "Roadside", "Park Area") or keep them in a default group.
+                   All plants in a category share the same type.
+                </div>
+              </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() =>
                   append({
+                    name: "",
                     plant_type: "tree",
-                    species_name: "",
-                    quantity: 1,
+                    plants: [{ species_name: "", quantity: 1 }],
                   })
                 }
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add Plant
+                Add Category
               </Button>
             </div>
 
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <Card key={field.id} className="border">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                        <Sprout className="w-4 h-4" />
-                        Plant Entry #{index + 1}
-                      </div>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`plants.${index}.plant_type`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Plant Type *</FormLabel>
-                            <Select
-                              value={field.value}
-                              onValueChange={field.onChange}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {PLANT_TYPES.map((type) => (
-                                  <SelectItem key={type.value} value={type.value}>
-                                    <div className="flex items-center gap-2">
-                                      {type.icon}
-                                      {type.label}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`plants.${index}.species_name`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Species Name *</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  {...field}
-                                  placeholder="Search species..."
-                                  onFocus={() => setShowSpeciesDropdown(index)}
-                                  onChange={(e) => {
-                                    field.onChange(e);
-                                    setShowSpeciesDropdown(index);
-                                  }}
-                                />
-                                {showSpeciesDropdown === index && field.value && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                    {species
-                                      .filter((s) =>
-                                        s.common_name.toLowerCase().includes(field.value.toLowerCase()) ||
-                                        (s.scientific_name && s.scientific_name.toLowerCase().includes(field.value.toLowerCase()))
-                                      )
-                                      .slice(0, 10)
-                                      .map((s) => (
-                                        <button
-                                          key={s.id}
-                                          type="button"
-                                          onClick={() => {
-                                            field.onChange(s.common_name);
-                                            setShowSpeciesDropdown(null);
-                                          }}
-                                          className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm border-b border-gray-100"
-                                        >
-                                          <div className="font-medium">{s.common_name}</div>
-                                          {s.scientific_name && (
-                                            <div className="text-xs text-gray-500 italic">{s.scientific_name}</div>
-                                          )}
-                                        </button>
-                                      ))}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setCurrentPlantIndex(index);
-                                        setNewSpeciesForm({
-                                          common_name: field.value || "",
-                                          scientific_name: "",
-                                          description: "",
-                                        });
-                                        setIsAddSpeciesOpen(true);
-                                        setShowSpeciesDropdown(null);
-                                      }}
-                                      className="w-full px-3 py-2 text-left hover:bg-blue-50 text-sm bg-blue-50/50 text-blue-600 font-medium"
-                                    >
-                                      <Plus className="w-4 h-4 inline mr-2" />
-                                      Add "{field.value}" as new species
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`plants.${index}.quantity`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Quantity *</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                <CategoryItem
+                  key={field.id}
+                  index={index}
+                  control={form.control}
+                  remove={remove}
+                  species={species}
+                  onAddSpecies={(catIdx, pIdx, name) => {
+                     setAddSpeciesTarget({ catIndex: catIdx, pIndex: pIdx });
+                     setNewSpeciesForm({
+                       common_name: name,
+                       scientific_name: "",
+                       description: "",
+                     });
+                     setIsAddSpeciesOpen(true);
+                  }}
+                />
               ))}
             </div>
 
@@ -1009,7 +1140,9 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Total Plants</span>
                   <span className="text-lg font-bold text-green-600">
-                    {fields.reduce((sum, _, i) => sum + (form.watch(`plants.${i}.quantity`) || 0), 0)}
+                     {form.watch("categories")?.reduce((total, cat) => 
+                        total + (cat.plants?.reduce((subTotal, p) => subTotal + (p.quantity || 0), 0) || 0), 
+                     0) || 0}
                   </span>
                 </div>
               </CardContent>

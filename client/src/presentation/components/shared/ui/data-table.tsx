@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -35,6 +35,7 @@ import {
   OnChangeFn,
   ExpandedState,
 } from "@tanstack/react-table";
+import { useSettingsStore } from "@/core/hooks/useSettingsStore";
 
 // Define the density options and their corresponding CSS classes
 export type TableDensity = "compact" | "normal" | "spacious";
@@ -84,7 +85,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   enableRowSelection = false,
   selectionChange,
-  defaultPageSize = 10,
+  defaultPageSize,
   pageSizeOptions = [5, 10, 20, 50, 100],
   className = "",
   renderRowSubComponent,
@@ -97,12 +98,23 @@ export function DataTable<TData, TValue>({
   disableSorting = false,
 }: DataTableProps<TData, TValue>) {
   // Table state hooks
+  const { rowsPerPage } = useSettingsStore();
   const [density, setDensity] = useState<TableDensity>(defaultDensity);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: defaultPageSize,
+    pageSize: defaultPageSize || rowsPerPage,
   });
+
+  useEffect(() => {
+    if (!defaultPageSize) {
+      setPagination((prev) => ({
+        ...prev,
+        pageSize: rowsPerPage,
+      }));
+    }
+  }, [rowsPerPage, defaultPageSize]);
+
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnFilters, setColumnFilters] =

@@ -18,6 +18,7 @@ import {
   updateRequirementsPhase,
   updateClearancePhase,
   updateDENRPhase,
+  fetchAllProcessingStandards,
   TreeRequestWithAnalytics,
   ISOOverallStatus,
   ISORequestType,
@@ -53,7 +54,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import ISOTreeRequestForm from "./components/ISOTreeRequestForm";
 import ISOTreeRequestDetails from "./components/ISOTreeRequestDetails";
 import EnhancedISODashboard from "./components/EnhancedISODashboard";
-import ProcessingStandardsSettings from "./components/ProcessingStandardsSettings";
 
 // Extend ColumnMeta to support group property for category headers
 declare module '@tanstack/react-table' {
@@ -86,7 +86,7 @@ const DENR_STATUS_OPTIONS = ["Pending", "Submitted", "Released", "Received"];
 
 const ISOTreeRequestsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<"list" | "dashboard" | "settings">("list");
+  const [view, setView] = useState<"list" | "dashboard">("list");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<TreeRequestWithAnalytics | null>(null);
   const [statusFilter, setStatusFilter] = useState<ISOOverallStatus | "all">("all");
@@ -103,6 +103,12 @@ const ISOTreeRequestsPage: React.FC = () => {
       request_type: typeFilter !== "all" ? typeFilter : undefined,
       is_archived: showArchived,
     }),
+  });
+
+  // Fetch standards for dynamic type filter
+  const { data: standards = [] } = useQuery({
+    queryKey: ["processing-standards"],
+    queryFn: fetchAllProcessingStandards,
   });
 
   const updateTypeMutation = useMutation({
@@ -139,14 +145,11 @@ const ISOTreeRequestsPage: React.FC = () => {
   });
 
   // Handle view changes with data refresh
-  const handleViewChange = (newView: "list" | "dashboard" | "settings") => {
+  const handleViewChange = (newView: "list" | "dashboard") => {
     setView(newView);
     // Invalidate queries based on the new view
     if (newView === "dashboard") {
       queryClient.invalidateQueries({ queryKey: ["tree-requests-dashboard"] });
-    } else if (newView === "settings") {
-      queryClient.invalidateQueries({ queryKey: ["processing-standards"] });
-      queryClient.invalidateQueries({ queryKey: ["dropdown-options"] });
     } else if (newView === "list") {
       queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
     }
@@ -156,9 +159,6 @@ const ISOTreeRequestsPage: React.FC = () => {
   const handleRefresh = () => {
     if (view === "dashboard") {
       queryClient.invalidateQueries({ queryKey: ["tree-requests-dashboard"] });
-    } else if (view === "settings") {
-      queryClient.invalidateQueries({ queryKey: ["processing-standards"] });
-      queryClient.invalidateQueries({ queryKey: ["dropdown-options"] });
     } else {
       refetch();
     }
@@ -582,8 +582,8 @@ const ISOTreeRequestsPage: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-[#F9FBFC]">
         {/* Header */}
-        <div className="bg-white px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="px-6 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-gray-900">Tree Request Tracking</h1>
               <p className="text-sm text-gray-500 mt-0.5">
@@ -601,30 +601,6 @@ const ISOTreeRequestsPage: React.FC = () => {
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
               <Button
-                variant={view === "list" ? "default" : "outline"}
-                onClick={() => handleViewChange("list")}
-                className="rounded-lg"
-              >
-                <List className="w-4 h-4 mr-2" />
-                List
-              </Button>
-              <Button
-                variant={view === "dashboard" ? "default" : "outline"}
-                onClick={() => handleViewChange("dashboard")}
-                className="rounded-lg"
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Dashboard
-              </Button>
-              <Button
-                variant={view === "settings" ? "default" : "outline"}
-                onClick={() => handleViewChange("settings")}
-                className="rounded-lg"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Standards
-              </Button>
-              <Button
                 onClick={() => setShowCreateForm(true)}
                 className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
               >
@@ -632,6 +608,34 @@ const ISOTreeRequestsPage: React.FC = () => {
                 New Request
               </Button>
             </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="px-6">
+            <nav className="flex space-x-8 -mb-px">
+              <button
+                onClick={() => handleViewChange("list")}
+                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                  view === "list"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <List className="w-4 h-4 inline mr-2" />
+                Request List
+              </button>
+              <button
+                onClick={() => handleViewChange("dashboard")}
+                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                  view === "dashboard"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 inline mr-2" />
+                Dashboard
+              </button>
+            </nav>
           </div>
         </div>
 
@@ -642,8 +646,6 @@ const ISOTreeRequestsPage: React.FC = () => {
               setSelectedRequest(request);
               setView("list");
             }} />
-          ) : view === "settings" ? (
-            <ProcessingStandardsSettings />
           ) : (
             <>
               {/* Filters and Table */}
@@ -697,6 +699,12 @@ const ISOTreeRequestsPage: React.FC = () => {
                         <option value="cutting">Tree Cutting</option>
                         <option value="pruning">Pruning</option>
                         <option value="ball_out">Ball-out</option>
+                        {standards
+                          .filter(s => !['cutting', 'pruning', 'ball_out'].includes(s.request_type))
+                          .map(s => (
+                            <option key={s.request_type} value={s.request_type}>{s.request_type}</option>
+                          ))
+                        }
                       </select>
                       <select
                         value={statusFilter}

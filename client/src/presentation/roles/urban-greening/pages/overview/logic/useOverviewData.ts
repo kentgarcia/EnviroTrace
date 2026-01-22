@@ -3,9 +3,9 @@ import {
   fetchUrbanGreeningStatistics,
   fetchSaplingStatistics,
   fetchUrbanGreeningPlantings,
-  fetchSaplingCollections,
 } from "@/core/api/planting-api";
-import { fetchTreeManagementRequests } from "@/core/api/tree-management-api";
+import { fetchSaplingRequests } from "@/core/api/sapling-requests-api";
+import { fetchTreeRequests } from "@/core/api/tree-management-request-api";
 import { fetchUrbanGreeningDashboard } from "@/core/api/dashboard-api";
 import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
 
@@ -14,8 +14,7 @@ export const useOverviewData = () => {
   // Fetch planting statistics
   const {
     data: plantingStats,
-    isLoading: plantingStatsLoading,
-    error: plantingStatsError,
+  // ... (rest of hook body)
   } = useQuery({
     queryKey: ["urban-greening-statistics"],
     queryFn: fetchUrbanGreeningStatistics,
@@ -44,25 +43,25 @@ export const useOverviewData = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch recent sapling collections
+  // Fetch recent sapling requests (New Schema)
   const {
     data: recentSaplings,
     isLoading: saplingsLoading,
     error: saplingsError,
   } = useQuery({
-    queryKey: ["recent-saplings"],
-    queryFn: () => fetchSaplingCollections({ limit: 10 }),
+    queryKey: ["recent-sapling-requests"],
+    queryFn: () => fetchSaplingRequests(),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch tree management requests
+  // Fetch tree requests (ISO Schema)
   const {
     data: treeRequests,
     isLoading: treeRequestsLoading,
     error: treeRequestsError,
   } = useQuery({
-    queryKey: ["tree-requests-overview"],
-    queryFn: fetchTreeManagementRequests,
+    queryKey: ["tree-requests-iso-overview"],
+    queryFn: () => fetchTreeRequests({ limit: 1000, year: new Date().getFullYear() }), // Fetch all for stats
     staleTime: 5 * 60 * 1000,
   });
 
@@ -146,9 +145,10 @@ export const transformTreeRequestData = (requests: any[]) => {
   if (!requests || requests.length === 0)
     return { statusPie: [], typePie: [], urgencyBar: [] };
 
-  // Status distribution
+  // Status distribution (ISO uses overall_status, classic used status)
   const statusCounts = requests.reduce((acc, req) => {
-    acc[req.status] = (acc[req.status] || 0) + 1;
+    const status = req.overall_status || req.status || "Unknown";
+    acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
@@ -160,7 +160,8 @@ export const transformTreeRequestData = (requests: any[]) => {
 
   // Request type distribution
   const typeCounts = requests.reduce((acc, req) => {
-    acc[req.request_type] = (acc[req.request_type] || 0) + 1;
+    const type = req.request_type || "Unknown";
+    acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
 
@@ -170,19 +171,10 @@ export const transformTreeRequestData = (requests: any[]) => {
     value: count as number,
   }));
 
-  // Urgency distribution
-  const urgencyCounts = requests.reduce((acc, req) => {
-    acc[req.urgency_level] = (acc[req.urgency_level] || 0) + 1;
-    return acc;
-  }, {});
+  // Urgency distribution (ISO schema doesn't have urgency level yet, keep distinct or empty)
+  const urgencyPie: any[] = []; 
 
-  const urgencyBar = Object.entries(urgencyCounts).map(([urgency, count]) => ({
-    id: urgency,
-    label: urgency.replace(/\b\w/g, (l) => l.toUpperCase()),
-    value: count as number,
-  }));
-
-  return { statusPie, typePie, urgencyBar };
+  return { statusPie, typePie, urgencyBar: urgencyPie };
 };
 
 // Transform planting data for charts

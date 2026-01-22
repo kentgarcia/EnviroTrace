@@ -124,34 +124,6 @@ export default function ProfileScreen() {
                                 <Text style={styles.sectionTitle}>Account Settings</Text>
                             </View>
                             <View style={styles.settingsContainer}>
-                                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                                    <View style={styles.settingIconContainer}>
-                                        <Icon name="Lock" size={18} color="#FFFFFF" />
-                                    </View>
-                                    <Text style={styles.settingText}>Change Password</Text>
-                                    <Icon name="ChevronRight" size={18} color="#64748B" />
-                                </TouchableOpacity>
-
-                                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                                    <View style={styles.settingIconContainer}>
-                                        <Icon name="Bell" size={18} color="#FFFFFF" />
-                                    </View>
-                                    <Text style={styles.settingText}>Notifications</Text>
-                                    <Icon name="ChevronRight" size={18} color="#64748B" />
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.settingItem}
-                                    activeOpacity={0.7}
-                                    onPress={() => (navigation as any).navigate("NetworkDiagnostics")}
-                                >
-                                    <View style={[styles.settingIconContainer, { backgroundColor: "#3B82F6" }]}>
-                                        <Icon name="Activity" size={18} color="#FFFFFF" />
-                                    </View>
-                                    <Text style={styles.settingText}>Network Diagnostics</Text>
-                                    <Icon name="ChevronRight" size={18} color="#64748B" />
-                                </TouchableOpacity>
-
                                 <TouchableOpacity
                                     style={styles.settingItem}
                                     activeOpacity={0.7}
@@ -170,7 +142,7 @@ export default function ProfileScreen() {
                     {/* Footer */}
                     <View style={styles.footer}>
                         <View style={styles.footerVersionBadge}>
-                            <Text style={styles.footerVersion}>v1.0.0</Text>
+                            <Text style={styles.footerVersion}>v1.0.1</Text>
                         </View>
                     </View>
             </ScreenLayout>

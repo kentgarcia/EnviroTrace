@@ -51,7 +51,7 @@ export const UrbanGreeningOverview: React.FC = () => {
 
     return (
         <div className="flex flex-col h-full bg-[#F9FBFC]">
-            <div className="bg-white px-6 py-3 border-b border-gray-200">
+            <div className="bg-white px-6 py-3 border-b border-gray-200 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold text-gray-900">Urban Greening Dashboard</h1>
                         <div className="flex items-center gap-3">

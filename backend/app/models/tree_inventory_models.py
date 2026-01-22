@@ -23,6 +23,7 @@ class TreeSpecies(Base):
     common_name = Column(String(150), nullable=False)  # Required - primary identifier
     local_name = Column(String(150), nullable=True)
     family = Column(String(100), nullable=True)
+    is_tree = Column(Boolean, default=True, nullable=False, comment="True if species is a tree, False if ornamental/shrub")
     is_native = Column(Boolean, default=False, nullable=False)
     is_endangered = Column(Boolean, default=False, nullable=False)
     description = Column(Text, nullable=True)

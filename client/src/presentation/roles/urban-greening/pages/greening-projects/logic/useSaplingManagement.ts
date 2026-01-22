@@ -19,7 +19,7 @@ export const SAPLING_MGMT_KEYS = {
 };
 
 export const useSaplingRequests = (year?: number) => {
-  const { data = [], refetch } = useQuery({
+  const { data = [], refetch, isLoading } = useQuery({
     queryKey: SAPLING_MGMT_KEYS.saplingRequests(year),
     queryFn: () => fetchSaplingRequests(year),
     staleTime: 5 * 60 * 1000,
@@ -28,6 +28,7 @@ export const useSaplingRequests = (year?: number) => {
   return {
     saplingRequests: data as SaplingRequest[],
     refetchSaplingRequests: refetch,
+    isLoading,
   };
 };
 

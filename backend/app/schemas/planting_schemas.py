@@ -182,6 +182,10 @@ class SaplingRequestBase(BaseModel):
     requester_name: str
     address: str
     saplings: list[SaplingItem]
+    received_through: Optional[str] = None
+    status: Optional[str] = None
+    date_donated: Optional[date] = None
+    total_qty: Optional[int] = 0
 
     # Accept both list of objects, list of legacy strings ("Name: N") or JSON string
     @field_validator("saplings", mode="before")
@@ -241,6 +245,10 @@ class SaplingRequestUpdate(BaseModel):
     requester_name: Optional[str] = None
     address: Optional[str] = None
     saplings: Optional[list[SaplingItem]] = None
+    received_through: Optional[str] = None
+    status: Optional[str] = None
+    date_donated: Optional[date] = None
+    total_qty: Optional[int] = None
 
     @field_validator("saplings", mode="before")
     @classmethod

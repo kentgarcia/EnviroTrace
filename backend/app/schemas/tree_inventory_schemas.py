@@ -27,6 +27,7 @@ class TreeSpeciesBase(BaseModel):
     common_name: str  # Required - primary identifier
     local_name: Optional[str] = None
     family: Optional[str] = None
+    is_tree: bool = True
     is_native: bool = False
     is_endangered: bool = False
     description: Optional[str] = None
@@ -72,6 +73,7 @@ class TreeSpeciesUpdate(BaseModel):
     common_name: Optional[str] = None
     local_name: Optional[str] = None
     family: Optional[str] = None
+    is_tree: Optional[bool] = None
     is_native: Optional[bool] = None
     is_endangered: Optional[bool] = None
     description: Optional[str] = None

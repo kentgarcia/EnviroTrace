@@ -1,3 +1,5 @@
+eas build --platform android --profile preview
+
 # Government Emission Mobile App
 
 A local-first mobile application for government emission monitoring and vehicle management, built with React Native and Expo.

@@ -188,6 +188,24 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       ),
     },
     {
+      accessorKey: "is_tree",
+      header: "Type",
+      cell: ({ row }) =>
+        row.original.is_tree ? (
+          <div className="flex justify-center">
+            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+              Tree
+            </Badge>
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <Badge variant="outline" className="text-gray-600 border-gray-300">
+              Plant
+            </Badge>
+          </div>
+        ),
+    },
+    {
       accessorKey: "is_native",
       header: "Native",
       cell: ({ row }) =>
@@ -424,7 +442,6 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
                 : "No species in database yet."
             }
             showPagination={true}
-            defaultPageSize={10}
             pageSizeOptions={[10, 25, 50, 100]}
             renderRowSubComponent={renderRowSubComponent}
             expandedRowIds={{}}

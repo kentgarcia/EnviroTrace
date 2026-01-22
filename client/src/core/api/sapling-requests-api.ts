@@ -12,6 +12,10 @@ export interface SaplingRequest {
   requester_name: string;
   address: string;
   saplings: SaplingItem[] | string; // backend may return JSON string; we'll normalize in consumer
+  received_through?: string;
+  status?: string;
+  date_donated?: string;
+  total_qty?: number;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +25,10 @@ export interface SaplingRequestCreate {
   requester_name: string;
   address: string;
   saplings: SaplingItem[];
+  received_through?: string;
+  status?: string;
+  date_donated?: string;
+  total_qty?: number;
 }
 
 export interface SaplingRequestUpdate {
@@ -28,6 +36,10 @@ export interface SaplingRequestUpdate {
   requester_name?: string;
   address?: string;
   saplings?: SaplingItem[];
+  received_through?: string;
+  status?: string;
+  date_donated?: string;
+  total_qty?: number;
 }
 
 export const fetchSaplingRequests = async (year?: number): Promise<SaplingRequest[]> => {

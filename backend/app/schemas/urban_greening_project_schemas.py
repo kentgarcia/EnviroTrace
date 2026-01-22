@@ -9,6 +9,7 @@ class ProjectPlant(BaseModel):
     species: Optional[str] = None
     common_name: str
     quantity: int
+    category: Optional[str] = None  # Grouping category (e.g., "Roadside", "Park")
 
 class UrbanGreeningProjectBase(BaseModel):
     project_type: str = "new_greening"  # replacement, new_greening, reforestation, beautification, other
@@ -23,6 +24,8 @@ class UrbanGreeningProjectBase(BaseModel):
     actual_start_date: Optional[date] = None
     actual_end_date: Optional[date] = None
     planting_date: Optional[date] = None  # Legacy field, now optional
+    date_received: Optional[date] = None
+    date_of_inspection: Optional[date] = None
     linked_cutting_request_id: Optional[str] = None
     linked_cut_tree_ids: Optional[List[str]] = None
     plants: List[ProjectPlant] = Field(default_factory=list)
@@ -74,7 +77,7 @@ class UrbanGreeningProjectBase(BaseModel):
                 return None
         return v
 
-    @field_validator("planned_start_date", "planned_end_date", "actual_start_date", "actual_end_date", "planting_date", mode="before")
+    @field_validator("planned_start_date", "planned_end_date", "actual_start_date", "actual_end_date", "planting_date", "date_received", "date_of_inspection", mode="before")
     @classmethod
     def parse_dates(cls, v):
         """Convert empty strings to None for optional date fields"""
@@ -98,6 +101,8 @@ class UrbanGreeningProjectUpdate(BaseModel):
     actual_start_date: Optional[date] = None
     actual_end_date: Optional[date] = None
     planting_date: Optional[date] = None
+    date_received: Optional[date] = None
+    date_of_inspection: Optional[date] = None
     plants: Optional[List[ProjectPlant]] = None
     project_lead: Optional[str] = None
     contact_number: Optional[str] = None
@@ -121,7 +126,7 @@ class UrbanGreeningProjectUpdate(BaseModel):
                 return None
         return v
 
-    @field_validator("planned_start_date", "planned_end_date", "actual_start_date", "actual_end_date", "planting_date", mode="before")
+    @field_validator("planned_start_date", "planned_end_date", "actual_start_date", "actual_end_date", "planting_date", "date_received", "date_of_inspection", mode="before")
     @classmethod
     def parse_dates(cls, v):
         """Convert empty strings to None for optional date fields"""

@@ -8,10 +8,10 @@ import apiClient from "./api-client";
 
 // ==================== Types ====================
 
-export type ProjectType = 'replacement' | 'new_greening' | 'reforestation' | 'beautification' | 'other';
-export type PlantType = 'tree' | 'ornamental' | 'ornamental_private' | 'seeds' | 'seeds_private' | 'other';
-export type ProjectStatus = 'planning' | 'procurement' | 'ready' | 'in_progress' | 'completed' | 'cancelled';
-export type PlantStatus = 'seedling' | 'sapling' | 'growing' | 'mature' | 'died' | 'removed' | 'transferred';
+export type ProjectType = string;
+export type PlantType = string;
+export type ProjectStatus = string;
+export type PlantStatus = string;
 
 export interface UrbanGreeningProject {
   id: string;
@@ -25,8 +25,14 @@ export interface UrbanGreeningProject {
   latitude?: number;
   longitude?: number;
   
-  // Planting
+  // Dates
   planting_date?: string;
+  planned_start_date?: string;
+  planned_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  date_received?: string;
+  date_of_inspection?: string;
   
   // Replacement link (if project_type is 'replacement')
   linked_cutting_request_id?: string;
@@ -84,6 +90,12 @@ export interface UrbanGreeningProjectCreate {
   latitude?: number;
   longitude?: number;
   planting_date?: string;
+  planned_start_date?: string;
+  planned_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  date_received?: string;
+  date_of_inspection?: string;
   linked_cutting_request_id?: string;
   linked_cut_tree_ids?: string[];
   plants: Omit<ProjectPlant, 'id'>[];
@@ -100,6 +112,12 @@ export interface UrbanGreeningProjectUpdate {
   latitude?: number;
   longitude?: number;
   planting_date?: string;
+  planned_start_date?: string;
+  planned_end_date?: string;
+  actual_start_date?: string;
+  actual_end_date?: string;
+  date_received?: string;
+  date_of_inspection?: string;
   plants?: ProjectPlant[];
   project_lead?: string;
   contact_number?: string;

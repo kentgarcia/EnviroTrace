@@ -8,8 +8,8 @@ export default function AboutScreen() {
     const navigation = useNavigation();
 
     const appInfo = [
-        { label: "Version", value: "1.0.0" },
-        { label: "Build", value: "2025.10.27" },
+        { label: "Version", value: "1.0.1" },
+        { label: "Build", value: "2026.01.22" },
         { label: "Environment", value: "Production" },
     ];
 

@@ -221,21 +221,40 @@ const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo((
     staleTime: 1000 * 60 * 30, // 30 mins
   });
 
-  const { data: statusOptions = [] } = useQuery({
-    queryKey: ["dropdown-options", "status"],
-    queryFn: () => fetchDropdownOptions("status"),
-    staleTime: 1000 * 60 * 30, // 30 mins
+  const { data: statusReceiving = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_receiving"],
+    queryFn: () => fetchDropdownOptions("status_receiving"),
+    staleTime: 1000 * 60 * 30,
   });
 
-  const statusComboboxItems: ComboboxItem[] = useMemo(() => statusOptions.map((opt: any) => ({
-    value: opt.option_value,
-    label: opt.option_value
-  })), [statusOptions]);
+  const { data: statusRequirements = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_requirements"],
+    queryFn: () => fetchDropdownOptions("status_requirements"),
+    staleTime: 1000 * 60 * 30,
+  });
 
-  const receivedThroughComboboxItems: ComboboxItem[] = useMemo(() => receivedThroughOptions.map((opt: any) => ({
+  const { data: statusClearance = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_clearance"],
+    queryFn: () => fetchDropdownOptions("status_clearance"),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const { data: statusDenr = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_denr"],
+    queryFn: () => fetchDropdownOptions("status_denr"),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const toItems = (opts: any[]) => opts.map((opt: any) => ({
     value: opt.option_value,
     label: opt.option_value
-  })), [receivedThroughOptions]);
+  }));
+
+  const receivedThroughItems = useMemo(() => toItems(receivedThroughOptions), [receivedThroughOptions]);
+  const statusReceivingItems = useMemo(() => toItems(statusReceiving), [statusReceiving]);
+  const statusRequirementsItems = useMemo(() => toItems(statusRequirements), [statusRequirements]);
+  const statusClearanceItems = useMemo(() => toItems(statusClearance), [statusClearance]);
+  const statusDenrItems = useMemo(() => toItems(statusDenr), [statusDenr]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<TreeRequestCreate>) => updateTreeRequest(request.id, data),
@@ -599,12 +618,12 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                         <FieldRenderer label="Date Received" fieldKey="receiving_date_received" type="date" value={getValue("receiving_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_date_received"]} />
                         <FieldRenderer label="Month" fieldKey="receiving_month" type="select" options={MONTHS} value={getValue("receiving_month")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_month"]} />
-                        <FieldRenderer label="Received Through" fieldKey="receiving_received_through" type="creatable-select" options={receivedThroughComboboxItems} value={getValue("receiving_received_through")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_received_through"]} />
+                        <FieldRenderer label="Received Through" fieldKey="receiving_received_through" type="creatable-select" options={receivedThroughItems} value={getValue("receiving_received_through")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_received_through"]} />
                         <FieldRenderer label="Date Received by Dept. Head" fieldKey="receiving_date_received_by_dept_head" type="date" value={getValue("receiving_date_received_by_dept_head")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_date_received_by_dept_head"]} />
                         <FieldRenderer label="Name" fieldKey="receiving_name" type="text" value={getValue("receiving_name")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_name"]} />
                         <FieldRenderer label="Address" fieldKey="receiving_address" type="text" value={getValue("receiving_address")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_address"]} />
                         <FieldRenderer label="Contact" fieldKey="receiving_contact" type="text" value={getValue("receiving_contact")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_contact"]} />
-                        <FieldRenderer label="Status" fieldKey="receiving_request_status" type="creatable-select" options={statusComboboxItems} value={getValue("receiving_request_status")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_request_status"]} />
+                        <FieldRenderer label="Status" fieldKey="receiving_request_status" type="creatable-select" options={statusReceivingItems} value={getValue("receiving_request_status")} onChange={handleInputChange} fieldState={fieldSaveStates["receiving_request_status"]} />
                       </div>
                     </div>
                   </div>
@@ -673,7 +692,7 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                       </div>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-3">
                         <FieldRenderer label="Remarks" fieldKey="requirements_remarks" type="textarea" value={getValue("requirements_remarks")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_remarks"]} />
-                        <FieldRenderer label="Status" fieldKey="requirements_status" type="creatable-select" options={statusComboboxItems} value={getValue("requirements_status")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_status"]} />
+                        <FieldRenderer label="Status" fieldKey="requirements_status" type="creatable-select" options={statusRequirementsItems} value={getValue("requirements_status")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_status"]} />
                         <FieldRenderer label="Date of Completion" fieldKey="requirements_date_completion" type="date" value={getValue("requirements_date_completion")} onChange={handleInputChange} fieldState={fieldSaveStates["requirements_date_completion"]} />
                       </div>
                       
@@ -745,7 +764,7 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                         <FieldRenderer label="Control Number" fieldKey="clearance_control_number" type="text" value={getValue("clearance_control_number")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_control_number"]} />
                         <FieldRenderer label="OR Number" fieldKey="clearance_or_number" type="text" value={getValue("clearance_or_number")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_or_number"]} />
                         <FieldRenderer label="Date Received" fieldKey="clearance_date_received" type="date" value={getValue("clearance_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_date_received"]} />
-                        <FieldRenderer label="Status" fieldKey="clearance_status" type="creatable-select" options={statusComboboxItems} value={getValue("clearance_status")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_status"]} />
+                        <FieldRenderer label="Status" fieldKey="clearance_status" type="creatable-select" options={statusClearanceItems} value={getValue("clearance_status")} onChange={handleInputChange} fieldState={fieldSaveStates["clearance_status"]} />
                       </div>
                     </div>
                   </div>
@@ -773,7 +792,7 @@ Last Updated: ${request.updated_at ? new Date(request.updated_at).toLocaleString
                         <FieldRenderer label="Date Submitted to Dept. Head" fieldKey="denr_date_submitted_to_dept_head" type="date" value={getValue("denr_date_submitted_to_dept_head")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_submitted_to_dept_head"]} />
                          <FieldRenderer label="Date Released to Inspectors" fieldKey="denr_date_released_to_inspectors" type="date" value={getValue("denr_date_released_to_inspectors")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_released_to_inspectors"]} />
                         <FieldRenderer label="Date Received" fieldKey="denr_date_received" type="date" value={getValue("denr_date_received")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_date_received"]} />
-                        <FieldRenderer label="Status" fieldKey="denr_status" type="creatable-select" options={statusComboboxItems} value={getValue("denr_status")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_status"]} />
+                        <FieldRenderer label="Status" fieldKey="denr_status" type="creatable-select" options={statusDenrItems} value={getValue("denr_status")} onChange={handleInputChange} fieldState={fieldSaveStates["denr_status"]} />
                       </div>
                     </div>
                   </div>

@@ -4,7 +4,7 @@
  * Multi-phase form for Receiving, Inspection, Requirements, and Clearance tracking
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
@@ -38,6 +38,7 @@ import {
   ISORequestType,
   RequirementChecklistItem,
   fetchDropdownOptions,
+  fetchAllProcessingStandards,
 } from "@/core/api/tree-management-request-api";
 import { createTreeRequest, updateTreeRequest } from "@/core/api/tree-management-request-api";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
@@ -51,17 +52,6 @@ interface ISOTreeRequestFormProps {
   onSuccess: () => void;
 }
 
-const REQUEST_TYPES: ComboboxItem[] = [
-  { value: "cutting", label: "Tree Cutting" },
-  { value: "pruning", label: "Tree Pruning" },
-  { value: "ball_out", label: "Tree Ball-out" },
-];
-
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
 const DEFAULT_REQUIREMENTS: string[] = [
   "Application Letter",
   "Photos",
@@ -73,6 +63,11 @@ const DEFAULT_REQUIREMENTS: string[] = [
   "ECC"
 ];
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
   mode,
   initialData,
@@ -81,28 +76,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
 }) => {
   const queryClient = useQueryClient();
 
-  // Fetch dropdown options dynamically
-  const { data: receivedThroughOptions = [] } = useQuery({
-    queryKey: ["dropdown-options", "received_through"],
-    queryFn: () => fetchDropdownOptions("received_through"),
-  });
-
-  const { data: statusOptions = [] } = useQuery({
-    queryKey: ["dropdown-options", "status"],
-    queryFn: () => fetchDropdownOptions("status"),
-  });
-
-  const statusComboboxItems: ComboboxItem[] = statusOptions.map(opt => ({
-    value: opt.option_value,
-    label: opt.option_value
-  }));
-
-  const receivedThroughComboboxItems: ComboboxItem[] = receivedThroughOptions.map(opt => ({
-    value: opt.option_value,
-    label: opt.option_value
-  }));
-  
-  // Initialize form data
+    // Initialize form data
   const [formData, setFormData] = useState<TreeRequestCreate>(() => {
     if (mode === "edit" && initialData) {
       return {
@@ -153,6 +127,63 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
     };
   });
 
+  // Fetch configured Request Types (Standards)
+  const { data: standards = [] } = useQuery({
+    queryKey: ["processing-standards"],
+    queryFn: fetchAllProcessingStandards,
+  });
+
+  const requestTypeOptions: ComboboxItem[] = useMemo(() => {
+    // Start with defaults
+    const defaults = [
+        { value: "cutting", label: "Tree Cutting" },
+        { value: "pruning", label: "Tree Pruning" },
+        { value: "ball_out", label: "Tree Ball-out" },
+    ];
+    // Map standards to items
+    const fromStandards = standards.map(s => ({ value: s.request_type, label: s.request_type }));
+    // Merge unique by value
+    const map = new Map();
+    defaults.forEach(i => map.set(i.value, i));
+    fromStandards.forEach(i => map.set(i.value, i));
+    return Array.from(map.values());
+  }, [standards]);
+
+  // Fetch dropdown options for each phase
+  const { data: receivedThroughOptions = [] } = useQuery({
+    queryKey: ["dropdown-options", "received_through"],
+    queryFn: () => fetchDropdownOptions("received_through"),
+  });
+
+  const { data: statusReceiving = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_receiving"],
+    queryFn: () => fetchDropdownOptions("status_receiving"),
+  });
+
+  const { data: statusRequirements = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_requirements"],
+    queryFn: () => fetchDropdownOptions("status_requirements"),
+  });
+
+  const { data: statusClearance = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_clearance"],
+    queryFn: () => fetchDropdownOptions("status_clearance"),
+  });
+
+  const { data: statusDenr = [] } = useQuery({
+    queryKey: ["dropdown-options", "status_denr"],
+    queryFn: () => fetchDropdownOptions("status_denr"),
+  });
+
+  // Helper to convert options to items
+  const toItems = (opts: any[]) => opts.map(o => ({ value: o.option_value, label: o.option_value }));
+
+  const receivedThroughItems = toItems(receivedThroughOptions);
+  const statusReceivingItems = toItems(statusReceiving);
+  const statusRequirementsItems = toItems(statusRequirements);
+  const statusClearanceItems = toItems(statusClearance);
+  const statusDenrItems = toItems(statusDenr);
+  
   const [activeTab, setActiveTab] = useState<string>("receiving");
 
   // Mutations
@@ -262,7 +293,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Request Type *</Label>
             <CreatableCombobox
-              items={REQUEST_TYPES}
+              items={requestTypeOptions}
               value={formData.request_type}
               onChange={(value) => handleInputChange('request_type', value as ISORequestType)}
               placeholder="Select or enter request type"
@@ -336,7 +367,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Received Through</Label>
                     <CreatableCombobox
-                      items={receivedThroughComboboxItems}
+                      items={receivedThroughItems}
                       value={formData.receiving_received_through || ""}
                       onChange={(value) => handleInputChange('receiving_received_through', value)}
                       placeholder="Select or enter option"
@@ -387,7 +418,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status of Request</Label>
                     <CreatableCombobox
-                      items={statusComboboxItems}
+                      items={statusReceivingItems}
                       value={formData.receiving_request_status || ""}
                       onChange={(value) => handleInputChange('receiving_request_status', value)}
                       placeholder="Select or enter status"
@@ -535,7 +566,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status</Label>
                     <CreatableCombobox
-                      items={statusComboboxItems}
+                      items={statusRequirementsItems}
                       value={formData.requirements_status || ""}
                       onChange={(value) => handleInputChange('requirements_status', value)}
                       placeholder="Select or enter status"
@@ -616,7 +647,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status</Label>
                     <CreatableCombobox
-                      items={statusComboboxItems}
+                      items={statusClearanceItems}
                       value={formData.clearance_status || ""}
                       onChange={(value) => handleInputChange('clearance_status', value)}
                       placeholder="Select or enter status"
@@ -678,7 +709,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Status</Label>
                     <CreatableCombobox
-                      items={statusComboboxItems}
+                      items={statusDenrItems}
                       value={formData.denr_status || ""}
                       onChange={(value) => handleInputChange('denr_status', value)}
                       placeholder="Select or enter status"

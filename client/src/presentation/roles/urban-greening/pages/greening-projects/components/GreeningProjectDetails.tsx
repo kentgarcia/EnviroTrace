@@ -70,6 +70,15 @@ import { MapContainer, TileLayer, Marker } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+
 // Fix leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -80,6 +89,8 @@ L.Icon.Default.mergeOptions({
 
 // Default center - San Fernando, Pampanga
 const DEFAULT_CENTER: [number, number] = [15.0287, 120.6880];
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.ReactNode; color: string }> = {
   replacement: { label: "Replacement", icon: <TreePine className="w-4 h-4" />, color: "bg-amber-100 text-amber-800" },
@@ -125,22 +136,16 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
 
   const [completeDate, setCompleteDate] = useState(new Date().toISOString().split('T')[0]);
   const [completionNotes, setCompletionNotes] = useState("");
-  const [survivingCounts, setSurvivingCounts] = useState<Record<string, number>>({});
 
   const { completeMutation, transferMutation } =
     useUrbanGreeningProjectMutations();
 
   const handleCompleteProject = async () => {
     try {
-      const totalSurviving = Object.values(survivingCounts).reduce((a, b) => a + b, 0);
-      const totalPlanted = project.total_plants;
-      const survivalRate = totalPlanted > 0 ? totalSurviving / totalPlanted : 0;
-
       await completeMutation.mutateAsync({
         id: project.id,
         data: {
           notes: completionNotes,
-          survival_rate: survivalRate,
         },
       });
       toast.success("Project completed successfully!");
@@ -251,14 +256,70 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
                   <span className="text-xs">Plants</span>
                 </div>
                 <div className="font-medium text-sm">{totalPlants} plants</div>
-                {project.surviving_plants !== undefined && (
-                  <div className="text-xs text-green-600">
-                    {project.surviving_plants} surviving
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Plant Types Breakdown */}
+          {project.plants && project.plants.length > 0 && (
+            <Card className="border-0 bg-white shadow-sm ring-1 ring-gray-200">
+              <CardContent className="p-4">
+                <h4 className="font-medium text-sm mb-4">Plant Types Breakdown</h4>
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="h-64 w-full md:w-1/2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={Object.values(
+                            project.plants.reduce((acc: any, plant) => {
+                              const type = plant.plant_type;
+                              if (!acc[type]) {
+                                acc[type] = { name: type, value: 0 };
+                              }
+                              acc[type].value += plant.quantity;
+                              return acc;
+                            }, {})
+                          )}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {project.plants.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="w-full md:w-1/2 space-y-2 text-sm">
+                   {Object.entries(
+                      project.plants.reduce((acc: Record<string, number>, plant) => {
+                        acc[plant.plant_type] = (acc[plant.plant_type] || 0) + plant.quantity;
+                        return acc;
+                      }, {})
+                    ).map(([type, count], idx) => (
+                      <div key={type} className="flex justify-between items-center p-2 rounded bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                          />
+                          <span className="capitalize text-gray-700">{type.replace('_', ' ')}</span>
+                        </div>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Team Info */}
           {(project.project_lead || project.organization) && (
@@ -429,37 +490,6 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
                 onChange={(e) => setCompleteDate(e.target.value)}
                 className="mt-1"
               />
-            </div>
-            <div>
-              <Label>Surviving Plant Counts</Label>
-              <div className="mt-2 space-y-2">
-                {project.plants?.map((plant, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex items-center gap-2">
-                      {PLANT_TYPE_ICONS[plant.plant_type]}
-                      <span className="text-sm">
-                        {plant.common_name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        (planted: {plant.quantity})
-                      </span>
-                    </div>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={plant.quantity}
-                      value={survivingCounts[index] || 0}
-                      onChange={(e) =>
-                        setSurvivingCounts({
-                          ...survivingCounts,
-                          [index]: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      className="w-20"
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
             <div>
               <Label>Completion Notes</Label>

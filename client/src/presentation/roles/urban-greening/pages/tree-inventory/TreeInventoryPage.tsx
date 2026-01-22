@@ -34,13 +34,12 @@ import { TreeInventory } from "@/core/api/tree-inventory-api";
 import TreeForm from "./components/TreeForm";
 import TreeDetailPanel from "./components/TreeDetailPanel";
 import TreeInventoryMap from "./components/TreeInventoryMap";
-import SpeciesManagement from "./components/SpeciesManagement";
 import CarbonStatistics from "./components/CarbonStatistics";
 
 // Search params type
 interface TreeInventorySearch {
   action?: "add";
-  tab?: "registry" | "map" | "stats" | "species";
+  tab?: "registry" | "map" | "stats";
   status?: string;
   health?: string;
 }
@@ -49,7 +48,7 @@ const TreeInventoryPage: React.FC = () => {
   // Get URL search params
   const search = useSearch({ strict: false }) as TreeInventorySearch;
   
-  const [activeTab, setActiveTab] = useState<"registry" | "map" | "stats" | "species">(search?.tab || "registry");
+  const [activeTab, setActiveTab] = useState<"registry" | "map" | "stats">(search?.tab || "registry");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(search?.status || "all");
   const [healthFilter, setHealthFilter] = useState<string>(search?.health || "all");
@@ -254,23 +253,12 @@ const TreeInventoryPage: React.FC = () => {
                 <BarChart3 className="w-4 h-4 inline mr-2" />
                 Statistics
               </button>
-              <button
-                onClick={() => setActiveTab("species")}
-                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "species"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <Leaf className="w-4 h-4 inline mr-2" />
-                Species
-              </button>
             </nav>
           </div>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-6 bg-[#F9FBFC] overflow-hidden">
+        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
           {/* Registry Tab */}
           {activeTab === "registry" && (
             <div className="flex gap-6 h-full">
@@ -411,11 +399,6 @@ const TreeInventoryPage: React.FC = () => {
             <div className="overflow-auto h-[calc(100vh-200px)]">
               <CarbonStatistics />
             </div>
-          )}
-
-          {/* Species Tab */}
-          {activeTab === "species" && (
-            <SpeciesManagement />
           )}
         </div>
 

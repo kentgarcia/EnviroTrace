@@ -6,7 +6,7 @@ from sqlalchemy import func, extract
 
 from app.apis.deps import get_db
 from app.models.urban_greening_models import (
-    FeeRecord, UrbanGreeningPlanting, SaplingCollection, TreeManagementRequest
+    FeeRecord, UrbanGreeningPlanting, SaplingRequest, TreeRequest
 )
 from app.schemas.dashboard_schemas import UrbanGreeningDashboardOverview, LabelValue, MonthValue
 
@@ -94,67 +94,35 @@ def get_urban_greening_dashboard(
 
     # Tree request counts by type and status (current year)
     type_query = db.query(
-        TreeManagementRequest.request_type, 
-        func.count(TreeManagementRequest.id)
-    ).filter(extract('year', TreeManagementRequest.request_date) == year)
+        TreeRequest.request_type, 
+        func.count(TreeRequest.id)
+    ).filter(extract('year', TreeRequest.created_at) == year)
     
     if month is not None:
-        type_query = type_query.filter(extract('month', TreeManagementRequest.request_date) == month)
+        type_query = type_query.filter(extract('month', TreeRequest.created_at) == month)
     
-    type_counts = type_query.group_by(TreeManagementRequest.request_type).all()
+    type_counts = type_query.group_by(TreeRequest.request_type).all()
     tree_request_type_counts = [
         LabelValue(id=t, label=t.replace('_', ' ').title(), value=float(c)) for t, c in type_counts
     ]
 
     status_query = db.query(
-        TreeManagementRequest.status, 
-        func.count(TreeManagementRequest.id)
-    ).filter(extract('year', TreeManagementRequest.request_date) == year)
+        TreeRequest.overall_status, 
+        func.count(TreeRequest.id)
+    ).filter(extract('year', TreeRequest.created_at) == year)
     
     if month is not None:
-        status_query = status_query.filter(extract('month', TreeManagementRequest.request_date) == month)
+        status_query = status_query.filter(extract('month', TreeRequest.created_at) == month)
     
-    status_counts = status_query.group_by(TreeManagementRequest.status).all()
+    status_counts = status_query.group_by(TreeRequest.overall_status).all()
     tree_request_status_counts = [
         LabelValue(id=s, label=s.replace('_', ' ').title(), value=float(c)) for s, c in status_counts
     ]
 
-    # Trees to be cut/prune bar: parse trees_and_quantities text best-effort and aggregate top 10
-    trees_query = db.query(TreeManagementRequest.trees_and_quantities).filter(
-        TreeManagementRequest.trees_and_quantities.isnot(None),
-        extract('year', TreeManagementRequest.request_date) == year
-    )
-    
-    if month is not None:
-        trees_query = trees_query.filter(extract('month', TreeManagementRequest.request_date) == month)
-    
-    all_trees_text = trees_query.all()
-    
-    counts: dict[str, int] = {}
-    for (txt,) in all_trees_text:
-        try:
-            # Expect a JSON array of strings like "Narrah: 3"; but handle plain text with commas
-            import json, re
-            arr = json.loads(txt)
-            if isinstance(arr, list):
-                for raw in arr:
-                    s = str(raw)
-                    m = re.search(r"([A-Za-z\s]+)[^0-9]*([0-9]+)", s)
-                    if m:
-                        name = m.group(1).strip()
-                        qty = int(m.group(2))
-                        counts[name] = counts.get(name, 0) + qty
-                    else:
-                        name = s.strip()
-                        counts[name] = counts.get(name, 0) + 1
-        except Exception:
-            continue
-    tree_types_bar = [LabelValue(id=k, label=k, value=float(v)) for k, v in counts.items()]
-    tree_types_bar.sort(key=lambda x: x.value, reverse=True)
-    # Note: These are always monthly breakdowns regardless of month filter
-    tree_types_bar = tree_types_bar[:10]
+    # Trees to be cut/prune bar: Not available in new schema yet, return empty
+    tree_types_bar = []
 
-    # Recent Activity monthly totals for current year (UG plantings and sapling collections)
+    # Recent Activity monthly totals for current year (UG plantings and sapling requests)
     ug_rows = (
         db.query(
             extract('month', UrbanGreeningPlanting.planting_date).label('m'),
@@ -169,13 +137,14 @@ def get_urban_greening_dashboard(
     for i, label in enumerate(month_labels(), start=1):
         ug_monthly.append(MonthValue(month=i, label=label, total=ug_by_month.get(i, 0.0)))
 
+    # Sapling Requests (Demand) instead of Collection (Supply)
     sap_rows = (
         db.query(
-            extract('month', SaplingCollection.collection_date).label('m'),
-            func.coalesce(func.sum(SaplingCollection.quantity_collected), 0)
+            extract('month', SaplingRequest.date_received).label('m'),
+            func.coalesce(func.sum(SaplingRequest.total_qty), 0)
         )
-        .filter(extract('year', SaplingCollection.collection_date) == year)
-        .group_by(extract('month', SaplingCollection.collection_date))
+        .filter(extract('year', SaplingRequest.date_received) == year)
+        .group_by(extract('month', SaplingRequest.date_received))
         .all()
     )
     sap_by_month = {int(m): float(total) for m, total in sap_rows}
