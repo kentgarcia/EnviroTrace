@@ -98,6 +98,7 @@ class AdminApiService extends ApiService {
     skip?: number;
     limit?: number;
     search?: string;
+    status?: "active" | "archived" | "all";
   }): Promise<User[]> {
     const queryParams = new URLSearchParams();
     if (params?.skip !== undefined)
@@ -105,6 +106,7 @@ class AdminApiService extends ApiService {
     if (params?.limit !== undefined)
       queryParams.append("limit", params.limit.toString());
     if (params?.search) queryParams.append("search", params.search);
+    if (params?.status) queryParams.append("status", params.status);
 
     const url = `/admin/users${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -177,6 +179,7 @@ export const useUsers = (params?: {
   skip?: number;
   limit?: number;
   search?: string;
+  status?: "active" | "archived" | "all";
 }) => {
   return useQuery({
     queryKey: ["admin", "users", params],

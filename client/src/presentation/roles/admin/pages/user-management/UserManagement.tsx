@@ -69,18 +69,23 @@ interface UserFormData {
 
 export function UserManagement() {
     const [search, setSearch] = useState("");
+    const [status, setStatus] = useState<"active" | "archived" | "all">("active");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const { toast } = useToast();
 
     // Queries
-    const { data: users = [], isLoading, error } = useUsers({ search: search || undefined });
+    const { data: users = [], isLoading, error } = useUsers({ 
+        search: search || undefined,
+        status: status 
+    });
     const { data: availableRoles = [] } = useAvailableRoles();
 
     // Mutations
     const createUserMutation = useCreateUser();
     const updateUserMutation = useUpdateUser();
     const deleteUserMutation = useDeleteUser();
+    const reactivateUserMutation = useReactivateUser();
 
     // Form for create/edit
     const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<UserFormData>({
@@ -252,6 +257,44 @@ export function UserManagement() {
         }
     };
 
+    const handleReactivateUser = async (userId: string, userEmail: string) => {
+        try {
+            await reactivateUserMutation.mutateAsync(userId);
+            toast({
+                title: "Success",
+                description: `User ${userEmail} has been reactivated successfully!`,
+                variant: "default",
+            });
+        } catch (error: any) {
+            console.error("Failed to reactivate user:", error);
+
+            // Handle specific error messages
+            let errorMessage = "Failed to reactivate user. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail;
+                // Handle array of validation errors
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        }
+    };
+
     const openEditDialog = (user: User) => {
         setEditingUser(user);
         setValue("email", user.email);
@@ -316,13 +359,40 @@ export function UserManagement() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add User
+                    {/* Header with Status Filter and Add Button */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                            <Button
+                                variant={status === "active" ? "default" : "outline"}
+                                onClick={() => setStatus("active")}
+                                className={status === "active" ? "" : "bg-white"}
+                            >
+                                Active Users
                             </Button>
-                        </DialogTrigger>
+                            <Button
+                                variant={status === "archived" ? "default" : "outline"}
+                                onClick={() => setStatus("archived")}
+                                className={status === "archived" ? "" : "bg-white"}
+                            >
+                                Archived Users
+                            </Button>
+                            <Button
+                                variant={status === "all" ? "default" : "outline"}
+                                onClick={() => setStatus("all")}
+                                className={status === "all" ? "" : "bg-white"}
+                            >
+                                All Users
+                            </Button>
+                        </div>
+
+                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add User
+                        </Button>
+                    </div>
+
+                    {/* Create User Dialog */}
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <DialogContent className="sm:max-w-md">
                             <form onSubmit={handleSubmit(handleCreateUser)}>
                                 <DialogHeader>
@@ -451,6 +521,7 @@ export function UserManagement() {
                             </form>
                         </DialogContent>
                     </Dialog>
+
                     {/* Search */}
                     <Card>
                         <CardHeader>
@@ -498,17 +569,22 @@ export function UserManagement() {
                                     </TableHeader>
                                     <TableBody>
                                         {users.map((user) => (
-                                            <TableRow key={user.id}>
+                                            <TableRow key={user.id} className={user.deleted_at ? "bg-gray-50" : ""}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
                                                         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                                                             <UserIcon className="w-4 h-4" />
                                                         </div>
                                                         <div>
-                                                            <div className="font-medium">
+                                                            <div className="font-medium flex items-center gap-2">
                                                                 {user.profile?.first_name && user.profile?.last_name
                                                                     ? `${user.profile.first_name} ${user.profile.last_name}`
                                                                     : "No Name"}
+                                                                {user.deleted_at && (
+                                                                    <Badge variant="secondary" className="text-xs">
+                                                                        Archived
+                                                                    </Badge>
+                                                                )}
                                                             </div>
                                                             {user.is_super_admin && (
                                                                 <Badge variant="destructive" className="text-xs">
@@ -557,38 +633,70 @@ export function UserManagement() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => openEditDialog(user)}
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </Button>
-
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="outline" size="sm">
-                                                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                                        {user.deleted_at ? (
+                                                            // Archived user - show Reactivate button
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="outline" size="sm" className="text-green-600">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                                                                        Reactivate
+                                                                    </Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Reactivate User</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            Are you sure you want to reactivate {user.email}? This will restore their access to the system.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction
+                                                                            onClick={() => handleReactivateUser(user.id, user.email)}
+                                                                            className="bg-green-600 hover:bg-green-700"
+                                                                        >
+                                                                            Reactivate
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        ) : (
+                                                            // Active user - show Edit and Delete buttons
+                                                            <>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => openEditDialog(user)}
+                                                                >
+                                                                    <Edit className="w-4 h-4" />
                                                                 </Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                                                    <AlertDialogDescription>
-                                                                        Are you sure you want to delete {user.email}? This action cannot be undone.
-                                                                    </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction
-                                                                        onClick={() => handleDeleteUser(user.id)}
-                                                                        className="bg-red-600 hover:bg-red-700"
-                                                                    >
-                                                                        Delete
-                                                                    </AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
+
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <Button variant="outline" size="sm">
+                                                                            <Trash2 className="w-4 h-4 text-red-600" />
+                                                                        </Button>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Are you sure you want to delete {user.email}? This action cannot be undone.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction
+                                                                                onClick={() => handleDeleteUser(user.id)}
+                                                                                className="bg-red-600 hover:bg-red-700"
+                                                                            >
+                                                                                Delete
+                                                                            </AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

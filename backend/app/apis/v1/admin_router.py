@@ -74,11 +74,22 @@ async def get_all_users(
     current_user: User = Depends(require_roles([UserRoleEnum.admin])),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    search: Optional[str] = Query(None)
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query("active", regex="^(active|archived|all)$")
 ):
-    """Get all users with their profiles and roles"""
+    """Get all users with their profiles and roles
     
-    query = select(User).where(User.deleted_at.is_(None))
+    Args:
+        status: Filter by user status - 'active' (default), 'archived', or 'all'
+    """
+    
+    # Build base query based on status filter
+    if status == "active":
+        query = select(User).where(User.deleted_at.is_(None))
+    elif status == "archived":
+        query = select(User).where(User.deleted_at.is_not(None))
+    else:  # all
+        query = select(User)
     
     if search:
         query = query.join(Profile, User.id == Profile.user_id, isouter=True).where(
