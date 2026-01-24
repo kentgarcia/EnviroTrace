@@ -95,7 +95,7 @@ def get_tree_management_stats(db: Session = Depends(get_db)):
         "fees_collected": fees_collected,
     }
 
-@router.get("/", response_model=List[TreeManagementRequest])
+@router.get("", response_model=List[TreeManagementRequest])
 def read_tree_management_requests(
     db: Session = Depends(get_db),
     skip: int = 0,
@@ -153,7 +153,7 @@ def read_tree_management_requests_by_month(
     requests = tree_management_request.get_by_date_range(db, start_date=start_date, end_date=end_date)
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
-@router.post("/", response_model=TreeManagementRequest)
+@router.post("", response_model=TreeManagementRequest)
 def create_tree_management_request(request_in: TreeManagementRequestCreate, db: Session = Depends(get_db)):
     """
     Create new tree management request.

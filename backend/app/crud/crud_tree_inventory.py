@@ -649,8 +649,9 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     
     for common_name, scientific_name, tree_count, co2_stored, co2_absorbed in carbon_by_species:
         # Use species avg CO2 stored, or estimate 500kg if unknown
-        species_co2_stored = (co2_stored or 500.0) * tree_count
-        species_co2_absorbed = (co2_absorbed or 22.0) * tree_count  # Default ~22kg/year
+        # Convert Decimal to float to avoid type errors
+        species_co2_stored = (float(co2_stored) if co2_stored else 500.0) * tree_count
+        species_co2_absorbed = (float(co2_absorbed) if co2_absorbed else 22.0) * tree_count  # Default ~22kg/year
         
         total_co2_stored += species_co2_stored
         
@@ -713,7 +714,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
      .first()
     
     new_tree_count = new_planting_co2[0] or 0
-    avg_absorption = new_planting_co2[1] or 22.0
+    avg_absorption = float(new_planting_co2[1]) if new_planting_co2[1] else 22.0
     co2_from_new_plantings = new_tree_count * avg_absorption * 0.3  # 30% for young trees
     
     annual_sequestration = AnnualCarbonSequestrationStats(
@@ -758,23 +759,24 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     
     for (cutting_reason, count, co2_stored, burned_pct, lumber_pct, 
          decay_min, decay_max) in removed_trees_carbon:
-        co2_per_tree = co2_stored or 500.0
+        # Convert Decimal to float to avoid type errors
+        co2_per_tree = float(co2_stored) if co2_stored else 500.0
         total_tree_co2 = co2_per_tree * count
         
         # Estimate release based on disposal method
         reason = cutting_reason or "Unknown"
         if "burn" in reason.lower() or "fire" in reason.lower():
             # Burned - immediate release
-            release_pct = burned_pct or 0.95
+            release_pct = float(burned_pct) if burned_pct else 0.95
             co2_released = total_tree_co2 * release_pct
         elif "lumber" in reason.lower() or "wood" in reason.lower():
             # Converted to lumber - partial retention
-            retention_pct = lumber_pct or 0.5
+            retention_pct = float(lumber_pct) if lumber_pct else 0.5
             co2_released = total_tree_co2 * (1 - retention_pct)
         else:
             # Natural decay - gradual release
             co2_released = total_tree_co2 * 0.3  # 30% immediate, rest over decay years
-            avg_decay = ((decay_min or 10) + (decay_max or 20)) / 2
+            avg_decay = ((float(decay_min) if decay_min else 10) + (float(decay_max) if decay_max else 20)) / 2
             projected_decay_release += total_tree_co2 * 0.7 / avg_decay  # Annual decay release
         
         total_co2_released += co2_released

@@ -44,7 +44,7 @@ def _serialize_project(project) -> dict:
     return data
 
 
-@router.get("/", response_model=List[dict])
+@router.get("", response_model=List[dict])
 def list_urban_greening_projects(
     skip: int = 0,
     limit: int = 100,
@@ -99,7 +99,7 @@ def get_urban_greening_project(
     return _serialize_project(project)
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def create_urban_greening_project(
     project_in: UrbanGreeningProjectCreate,
     db: Session = Depends(get_db),
