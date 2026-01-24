@@ -73,14 +73,15 @@ const CarbonStatistics: React.FC = () => {
     carbon_loss.projected_decay_release_kg;
 
   // Transform data for charts
+  const exoticCount = composition.alive_trees - composition.native_count;
   const compositionPieData = [
     { id: "native", label: "Native Species", value: composition.native_count },
-    { id: "endangered", label: "Endangered Species", value: composition.endangered_count },
+    { id: "exotic", label: "Exotic Species", value: exoticCount },
   ];
 
-  const topSpeciesBarData = carbon_stock.co2_stored_per_species.slice(0, 10).map((s) => ({
-    id: s.common_name,
-    label: s.common_name,
+  const topSpeciesBarData = (carbon_stock.co2_stored_per_species || []).slice(0, 10).map((s) => ({
+    id: s.common_name || 'Unknown',
+    label: s.common_name || 'Unknown',
     value: Number((s.co2_stored_kg / 1000).toFixed(1)),
   }));
 
@@ -91,7 +92,7 @@ const CarbonStatistics: React.FC = () => {
     { id: "decay", label: "Projected Decay", value: Number(carbon_loss.projected_decay_release_tonnes.toFixed(1)) },
   ];
 
-  const removalMethodsData = carbon_loss.removal_methods.map((m) => ({
+  const removalMethodsData = (carbon_loss.removal_methods || []).map((m) => ({
     id: m.reason || "Unknown",
     label: m.reason || "Unknown",
     value: Number((m.co2_released_kg / 1000).toFixed(1)),
@@ -141,18 +142,22 @@ const CarbonStatistics: React.FC = () => {
               title=""
               data={compositionPieData}
               height={280}
-              color={["#0054A6", "#4A90E2"]}
+              colors={["#0054A6", "#4A90E2"]}
               legendAsList
               showLabels
             />
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{composition.native_ratio}%</div>
-                <div className="text-xs text-gray-600">Native Species</div>
+                <div className="text-xs text-gray-600">Native Ratio</div>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{exoticCount}</div>
+                <div className="text-xs text-gray-600">Exotic Trees</div>
               </div>
               <div className="text-center p-3 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">{composition.endangered_count}</div>
-                <div className="text-xs text-gray-600">Endangered Species</div>
+                <div className="text-xs text-gray-600">Endangered</div>
               </div>
             </div>
           </CardContent>
@@ -193,7 +198,7 @@ const CarbonStatistics: React.FC = () => {
               title=""
               data={carbonFlowData}
               height={280}
-              color={["#0054A6", "#22c55e", "#ef4444", "#f97316"]}
+              color={["#0054A6"]}
               insights={[
                 `Net balance: ${netBalance >= 0 ? '+' : ''}${formatNumber(netBalance / 1000, 1)} t/year`,
                 netBalance >= 0 ? "Carbon positive!" : "Need more trees"
@@ -212,7 +217,7 @@ const CarbonStatistics: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {carbon_stock.co2_stored_per_species.slice(0, 5).map((species, idx) => (
+              {(carbon_stock.co2_stored_per_species || []).slice(0, 5).map((species, idx) => (
                 <div key={idx} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-3">
@@ -252,7 +257,7 @@ const CarbonStatistics: React.FC = () => {
                 title=""
                 data={removalMethodsData}
                 height={280}
-                color={["#ef4444", "#f97316", "#dc2626"]}
+                colors={["#ef4444", "#f97316", "#dc2626"]}
                 legendAsList
                 showLabels
               />
@@ -313,7 +318,7 @@ const CarbonStatistics: React.FC = () => {
               </div>
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Avg per Tree</span>
-                <span className="text-lg font-bold text-gray-900">{formatNumber(carbon_stock.total_co2_stored_kg / (composition.alive_trees || 1))} kg</span>
+                <span className="text-lg font-bold text-gray-900">{composition.alive_trees > 0 ? formatNumber(carbon_stock.total_co2_stored_kg / composition.alive_trees, 1) : '0'} kg</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                 <span className="text-sm text-gray-600">Annual Absorption</span>

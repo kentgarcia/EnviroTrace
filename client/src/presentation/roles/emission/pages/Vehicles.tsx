@@ -200,13 +200,13 @@ export default function Vehicles() {
       contact_number: vehicleData.contactNumber,
       engine_type: vehicleData.engineType,
       office_id: officeId,
-      plate_number: vehicleData.plateNumber || null,
-      chassis_number: vehicleData.chassisNumber || null,
-      registration_number: vehicleData.registrationNumber || null,
+      plate_number: vehicleData.plateNumber || undefined,
+      chassis_number: vehicleData.chassisNumber || undefined,
+      registration_number: vehicleData.registrationNumber || undefined,
       vehicle_type: vehicleData.vehicleType,
       wheels: vehicleData.wheels,
-      description: vehicleData.description,
-      year_acquired: vehicleData.yearAcquired
+      description: vehicleData.description || undefined,
+      year_acquired: vehicleData.yearAcquired || undefined
     };
 
     try {
@@ -218,42 +218,48 @@ export default function Vehicles() {
       toast.success("Vehicle updated successfully");
       setEditModalOpen(false);
       setSelectedVehicle(null);
+      // Refetch vehicles to show the updated data
+      await refetch();
     } catch (error: any) {
       console.error("Error updating vehicle:", error);
-      toast.error(error.response?.data?.detail || "Failed to update vehicle");
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to update vehicle";
+      toast.error(errorMessage);
     }
   };  // Handler for adding new vehicle
-  const handleAddVehicle = (vehicle: VehicleFormInput) => {
+  const handleAddVehicle = async (vehicle: VehicleFormInput) => {
     // Find the office ID by office name
     const officeId = getOfficeIdByName(vehicle.officeName);
     if (!officeId) {
       toast.error(`Office "${vehicle.officeName}" not found`);
       return;
-    }    // Convert from UI VehicleFormInput to API VehicleInput
+    }
+
+    // Convert from UI VehicleFormInput to API VehicleInput
     const apiVehicle = {
       driver_name: vehicle.driverName,
       contact_number: vehicle.contactNumber,
       engine_type: vehicle.engineType,
       office_id: officeId,
-      plate_number: vehicle.plateNumber || null,
-      chassis_number: vehicle.chassisNumber || null,
-      registration_number: vehicle.registrationNumber || null,
+      plate_number: vehicle.plateNumber || undefined,
+      chassis_number: vehicle.chassisNumber || undefined,
+      registration_number: vehicle.registrationNumber || undefined,
       vehicle_type: vehicle.vehicleType,
       wheels: vehicle.wheels,
-      description: vehicle.description,
-      year_acquired: vehicle.yearAcquired
+      description: vehicle.description || undefined,
+      year_acquired: vehicle.yearAcquired || undefined
     };
 
-    addVehicleMutation.mutate(apiVehicle, {
-      onSuccess: () => {
-        toast.success("Vehicle added successfully");
-        setAddModalOpen(false);
-      },
-      onError: (error: any) => {
-        console.error("Error adding vehicle:", error);
-        toast.error(error.response?.data?.detail || "Failed to add vehicle");
-      }
-    });
+    try {
+      await addVehicleMutation.mutateAsync(apiVehicle);
+      toast.success("Vehicle added successfully");
+      setAddModalOpen(false);
+      // Refetch vehicles to show the new vehicle
+      await refetch();
+    } catch (error: any) {
+      console.error("Error adding vehicle:", error);
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to add vehicle";
+      toast.error(errorMessage);
+    }
   };
 
   // Handler for deleting vehicle
@@ -266,9 +272,12 @@ export default function Vehicles() {
       setDeleteDialogOpen(false);
       setSelectedVehicle(null);
       setRowSelection({});
+      // Refetch vehicles to update the list
+      await refetch();
     } catch (error: any) {
       console.error("Error deleting vehicle:", error);
-      toast.error(error.response?.data?.detail || "Failed to delete vehicle");
+      const errorMessage = error.response?.data?.detail || error.message || "Failed to delete vehicle";
+      toast.error(errorMessage);
     }
   };
 
@@ -566,18 +575,28 @@ export default function Vehicles() {
                           contact_number: data.contactNumber,
                           engine_type: data.engineType,
                           office_id: officeId,
-                          plate_number: data.plateNumber,
+                          plate_number: data.plateNumber || undefined,
+                          chassis_number: data.chassisNumber || undefined,
+                          registration_number: data.registrationNumber || undefined,
                           vehicle_type: data.vehicleType,
                           wheels: data.wheels,
-                          description: data.description
+                          description: data.description || undefined,
+                          year_acquired: data.yearAcquired || undefined
                         };
 
-                        await updateVehicleMutation.mutateAsync({
-                          id,
-                          vehicleData: apiVehicleData,
-                        });
+                        try {
+                          await updateVehicleMutation.mutateAsync({
+                            id,
+                            vehicleData: apiVehicleData,
+                          });
 
-                        toast.success("Vehicle updated successfully");
+                          toast.success("Vehicle updated successfully");
+                          await refetch();
+                        } catch (error: any) {
+                          console.error("Error updating vehicle:", error);
+                          const errorMessage = error.response?.data?.detail || error.message || "Failed to update vehicle";
+                          toast.error(errorMessage);
+                        }
                       }}
                     />
                   )}

@@ -16,6 +16,12 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(min_length=8)
     roles: Optional[List[UserRoleEnum]] = None # For assigning roles on creation
+    # Profile fields
+    first_name: Optional[str] = Field(default=None, max_length=100)
+    last_name: Optional[str] = Field(default=None, max_length=100)
+    job_title: Optional[str] = Field(default=None, max_length=200)
+    department: Optional[str] = Field(default=None, max_length=200)
+    phone_number: Optional[str] = Field(default=None, max_length=50)
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -23,6 +29,12 @@ class UserUpdate(BaseModel):
     is_super_admin: Optional[bool] = None
     is_active: Optional[bool] = None # Assuming you might add is_active to User model
     roles: Optional[List[UserRoleEnum]] = None
+    # Profile fields
+    first_name: Optional[str] = Field(default=None, max_length=100)
+    last_name: Optional[str] = Field(default=None, max_length=100)
+    job_title: Optional[str] = Field(default=None, max_length=200)
+    department: Optional[str] = Field(default=None, max_length=200)
+    phone_number: Optional[str] = Field(default=None, max_length=50)
 
 class UserInDBBase(UserBase):
     id: uuid.UUID

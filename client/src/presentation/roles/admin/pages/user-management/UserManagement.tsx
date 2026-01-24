@@ -47,6 +47,7 @@ import {
     useCreateUser,
     useUpdateUser,
     useDeleteUser,
+    useReactivateUser,
     useAvailableRoles,
     CreateUserRequest,
     UpdateUserRequest,
@@ -59,6 +60,11 @@ interface UserFormData {
     password?: string;
     is_super_admin: boolean;
     roles: string[];
+    first_name?: string;
+    last_name?: string;
+    job_title?: string;
+    department?: string;
+    phone_number?: string;
 }
 
 export function UserManagement() {
@@ -82,7 +88,12 @@ export function UserManagement() {
             email: "",
             password: "",
             is_super_admin: false,
-            roles: []
+            roles: [],
+            first_name: "",
+            last_name: "",
+            job_title: "",
+            department: "",
+            phone_number: ""
         }
     });
 
@@ -94,7 +105,12 @@ export function UserManagement() {
                 email: data.email,
                 password: data.password!,
                 is_super_admin: data.is_super_admin,
-                roles: data.roles
+                roles: data.roles,
+                first_name: data.first_name || undefined,
+                last_name: data.last_name || undefined,
+                job_title: data.job_title || undefined,
+                department: data.department || undefined,
+                phone_number: data.phone_number || undefined
             };
 
             await createUserMutation.mutateAsync(createData);
@@ -110,9 +126,20 @@ export function UserManagement() {
 
             // Handle specific error messages
             let errorMessage = "Failed to create user. Please try again.";
-
-            if (error?.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
+            
+            // Check for archived account conflict (409)
+            if (error?.response?.status === 409) {
+                errorMessage = error?.response?.data?.detail || "An archived account exists with this email. Please contact an administrator to reactivate the account.";
+            } else if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail;
+                // Handle array of validation errors
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
             } else if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error?.message) {
@@ -134,7 +161,12 @@ export function UserManagement() {
             const updateData: UpdateUserRequest = {
                 email: data.email,
                 is_super_admin: data.is_super_admin,
-                roles: data.roles
+                roles: data.roles,
+                first_name: data.first_name || undefined,
+                last_name: data.last_name || undefined,
+                job_title: data.job_title || undefined,
+                department: data.department || undefined,
+                phone_number: data.phone_number || undefined
             };
 
             if (data.password) {
@@ -154,9 +186,20 @@ export function UserManagement() {
 
             // Handle specific error messages
             let errorMessage = "Failed to update user. Please try again.";
-
-            if (error?.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
+            
+            // Check for archived account conflict (409)
+            if (error?.response?.status === 409) {
+                errorMessage = error?.response?.data?.detail || "An archived account exists with this email. Cannot update to this email address.";
+            } else if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail;
+                // Handle array of validation errors
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
             } else if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error?.message) {
@@ -186,7 +229,15 @@ export function UserManagement() {
             let errorMessage = "Failed to delete user. Please try again.";
 
             if (error?.response?.data?.detail) {
-                errorMessage = error.response.data.detail;
+                const detail = error.response.data.detail;
+                // Handle array of validation errors
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
             } else if (error?.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error?.message) {
@@ -207,6 +258,11 @@ export function UserManagement() {
         setValue("is_super_admin", user.is_super_admin);
         setValue("roles", user.assigned_roles);
         setValue("password", ""); // Don't pre-fill password
+        setValue("first_name", user.profile?.first_name || "");
+        setValue("last_name", user.profile?.last_name || "");
+        setValue("job_title", user.profile?.job_title || "");
+        setValue("department", user.profile?.department || "");
+        setValue("phone_number", user.profile?.phone_number || "");
     };
 
     const closeEditDialog = () => {
@@ -282,7 +338,13 @@ export function UserManagement() {
                                         <Input
                                             id="email"
                                             type="email"
-                                            {...register("email", { required: "Email is required" })}
+                                            {...register("email", { 
+                                                required: "Email is required",
+                                                pattern: {
+                                                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                                    message: "Invalid email address"
+                                                }
+                                            })}
                                             placeholder="user@example.com"
                                         />
                                         {errors.email && (
@@ -301,6 +363,55 @@ export function UserManagement() {
                                         {errors.password && (
                                             <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
                                         )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="first_name">First Name</Label>
+                                            <Input
+                                                id="first_name"
+                                                {...register("first_name")}
+                                                placeholder="John"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="last_name">Last Name</Label>
+                                            <Input
+                                                id="last_name"
+                                                {...register("last_name")}
+                                                placeholder="Doe"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Label htmlFor="job_title">Job Title</Label>
+                                        <Input
+                                            id="job_title"
+                                            {...register("job_title")}
+                                            placeholder="Environmental Officer"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label htmlFor="department">Department</Label>
+                                            <Input
+                                                id="department"
+                                                {...register("department")}
+                                                placeholder="Urban Planning"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="phone_number">Phone Number</Label>
+                                            <Input
+                                                id="phone_number"
+                                                {...register("phone_number")}
+                                                placeholder="+1234567890"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center space-x-2">
@@ -377,6 +488,8 @@ export function UserManagement() {
                                         <TableRow>
                                             <TableHead>User</TableHead>
                                             <TableHead>Email</TableHead>
+                                            <TableHead>Job Title</TableHead>
+                                            <TableHead>Department</TableHead>
                                             <TableHead>Roles</TableHead>
                                             <TableHead>Last Sign In</TableHead>
                                             <TableHead>Created</TableHead>
@@ -410,6 +523,16 @@ export function UserManagement() {
                                                     <div className="flex items-center gap-2">
                                                         <Mail className="w-4 h-4 text-gray-400" />
                                                         {user.email}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm text-gray-600">
+                                                        {user.profile?.job_title || "-"}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="text-sm text-gray-600">
+                                                        {user.profile?.department || "-"}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -496,7 +619,13 @@ export function UserManagement() {
                                 <Input
                                     id="edit-email"
                                     type="email"
-                                    {...register("email", { required: "Email is required" })}
+                                    {...register("email", { 
+                                        required: "Email is required",
+                                        pattern: {
+                                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                            message: "Invalid email address"
+                                        }
+                                    })}
                                 />
                                 {errors.email && (
                                     <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
@@ -514,6 +643,55 @@ export function UserManagement() {
                                 {errors.password && (
                                     <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
                                 )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="edit-first_name">First Name</Label>
+                                    <Input
+                                        id="edit-first_name"
+                                        {...register("first_name")}
+                                        placeholder="John"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="edit-last_name">Last Name</Label>
+                                    <Input
+                                        id="edit-last_name"
+                                        {...register("last_name")}
+                                        placeholder="Doe"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label htmlFor="edit-job_title">Job Title</Label>
+                                <Input
+                                    id="edit-job_title"
+                                    {...register("job_title")}
+                                    placeholder="Environmental Officer"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="edit-department">Department</Label>
+                                    <Input
+                                        id="edit-department"
+                                        {...register("department")}
+                                        placeholder="Urban Planning"
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="edit-phone_number">Phone Number</Label>
+                                    <Input
+                                        id="edit-phone_number"
+                                        {...register("phone_number")}
+                                        placeholder="+1234567890"
+                                    />
+                                </div>
                             </div>
 
                             <div className="flex items-center space-x-2">

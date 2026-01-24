@@ -1,5 +1,6 @@
 # app/services/auth_service.py
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from fastapi import HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Optional, List
@@ -16,16 +17,53 @@ from app.core.security import create_access_token, verify_password
 
 class AuthService:
     async def register_user(self, db: AsyncSession, *, user_in: UserCreate) -> UserFullPublic:
-        existing_user = await crud_user.get_by_email(db, email=user_in.email)
+        # Check for existing active user
+        existing_user = await crud_user.get_by_email(db, email=user_in.email, include_deleted=False)
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="The user with this email already exists in the system.",
             )
         
+        # Check for archived user with same email
+        archived_user = await crud_user.get_by_email(db, email=user_in.email, include_deleted=True)
+        if archived_user and archived_user.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An archived account exists with this email. Please contact an administrator to reactivate the account instead of creating a new one.",
+            )
+        
         user = await crud_user.create(db, obj_in=user_in)
         
         # Get user details with profile
+        return await self.get_user_details(db=db, user_id=user.id)
+
+    async def reactivate_user(self, db: AsyncSession, *, user_id: uuid.UUID) -> UserFullPublic:
+        """Reactivate an archived user account"""
+        result = await db.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        if user.deleted_at is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User account is already active"
+            )
+        
+        # Reactivate the user
+        user.deleted_at = None
+        from datetime import datetime
+        user.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
+        
         return await self.get_user_details(db=db, user_id=user.id)
 
     async def login_user(
@@ -37,7 +75,7 @@ class AuthService:
         device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
         device_name: Optional[str] = None
     ) -> Token:
-        user = await crud_user.get_by_email(db, email=form_data.username) # form_data.username is email
+        user = await crud_user.get_by_email(db, email=form_data.username, include_deleted=False) # form_data.username is email
         if not user or not verify_password(form_data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

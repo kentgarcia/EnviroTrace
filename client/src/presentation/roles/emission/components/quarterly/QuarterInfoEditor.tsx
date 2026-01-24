@@ -6,7 +6,6 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/presentation/components/shared/ui/dialog";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -175,18 +174,22 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
                         </div>
                     </div>
 
-                    <Dialog open={editingQuarter === quarter} onOpenChange={(open) => !open && setEditingQuarter(null)}>
-                        <DialogTrigger asChild>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full border-slate-200 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider"
-                                onClick={() => handleEdit(quarter)}
-                            >
-                                <EditIcon className="h-3.5 w-3.5 mr-2" />
-                                {hasData ? "Edit Configuration" : "Set Up Quarter"}
-                            </Button>
-                        </DialogTrigger>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full border-slate-200 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider"
+                        onClick={() => handleEdit(quarter)}
+                    >
+                        <EditIcon className="h-3.5 w-3.5 mr-2" />
+                        {hasData ? "Edit Configuration" : "Set Up Quarter"}
+                    </Button>
+
+                    <Dialog 
+                        open={editingQuarter === quarter} 
+                        onOpenChange={(open) => {
+                            if (!open) setEditingQuarter(null);
+                        }}
+                    >
                         <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
                             <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
                                 <DialogTitle className="text-xl font-bold text-white">

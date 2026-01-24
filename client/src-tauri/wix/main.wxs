@@ -1,0 +1,188 @@
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    {{#if build_arch_x86}}
+    <?define PlatformProgramFilesFolder = "ProgramFilesFolder"?>
+    <?define Win64 = "no"?>
+    {{else}}
+    <?define PlatformProgramFilesFolder = "ProgramFiles64Folder"?>
+    <?define Win64 = "yes"?>
+    {{/if}}
+
+    <Product
+        Id="*"
+        Name="{{product_name}}"
+        Manufacturer="{{manufacturer}}"
+        Version="{{version}}"
+        UpgradeCode="{{upgrade_code}}"
+        Language="!(loc.TauriLanguage)">
+
+        <Package
+            Id="*"
+            Keywords="Installer"
+            Description="{{short_description}}"
+            Manufacturer="{{manufacturer}}"
+            InstallerVersion="450"
+            Languages="!(loc.TauriLanguage)"
+            Compressed="yes"
+            InstallScope="perMachine"
+            SummaryCodepage="!(loc.TauriCodepage)"
+            {{#if install_mode_per_machine}}
+            InstallPrivileges="elevated"
+            {{/if}}
+        />
+
+        <MajorUpgrade
+            Schedule="afterInstallInitialize"
+            AllowDowngrades="yes"
+        />
+
+        <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+        {{#if banner_path}}
+        <WixVariable Id="WixUIBannerBmp" Value="{{banner_path}}" />
+        {{/if}}
+        {{#if dialog_image_path}}
+        <WixVariable Id="WixUIDialogBmp" Value="{{dialog_image_path}}" />
+        {{/if}}
+
+        {{#if icon_path}}
+        <Icon Id="ProductICO" SourceFile="{{icon_path}}"/>
+        <Property Id="ARPPRODUCTICON" Value="ProductICO" />
+        {{/if}}
+
+        <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+        <SetProperty Id="ARPNOMODIFY" Value="1" After="InstallValidate" Sequence="execute"/>
+
+        <!-- Customize text colors for dark backgrounds -->
+        <UI>
+            <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" Red="255" Green="255" Blue="255" />
+            <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" Red="255" Green="255" Blue="255" />
+            <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" Red="255" Green="255" Blue="255" />
+
+            <UIRef Id="WixUI_InstallDir" />
+
+            <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+
+            {{#if license}}
+            {{else}}
+            <!-- Skip license dialog if no license -->
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+            {{/if}}
+        </UI>
+
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchApp)" />
+        <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+
+        <CustomAction
+            Id="LaunchApplication"
+            FileKey="PathToMainExecutable"
+            ExeCommand=""
+            Execute="immediate"
+            Impersonate="yes"
+            Return="asyncNoWait"
+        />
+
+        <InstallExecuteSequence>
+            <Custom Action="LaunchApplication" After="InstallFinalize">
+                WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed
+            </Custom>
+        </InstallExecuteSequence>
+
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="$(var.PlatformProgramFilesFolder)">
+                <Directory Id="INSTALLDIR" Name="{{product_name}}">
+                    {{#each binaries}}
+                    <Component Id="{{this.id}}" Guid="{{this.guid}}" Win64="$(var.Win64)">
+                        <File
+                            Id="PathToMainExecutable"
+                            Source="{{this.path}}"
+                            KeyPath="yes"
+                        />
+                    </Component>
+                    {{/each}}
+
+                    {{#each resources}}
+                    <Component Id="{{this.id}}" Guid="*" Win64="$(var.Win64)">
+                        <File
+                            Id="{{this.id}}"
+                            Source="{{this.path}}"
+                            KeyPath="yes"
+                        />
+                    </Component>
+                    {{/each}}
+                </Directory>
+            </Directory>
+
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="{{product_name}}">
+                    <Component Id="ApplicationShortcut" Guid="*">
+                        <Shortcut
+                            Id="ApplicationStartMenuShortcut"
+                            Name="{{product_name}}"
+                            Description="{{short_description}}"
+                            Target="[#PathToMainExecutable]"
+                            WorkingDirectory="INSTALLDIR"
+                            {{#if icon_path}}
+                            Icon="ProductICO"
+                            {{/if}}
+                        />
+                        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+                        <RegistryValue Root="HKCU" Key="Software\{{manufacturer}}\{{product_name}}" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+                    </Component>
+                </Directory>
+            </Directory>
+
+            <Directory Id="DesktopFolder" Name="Desktop">
+                <Component Id="ApplicationShortcutDesktop" Guid="*">
+                    <Shortcut
+                        Id="ApplicationDesktopShortcut"
+                        Name="{{product_name}}"
+                        Description="{{short_description}}"
+                        Target="[#PathToMainExecutable]"
+                        WorkingDirectory="INSTALLDIR"
+                        {{#if icon_path}}
+                        Icon="ProductICO"
+                        {{/if}}
+                    />
+                    <RemoveFolder Id="DesktopFolder" On="uninstall"/>
+                    <RegistryValue Root="HKCU" Key="Software\{{manufacturer}}\{{product_name}}" Name="desktop_shortcut" Type="integer" Value="1" KeyPath="yes"/>
+                </Component>
+            </Directory>
+        </Directory>
+
+        <Feature Id="MainApplication" Title="{{product_name}}" Level="1" ConfigurableDirectory="INSTALLDIR" AllowAdvertise="no" Display="expand" Absent="disallow">
+            {{#each binaries}}
+            <ComponentRef Id="{{this.id}}" />
+            {{/each}}
+
+            {{#each resources}}
+            <ComponentRef Id="{{this.id}}" />
+            {{/each}}
+
+            <Feature Id="ShortcutsFeature" Title="Shortcuts" Level="1">
+                <ComponentRef Id="ApplicationShortcut" />
+                <ComponentRef Id="ApplicationShortcutDesktop" />
+            </Feature>
+        </Feature>
+
+        {{#if webview2_install_mode}}
+        <!-- WebView2 installation -->
+        <Property Id="WVRTINSTALLED">
+            <RegistrySearch Id="WVRTInstalledSystem" Root="HKLM" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" Win64="no" />
+            <RegistrySearch Id="WVRTInstalledUser" Root="HKCU" Key="SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw"/>
+        </Property>
+
+        {{#if webview2_bootstrapper_path}}
+        <Binary Id="MicrosoftEdgeWebview2Setup.exe" SourceFile="{{webview2_bootstrapper_path}}"/>
+        <CustomAction Id='InvokeBootstrapper' BinaryKey='MicrosoftEdgeWebview2Setup.exe' Execute="deferred" ExeCommand='/silent /install' Return='check' />
+        <InstallExecuteSequence>
+            <Custom Action='InvokeBootstrapper' Before='InstallFinalize'>
+                <![CDATA[NOT(REMOVE OR WVRTINSTALLED)]]>
+            </Custom>
+        </InstallExecuteSequence>
+        {{/if}}
+        {{/if}}
+
+        <SetProperty Id="ARPINSTALLLOCATION" Value="[INSTALLDIR]" After="CostFinalize"/>
+    </Product>
+</Wix>

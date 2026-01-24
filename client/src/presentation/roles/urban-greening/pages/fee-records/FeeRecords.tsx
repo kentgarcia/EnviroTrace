@@ -362,10 +362,19 @@ const FeeRecords: React.FC = () => {
                                             <FeeRecordForm
                                                 mode="edit"
                                                 initialData={selectedRowForDetails}
-                                                onSave={(data) => {
+                                                onSave={async (data) => {
                                                     // Only send updateable fields, exclude auto-generated and readonly fields
                                                     const { id, reference_number, or_number, created_at, updated_at, ...updateData } = data || {};
-                                                    fullUpdateMutation.mutate({ id: selectedRowForDetails.id, data: updateData });
+                                                    await fullUpdateMutation.mutateAsync({ id: selectedRowForDetails.id, data: updateData });
+                                                    // Refetch to get updated data
+                                                    const result = await refetch();
+                                                    // Update the selected row with fresh data from refetch
+                                                    if (result.data) {
+                                                        const updatedRecord = result.data.find((r: FeeRecord) => r.id === selectedRowForDetails.id);
+                                                        if (updatedRecord) {
+                                                            setSelectedRowForDetails(updatedRecord);
+                                                        }
+                                                    }
                                                     setIsEditingDetails(false);
                                                 }}
                                                 onCancel={() => setIsEditingDetails(false)}

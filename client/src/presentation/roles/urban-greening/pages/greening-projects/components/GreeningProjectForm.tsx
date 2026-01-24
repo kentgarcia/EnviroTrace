@@ -684,33 +684,34 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       const plants = data.categories.flatMap((cat) => 
         cat.plants.map((p) => ({
           plant_type: cat.plant_type,
-          species: p.species_name,
+          species: p.species_name || undefined,
           common_name: p.species_name,
           quantity: p.quantity,
           category: cat.name || cat.plant_type,
         }))
       );
 
+      // Convert empty strings to undefined for date fields
       const payload: UrbanGreeningProjectCreate = {
         project_type: data.project_type,
         status: data.status,
-        description: data.note,
+        description: data.note || undefined,
         location: data.location,
-        barangay: data.barangay,
+        barangay: data.barangay || undefined,
         latitude: data.latitude,
         longitude: data.longitude,
-        planting_date: data.planting_date,
-        date_received: data.date_received,
-        date_of_inspection: data.date_of_inspection,
-        project_lead: data.project_lead,
-        organization: data.organization,
-        linked_cutting_request_id: data.linked_request_ids?.[0],
+        planting_date: data.planting_date || undefined,
+        date_received: data.date_received || undefined,
+        date_of_inspection: data.date_of_inspection || undefined,
+        project_lead: data.project_lead || undefined,
+        organization: data.organization || undefined,
+        linked_cutting_request_id: data.linked_request_ids?.[0] || undefined,
         linked_cut_tree_ids:
-          projectType === "replacement"
+          projectType === "replacement" && selectedReplacementTrees.length > 0
             ? selectedReplacementTrees.map((t) => t.id)
             : undefined,
         plants: plants,
-        contact_number: data.contact_number,
+        contact_number: data.contact_number || undefined,
       } as any;
 
       if (mode === "add") {
@@ -722,6 +723,11 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       onSuccess();
     } catch (error) {
       console.error("Error saving project:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save project",
+        variant: "destructive",
+      });
     }
   };
 

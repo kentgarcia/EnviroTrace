@@ -149,6 +149,29 @@ async def update_user(
     # Update user fields
     update_data = user_update.model_dump(exclude_unset=True)
     
+    # Check if email is being changed to one that already exists (including archived users)
+    if "email" in update_data and update_data["email"] != user.email:
+        existing_user = await db.execute(
+            select(User).where(
+                and_(
+                    User.email == update_data["email"],
+                    User.id != user_id
+                )
+            )
+        )
+        found_user = existing_user.scalar_one_or_none()
+        if found_user:
+            if found_user.deleted_at is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An archived account exists with this email. Please reactivate that account instead."
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A user with this email already exists"
+                )
+    
     if "password" in update_data:
         # Hash the new password
         from app.core.security import get_password_hash
@@ -214,6 +237,16 @@ async def delete_user(
     # Soft delete
     user.deleted_at = datetime.utcnow()
     await db.commit()
+
+@router.post("/users/{user_id}/reactivate", response_model=UserFullPublic)
+async def reactivate_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Reactivate an archived user account (admin only)"""
+    
+    return await auth_service.reactivate_user(db=db, user_id=user_id)
 
 @router.post("/users/{user_id}/roles", response_model=UserWithRoles)
 async def assign_role_to_user(

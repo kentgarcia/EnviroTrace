@@ -56,6 +56,11 @@ export interface CreateUserRequest {
   password: string;
   is_super_admin?: boolean;
   roles?: string[];
+  first_name?: string;
+  last_name?: string;
+  job_title?: string;
+  department?: string;
+  phone_number?: string;
 }
 
 export interface UpdateUserRequest {
@@ -63,6 +68,11 @@ export interface UpdateUserRequest {
   password?: string;
   is_super_admin?: boolean;
   roles?: string[];
+  first_name?: string;
+  last_name?: string;
+  job_title?: string;
+  department?: string;
+  phone_number?: string;
 }
 
 export interface AssignRoleRequest {
@@ -116,6 +126,10 @@ class AdminApiService extends ApiService {
 
   async deleteUser(userId: string): Promise<void> {
     return this.delete(`/admin/users/${userId}`);
+  }
+
+  async reactivateUser(userId: string): Promise<User> {
+    return this.post<User>(`/admin/users/${userId}/reactivate`, {});
   }
 
   async assignRole(userId: string, roleData: AssignRoleRequest): Promise<User> {
@@ -229,6 +243,23 @@ export const useDeleteUser = () => {
     mutationFn: (userId: string) => adminApiService.deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "dashboard", "stats"],
+      });
+    },
+  });
+};
+
+export const useReactivateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApiService.reactivateUser(userId),
+    onSuccess: (data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId],
+      });
       queryClient.invalidateQueries({
         queryKey: ["admin", "dashboard", "stats"],
       });
