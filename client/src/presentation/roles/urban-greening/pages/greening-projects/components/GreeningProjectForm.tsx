@@ -1097,10 +1097,6 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-base font-semibold">Project Plants & Categories</Label>
-                <div className="text-sm text-gray-500">
-                   Group plants by category (e.g., "Roadside", "Park Area") or keep them in a default group.
-                   All plants in a category share the same type.
-                </div>
               </div>
               <Button
                 type="button"

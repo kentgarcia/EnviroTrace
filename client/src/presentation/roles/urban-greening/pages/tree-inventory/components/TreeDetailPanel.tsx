@@ -160,7 +160,6 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
               </Badge>
             </div>
           </div>
-          <QrCode className="w-12 h-12 text-gray-300" />
         </div>
 
         {/* Species */}

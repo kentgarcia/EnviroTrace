@@ -434,14 +434,14 @@ const FeeRecords: React.FC = () => {
 
             {/* Form Dialog (Add only) */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-                <DialogContent className="sm:max-w-lg rounded-2xl border-none p-0 overflow-hidden max-h-[90vh] flex flex-col">
-                    <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
-                        <DialogTitle className="text-xl font-bold text-white">Add Fee Record</DialogTitle>
-                        <DialogDescription className="text-blue-100/80">
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add Fee Record</DialogTitle>
+                        <DialogDescription >
                             Enter the details of the new fee record to add to the database.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="p-6 bg-white overflow-y-auto">
+                    <div>
                         <FeeRecordForm
                             mode="add"
                             initialData={selectedRecord}

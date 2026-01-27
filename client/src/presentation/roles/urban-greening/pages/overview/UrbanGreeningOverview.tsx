@@ -38,6 +38,7 @@ export const UrbanGreeningOverview: React.FC = () => {
     const isChartsLoading = isTreeRequestsLoading || isPlantingLoading || isSaplingRecordsLoading;
 
     const handleRefresh = () => {
+        queryClient.invalidateQueries({ queryKey: ["ug-dashboard-aggregated"] });
         queryClient.invalidateQueries({ queryKey: ["urban-greening-statistics"] });
         queryClient.invalidateQueries({ queryKey: ["sapling-statistics"] });
         queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
@@ -68,7 +69,10 @@ export const UrbanGreeningOverview: React.FC = () => {
 
                 <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
                     {/* Key Stats */}
-                    <UGKeyStatsCards feeData={feeData} />
+                    <UGKeyStatsCards 
+                        statCards={dashboardData?.stat_cards} 
+                        loading={isUrbanGreeningLoading || isSaplingLoading}
+                    />
 
                     {/* Visualized Dashboard */}
                     <UGVisualDashboard

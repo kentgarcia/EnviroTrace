@@ -193,7 +193,7 @@ const TreeInventoryPage: React.FC = () => {
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Inventory</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 Unified registry for all trees • {stats?.total_trees || 0} total trees
               </p>
             </div>
@@ -205,15 +205,9 @@ const TreeInventoryPage: React.FC = () => {
                 disabled={isLoading}
                 className="border border-gray-200 bg-white rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
               >
-                <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
-              <Button
-                onClick={handleAddTree}
-                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Tree
-              </Button>
+
             </div>
           </div>
 
@@ -266,10 +260,10 @@ const TreeInventoryPage: React.FC = () => {
               <div className={`flex flex-col transition-all duration-300 ${detailTree ? 'w-[60%]' : 'flex-1'}`}>
                 <Card className="flex-1 flex flex-col">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
-                    <CardTitle className="flex items-center gap-2">
+                    {/* <CardTitle className="flex items-center gap-2">
                       <TreePine className="w-5 h-5" />
                       Tree Registry
-                    </CardTitle>
+                    </CardTitle> */}
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col overflow-hidden">
                     {/* Filters */}
@@ -306,6 +300,13 @@ const TreeInventoryPage: React.FC = () => {
                         <option value="needs_attention">Needs Attention</option>
                         <option value="diseased">Diseased</option>
                       </select>
+                                    <Button
+                onClick={handleAddTree}
+                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Tree
+              </Button>
                     </div>
 
                     {/* Data Table */}
@@ -404,13 +405,13 @@ const TreeInventoryPage: React.FC = () => {
 
         {/* Add/Edit Tree Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-2xl p-0 rounded-2xl border-none overflow-hidden max-h-[90vh] flex flex-col">
-            <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
+          <DialogContent className="max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <DialogHeader>
               <DialogTitle>
                 {formMode === "add" ? "Add Tree to Inventory" : "Edit Tree"}
               </DialogTitle>
             </DialogHeader>
-            <div className="p-6 overflow-y-auto">
+            <div className="p-2 overflow-y-auto">
               <TreeForm
                 mode={formMode}
                 initialData={selectedTree || undefined}

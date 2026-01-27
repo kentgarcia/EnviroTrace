@@ -183,76 +183,6 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
                         <EditIcon className="h-3.5 w-3.5 mr-2" />
                         {hasData ? "Edit Configuration" : "Set Up Quarter"}
                     </Button>
-
-                    <Dialog 
-                        open={editingQuarter === quarter} 
-                        onOpenChange={(open) => {
-                            if (!open) setEditingQuarter(null);
-                        }}
-                    >
-                        <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
-                            <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
-                                <DialogTitle className="text-xl font-bold text-white">
-                                    {hasData ? "Edit" : "Set Up"} {getQuarterName(quarter)} Quarter {selectedYear}
-                                </DialogTitle>
-                                <DialogDescription className="text-blue-100/80">
-                                    Configure the testing schedule and personnel for this quarter.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="p-6 bg-white space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="personnel" className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Personnel</Label>
-                                    <Input
-                                        id="personnel"
-                                        value={formData.assigned_personnel}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, assigned_personnel: e.target.value }))}
-                                        placeholder="Enter personnel name"
-                                        className="h-11"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Date</Label>
-                                    <Input
-                                        id="date"
-                                        type="date"
-                                        value={formData.conducted_on}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, conducted_on: e.target.value }))}
-                                        className="h-11"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-500">Location</Label>
-                                    <Input
-                                        id="location"
-                                        value={formData.location}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                                        placeholder="Enter test location"
-                                        className="h-11"
-                                    />
-                                </div>
-
-                                <div className="flex justify-end gap-3 pt-6">
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => setEditingQuarter(null)}
-                                        disabled={isSubmitting}
-                                        className="font-bold text-xs uppercase tracking-wider"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        onClick={handleSubmit}
-                                        disabled={isSubmitting || !formData.assigned_personnel || !formData.conducted_on || !formData.location}
-                                        className="bg-[#0033a0] hover:bg-[#002a80] font-bold text-xs uppercase tracking-wider px-8"
-                                    >
-                                        {isSubmitting ? "Saving..." : "Save Configuration"}
-                                    </Button>
-                                </div>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
                 </CardContent>
             </Card>
         );
@@ -294,6 +224,76 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
                     ))}
                 </div>
             )}
+
+            <Dialog 
+                open={editingQuarter !== null} 
+                onOpenChange={(open) => {
+                    if (!open) setEditingQuarter(null);
+                }}
+            >
+                <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
+                    <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
+                        <DialogTitle className="text-xl font-bold text-white">
+                            {editingQuarter && getScheduleForQuarter(editingQuarter) ? "Edit" : "Set Up"} {editingQuarter && getQuarterName(editingQuarter)} Quarter {selectedYear}
+                        </DialogTitle>
+                        <DialogDescription className="text-blue-100/80">
+                            Configure the testing schedule and personnel for this quarter.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-6 bg-white space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="personnel" className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Personnel</Label>
+                            <Input
+                                id="personnel"
+                                value={formData.assigned_personnel}
+                                onChange={(e) => setFormData(prev => ({ ...prev, assigned_personnel: e.target.value }))}
+                                placeholder="Enter personnel name"
+                                className="h-11"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Date</Label>
+                            <Input
+                                id="date"
+                                type="date"
+                                value={formData.conducted_on}
+                                onChange={(e) => setFormData(prev => ({ ...prev, conducted_on: e.target.value }))}
+                                className="h-11"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-500">Location</Label>
+                            <Input
+                                id="location"
+                                value={formData.location}
+                                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                                placeholder="Enter test location"
+                                className="h-11"
+                            />
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-6">
+                            <Button
+                                variant="ghost"
+                                onClick={() => setEditingQuarter(null)}
+                                disabled={isSubmitting}
+                                className="font-bold text-xs uppercase tracking-wider"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={isSubmitting || !formData.assigned_personnel || !formData.conducted_on || !formData.location}
+                                className="bg-[#0033a0] hover:bg-[#002a80] font-bold text-xs uppercase tracking-wider px-8"
+                            >
+                                {isSubmitting ? "Saving..." : "Save Configuration"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

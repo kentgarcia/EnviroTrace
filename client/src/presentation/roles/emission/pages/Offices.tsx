@@ -110,13 +110,7 @@ export default function OfficesPage() {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <Button
-                    onClick={handleAddOffice}
-                    className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Office
-                  </Button>
+                  
                   <Button
                     variant="outline"
                     size="icon"
@@ -140,30 +134,7 @@ export default function OfficesPage() {
             {/* Body Section */}
             <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
               <div className="p-8">
-                {/* Controls Row: Search left, Filters right */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
-                  {/* Search (left) */}
-                  <div className="relative flex items-center w-full lg:w-96">
-                    <Input
-                      placeholder="Search offices by name or location..."
-                      value={filters.searchTerm || ""}
-                      onChange={handleSearchChange}
-                      className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
-                    />
-                    <Search className="absolute left-3 h-4 w-4 text-slate-400" />
-                  </div>
-                  
-                  {/* Filters (right) */}
-                  <div className="flex flex-wrap gap-2 items-center lg:justify-end">
-                    <YearSelector
-                      selectedYear={filters.year ?? new Date().getFullYear()}
-                      availableYears={availableYears}
-                      onYearChange={handleYearChange}
-                      selectedQuarter={filters.quarter}
-                      onQuarterChange={handleQuarterChange}
-                    />
-                  </div>
-                </div>
+
 
                 <div className="space-y-8 mt-0 outline-none">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -190,6 +161,38 @@ export default function OfficesPage() {
                   </div>
 
                   <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
+                    {/* Controls Row: Search left, Filters right */}
+                    <div className="px-6 pt-6 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100">
+                      {/* Search (left) */}
+                      <div className="relative flex items-center w-full lg:w-96">
+                        <Input
+                          placeholder="Search offices by name or location..."
+                          value={filters.searchTerm || ""}
+                          onChange={handleSearchChange}
+                          className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                        />
+                        <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+                      </div>
+                      
+                      {/* Filters (right) */}
+                      <div className="flex flex-wrap gap-2 items-center lg:justify-end">
+                        <YearSelector
+                          selectedYear={filters.year ?? new Date().getFullYear()}
+                          availableYears={availableYears}
+                          onYearChange={handleYearChange}
+                          selectedQuarter={filters.quarter}
+                          onQuarterChange={handleQuarterChange}
+                        />
+                        <Button
+                          onClick={handleAddOffice}
+                          className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Office
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="p-6">
                       <OfficeComplianceTable
                         officeData={officeData}

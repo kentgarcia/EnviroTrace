@@ -197,13 +197,7 @@ const SaplingRequestsPage: React.FC = () => {
               >
                 <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
-              <Button
-                onClick={handleAddRequest}
-                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Request
-              </Button>
+
             </div>
           </div>
         </div>
@@ -211,73 +205,20 @@ const SaplingRequestsPage: React.FC = () => {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
             <div className="flex flex-col space-y-6 h-full">
-               {/* Dashboard Stats */}
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
-                  {/* Total Requests Card */}
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-4 flex items-center justify-between">
-                       <div>
-                          <p className="text-sm font-medium text-gray-500">Total Requests</p>
-                          <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
-                          <p className="text-xs text-blue-600 mt-1 flex items-center">
-                             <FileText className="w-3 h-3 mr-1" /> All time records
-                          </p>
-                       </div>
-                       <div className="p-3 bg-blue-50 rounded-full">
-                          <FileText className="w-6 h-6 text-blue-600" />
-                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Status Breakdown Card */}
-                  <Card className="border-0 shadow-sm col-span-1 lg:col-span-2">
-                    <CardContent className="p-4">
-                       <p className="text-sm font-medium text-gray-500 mb-3">Request Status</p>
-                       <div className="grid grid-cols-3 gap-4">
-                          <div className="flex items-center gap-3">
-                             <div className="p-2 bg-yellow-100 rounded-lg">
-                                <Clock className="w-4 h-4 text-yellow-600" />
-                             </div>
-                             <div>
-                                <div className="text-lg font-bold">{stats.pending}</div>
-                                <div className="text-xs text-gray-500">Pending</div>
-                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                             <div className="p-2 bg-green-100 rounded-lg">
-                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                             </div>
-                             <div>
-                                <div className="text-lg font-bold">{stats.completed}</div>
-                                <div className="text-xs text-gray-500">Completed</div>
-                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                             <div className="p-2 bg-red-100 rounded-lg">
-                                <XCircle className="w-4 h-4 text-red-600" />
-                             </div>
-                             <div>
-                                <div className="text-lg font-bold">{stats.cancelled}</div>
-                                <div className="text-xs text-gray-500">Cancelled</div>
-                             </div>
-                          </div>
-                       </div>
-                    </CardContent>
-                  </Card>
-
-                   {/* Distribution Pie Chart */}
-                   <Card className="border-0 shadow-sm row-span-2 lg:row-span-1">
-                      <CardContent className="p-4 h-40 relative">
-                         <div className="absolute top-4 left-4 z-10">
-                            <p className="text-sm font-medium text-gray-500">Requested Types</p>
-                         </div>
-                         {stats.pieData.length > 0 ? (
+               {/* Stats Cards and Charts */}
+               <Card className="mb-6 shrink-0 overflow-hidden">
+                 <div className="flex flex-col lg:flex-row">
+                    {/* Compact Pie Chart Visual Code */}
+                    <div className="w-full lg:w-[200px] border-b lg:border-b-0 lg:border-r border-gray-100 bg-gray-50/30 p-4 flex flex-col justify-center items-center">
+                        <h3 className="text-xs font-semibold text-gray-600 mb-2 text-center">Plant Type Distribution</h3>
+                        <div className="h-[120px] w-full relative">
+                          {stats.pieData.length > 0 ? (
                              <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                    <Pie
                                       data={stats.pieData}
                                       cx="50%"
-                                      cy="60%"
+                                      cy="50%"
                                       innerRadius={30}
                                       outerRadius={50}
                                       paddingAngle={2}
@@ -287,25 +228,88 @@ const SaplingRequestsPage: React.FC = () => {
                                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                       ))}
                                    </Pie>
-                                   <Tooltip />
+                                   <Tooltip 
+                                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                      formatter={(value: number, name: string) => [value.toLocaleString(), name]} 
+                                   />
                                 </PieChart>
                              </ResponsiveContainer>
-                         ) : (
-                             <div className="h-full flex items-center justify-center text-xs text-gray-400">
-                                No data available
+                          ) : (
+                             <div className="flex h-full items-center justify-center text-gray-400 text-xs">
+                                No data
                              </div>
-                         )}
-                      </CardContent>
-                   </Card>
-               </div>
+                          )}
+                        </div>
+                    </div>
+
+                    {/* Metrics & Legend Section */}
+                    <div className="flex-1 p-6 flex flex-col gap-6">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                                <FileText className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-2xl font-bold truncate">{stats.total}</div>
+                                <div className="text-xs text-gray-500 truncate">Total Requests</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-yellow-100 rounded-lg shrink-0">
+                                <Clock className="w-5 h-5 text-yellow-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-2xl font-bold truncate">{stats.pending}</div>
+                                <div className="text-xs text-gray-500 truncate">Pending</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-green-100 rounded-lg shrink-0">
+                                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-2xl font-bold truncate">{stats.completed}</div>
+                                <div className="text-xs text-gray-500 truncate">Completed</div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                                <Sprout className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-2xl font-bold truncate">{stats.approved}</div>
+                                <div className="text-xs text-gray-500 truncate">Approved/Ready</div>
+                              </div>
+                            </div>
+                        </div>
+
+                        {/* Integrated Legend */}
+                        {stats.pieData.length > 0 && (
+                          <div className="border-t border-gray-100 pt-4">
+                              <div className="text-[11px] font-medium text-gray-500 mb-2 uppercase tracking-wider">Plant Type Distribution</div>
+                              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                                  {stats.pieData.map((entry, index) => (
+                                      <div key={index} className="flex items-center gap-2 text-xs">
+                                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                          <span className="text-gray-600 font-medium truncate max-w-[150px]" title={entry.name}>{entry.name}</span>
+                                          <span className="text-gray-400">({entry.value.toLocaleString()})</span>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                        )}
+                    </div>
+                 </div>
+               </Card>
 
                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
               <div className="min-w-0 flex flex-col transition-all duration-300 lg:col-span-2 h-full">
-                <Card className="border-0 flex flex-col h-full shadow-sm">
+                <Card className="flex flex-col h-full">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
-                    <CardTitle className="flex items-center gap-2">
-                      <Sprout className="w-5 h-5" /> Request List
-                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex flex-col sm:flex-row gap-4 mb-4 shrink-0">
@@ -327,6 +331,13 @@ const SaplingRequestsPage: React.FC = () => {
                         ))}
                         <option value="all">All Years</option>
                       </select>
+                                    <Button
+                onClick={handleAddRequest}
+                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <DataTable
@@ -340,7 +351,7 @@ const SaplingRequestsPage: React.FC = () => {
               </div>
 
               <div className="flex flex-col min-h-0 transition-all duration-300 lg:col-span-1 h-full">
-                <Card className={`flex-1 flex flex-col min-h-0 ${srSelected ? 'bg-gray-50' : 'bg-white'} shadow-sm`}>
+                <Card className={"flex-1 flex flex-col min-h-0"}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
                     <CardTitle className="text-lg">{srSelected ? 'Request Details' : 'Select a Request'}</CardTitle>
                     {srSelected && (
@@ -447,13 +458,13 @@ const SaplingRequestsPage: React.FC = () => {
       
       {/* Sapling Request Form Dialog */}
       <Dialog open={srOpen} onOpenChange={setSrOpen}>
-        <DialogContent className="sm:max-w-lg rounded-2xl border-none p-0 overflow-hidden max-h-[90vh] flex flex-col">
-            <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
-                <DialogTitle className="text-xl font-bold text-white">
+        <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+                <DialogTitle>
               {srMode === "add" ? "Add Sapling Request" : "Edit Sapling Request"}
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6 overflow-y-auto">
+          <div>
             <SaplingRequestForm
               mode={srMode}
               initialData={srSelected || undefined}

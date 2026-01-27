@@ -11,7 +11,17 @@ export interface MonthValue {
   total: number;
 }
 
+export interface StatCardData {
+  fees_yearly_total: number;
+  fees_monthly_total: number;
+  sapling_requests_yearly_total: number;
+  sapling_requests_monthly_total: number;
+  urban_greening_yearly_total: number;
+  urban_greening_monthly_total: number;
+}
+
 export interface UrbanGreeningDashboardOverview {
+  stat_cards: StatCardData;
   planting_type_data: LabelValue[];
   species_data: LabelValue[];
   sapling_species_data: LabelValue[];

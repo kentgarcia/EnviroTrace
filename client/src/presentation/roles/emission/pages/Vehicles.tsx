@@ -361,13 +361,7 @@ export default function Vehicles() {
               </div>
               
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setAddModalOpen(true)}
-                  className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Vehicle
-                </Button>
+                
                 <Button
                   variant="outline"
                   size="icon"
@@ -549,6 +543,13 @@ export default function Vehicles() {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <Button
+                  onClick={() => setAddModalOpen(true)}
+                  className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Vehicle
+                </Button>
                   </div>
                 </div>
 

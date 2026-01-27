@@ -8,7 +8,9 @@ from app.apis.deps import get_db
 from app.models.urban_greening_models import (
     FeeRecord, UrbanGreeningPlanting, SaplingRequest, TreeRequest
 )
-from app.schemas.dashboard_schemas import UrbanGreeningDashboardOverview, LabelValue, MonthValue
+from app.schemas.dashboard_schemas import (
+    UrbanGreeningDashboardOverview, LabelValue, MonthValue, StatCardData
+)
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -39,7 +41,71 @@ def get_urban_greening_dashboard(
     """
     if year is None:
         year = datetime.now().year
+    
+    current_month = datetime.now().month if month is None else month
 
+    # ===== STAT CARD DATA =====
+    
+    # Fees - Yearly total (paid fees in selected year)
+    fees_yearly_total = db.query(
+        func.coalesce(func.sum(FeeRecord.amount), 0)
+    ).filter(
+        FeeRecord.payment_date.isnot(None),
+        extract('year', FeeRecord.payment_date) == year,
+        FeeRecord.status == 'paid'
+    ).scalar() or 0.0
+    
+    # Fees - Monthly total (paid fees in current/selected month)
+    fees_monthly_total = db.query(
+        func.coalesce(func.sum(FeeRecord.amount), 0)
+    ).filter(
+        FeeRecord.payment_date.isnot(None),
+        extract('year', FeeRecord.payment_date) == year,
+        extract('month', FeeRecord.payment_date) == current_month,
+        FeeRecord.status == 'paid'
+    ).scalar() or 0.0
+    
+    # Sapling Requests - Yearly count (total quantity in selected year)
+    sapling_requests_yearly_total = db.query(
+        func.coalesce(func.sum(SaplingRequest.total_qty), 0)
+    ).filter(
+        extract('year', SaplingRequest.date_received) == year
+    ).scalar() or 0
+    
+    # Sapling Requests - Monthly count (total quantity in current/selected month)
+    sapling_requests_monthly_total = db.query(
+        func.coalesce(func.sum(SaplingRequest.total_qty), 0)
+    ).filter(
+        extract('year', SaplingRequest.date_received) == year,
+        extract('month', SaplingRequest.date_received) == current_month
+    ).scalar() or 0
+    
+    # Urban Greening - Yearly total (quantity planted in selected year)
+    urban_greening_yearly_total = db.query(
+        func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
+    ).filter(
+        extract('year', UrbanGreeningPlanting.planting_date) == year
+    ).scalar() or 0
+    
+    # Urban Greening - Monthly total (quantity planted in current/selected month)
+    urban_greening_monthly_total = db.query(
+        func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
+    ).filter(
+        extract('year', UrbanGreeningPlanting.planting_date) == year,
+        extract('month', UrbanGreeningPlanting.planting_date) == current_month
+    ).scalar() or 0
+    
+    stat_cards = StatCardData(
+        fees_yearly_total=float(fees_yearly_total),
+        fees_monthly_total=float(fees_monthly_total),
+        sapling_requests_yearly_total=int(sapling_requests_yearly_total),
+        sapling_requests_monthly_total=int(sapling_requests_monthly_total),
+        urban_greening_yearly_total=int(urban_greening_yearly_total),
+        urban_greening_monthly_total=int(urban_greening_monthly_total),
+    )
+
+    # ===== CHART DATA =====
+    
     # Monthly fees (paid amount by payment_date in current year)
     fee_query = db.query(
         extract('month', FeeRecord.payment_date).label('m'),
@@ -188,6 +254,7 @@ def get_urban_greening_dashboard(
         saplings_monthly.append(MonthValue(month=i, label=label, total=sap_by_month.get(i, 0.0)))
 
     return UrbanGreeningDashboardOverview(
+        stat_cards=stat_cards,
         planting_type_data=planting_type_data,
         species_data=species_data,
         sapling_species_data=sapling_species_data,

@@ -585,9 +585,9 @@ const ISOTreeRequestsPage: React.FC = () => {
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Tree Request Tracking</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                ISO-compliant 4-phase tracking: Receiving → Inspection → Requirements → Clearance
+              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Request Tracking</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                4-phase tracking: Receiving → Inspection → Requirements → Clearance
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -596,16 +596,9 @@ const ISOTreeRequestsPage: React.FC = () => {
                 size="icon"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="rounded-lg h-9 w-9"
+                className="border border-gray-200 bg-white rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              </Button>
-              <Button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Request
               </Button>
             </div>
           </div>
@@ -641,6 +634,7 @@ const ISOTreeRequestsPage: React.FC = () => {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC] space-y-6">
+          
           {view === "dashboard" ? (
             <EnhancedISODashboard onViewRequest={(request) => {
               setSelectedRequest(request);
@@ -649,16 +643,8 @@ const ISOTreeRequestsPage: React.FC = () => {
           ) : (
             <>
               {/* Filters and Table */}
-              <Card className="border-0">
+              <Card>
                 <CardHeader className="pb-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg font-semibold text-gray-900">All Tree Requests</h2>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Comprehensive view with all fields categorized by phase
-                      </p>
-                    </div>
-                  </div>
                   
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
@@ -719,6 +705,13 @@ const ISOTreeRequestsPage: React.FC = () => {
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
+                                    <Button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Request
+              </Button>
                     </div>
                   </div>
                 </CardHeader>
