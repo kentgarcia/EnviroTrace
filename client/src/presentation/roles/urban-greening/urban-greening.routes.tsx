@@ -11,6 +11,7 @@ import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage
 import UrbanGreeningSettings from "./pages/settings/UrbanGreeningSettings";
 import SpeciesManagementPage from "./pages/species/SpeciesManagementPage";
 import SaplingRequestsPage from "./pages/sapling-requests/SaplingRequestsPage";
+import UrbanGreeningReports from "./pages/reports/UrbanGreeningReports";
 
 const urbanGreeningLayout = createRoute({
     getParentRoute: () => rootRoute,
@@ -76,6 +77,12 @@ const saplingRequestsRoute = createRoute({
     component: SaplingRequestsPage,
 });
 
+const reportsRoute = createRoute({
+    getParentRoute: () => urbanGreeningLayout,
+    path: "reports",
+    component: UrbanGreeningReports,
+});
+
 urbanGreeningLayout.addChildren([
     overviewRoute,
     treeInventoryRoute,
@@ -85,7 +92,8 @@ urbanGreeningLayout.addChildren([
     feeRecordsRoute,
     settingsRoute,
     speciesManagementRoute,
-    saplingRequestsRoute
+    saplingRequestsRoute,
+    reportsRoute
 ]);
 
 export const urbanGreeningRoute = [urbanGreeningLayout];

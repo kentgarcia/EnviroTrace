@@ -19,6 +19,7 @@ import {
   FileBarChart,
   Car,
   Loader2,
+  Edit,
 } from "lucide-react";
 import {
   Alert,
@@ -76,7 +77,17 @@ const StatusCell = memo(({ isCompliant }: { isCompliant: boolean }) => {
 
 // Office Details View Component
 const OfficeDetailsView = memo(
-  ({ office, onBack }: { office: OfficeWithCompliance; onBack: () => void }) => {
+  ({ 
+    office, 
+    onBack, 
+    year, 
+    onEdit 
+  }: { 
+    office: OfficeWithCompliance; 
+    onBack: () => void; 
+    year?: number; 
+    onEdit: (office: OfficeWithCompliance) => void 
+  }) => {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -89,8 +100,19 @@ const OfficeDetailsView = memo(
             <ArrowLeft className="h-4 w-4" />
             Back to List
           </Button>
-          <div className="text-sm font-medium text-slate-500">
-            Office Detail View
+          <div className="flex items-center gap-3">
+             <div className="text-sm font-medium text-slate-500">
+              Office Detail View {year ? `(${year})` : ""}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(office)}
+              className="flex items-center gap-2 rounded-lg border-slate-200 hover:bg-slate-50 text-blue-600"
+            >
+              <Edit className="h-4 w-4" />
+              Edit Office
+            </Button>
           </div>
         </div>
 
@@ -241,7 +263,7 @@ const OfficeDetailsView = memo(
                   Emission Tests
                 </div>
                 <div className="p-0">
-                  <OfficeEmissionTests officeName={office.name} />
+                  <OfficeEmissionTests officeName={office.name} year={year} />
                 </div>
               </div>
             </div>
@@ -257,11 +279,15 @@ OfficeDetailsView.displayName = "OfficeDetailsView";
 interface OfficeComplianceTableProps {
   officeData: OfficeWithCompliance[];
   errorMessage?: string;
+  year?: number;
+  onEdit: (office: OfficeWithCompliance) => void;
 }
 
 export function OfficeComplianceTable({
   officeData,
   errorMessage,
+  year,
+  onEdit,
 }: OfficeComplianceTableProps) {
   // State for sorting
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -364,7 +390,12 @@ export function OfficeComplianceTable({
 
   if (selectedOffice) {
     return (
-      <OfficeDetailsView office={selectedOffice} onBack={handleBackToTable} />
+      <OfficeDetailsView 
+        office={selectedOffice} 
+        onBack={handleBackToTable} 
+        year={year}
+        onEdit={onEdit}
+      />
     );
   }
 
@@ -390,17 +421,29 @@ ComplianceCell.displayName = "ComplianceCell";
 StatusCell.displayName = "StatusCell";
 
 // Office Emission Tests Component
-const OfficeEmissionTests = memo(({ officeName }: { officeName: string }) => {
+const OfficeEmissionTests = memo(({ officeName, year }: { officeName: string; year?: number }) => {
   const { data, isLoading: loading, isError: hasError } = useEmissionTests({});
 
   const tests = useMemo(() => {
     if (!data) return [];
-    // Filter tests by office name and current year
-    const currentYear = new Date().getFullYear();
-    return data.filter(
-      (test) => test.vehicle?.office_name === officeName && test.year === currentYear
-    );
-  }, [data, officeName]);
+    // Filter tests by office name and passed year (or current year)
+    const targetYear = year || new Date().getFullYear();
+    
+    return data.filter((test) => {
+        // Handle different vehicle object shapes
+        const vehicle = test.vehicle as any;
+        const testOfficeName = vehicle?.office_name || vehicle?.office?.name;
+        
+        // Handle potential casing issues
+        const matchesOffice = testOfficeName === officeName;
+        
+        // Check year
+        const testYear = (test as any).year;
+        const matchesYear = testYear === targetYear;
+        
+        return matchesOffice && matchesYear;
+    });
+  }, [data, officeName, year]);
 
   if (loading) {
     return (
@@ -423,7 +466,7 @@ const OfficeEmissionTests = memo(({ officeName }: { officeName: string }) => {
   if (!tests.length) {
     return (
       <div className="text-center py-4 text-muted-foreground">
-        No emission tests found for this office.
+        No emission tests found for this office in {year || new Date().getFullYear()}.
       </div>
     );
   }
@@ -442,46 +485,47 @@ const OfficeEmissionTests = memo(({ officeName }: { officeName: string }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tests.map((test: EmissionTest) => (
-            <TableRow key={(test as any).id} className="h-8">
-              <TableCell>
-                {(test.vehicle as { plateNumber?: string })?.plateNumber ||
-                  "Unknown"}
-              </TableCell>
-              <TableCell>
-                {(test.vehicle as { driverName?: string })?.driverName ||
-                  "Unknown"}
-              </TableCell>
-              <TableCell>
-                {(test as { testDate?: string | number | Date }).testDate
-                  ? new Date(
-                    (test as { testDate?: string | number | Date }).testDate!
-                  ).toLocaleDateString()
-                  : "N/A"}
-              </TableCell>
-              <TableCell>
-                Q{(test as unknown as { quarter: number }).quarter}
-              </TableCell>
-              <TableCell>
-                {(test as unknown as { year: number }).year}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center">
-                  {test.result ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
-                      <span className="text-green-600">Passed</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                      <span className="text-red-600">Failed</span>
-                    </>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {tests.map((test: EmissionTest) => {
+            const vehicle = test.vehicle as any;
+            return (
+                <TableRow key={(test as any).id} className="h-8">
+                <TableCell>
+                    {vehicle?.plate_number || vehicle?.plateNumber || "Unknown"}
+                </TableCell>
+                <TableCell>
+                    {vehicle?.driver_name || vehicle?.driverName || "Unknown"}
+                </TableCell>
+                <TableCell>
+                    {(test as { testDate?: string | number | Date }).testDate
+                    ? new Date(
+                        (test as { testDate?: string | number | Date }).testDate!
+                        ).toLocaleDateString()
+                    : (test as any).conducted_on ? new Date((test as any).conducted_on).toLocaleDateString() : "N/A"}
+                </TableCell>
+                <TableCell>
+                    Q{(test as unknown as { quarter: number }).quarter}
+                </TableCell>
+                <TableCell>
+                    {(test as unknown as { year: number }).year}
+                </TableCell>
+                <TableCell>
+                    <div className="flex items-center">
+                    {test.result ? (
+                        <>
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
+                        <span className="text-green-600">Passed</span>
+                        </>
+                    ) : (
+                        <>
+                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                        <span className="text-red-600">Failed</span>
+                        </>
+                    )}
+                    </div>
+                </TableCell>
+                </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

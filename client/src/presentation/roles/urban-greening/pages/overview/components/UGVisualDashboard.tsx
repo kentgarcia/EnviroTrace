@@ -48,6 +48,7 @@ export interface UGVisualDashboardProps {
     feeMonthly: Array<{ month: string; amount: number }>;
     plantingTypeData: Array<{ id: string; label: string; value: number }>;
     speciesData: Array<{ id: string; label: string; value: number }>;
+    saplingSpeciesData: Array<{ id: string; label: string; value: number }>;
     // Optional pre-aggregated data from dashboard API
     treeRequestTypeCounts?: Array<{ id: string; label: string; value: number }>;
     treeRequestStatusCounts?: Array<{ id: string; label: string; value: number }>;
@@ -64,6 +65,7 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
     feeMonthly,
     plantingTypeData,
     speciesData,
+    saplingSpeciesData,
     // aggregated optional props
     treeRequestTypeCounts,
     treeRequestStatusCounts,
@@ -276,8 +278,8 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                     </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                        <div className="h-[280px]">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                        <div className="h-[280px] min-w-0">
                             <RechartsAreaChart
                                 title=""
                                 data={feesMonthly}
@@ -287,7 +289,7 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                                 noCard
                             />
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto min-w-0">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -309,120 +311,105 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                 </CardContent>
             </Card>
 
-            {/* Recent Activity (Monthly) with sorting */}
-            <div className="col-span-1 md:col-span-1 xl:col-span-1 2xl:col-span-1">
-                <Tabs defaultValue="ug">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm">Recent Activity (Monthly)</CardTitle>
-                                <TabsList>
-                                    <TabsTrigger value="ug">Urban Greening</TabsTrigger>
-                                    <TabsTrigger value="saplings">Plant Saplings</TabsTrigger>
-                                </TabsList>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-2">
-                            <TabsContent value="ug">
-                                {recentLoading ? (
-                                    <div className="h-24 bg-gray-100 rounded animate-pulse" />
-                                ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead
-                                                    className="text-xs cursor-pointer"
-                                                    onClick={() => {
-                                                        if (ugSortBy === "month") setUgDir((d) => (d === "asc" ? "desc" : "asc"));
-                                                        else { setUgSortBy("month"); setUgDir("asc"); }
-                                                    }}
-                                                >
-                                                    Month
-                                                </TableHead>
-                                                <TableHead
-                                                    className="text-xs text-right cursor-pointer"
-                                                    onClick={() => {
-                                                        if (ugSortBy === "count") setUgDir((d) => (d === "asc" ? "desc" : "asc"));
-                                                        else { setUgSortBy("count"); setUgDir("asc"); }
-                                                    }}
-                                                >
-                                                    Total Planted
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {sortedUgMonthly.map((row) => (
-                                                <TableRow key={row.key}>
-                                                    <TableCell className="text-xs py-1">{row.label}</TableCell>
-                                                    <TableCell className="text-xs py-1 text-right font-medium">{row.total}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {sortedUgMonthly.length === 0 && (
-                                                <TableRow>
-                                                    <TableCell className="text-xs py-2 text-gray-500" colSpan={2}>No recent records</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
+            {/* Monthly Urban Greening Activity */}
+            <Card className="col-span-1">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium">Monthly Urban Greening</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2">
+                    {recentLoading ? (
+                        <div className="h-24 bg-gray-100 rounded animate-pulse" />
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead
+                                        className="text-xs cursor-pointer"
+                                        onClick={() => {
+                                            if (ugSortBy === "month") setUgDir((d) => (d === "asc" ? "desc" : "asc"));
+                                            else { setUgSortBy("month"); setUgDir("asc"); }
+                                        }}
+                                    >
+                                        Month
+                                    </TableHead>
+                                    <TableHead
+                                        className="text-xs text-right cursor-pointer"
+                                        onClick={() => {
+                                            if (ugSortBy === "count") setUgDir((d) => (d === "asc" ? "desc" : "asc"));
+                                            else { setUgSortBy("count"); setUgDir("asc"); }
+                                        }}
+                                    >
+                                        Total Planted
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedUgMonthly.map((row) => (
+                                    <TableRow key={row.key}>
+                                        <TableCell className="text-xs py-1">{row.label}</TableCell>
+                                        <TableCell className="text-xs py-1 text-right font-medium">{row.total}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {sortedUgMonthly.length === 0 && (
+                                    <TableRow>
+                                        <TableCell className="text-xs py-2 text-gray-500" colSpan={2}>No recent records</TableCell>
+                                    </TableRow>
                                 )}
-                            </TabsContent>
-                            <TabsContent value="saplings">
-                                {recentLoading ? (
-                                    <div className="h-24 bg-gray-100 rounded animate-pulse" />
-                                ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead
-                                                    className="text-xs cursor-pointer"
-                                                    onClick={() => {
-                                                        if (saplingsSortBy === "month") setSaplingsDir((d) => (d === "asc" ? "desc" : "asc"));
-                                                        else { setSaplingsSortBy("month"); setSaplingsDir("asc"); }
-                                                    }}
-                                                >
-                                                    Month
-                                                </TableHead>
-                                                <TableHead
-                                                    className="text-xs text-right cursor-pointer"
-                                                    onClick={() => {
-                                                        if (saplingsSortBy === "count") setSaplingsDir((d) => (d === "asc" ? "desc" : "asc"));
-                                                        else { setSaplingsSortBy("count"); setSaplingsDir("asc"); }
-                                                    }}
-                                                >
-                                                    Total Saplings
-                                                </TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {sortedSaplingsMonthly.map((row) => (
-                                                <TableRow key={row.key}>
-                                                    <TableCell className="text-xs py-1">{row.label}</TableCell>
-                                                    <TableCell className="text-xs py-1 text-right font-medium">{row.total}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                            {sortedSaplingsMonthly.length === 0 && (
-                                                <TableRow>
-                                                    <TableCell className="text-xs py-2 text-gray-500" colSpan={2}>No recent records</TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                )}
-                            </TabsContent>
-                        </CardContent>
-                    </Card>
-                </Tabs>
-            </div>
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
 
-            <RechartsPieChart
-                title={`Urban Greening Breakdown ${currentYear()}`}
-                data={plantingTypeData}
-                height={300}
-                layout="square"
-                legendAsList={true}
-                showLabels={true}
-                minSlicePctToLabel={7}
-            />
+            {/* Monthly Plant Saplings Activity */}
+            <Card className="col-span-1">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-medium">Monthly Plant Saplings</CardTitle>
+                </CardHeader>
+                <CardContent className="p-2">
+                    {recentLoading ? (
+                        <div className="h-24 bg-gray-100 rounded animate-pulse" />
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead
+                                        className="text-xs cursor-pointer"
+                                        onClick={() => {
+                                            if (saplingsSortBy === "month") setSaplingsDir((d) => (d === "asc" ? "desc" : "asc"));
+                                            else { setSaplingsSortBy("month"); setSaplingsDir("asc"); }
+                                        }}
+                                    >
+                                        Month
+                                    </TableHead>
+                                    <TableHead
+                                        className="text-xs text-right cursor-pointer"
+                                        onClick={() => {
+                                            if (saplingsSortBy === "count") setSaplingsDir((d) => (d === "asc" ? "desc" : "asc"));
+                                            else { setSaplingsSortBy("count"); setSaplingsDir("asc"); }
+                                        }}
+                                    >
+                                        Total Saplings
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedSaplingsMonthly.map((row) => (
+                                    <TableRow key={row.key}>
+                                        <TableCell className="text-xs py-1">{row.label}</TableCell>
+                                        <TableCell className="text-xs py-1 text-right font-medium">{row.total}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {sortedSaplingsMonthly.length === 0 && (
+                                    <TableRow>
+                                        <TableCell className="text-xs py-2 text-gray-500" colSpan={2}>No recent records</TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
+                </CardContent>
+            </Card>
 
             <div className="col-span-1 md:col-span-2 xl:col-span-2 2xl:col-span-2">
                 <Tabs defaultValue="type">
@@ -456,20 +443,19 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                 </Tabs>
             </div>
 
-            {/* Flora Data and Trees to Cut/Prune combined via tabs */}
+            {/* Flora Data with Tabs */}
             <div className="col-span-1 md:col-span-2 xl:col-span-2 2xl:col-span-2">
-                <Tabs defaultValue="flora">
+                <Tabs defaultValue="urban-greening">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-muted-foreground h-4 w-4"><BarChart3 /></span>
-                            <h3 className="text-base font-medium truncate">Flora vs Trees to Cut/Prune</h3>
+                            <h3 className="text-base font-medium truncate">Flora Data {currentYear()}</h3>
                         </div>
                         <TabsList>
-                            <TabsTrigger value="flora">Flora</TabsTrigger>
-                            <TabsTrigger value="trees">Trees</TabsTrigger>
+                            <TabsTrigger value="urban-greening">Urban Greening</TabsTrigger>
+                            <TabsTrigger value="plant-saplings">Plant Saplings</TabsTrigger>
                         </TabsList>
                     </div>
-                    <TabsContent value="flora">
+                    <TabsContent value="urban-greening">
                         <RechartsBarChart
                             title="Flora Data (Urban Greening)"
                             data={speciesData.slice(0, 12)}
@@ -478,13 +464,13 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                             insights={makeInsights(speciesData.slice(0, 12) as any)}
                         />
                     </TabsContent>
-                    <TabsContent value="trees">
+                    <TabsContent value="plant-saplings">
                         <RechartsBarChart
-                            title="Trees to be Cut Down / Pruned (by Type)"
-                            data={treeTypesBar}
+                            title="Flora Data (Plant Saplings)"
+                            data={saplingSpeciesData.slice(0, 12)}
                             height={300}
-                            color={["#ef4444"]}
-                            insights={makeInsights(treeTypesBar)}
+                            color={["#10b981", "#8b5cf6", "#f97316", "#facc15", "#84cc16", "#6366f1"]}
+                            insights={makeInsights(saplingSpeciesData.slice(0, 12) as any)}
                         />
                     </TabsContent>
                 </Tabs>

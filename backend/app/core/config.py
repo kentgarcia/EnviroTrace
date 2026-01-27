@@ -6,7 +6,7 @@ from pydantic import AnyHttpUrl, field_validator
 class Settings(BaseSettings):
     DATABASE_URL: str
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 600  # 10 hours
     ALGORITHM: str = "HS256"
     
     # Supabase Configuration

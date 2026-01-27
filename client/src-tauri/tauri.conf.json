@@ -31,6 +31,7 @@
   },
   "bundle": {
     "active": true,
+    "shortDescription": "EnviroTrace Management System",
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -46,7 +47,6 @@
       },
       "wix": {
         "language": "en-US",
-        "template": "wix/main.wxs",
         "bannerPath": "icons/WixBanner.bmp",
         "dialogImagePath": "icons/WixDialog.bmp"
       },

@@ -9,14 +9,14 @@ import { toast } from "sonner";
 import { useOffices, useVehicles, useEmissionTests } from "@/core/api/emission-service";
 import { generateReportHTML, generateComprehensiveTestingReportHTML } from "./utils/reportHTMLGenerator";
 import { generateComprehensiveTestingReport } from "./utils/excelReportGenerator";
-import { exportHTMLToWord } from "./utils/htmlToWordConverter";
-import { ReportPreviewEditor } from "./components/ReportPreviewEditor";
+import { exportHTMLToWord } from "@/core/utils/htmlToWordConverter";
+import { ReportPreviewEditor } from "@/presentation/components/shared/reports/ReportPreviewEditor";
 
-type ReportType = 'vehicle-registry' | 'testing-result' | 'office-compliance' | 'comprehensive-testing';
+type ReportType = 'quarterly-testing' | 'vehicle-registry' | 'testing-result' | 'office-compliance';
 
 export const EmissionReports: React.FC = () => {
     const currentYear = new Date().getFullYear();
-    const [reportType, setReportType] = useState<ReportType>("vehicle-registry");
+    const [reportType, setReportType] = useState<ReportType>("quarterly-testing");
     const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
     const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
     const [selectedOffices, setSelectedOffices] = useState<string[]>([]);
@@ -35,6 +35,11 @@ export const EmissionReports: React.FC = () => {
 
     const reportTypes = [
         {
+            id: "quarterly-testing" as ReportType,
+            label: "Quarterly Testing Report",
+            description: "Detailed emission testing report with CO/HC levels and vehicle information",
+        },
+        {
             id: "vehicle-registry" as ReportType,
             label: "Vehicle Registry",
             description: "Complete list of all registered government vehicles",
@@ -48,11 +53,6 @@ export const EmissionReports: React.FC = () => {
             id: "office-compliance" as ReportType,
             label: "Office Compliance Summary",
             description: "Compliance rates by quarter and office",
-        },
-        {
-            id: "comprehensive-testing" as ReportType,
-            label: "Comprehensive Testing Report",
-            description: "Detailed emission testing report with CO/HC levels and vehicle information",
         },
     ];
 
@@ -93,8 +93,8 @@ export const EmissionReports: React.FC = () => {
         setIsGenerating(true);
 
         try {
-            // Handle comprehensive testing report differently
-            if (reportType === "comprehensive-testing") {
+            // Handle quarterly testing report differently
+            if (reportType === "quarterly-testing") {
                 // Create vehicle test map
                 const vehicleTestMap = new Map();
                 (emissionTests || []).forEach(test => {
@@ -206,8 +206,8 @@ export const EmissionReports: React.FC = () => {
     };
 
     const handleExportToExcel = async () => {
-        if (reportType !== "comprehensive-testing") {
-            toast.error("Excel export is only available for Comprehensive Testing Report");
+        if (reportType !== "quarterly-testing") {
+            toast.error("Excel export is only available for Quarterly Testing Report");
             return;
         }
 
@@ -274,13 +274,13 @@ export const EmissionReports: React.FC = () => {
     const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
     // Get available options based on report type
-    const showQuarterSelection = reportType === "office-compliance" || reportType === "comprehensive-testing";
+    const showQuarterSelection = reportType === "office-compliance" || reportType === "quarterly-testing";
     const showOfficeSelection = reportType === "testing-result" || reportType === "office-compliance";
-    const showComprehensiveFilters = reportType === "comprehensive-testing";
+    const showComprehensiveFilters = reportType === "quarterly-testing";
+    const showYearSelection = reportType !== "vehicle-registry";
 
     return (
-        <>
-            {/* Preview Modal */}
+        <React.Fragment>
             {showPreview && (
                 <ReportPreviewEditor
                     content={previewContent}
@@ -290,27 +290,35 @@ export const EmissionReports: React.FC = () => {
                 />
             )}
 
-            {/* Desktop Version */}
-            <div className="hidden md:block min-h-screen bg-gray-50">
-                <div className="p-6">
-                    <div className="mb-6">
-                        <h1 className="text-2xl font-bold text-gray-900">Emission Reports</h1>
-                        <p className="text-gray-600 mt-1">
-                            Generate comprehensive reports for government vehicle emission testing
-                        </p>
+            <div className="flex flex-col h-full overflow-hidden">
+                {/* Header Section */}
+                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                    <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+                        <div className="shrink-0">
+                            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                                Emission Reports
+                            </h1>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                Generate comprehensive reports for government vehicle emission testing
+                            </p>
+                        </div>
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Configuration Panel */}
-                        <div className="lg:col-span-1">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Report Configuration</CardTitle>
-                                    <CardDescription>
-                                        Select report type and parameters
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
+                {/* Body Section */}
+                <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+                    <div className="p-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Configuration Panel */}
+                            <div className="lg:col-span-1">
+                                <Card className="border border-slate-200 shadow-none bg-white">
+                                    <CardHeader>
+                                        <CardTitle>Report Configuration</CardTitle>
+                                        <CardDescription>
+                                            Select report type and parameters
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
                                     {/* Report Type Selection */}
                                     <div className="space-y-2">
                                         <Label>Report Type</Label>
@@ -331,7 +339,8 @@ export const EmissionReports: React.FC = () => {
                                         </p>
                                     </div>
 
-                                    {/* Year Selection */}
+                                    {/* Year Selection - Hidden for Vehicle Registry */}
+                                    {showYearSelection && (
                                     <div className="space-y-2">
                                         <Label>Year</Label>
                                         <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -339,7 +348,7 @@ export const EmissionReports: React.FC = () => {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {reportType === "comprehensive-testing" && (
+                                                {reportType === "quarterly-testing" && (
                                                     <SelectItem value="all">All Years</SelectItem>
                                                 )}
                                                 {years.map(year => (
@@ -350,8 +359,9 @@ export const EmissionReports: React.FC = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    )}
 
-                                    {/* Quarter Selection - Only for Office Compliance and Comprehensive Testing */}
+                                    {/* Quarter Selection - Only for Office Compliance and Quarterly Testing */}
                                     {showQuarterSelection && (
                                         <div className="space-y-2">
                                             <Label>Quarter</Label>
@@ -360,7 +370,7 @@ export const EmissionReports: React.FC = () => {
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {reportType === "comprehensive-testing" && (
+                                                    {reportType === "quarterly-testing" && (
                                                         <SelectItem value="all">All Quarters</SelectItem>
                                                     )}
                                                     {quarters.map(quarter => (
@@ -373,7 +383,7 @@ export const EmissionReports: React.FC = () => {
                                         </div>
                                     )}
 
-                                    {/* Comprehensive Testing Filters */}
+                                    {/* Quarterly Testing Filters */}
                                     {showComprehensiveFilters && (
                                         <>
                                             <div className="space-y-2">
@@ -419,7 +429,7 @@ export const EmissionReports: React.FC = () => {
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={selectAllOffices}
-                                                    className="h-6 text-xs"
+                                                    className="h-6 text-xs hover:bg-slate-100"
                                                 >
                                                     {selectedOffices.length === officesData?.offices.length
                                                         ? "Deselect All"
@@ -452,7 +462,7 @@ export const EmissionReports: React.FC = () => {
                                     {/* Generate Button */}
                                     <div className="space-y-2">
                                         <Button
-                                            className="w-full"
+                                            className="w-full bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg"
                                             size="lg"
                                             onClick={handleGenerateReport}
                                             disabled={isGenerating}
@@ -470,10 +480,10 @@ export const EmissionReports: React.FC = () => {
                                             )}
                                         </Button>
 
-                                        {/* Export to Excel Button - Only for Comprehensive Testing */}
+                                        {/* Export to Excel Button - Only for Quarterly Testing */}
                                         {showComprehensiveFilters && (
                                             <Button
-                                                className="w-full"
+                                                className="w-full border border-gray-200 bg-white shadow-none rounded-lg hover:bg-slate-50"
                                                 size="lg"
                                                 variant="outline"
                                                 onClick={handleExportToExcel}
@@ -491,7 +501,7 @@ export const EmissionReports: React.FC = () => {
                         {/* Report Information Panel */}
                         <div className="lg:col-span-2">
                             {/* Data Summary Card */}
-                            <Card className="mb-6 border-l-4 border-l-blue-500">
+                            <Card className="mb-6 border border-slate-200 shadow-none bg-white">
                                 <CardHeader>
                                     <CardTitle className="text-base">Data Summary</CardTitle>
                                 </CardHeader>
@@ -545,7 +555,7 @@ export const EmissionReports: React.FC = () => {
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            <Card className="border border-slate-200 shadow-none bg-white">
                                 <CardHeader>
                                     <CardTitle>Report Information</CardTitle>
                                     <CardDescription>
@@ -641,185 +651,8 @@ export const EmissionReports: React.FC = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Mobile Version */}
-            <div className="md:hidden min-h-screen bg-gray-50">
-                <div className="p-4 space-y-4">
-                    <div className="mb-4">
-                        <h1 className="text-xl font-bold text-gray-900">Emission Reports</h1>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Generate reports for emission testing
-                        </p>
-                    </div>
-
-                    {/* Mobile Data Summary */}
-                    <Card className="border-l-4 border-l-blue-500">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Data Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-3 gap-3 text-center">
-                                <div className="p-3 bg-blue-50 rounded-lg">
-                                    <p className="text-xs text-gray-600 mb-1">Vehicles</p>
-                                    <p className="text-xl font-bold text-blue-600">
-                                        {isLoadingVehicles ? "..." : vehiclesData?.vehicles.length || 0}
-                                    </p>
-                                </div>
-                                <div className="p-3 bg-cyan-50 rounded-lg">
-                                    <p className="text-xs text-gray-600 mb-1">Tests</p>
-                                    <p className="text-xl font-bold text-cyan-600">
-                                        {isLoadingTests ? "..." : emissionTests?.length || 0}
-                                    </p>
-                                </div>
-                                <div className="p-3 bg-purple-50 rounded-lg">
-                                    <p className="text-xs text-gray-600 mb-1">Offices</p>
-                                    <p className="text-xl font-bold text-purple-600">
-                                        {officesData?.offices.length || 0}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Mobile Configuration */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-lg">Configuration</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Report Type */}
-                            <div className="space-y-2">
-                                <Label className="text-sm">Report Type</Label>
-                                <Select value={reportType} onValueChange={(value) => setReportType(value as ReportType)}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {reportTypes.map(type => (
-                                            <SelectItem key={type.id} value={type.id}>
-                                                {type.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Year */}
-                            <div className="space-y-2">
-                                <Label className="text-sm">Year</Label>
-                                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {years.map(year => (
-                                            <SelectItem key={year} value={year.toString()}>
-                                                {year}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Quarter - Only for Office Compliance */}
-                            {showQuarterSelection && (
-                                <div className="space-y-2">
-                                    <Label className="text-sm">Quarter</Label>
-                                    <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {quarters.map(quarter => (
-                                                <SelectItem key={quarter} value={quarter}>
-                                                    {quarter}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            {/* Office Selection */}
-                            {showOfficeSelection && (
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label className="text-sm">Office/Department</Label>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={selectAllOffices}
-                                            className="h-6 text-xs"
-                                        >
-                                            {selectedOffices.length === officesData?.offices.length
-                                                ? "Deselect All"
-                                                : "Select All"}
-                                        </Button>
-                                    </div>
-                                    <div className="border rounded-md p-2 max-h-48 overflow-y-auto space-y-2">
-                                        {officesData?.offices.map(office => (
-                                            <div key={office.id} className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id={`mobile-${office.id}`}
-                                                    checked={selectedOffices.includes(office.id)}
-                                                    onCheckedChange={() => toggleOfficeSelection(office.id)}
-                                                />
-                                                <label
-                                                    htmlFor={`mobile-${office.id}`}
-                                                    className="text-sm cursor-pointer flex-1"
-                                                >
-                                                    {office.name}
-                                                </label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <p className="text-xs text-gray-500">
-                                        {selectedOffices.length} office(s) selected
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Mobile Report Information */}
-                    <Card className={`border-l-4 ${reportType === 'vehicle-registry' ? 'border-l-blue-500' :
-                            reportType === 'testing-result' ? 'border-l-green-500' :
-                                'border-l-purple-500'
-                        }`}>
-                        <CardHeader>
-                            <CardTitle className="text-lg">
-                                {reportTypes.find(r => r.id === reportType)?.label}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-gray-700">
-                                {reportTypes.find(r => r.id === reportType)?.description}
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Mobile Generate Button */}
-                    <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={handleGenerateReport}
-                        disabled={isGenerating}
-                    >
-                        {isGenerating ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Eye className="w-4 h-4 mr-2" />
-                                Preview Report
-                            </>
-                        )}
-                    </Button>
-                </div>
             </div>
-        </>
+        </React.Fragment>
     );
 };
 

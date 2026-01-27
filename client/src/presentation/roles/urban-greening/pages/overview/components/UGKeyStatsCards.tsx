@@ -23,26 +23,26 @@ export const UGKeyStatsCards: React.FC<UGKeyStatsCardsProps> = ({ feeData }) => 
     const currentYear = now.getFullYear();
 
     const { data: saplingRequests, isLoading: saplingLoading } = useQuery({
-        queryKey: ["sapling-requests-overview"],
-        queryFn: fetchSaplingRequests,
+        queryKey: ["sapling-requests-overview", currentYear],
+        queryFn: () => fetchSaplingRequests(currentYear),
         staleTime: 5 * 60 * 1000,
     });
 
     const { data: ugPlantings, isLoading: ugLoading } = useQuery({
-        queryKey: ["ug-plantings-overview"],
-        queryFn: () => fetchUrbanGreeningPlantings(),
+        queryKey: ["ug-plantings-overview", currentYear],
+        queryFn: () => fetchUrbanGreeningPlantings({ limit: 10000 }),
         staleTime: 5 * 60 * 1000,
     });
 
     const saplingThisMonth = (saplingRequests || []).filter((r: any) => {
         const d = new Date(r.date_received);
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonthIdx;
-    }).length;
+        return d.getMonth() === currentMonthIdx;
+    }).reduce((sum, r: any) => sum + (Number(r.total_qty) || 0), 0);
 
     const ugThisMonth = (ugPlantings || []).filter((p: any) => {
         const d = new Date(p.planting_date);
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonthIdx;
-    }).length;
+        return d.getMonth() === currentMonthIdx;
+    }).reduce((sum, p: any) => sum + (Number(p.quantity_planted) || 0), 0);
 
     const feesThisYear = feeData?.totalFees || 0; // Treat tracked total as current year aggregate
     const feesThisMonth = feeData?.monthlyFees?.find((m) => m.month === currentMonthName)?.amount || 0;

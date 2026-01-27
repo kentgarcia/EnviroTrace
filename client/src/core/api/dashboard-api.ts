@@ -14,6 +14,7 @@ export interface MonthValue {
 export interface UrbanGreeningDashboardOverview {
   planting_type_data: LabelValue[];
   species_data: LabelValue[];
+  sapling_species_data: LabelValue[];
   fee_monthly: MonthValue[];
   tree_request_type_counts: LabelValue[];
   tree_request_status_counts: LabelValue[];

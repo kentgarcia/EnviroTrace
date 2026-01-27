@@ -28,13 +28,18 @@ def _serialize_plants(entity):
 @router.get("/urban-greening/", response_model=List[UrbanGreeningPlantingInDB])
 def get_urban_greening_plantings(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=10000),
     planting_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    year: Optional[int] = Query(None, description="Filter by year"),
     db: Session = Depends(get_db)
 ):
     """Get all urban greening planting records with optional filters"""
+    if year is not None:
+        items = urban_greening_planting_crud.get_by_year(db, year=year, skip=skip, limit=limit)
+        return [_serialize_plants(it) for it in items]
+    
     if search or planting_type or status:
         items = urban_greening_planting_crud.search(
             db, 

@@ -114,9 +114,9 @@ export function QuickTestForm({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-none shadow-2xl">
-                <DialogHeader className="px-6 pt-6 bg-[#0033a0] -mx-0 -mt-0 pb-4">
-                    <DialogTitle className="text-xl font-bold text-white">
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>
                         {testToEdit ? "Edit" : "Record"} {quarterName} Result
                     </DialogTitle>
                     <DialogDescription className="text-white/90 font-medium">
@@ -127,7 +127,7 @@ export function QuickTestForm({
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 px-6 py-4">
+                    <form onSubmit={form.handleSubmit(handleSubmit)}>
                         {/* Test Result */}
                         <FormField
                             control={form.control}
@@ -140,7 +140,7 @@ export function QuickTestForm({
                                         value={field.value.toString()}
                                     >
                                         <FormControl>
-                                            <SelectTrigger className="h-12 border-slate-200 focus:ring-blue-500">
+                                            <SelectTrigger>
                                                 <SelectValue placeholder="Select test result" />
                                             </SelectTrigger>
                                         </FormControl>
@@ -253,14 +253,12 @@ export function QuickTestForm({
                                 type="button" 
                                 variant="ghost" 
                                 onClick={onClose}
-                                className="font-bold text-xs uppercase tracking-wider text-slate-500"
                             >
                                 Cancel
                             </Button>
                             <Button 
                                 type="submit" 
                                 disabled={isSubmitting}
-                                className="bg-[#0033a0] hover:bg-[#002a80] font-bold text-xs uppercase tracking-wider px-8 shadow-lg shadow-blue-900/20"
                             >
                                 {isSubmitting ? "Saving..." : testToEdit ? "Update Result" : "Save Result"}
                             </Button>

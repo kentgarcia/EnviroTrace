@@ -107,9 +107,17 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
         return db.query(UrbanGreeningPlanting).filter(
             UrbanGreeningPlanting.monitoring_request_id == monitoring_request_id
         ).all()
-        return db.query(UrbanGreeningPlanting).filter(
-            UrbanGreeningPlanting.location.ilike(f"%{location}%")
-        ).offset(skip).limit(limit).all()
+    
+    def get_by_year(self, db: Session, *, year: int, skip: int = 0, limit: int = 100) -> List[UrbanGreeningPlanting]:
+        """Get urban greening plantings filtered by year"""
+        return (
+            db.query(UrbanGreeningPlanting)
+            .filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
+            .order_by(desc(UrbanGreeningPlanting.planting_date))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
     
     def search(
         self, 

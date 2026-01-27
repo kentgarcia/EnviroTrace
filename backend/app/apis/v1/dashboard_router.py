@@ -74,11 +74,14 @@ def get_urban_greening_dashboard(
         LabelValue(id=t, label=t.replace('_', ' ').title(), value=float(c)) for t, c in type_rows
     ]
 
-    # Species bar: top 12 by total quantity
+    # Species bar: top 12 by total quantity (excluding trees - Flora only)
     species_query = db.query(
         UrbanGreeningPlanting.species_name,
         func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
-    ).filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
+    ).filter(
+        extract('year', UrbanGreeningPlanting.planting_date) == year,
+        UrbanGreeningPlanting.planting_type != 'trees'
+    )
     
     if month is not None:
         species_query = species_query.filter(extract('month', UrbanGreeningPlanting.planting_date) == month)
@@ -91,6 +94,38 @@ def get_urban_greening_dashboard(
         .all()
     )
     species_data = [LabelValue(id=s, label=s, value=float(q)) for s, q in species_rows]
+    
+    # Sapling species breakdown (top 12 by total quantity from sapling requests)
+    sapling_species_query = (
+        db.query(SaplingRequest.saplings)
+        .filter(extract('year', SaplingRequest.date_received) == year)
+    )
+    
+    if month is not None:
+        sapling_species_query = sapling_species_query.filter(
+            extract('month', SaplingRequest.date_received) == month
+        )
+    
+    sapling_records = sapling_species_query.all()
+    species_qty_map = {}
+    
+    # Parse saplings JSON field to extract species and quantities
+    for (saplings_json,) in sapling_records:
+        if not saplings_json:
+            continue
+        # saplings_json is a list of dicts with keys: name, qty, plant_type
+        if isinstance(saplings_json, list):
+            for item in saplings_json:
+                if isinstance(item, dict):
+                    name = item.get('name', 'Unknown')
+                    qty = item.get('qty', 0)
+                    species_qty_map[name] = species_qty_map.get(name, 0) + qty
+    
+    # Sort by quantity and take top 12
+    sorted_species = sorted(species_qty_map.items(), key=lambda x: x[1], reverse=True)[:12]
+    sapling_species_data = [
+        LabelValue(id=s, label=s, value=float(q)) for s, q in sorted_species
+    ]
 
     # Tree request counts by type and status (current year)
     type_query = db.query(
@@ -155,6 +190,7 @@ def get_urban_greening_dashboard(
     return UrbanGreeningDashboardOverview(
         planting_type_data=planting_type_data,
         species_data=species_data,
+        sapling_species_data=sapling_species_data,
         fee_monthly=fee_monthly,
         tree_request_type_counts=tree_request_type_counts,
         tree_request_status_counts=tree_request_status_counts,

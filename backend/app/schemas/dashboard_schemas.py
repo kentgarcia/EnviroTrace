@@ -17,6 +17,7 @@ class MonthValue(BaseModel):
 class UrbanGreeningDashboardOverview(BaseModel):
     planting_type_data: List[LabelValue]
     species_data: List[LabelValue]
+    sapling_species_data: List[LabelValue]
     fee_monthly: List[MonthValue]
 
     tree_request_type_counts: List[LabelValue]

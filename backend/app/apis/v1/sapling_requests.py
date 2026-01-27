@@ -67,12 +67,14 @@ def _serialize(obj) -> dict:
 @router.get("/")
 def list_sapling_requests(
     year: Optional[int] = Query(None, description="Filter by year"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10000, ge=1, le=10000),
     db: Session = Depends(get_db)
 ):
     if year is not None:
-        items = sapling_request_crud.get_by_year(db, year=year)
+        items = sapling_request_crud.get_by_year(db, year=year, skip=skip, limit=limit)
     else:
-        items = sapling_request_crud.get_multi(db)
+        items = sapling_request_crud.get_multi(db, skip=skip, limit=limit)
     return [_serialize(x) for x in items]
 
 

@@ -3,9 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { useOverviewData } from "./logic/useOverviewData";
-import { PlantingSummary } from "./components/PlantingSummary";
-import { FeeManagement } from "./components/FeeManagement";
-import { ChartsOverview } from "./components/ChartsOverview";
 import UGKeyStatsCards from "./components/UGKeyStatsCards";
 import UGVisualDashboard from "./components/UGVisualDashboard";
 
@@ -70,16 +67,15 @@ export const UrbanGreeningOverview: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
-                    {/* Row 1: Key Stats (Fees + Monthly counts) */}
+                    {/* Key Stats */}
                     <UGKeyStatsCards feeData={feeData} />
 
-                    {/* Row 2: Urban Greening Breakdown */}
-
-                    {/* Row 3: Visualized Dashboard (Monthly bars, pies, flora) */}
+                    {/* Visualized Dashboard */}
                     <UGVisualDashboard
                         feeMonthly={dashboardData?.fee_monthly?.map(m => ({ month: m.label.slice(0, 3), amount: m.total })) || feeData.monthlyFees}
                         plantingTypeData={dashboardData?.planting_type_data || plantingTypeData}
                         speciesData={dashboardData?.species_data || speciesData}
+                        saplingSpeciesData={dashboardData?.sapling_species_data || []}
                         treeRequestTypeCounts={dashboardData?.tree_request_type_counts}
                         treeRequestStatusCounts={dashboardData?.tree_request_status_counts}
                         treeTypesBarPreset={dashboardData?.tree_types_bar}

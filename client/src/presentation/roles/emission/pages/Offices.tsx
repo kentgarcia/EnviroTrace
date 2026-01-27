@@ -1,19 +1,12 @@
 import { useState, useCallback, memo, useMemo } from "react";
 import { Input } from "@/presentation/components/shared/ui/input";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/presentation/components/shared/ui/tabs";
 import { Card } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Search, RefreshCw, FileSpreadsheet, Plus, Building2, Car, CheckCircle2, BarChart3 } from "lucide-react";
 import { YearSelector } from "@/presentation/roles/emission/components/offices/YearSelector";
 import { OfficeComplianceTable } from "@/presentation/roles/emission/components/offices/OfficeComplianceTable";
-import { OfficeManagementTable } from "@/presentation/roles/emission/components/offices/OfficeManagementTable";
 import { OfficeModal } from "@/presentation/roles/emission/components/offices/OfficeModal";
-import { useOffices } from "@/core/hooks/offices/useOffices";
+import { useOffices, OfficeWithCompliance } from "@/core/hooks/offices/useOffices";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
@@ -37,8 +30,8 @@ const StatCard = memo(
 StatCard.displayName = "StatCard";
 
 export default function OfficesPage() {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [isAddOfficeModalOpen, setIsAddOfficeModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingOffice, setEditingOffice] = useState<OfficeWithCompliance | null>(null);
 
   const {
     officeData,
@@ -86,10 +79,16 @@ export default function OfficesPage() {
   }, [refetch]);
 
   const handleAddOffice = useCallback(() => {
-    setIsAddOfficeModalOpen(true);
+    setEditingOffice(null);
+    setIsModalOpen(true);
   }, []);
 
-  const handleOfficeModalSuccess = useCallback(() => {
+  const handleEditOffice = useCallback((office: OfficeWithCompliance) => {
+    setEditingOffice(office);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleModalSuccess = useCallback(() => {
     refetch();
   }, [refetch]);
 
@@ -98,12 +97,7 @@ export default function OfficesPage() {
       <div className="flex flex-col h-full overflow-hidden">
           
           {/* Header Section */}
-          <Tabs
-            defaultValue="overview"
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full flex flex-col flex-1 overflow-hidden"
-          >
+          <div className="w-full flex flex-col flex-1 overflow-hidden">
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
               <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
                 <div className="shrink-0">
@@ -141,21 +135,6 @@ export default function OfficesPage() {
                   </Button>
                 </div>
               </div>
-
-              <div className="px-6 pb-4">
-                <TabsList>
-                  <TabsTrigger 
-                    value="overview"
-                  >
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="management"
-                  >
-                    Office Management
-                  </TabsTrigger>
-                </TabsList>
-              </div>
             </div>
 
             {/* Body Section */}
@@ -186,7 +165,7 @@ export default function OfficesPage() {
                   </div>
                 </div>
 
-                <TabsContent value="overview" className="space-y-8 mt-0 outline-none">
+                <div className="space-y-8 mt-0 outline-none">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard
                       title="Total Offices"
@@ -215,29 +194,23 @@ export default function OfficesPage() {
                       <OfficeComplianceTable
                         officeData={officeData}
                         errorMessage={errorMessage || undefined}
+                        year={filters.year}
+                        onEdit={handleEditOffice}
                       />
                     </div>
                   </Card>
-                </TabsContent>
-
-                <TabsContent value="management" className="mt-0 outline-none">
-                  <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
-                    <div className="p-6">
-                      <OfficeManagementTable searchTerm={filters.searchTerm} />
-                    </div>
-                  </Card>
-                </TabsContent>
+                </div>
               </div>
             </div>
-          </Tabs>
+          </div>
       </div>
 
       {/* Office Modal */}
       <OfficeModal
-        open={isAddOfficeModalOpen}
-        onOpenChange={setIsAddOfficeModalOpen}
-        office={null}
-        onSuccess={handleOfficeModalSuccess}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        office={editingOffice}
+        onSuccess={handleModalSuccess}
       />
     </>
   );

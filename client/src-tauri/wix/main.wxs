@@ -18,7 +18,9 @@
         <Package
             Id="*"
             Keywords="Installer"
+            {{#if short_description}}
             Description="{{short_description}}"
+            {{/if}}
             Manufacturer="{{manufacturer}}"
             InstallerVersion="450"
             Languages="!(loc.TauriLanguage)"
@@ -119,7 +121,9 @@
                         <Shortcut
                             Id="ApplicationStartMenuShortcut"
                             Name="{{product_name}}"
+                            {{#if short_description}}
                             Description="{{short_description}}"
+                            {{/if}}
                             Target="[#PathToMainExecutable]"
                             WorkingDirectory="INSTALLDIR"
                             {{#if icon_path}}
@@ -137,7 +141,9 @@
                     <Shortcut
                         Id="ApplicationDesktopShortcut"
                         Name="{{product_name}}"
+                        {{#if short_description}}
                         Description="{{short_description}}"
+                        {{/if}}
                         Target="[#PathToMainExecutable]"
                         WorkingDirectory="INSTALLDIR"
                         {{#if icon_path}}

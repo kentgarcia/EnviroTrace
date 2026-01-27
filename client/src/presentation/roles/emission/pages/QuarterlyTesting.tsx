@@ -4,12 +4,6 @@ import { BarChart3, Settings, Table, Users, RefreshCw } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { cn } from "@/core/utils/utils";
 import { Card } from "@/presentation/components/shared/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/presentation/components/shared/ui/tabs";
 import { QuarterlyTestingFilters } from "@/presentation/roles/emission/components/quarterly/QuarterlyTestingFilters";
 import VehicleTestingSpreadsheet from "@/presentation/roles/emission/components/quarterly/VehicleTestingSpreadsheet";
 import { QuickTestForm } from "@/presentation/roles/emission/components/quarterly/QuickTestForm";
@@ -89,31 +83,46 @@ export default function QuarterlyTesting() {
               </div>
             </div>
 
-            {/* Toolbar / Tabs */}
-            <div className="px-6 pb-0 flex flex-col gap-4 w-full mb-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList>
-                  <TabsTrigger 
-                    value="overview" 
-                  >
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="testing" 
-                    disabled={selectedOffices.length === 0 || (!selectedOffices.includes("all") && selectedOffices.length === 0)}
-                  >
-                    <Table className="h-4 w-4 mr-2" />
-                    Vehicle Testing
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="quarters" 
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            {/* Tab Navigation */}
+            <div className="px-6">
+              <nav className="flex space-x-8 -mb-px">
+                <button
+                  onClick={() => setActiveTab("overview")}
+                  className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "overview"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4 inline mr-2" />
+                  Overview
+                </button>
+                <button
+                  onClick={() => setActiveTab("testing")}
+                  disabled={selectedOffices.length === 0}
+                  className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "testing"
+                      ? "border-blue-500 text-blue-600"
+                      : selectedOffices.length === 0
+                      ? "border-transparent text-gray-300 cursor-not-allowed"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Table className="w-4 h-4 inline mr-2" />
+                  Vehicle Testing
+                </button>
+                <button
+                  onClick={() => setActiveTab("quarters")}
+                  className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "quarters"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Settings className="w-4 h-4 inline mr-2" />
+                  Settings
+                </button>
+              </nav>
             </div>
           </div>
 
@@ -138,27 +147,26 @@ export default function QuarterlyTesting() {
                 />
               </div>
 
-              <Tabs value={activeTab} className="w-full">
-                {/* Overview Tab */}
-                <TabsContent value="overview" className="mt-0 focus-visible:outline-none">
-                  <QuarterlyOverview
-                    stats={summaryStats}
-                    selectedYear={selectedYear}
-                    officeGroups={officeGroups}
-                    selectedOffices={selectedOffices}
-                  />
-                </TabsContent>
+              {/* Overview Tab */}
+              {activeTab === "overview" && (
+                <QuarterlyOverview
+                  stats={summaryStats}
+                  selectedYear={selectedYear}
+                  officeGroups={officeGroups}
+                  selectedOffices={selectedOffices}
+                />
+              )}
 
-                {/* Manage Quarters Tab */}
-                <TabsContent value="quarters" className="mt-0 focus-visible:outline-none">
-                  <Card className="border border-slate-200 shadow-none bg-white p-6">
-                    <QuarterInfoEditor selectedYear={selectedYear} />
-                  </Card>
-                </TabsContent>
+              {/* Manage Quarters Tab */}
+              {activeTab === "quarters" && (
+                <Card className="border border-slate-200 shadow-none bg-white p-6">
+                  <QuarterInfoEditor selectedYear={selectedYear} />
+                </Card>
+              )}
 
-                {/* Vehicle Testing Tab */}
-                <TabsContent value="testing" className="mt-0 focus-visible:outline-none">
-                  {(!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
+              {/* Vehicle Testing Tab */}
+              {activeTab === "testing" && (
+                  (!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
                     <Card className="border border-slate-200 shadow-none bg-white">
                       <div className="p-12 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
@@ -189,9 +197,8 @@ export default function QuarterlyTesting() {
                         />
                       </div>
                     </Card>
-                  )}
-                </TabsContent>
-              </Tabs>
+                  )
+              )}
             </div>
           </div>
       </div>

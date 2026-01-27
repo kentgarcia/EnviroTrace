@@ -133,6 +133,11 @@ function getMenuItems(
         icon: <Banknote size={18} />,
       },
       {
+        label: "Reports",
+        path: `${basePath}/reports`,
+        icon: <FileText size={18} />,
+      },
+      {
         label: "Settings",
         path: `${basePath}/settings`,
         icon: <Settings size={18} />,

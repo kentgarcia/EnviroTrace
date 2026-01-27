@@ -315,107 +315,21 @@ const GreeningProjectsPage: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
             <div className="flex flex-col h-full space-y-6">
           {/* Stats Cards and Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 shrink-0">
-             {/* Key Metrics Column */}
-             <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4 h-full">
-                <Card className="border-0 shadow-sm col-span-1">
-                  <CardContent className="p-4 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 rounded-lg shrink-0">
-                        <Leaf className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-2xl font-bold truncate">{filteredStats.total}</div>
-                        <div className="text-xs text-gray-500 truncate">Total Projects</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm col-span-1">
-                  <CardContent className="p-4 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 rounded-lg shrink-0">
-                        <Play className="w-5 h-5 text-yellow-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-2xl font-bold truncate">{filteredStats.active}</div>
-                        <div className="text-xs text-gray-500 truncate">Active</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm col-span-1">
-                  <CardContent className="p-4 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-100 rounded-lg shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-2xl font-bold truncate">{filteredStats.completed}</div>
-                        <div className="text-xs text-gray-500 truncate">Completed</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm col-span-1">
-                  <CardContent className="p-4 flex flex-col justify-center h-full">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
-                        <Sprout className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-2xl font-bold truncate">{filteredStats.totalPlants.toLocaleString()}</div>
-                        <div className="text-xs text-gray-500 truncate">Total Plants</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Breakdown List - Visible on larger screens inside this grid or separate? 
-                    Let's put a simple list of top 5 types here spanning full width of this sub-grid 
-                    or just leave it to the pie chart. I'll add a breakdown bar here. 
-                */}
-                <Card className="border-0 shadow-sm col-span-2 sm:col-span-4 lg:col-span-4 h-48 sm:h-auto min-h-[160px]">
-                   <CardContent className="p-4 h-full flex flex-col">
-                      <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                         <BarChart3 className="w-4 h-4" /> Top Plant Types
-                      </h3>
-                      <div className="flex-1 overflow-y-auto pr-2 space-y-3">
-                          {filteredStats.pieData.length > 0 ? (
-                             filteredStats.pieData.slice(0, 5).map((item, idx) => (
-                                <div key={idx} className="flex items-center text-sm">
-                                   <div className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                                   <div className="flex-1 truncate text-gray-700">{item.name}</div>
-                                   <div className="font-medium text-gray-900">{item.value.toLocaleString()}</div>
-                                   <div className="text-xs text-gray-400 ml-2 w-12 text-right">
-                                      {Math.round((item.value / filteredStats.totalPlants) * 100)}%
-                                   </div>
-                                </div>
-                             ))
-                          ) : (
-                             <div className="text-sm text-gray-400 text-center py-4">No plant data available</div>
-                          )}
-                      </div>
-                   </CardContent>
-                </Card>
-             </div>
-
-             {/* Pie Chart Column */}
-             <Card className="border-0 shadow-sm lg:col-span-1 h-[340px] lg:h-auto">
-                <CardContent className="p-4 h-full flex flex-col">
-                   <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
-                       <PieChartIcon className="w-4 h-4" /> Plant Distribution
-                   </h3>
-                   <div className="flex-1 min-h-0 relative">
+          <Card className="border-0 shadow-sm mb-6 shrink-0 overflow-hidden">
+             <div className="flex flex-col lg:flex-row">
+                {/* Compact Pie Chart Visual Code */}
+                <div className="w-full lg:w-[200px] border-b lg:border-b-0 lg:border-r border-gray-100 bg-gray-50/30 p-4 flex flex-col justify-center items-center">
+                    <h3 className="text-xs font-semibold text-gray-600 mb-2 text-center">Plant Distribution</h3>
+                    <div className="h-[120px] w-full relative">
                       {filteredStats.pieData.length > 0 ? (
                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                            <PieChart>
                                <Pie
                                   data={filteredStats.pieData}
                                   cx="50%"
                                   cy="50%"
-                                  innerRadius={50}
-                                  outerRadius={80}
+                                  innerRadius={30}
+                                  outerRadius={50}
                                   paddingAngle={2}
                                   dataKey="value"
                                >
@@ -424,27 +338,82 @@ const GreeningProjectsPage: React.FC = () => {
                                   ))}
                                </Pie>
                                <Tooltip 
-                                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                                  formatter={(value: number) => [value.toLocaleString(), 'Plants']} 
-                               />
-                               <Legend 
-                                  layout="horizontal" 
-                                  verticalAlign="bottom" 
-                                  align="center"
-                                  iconSize={8}
-                                  wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }}
+                                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: '12px' }}
+                                  formatter={(value: number, name: string) => [value.toLocaleString(), name]} 
                                />
                             </PieChart>
                          </ResponsiveContainer>
                       ) : (
-                         <div className="flex h-full items-center justify-center text-gray-400 text-sm">
-                            No data to display
+                         <div className="flex h-full items-center justify-center text-gray-400 text-xs">
+                            No data
                          </div>
                       )}
-                   </div>
-                </CardContent>
-             </Card>
-          </div>
+                    </div>
+                </div>
+
+                {/* Metrics & Legend Section */}
+                <div className="flex-1 p-6 flex flex-col gap-6">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-100 rounded-lg shrink-0">
+                            <Leaf className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-2xl font-bold truncate">{filteredStats.total}</div>
+                            <div className="text-xs text-gray-500 truncate">Total Projects</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-yellow-100 rounded-lg shrink-0">
+                            <Play className="w-5 h-5 text-yellow-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-2xl font-bold truncate">{filteredStats.active}</div>
+                            <div className="text-xs text-gray-500 truncate">Active</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-green-100 rounded-lg shrink-0">
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-2xl font-bold truncate">{filteredStats.completed}</div>
+                            <div className="text-xs text-gray-500 truncate">Completed</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
+                            <Sprout className="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-2xl font-bold truncate">{filteredStats.totalPlants.toLocaleString()}</div>
+                            <div className="text-xs text-gray-500 truncate">Total Plants</div>
+                          </div>
+                        </div>
+                    </div>
+
+                    {/* Integrated Legend */}
+                    {filteredStats.pieData.length > 0 && (
+                      <div className="border-t border-gray-100 pt-4">
+                          <div className="text-[11px] font-medium text-gray-500 mb-2 uppercase tracking-wider">Plant Distribution</div>
+                          <div className="flex flex-wrap gap-x-6 gap-y-2">
+                              {filteredStats.pieData.map((entry, index) => (
+                                  <div key={index} className="flex items-center gap-2 text-xs">
+                                      <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                                      <span className="text-gray-600 font-medium truncate max-w-[150px]" title={entry.name}>{entry.name}</span>
+                                      <span className="text-gray-400">({entry.value.toLocaleString()})</span>
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+                    )}
+                </div>
+             </div>
+          </Card>
 
           {/* Filters and Table */}
           <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white rounded-lg border border-gray-100 shadow-sm">
