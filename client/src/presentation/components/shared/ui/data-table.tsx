@@ -70,6 +70,11 @@ export interface DataTableProps<TData, TValue> {
   showFilterInput?: boolean;
   defaultColumnFilters?: ColumnFiltersState;
   disableSorting?: boolean;
+  manualPagination?: boolean;
+  pageCount?: number;
+  paginationState?: PaginationState;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  totalItems?: number;
 }
 
 export function DataTable<TData, TValue>({
@@ -96,19 +101,24 @@ export function DataTable<TData, TValue>({
   showFilterInput = false,
   defaultColumnFilters = [],
   disableSorting = false,
+  manualPagination = false,
+  pageCount,
+  paginationState,
+  onPaginationChange,
+  totalItems,
 }: DataTableProps<TData, TValue>) {
   // Table state hooks
-  const { rowsPerPage } = useSettingsStore();
+  const rowsPerPage = useSettingsStore((state) => state.rowsPerPage);
   const [density, setDensity] = useState<TableDensity>(defaultDensity);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>({
+  const [internalPagination, setInternalPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: defaultPageSize || rowsPerPage,
   });
 
   useEffect(() => {
     if (!defaultPageSize) {
-      setPagination((prev) => ({
+      setInternalPagination((prev) => ({
         ...prev,
         pageSize: rowsPerPage,
       }));
@@ -121,13 +131,27 @@ export function DataTable<TData, TValue>({
     useState<ColumnFiltersState>(defaultColumnFilters);
   const [expanded, setExpanded] = useState<ExpandedState>(expandedRowIds || {});
 
+  const resolvedPagination = paginationState ?? internalPagination;
+
+  const handlePaginationChange: OnChangeFn<PaginationState> = (updater) => {
+    if (onPaginationChange) {
+      onPaginationChange(updater);
+    }
+
+    if (!paginationState || manualPagination === false) {
+      setInternalPagination((prev) =>
+        typeof updater === "function" ? (updater as (old: PaginationState) => PaginationState)(prev) : updater
+      );
+    }
+  };
+
   // Initialize the table
   const table = useReactTable({
     data,
     columns,
     state: {
       sorting,
-      pagination,
+      pagination: resolvedPagination,
       columnVisibility,
       rowSelection,
       expanded,
@@ -137,15 +161,36 @@ export function DataTable<TData, TValue>({
     enableMultiRowSelection: enableRowSelection,
     onRowSelectionChange: selectionChange || setRowSelection,
     onSortingChange: disableSorting ? undefined : setSorting,
-    onPaginationChange: setPagination,
+    onPaginationChange: handlePaginationChange,
     onColumnVisibilityChange: setColumnVisibility,
     onExpandedChange: onExpandedChange || setExpanded,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: showPagination ? getPaginationRowModel() : undefined,
+    getPaginationRowModel:
+      showPagination && !manualPagination ? getPaginationRowModel() : undefined,
     getFilteredRowModel: getFilteredRowModel(),
+    manualPagination,
+    pageCount:
+      manualPagination && resolvedPagination.pageSize > 0
+        ? pageCount ??
+          (typeof totalItems === "number"
+            ? Math.ceil(totalItems / resolvedPagination.pageSize)
+            : undefined)
+        : undefined,
   });
+
+  const totalRowCount = manualPagination
+    ? typeof totalItems === "number"
+      ? totalItems
+      : data.length
+    : table.getFilteredRowModel().rows.length;
+
+  const currentPageIndex = table.getState().pagination.pageIndex;
+  const currentPageSize = table.getState().pagination.pageSize;
+  const visibleRowCount = table.getRowModel().rows.length;
+  const pageStart = totalRowCount === 0 ? 0 : currentPageIndex * currentPageSize + 1;
+  const pageEnd = totalRowCount === 0 ? 0 : pageStart + visibleRowCount - 1;
 
   if (isLoading) {
     return (
@@ -334,7 +379,9 @@ export function DataTable<TData, TValue>({
       {/* Number of items and Pagination Controls */}
       <div className="flex flex-col gap-1 px-2 py-1 text-xs">
         <div className="text-xs text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} items
+          {totalRowCount === 0
+            ? "0 items"
+            : `Showing ${pageStart}-${pageEnd} of ${totalRowCount} items`}
         </div>
         {showPagination && table.getRowModel().rows.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">

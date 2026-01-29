@@ -1,14 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  ColumnDef,
-  SortingState,
-  PaginationState,
-  VisibilityState,
-  ColumnFiltersState,
-  OnChangeFn,
-  RowSelectionState,
-  Row,
-} from "@tanstack/react-table";
+import { ColumnDef, Row, PaginationState, OnChangeFn } from "@tanstack/react-table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,18 +35,11 @@ interface VehicleTableProps {
   wheelCounts?: string[];
   offices?: string[];
   onRefreshOffices?: () => void;
-
-  // Optional TanStack Table state
-  sorting?: SortingState;
-  onSortingChange?: OnChangeFn<SortingState>;
-  pagination?: PaginationState;
+  manualPagination?: boolean;
+  pageCount?: number;
+  paginationState?: PaginationState;
   onPaginationChange?: OnChangeFn<PaginationState>;
-  columnFilters?: ColumnFiltersState;
-  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
-  columnVisibility?: VisibilityState;
-  onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
-  rowSelection?: RowSelectionState;
-  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  totalCount?: number;
 }
 
 // Skeleton loader for the table
@@ -113,18 +97,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   wheelCounts = [],
   offices = [],
   onRefreshOffices,
-
-  // Optional TanStack Table state props (with defaults)
-  sorting = [{ id: "identifier", desc: false }],
-  onSortingChange,
-  pagination = { pageIndex: 0, pageSize: 10 },
+  manualPagination = false,
+  pageCount,
+  paginationState,
   onPaginationChange,
-  columnFilters = [],
-  onColumnFiltersChange,
-  columnVisibility = {},
-  onColumnVisibilityChange,
-  rowSelection = {},
-  onRowSelectionChange,
+  totalCount,
 }) => {
   // Add: row-to-details functionality
   const [detailsVehicle, setDetailsVehicle] = useState<Vehicle | null>(null);
@@ -385,6 +362,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       showColumnVisibility={true}
       showPagination={true}
       defaultDensity="compact"
+      manualPagination={manualPagination}
+      pageCount={pageCount}
+      paginationState={paginationState}
+      onPaginationChange={onPaginationChange}
+      totalItems={totalCount}
     />
   );
 };

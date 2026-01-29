@@ -21,6 +21,7 @@ import {
 import { VehicleModals } from "@/presentation/roles/emission/components/vehicles/VehicleModals";
 import { VehicleDetails } from "@/presentation/roles/emission/components/vehicles/VehicleDetails";
 import { FileDown, Plus, AlertTriangle, Search, Filter, X, Loader2, RefreshCw } from "lucide-react";
+import { PaginationState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -37,7 +38,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/presentation/components/shared/ui/alert";
-import { Card, CardContent } from "@/presentation/components/shared/ui/card";
+import { Card } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import {
@@ -64,7 +65,8 @@ export default function Vehicles() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Pagination state
-  const { rowsPerPage } = useSettingsStore();
+  const rowsPerPage = useSettingsStore((state) => state.rowsPerPage);
+  const setRowsPerPage = useSettingsStore((state) => state.setRowsPerPage);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: rowsPerPage,
@@ -112,7 +114,8 @@ export default function Vehicles() {
   } = useVehicles(
     filters,
     pagination.pageIndex * pagination.pageSize,
-    pagination.pageSize
+    pagination.pageSize,
+    { includeTestData: false }
   );
   // Get filter options from the API
   const {
@@ -148,6 +151,63 @@ export default function Vehicles() {
   const vehicles = useMemo(() => {
     return vehiclesData?.vehicles || [];
   }, [vehiclesData]);
+
+  const totalVehicles = vehiclesData?.total ?? 0;
+
+  const pageCount = useMemo(() => {
+    if (!pagination.pageSize) {
+      return 0;
+    }
+
+    return Math.ceil(totalVehicles / pagination.pageSize);
+  }, [totalVehicles, pagination.pageSize]);
+
+  const handlePaginationChange = useCallback(
+    (
+      updater:
+        | PaginationState
+        | ((prev: PaginationState) => PaginationState)
+    ) => {
+      setPagination((prev) => {
+        const next =
+          typeof updater === "function"
+            ? (updater as (old: PaginationState) => PaginationState)(prev)
+            : updater;
+
+        if (prev.pageSize !== next.pageSize) {
+          setRowsPerPage(next.pageSize);
+        }
+
+        return next;
+      });
+    },
+    [setPagination, setRowsPerPage]
+  );
+
+  useEffect(() => {
+    if (!pagination.pageSize) return;
+
+    if (pageCount === 0) {
+      if (pagination.pageIndex !== 0) {
+        setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+      }
+      return;
+    }
+
+    if (pagination.pageIndex > pageCount - 1) {
+      setPagination((prev) => ({ ...prev, pageIndex: Math.max(pageCount - 1, 0) }));
+    }
+  }, [pageCount, pagination.pageIndex, pagination.pageSize, setPagination]);
+
+  useEffect(() => {
+    setPagination((prev) => {
+      if (prev.pageIndex === 0) {
+        return prev;
+      }
+
+      return { ...prev, pageIndex: 0 };
+    });
+  }, [debouncedSearch, office, vehicleType, engineType, setPagination]);
 
   // Get unique values for filters
   const offices = useMemo(() => filterOptions?.offices || [], [filterOptions]);
@@ -338,7 +398,7 @@ export default function Vehicles() {
 
   // Stats for the tabs - since test data is not fetched, show simplified stats
   const stats = useMemo(() => {
-    const allCount = vehicles.length;
+    const allCount = totalVehicles;
     // Without test data, we can't calculate passed/failed/untested counts
     // These would require separate API calls if needed
     return {
@@ -347,7 +407,7 @@ export default function Vehicles() {
       failed: 0, // Would need separate API call
       untested: 0, // Would need separate API call
     };
-  }, [vehicles]);
+  }, [totalVehicles]);
 
   // Reset filters
   const resetFilters = () => {
@@ -400,13 +460,14 @@ export default function Vehicles() {
           <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
             <div className="p-8">
             {/* Error Notice */}
-            {error && (
+            {error != null && (
               <Alert
                 variant="destructive"
                 className="mb-4 border border-red-200 bg-white shadow-none rounded-none"
               >
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
+                
                 <AlertDescription>
                   There was a problem loading the vehicles data. Please try
                   again later.
@@ -574,6 +635,11 @@ export default function Vehicles() {
                       onView={handleViewVehicle}
                       onEdit={handleEditVehicle}
                       onDelete={handleDeleteConfirm}
+                      manualPagination
+                      pageCount={pageCount}
+                      paginationState={pagination}
+                      onPaginationChange={handlePaginationChange}
+                      totalCount={totalVehicles}
                     />
                   )}
                 </div>

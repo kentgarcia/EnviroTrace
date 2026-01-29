@@ -1,4 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 import apiClient from "@/core/api/api-client";
 
 // Types
@@ -73,7 +78,7 @@ export interface VehicleFilters {
   search?: string;
 }
 
-interface VehiclesResponse {
+export interface VehiclesResponse {
   vehicles: Vehicle[];
   total: number;
 }
@@ -176,38 +181,70 @@ export function useDeleteOffice() {
   });
 }
 
-// Hooks for vehicles
-export function useVehicles(filters?: VehicleFilters, skip = 0, limit = 100) {
-  return useQuery<VehiclesResponse>({
-    queryKey: ["vehicles", filters, skip, limit],
-    queryFn: async () => {
-      // Build query params
-      const params = new URLSearchParams();
+type VehiclesQueryKey = [
+  "vehicles",
+  VehicleFilters | undefined,
+  number,
+  number,
+  boolean
+];
 
-      if (skip) params.append("skip", skip.toString());
-      if (limit) params.append("limit", limit.toString());
+export interface UseVehiclesOptions
+  extends Omit<
+    UseQueryOptions<VehiclesResponse, unknown, VehiclesResponse, VehiclesQueryKey>,
+    "queryKey" | "queryFn"
+  > {
+  includeTestData?: boolean;
+}
 
-      // Include test data to show status badges
-      params.append("include_test_data", "true");
+export async function fetchVehicles(
+  filters?: VehicleFilters,
+  skip = 0,
+  limit = 100,
+  includeTestData = false
+) {
+  const params = new URLSearchParams();
 
-      if (filters) {
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null && value !== "") {
-            params.append(key, value.toString());
-          }
-        });
+  if (skip) params.append("skip", skip.toString());
+  if (limit) params.append("limit", limit.toString());
+
+  if (includeTestData) {
+    params.append("include_test_data", "true");
+  }
+
+  if (filters) {
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, value.toString());
       }
+    });
+  }
 
-      const { data } = await apiClient.get<VehiclesResponse>(
-        `${API_ENDPOINTS.VEHICLES}?${params.toString()}`
-      );
-      return data;
-    },
+  const { data } = await apiClient.get<VehiclesResponse>(
+    `${API_ENDPOINTS.VEHICLES}?${params.toString()}`
+  );
+
+  return data;
+}
+
+// Hooks for vehicles
+export function useVehicles(
+  filters?: VehicleFilters,
+  skip = 0,
+  limit = 100,
+  options?: UseVehiclesOptions
+) {
+  const { includeTestData = false, ...queryOptions } = options ?? {};
+
+  return useQuery<VehiclesResponse, unknown, VehiclesResponse, VehiclesQueryKey>({
+    queryKey: ["vehicles", filters, skip, limit, includeTestData],
+    queryFn: () => fetchVehicles(filters, skip, limit, includeTestData),
     staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes - cache time (formerly cacheTime)
     placeholderData: (previousData) => previousData, // Keep previous data while loading new data
     refetchOnWindowFocus: false, // Don't refetch when window regains focus
     retry: 2, // Retry failed requests 2 times
+    ...queryOptions,
   });
 }
 

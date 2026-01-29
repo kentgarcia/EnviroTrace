@@ -6,7 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
 import { Eye, Loader2, FileSpreadsheet, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { useOffices, useVehicles, useEmissionTests } from "@/core/api/emission-service";
+import {
+    useOffices,
+    useEmissionTests,
+    fetchVehicles,
+    type Vehicle,
+} from "@/core/api/emission-service";
 import { generateReportHTML, generateComprehensiveTestingReportHTML } from "./utils/reportHTMLGenerator";
 import { generateComprehensiveTestingReport } from "./utils/excelReportGenerator";
 import { exportHTMLToWord } from "@/core/utils/htmlToWordConverter";
@@ -29,18 +34,63 @@ export const EmissionReports: React.FC = () => {
     const [comprehensiveOffice, setComprehensiveOffice] = useState<string>("all");
     const [comprehensiveEngineType, setComprehensiveEngineType] = useState<string>("all");
 
-    // Fetch data for report generation - fetch ALL vehicles (no limit)
     const { data: officesData } = useOffices();
-    const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles(undefined, 0, 10000); // Fetch up to 10,000 vehicles for reports
     const { data: emissionTests, isLoading: isLoadingTests } = useEmissionTests(); // Fetch all emission tests
 
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [vehiclesTotal, setVehiclesTotal] = useState<number>(0);
+    const [isVehiclesLoading, setIsVehiclesLoading] = useState(false);
+    const vehiclesLoadPromiseRef = React.useRef<Promise<Vehicle[]> | null>(null);
+
+    const ensureVehiclesLoaded = React.useCallback(async () => {
+        if (vehicles.length > 0) {
+            return vehicles;
+        }
+
+        if (vehiclesLoadPromiseRef.current) {
+            return vehiclesLoadPromiseRef.current;
+        }
+
+        const loader = (async () => {
+            const pageSize = 1000;
+            let skip = 0;
+            let allVehicles: Vehicle[] = [];
+            let total = 0;
+
+            while (true) {
+                const response = await fetchVehicles(undefined, skip, pageSize);
+                allVehicles = allVehicles.concat(response.vehicles);
+                total = response.total;
+                skip += response.vehicles.length;
+
+                if (allVehicles.length >= total || response.vehicles.length === 0) {
+                    break;
+                }
+            }
+
+            setVehicles(allVehicles);
+            setVehiclesTotal(total);
+            return allVehicles;
+        })();
+
+        vehiclesLoadPromiseRef.current = loader;
+        setIsVehiclesLoading(true);
+
+        try {
+            return await loader;
+        } finally {
+            vehiclesLoadPromiseRef.current = null;
+            setIsVehiclesLoading(false);
+        }
+    }, [vehicles]);
+
     const engineTypeOptions = React.useMemo(() => {
-        if (!vehiclesData?.vehicles) {
+        if (vehicles.length === 0) {
             return [] as string[];
         }
 
         const deduped = new Map<string, string>();
-        vehiclesData.vehicles.forEach(vehicle => {
+        vehicles.forEach(vehicle => {
             const type = vehicle.engine_type?.trim();
             if (!type) {
                 return;
@@ -53,7 +103,7 @@ export const EmissionReports: React.FC = () => {
         });
 
         return Array.from(deduped.values()).sort((a, b) => a.localeCompare(b));
-    }, [vehiclesData?.vehicles]);
+    }, [vehicles]);
 
     const reportTypes = [
         {
@@ -96,7 +146,7 @@ export const EmissionReports: React.FC = () => {
 
     const handleGenerateReport = async () => {
         // Check if data is still loading
-        if (isLoadingVehicles || isLoadingTests) {
+        if (isLoadingTests) {
             toast.error("Please wait, data is still loading...");
             return;
         }
@@ -115,6 +165,14 @@ export const EmissionReports: React.FC = () => {
         setIsGenerating(true);
 
         try {
+            const vehiclesForReport = await ensureVehiclesLoaded();
+
+            if (vehiclesForReport.length === 0) {
+                toast.info("No vehicles available to generate this report.");
+                setIsGenerating(false);
+                return;
+            }
+
             // Handle quarterly testing report differently
             if (reportType === "quarterly-testing") {
                 // Create vehicle test map, preferring latest tests with diesel opacimeter data
@@ -164,7 +222,7 @@ export const EmissionReports: React.FC = () => {
                 });
 
                 // Build report data
-                const reportData = (vehiclesData?.vehicles || [])
+                const reportData = vehiclesForReport
                     .filter(v => {
                         // Filter by year if selected
                         if (selectedYear !== "all") {
@@ -246,7 +304,7 @@ export const EmissionReports: React.FC = () => {
                     quarter: selectedQuarter,
                     offices: officesData?.offices || [],
                     selectedOfficeIds: selectedOffices,
-                    vehicles: vehiclesData?.vehicles || [],
+                    vehicles: vehiclesForReport,
                     emissionTests: emissionTests || [],
                 };
 
@@ -275,6 +333,16 @@ export const EmissionReports: React.FC = () => {
         }
     };
 
+    const handleLoadVehicles = React.useCallback(async () => {
+        try {
+            await ensureVehiclesLoaded();
+            toast.success("Vehicle data loaded");
+        } catch (error) {
+            console.error("Error loading vehicles:", error);
+            toast.error("Failed to load vehicle data");
+        }
+    }, [ensureVehiclesLoaded]);
+
     const handleExportToExcel = async () => {
         if (reportType !== "quarterly-testing") {
             toast.error("Excel export is only available for Quarterly Testing Report");
@@ -282,6 +350,13 @@ export const EmissionReports: React.FC = () => {
         }
 
         try {
+            const vehiclesForReport = await ensureVehiclesLoaded();
+
+            if (vehiclesForReport.length === 0) {
+                toast.info("No vehicles available to export.");
+                return;
+            }
+
             // Create vehicle test map, preferring latest tests with diesel opacimeter data
             const vehicleTestMap = new Map();
             (emissionTests || []).forEach(test => {
@@ -329,7 +404,7 @@ export const EmissionReports: React.FC = () => {
             });
 
             // Filter vehicles
-            let filteredVehicles = vehiclesData?.vehicles || [];
+            let filteredVehicles = vehiclesForReport;
 
             if (selectedYear !== "all") {
                 filteredVehicles = filteredVehicles.filter(v => {
@@ -643,21 +718,17 @@ export const EmissionReports: React.FC = () => {
                                         <div>
                                             <p className="text-sm text-gray-600">Total Vehicles</p>
                                             <p className="text-2xl font-bold text-blue-600">
-                                                {isLoadingVehicles ? (
+                                                {isVehiclesLoading ? (
                                                     <Loader2 className="w-6 h-6 animate-spin inline" />
-                                                ) : (
-                                                    vehiclesData?.total || 0
-                                                )}
+                                                ) : vehiclesTotal > 0 ? vehiclesTotal : "—"}
                                             </p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600">Loaded</p>
                                             <p className="text-2xl font-bold text-green-600">
-                                                {isLoadingVehicles ? (
+                                                {isVehiclesLoading ? (
                                                     <Loader2 className="w-6 h-6 animate-spin inline" />
-                                                ) : (
-                                                    vehiclesData?.vehicles.length || 0
-                                                )}
+                                                ) : vehicles.length}
                                             </p>
                                         </div>
                                         <div>
@@ -677,12 +748,28 @@ export const EmissionReports: React.FC = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    {vehiclesData && vehiclesData.total > vehiclesData.vehicles.length && (
+                                    {vehiclesTotal > 0 && vehicles.length < vehiclesTotal && (
                                         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                                             <p className="text-sm text-yellow-800">
-                                                ⚠️ Showing {vehiclesData.vehicles.length} of {vehiclesData.total} vehicles.
-                                                Some vehicles may not be included in the report.
+                                                ⚠️ Showing {vehicles.length} of {vehiclesTotal} vehicles. Use the load button to fetch remaining records.
                                             </p>
+                                        </div>
+                                    )}
+                                    {vehiclesTotal === 0 && vehicles.length === 0 && !isVehiclesLoading && (
+                                        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between">
+                                            <p className="text-sm text-slate-700">Vehicle data has not been loaded yet.</p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleLoadVehicles}
+                                                disabled={isVehiclesLoading}
+                                            >
+                                                {isVehiclesLoading ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    "Load vehicle data"
+                                                )}
+                                            </Button>
                                         </div>
                                     )}
                                 </CardContent>
