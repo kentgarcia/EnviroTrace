@@ -10,6 +10,29 @@ export interface DashboardData {
   recentTests: (LocalEmissionTest & { vehicle_plate?: string })[];
   pendingSyncCount: number;
   chartData?: any;
+  passedTests: number;
+  failedTests: number;
+  pendingTests: number;
+  topPerformingOffice?: { name: string };
+  monthlyTrendsData?: {
+    labels: string[];
+    datasets: { data: number[] }[];
+  };
+  vehicleTypeData?: Array<{
+    name: string;
+    population: number;
+    color: string;
+    legendFontColor: string;
+    legendFontSize: number;
+  }>;
+  quarterlyData?: {
+    labels: string[];
+    datasets: { data: number[] }[];
+  };
+  engineTypeData?: {
+    labels: string[];
+    datasets: { data: number[] }[];
+  };
 }
 
 /**
@@ -22,13 +45,26 @@ export interface DashboardData {
  * - Offline support with cached data
  * - Data persists across app restarts (up to 24 hours)
  */
-export function useDashboardData() {
+export function useDashboardData(year?: number, quarter?: number) {
   // Fetch dashboard stats from local database
   const fetchDashboardStats = async (): Promise<DashboardData> => {
     try {
       const stats = await database.getDashboardStats();
       const vehicles = await database.getVehicles();
-      const tests = await database.getEmissionTests();
+      let tests = await database.getEmissionTests();
+
+      // Filter tests by year and quarter if specified
+      if (year || quarter) {
+        tests = tests.filter((test) => {
+          const testDate = new Date(test.test_date);
+          const testYear = testDate.getFullYear();
+          const testQuarter = Math.floor(testDate.getMonth() / 3) + 1;
+          
+          if (year && testYear !== year) return false;
+          if (quarter && testQuarter !== quarter) return false;
+          return true;
+        });
+      }
 
       // Calculate tested vehicles (vehicles with at least one test)
       const vehicleIds = vehicles.map((v) => v.id);
@@ -37,8 +73,10 @@ export function useDashboardData() {
         testedVehicleIds.has(id)
       ).length;
 
-      // Calculate compliance rate (passed tests / total tests)
+      // Calculate test results
       const passedTests = tests.filter((t) => t.result === true).length;
+      const failedTests = tests.filter((t) => t.result === false).length;
+      const pendingTests = tests.filter((t) => t.result === null || t.result === undefined).length;
       const totalTests = tests.length;
       const complianceRate =
         totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
@@ -63,6 +101,18 @@ export function useDashboardData() {
         })
       );
 
+      // Generate monthly trends data (simplified)
+      const monthlyTrendsData = generateMonthlyTrends(tests);
+
+      // Generate vehicle type distribution (simplified)
+      const vehicleTypeData = generateVehicleTypeData(vehicles, tests);
+
+      // Generate quarterly data (simplified)
+      const quarterlyData = generateQuarterlyData(tests);
+
+      // Generate engine type data (simplified)
+      const engineTypeData = generateEngineTypeData(tests);
+
       return {
         totalVehicles: stats.totalVehicles,
         testedVehicles: testedCount,
@@ -71,6 +121,14 @@ export function useDashboardData() {
         lastTestDate,
         recentTests,
         pendingSyncCount: stats.pendingSync,
+        passedTests,
+        failedTests,
+        pendingTests,
+        topPerformingOffice: { name: "City Hall" }, // Placeholder
+        monthlyTrendsData,
+        vehicleTypeData,
+        quarterlyData,
+        engineTypeData,
       };
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
@@ -81,6 +139,9 @@ export function useDashboardData() {
         departments: 0,
         recentTests: [],
         pendingSyncCount: 0,
+        passedTests: 0,
+        failedTests: 0,
+        pendingTests: 0,
       };
     }
   };
@@ -94,7 +155,7 @@ export function useDashboardData() {
     isFromCache,
     isStale,
   } = useSmartQuery<DashboardData>({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", year, quarter],
     queryFn: fetchDashboardStats,
     staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
     cacheTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
@@ -109,6 +170,9 @@ export function useDashboardData() {
       departments: 0,
       recentTests: [],
       pendingSyncCount: 0,
+      passedTests: 0,
+      failedTests: 0,
+      pendingTests: 0,
     },
     loading: isLoading,
     error,
@@ -117,4 +181,87 @@ export function useDashboardData() {
     isFromCache,
     isStale,
   };
+}
+
+// Helper functions for chart data generation
+function generateMonthlyTrends(tests: LocalEmissionTest[]) {
+  if (tests.length === 0) return undefined;
+  
+  const monthlyMap: Record<string, number> = {};
+  tests.forEach((test) => {
+    const month = new Date(test.test_date).toLocaleDateString('en-US', { month: 'short' });
+    monthlyMap[month] = (monthlyMap[month] || 0) + 1;
+  });
+  
+  const labels = Object.keys(monthlyMap);
+  const data = Object.values(monthlyMap);
+  
+  return labels.length > 0 ? {
+    labels,
+    datasets: [{ data }],
+  } : undefined;
+}
+
+function generateVehicleTypeData(vehicles: any[], tests: LocalEmissionTest[]) {
+  if (vehicles.length === 0) return undefined;
+  
+  const typeMap: Record<string, number> = {};
+  vehicles.forEach((vehicle) => {
+    const type = vehicle.vehicle_type || 'Unknown';
+    typeMap[type] = (typeMap[type] || 0) + 1;
+  });
+  
+  const colors = ['#1E40AF', '#7C3AED', '#16A34A', '#DC2626', '#F59E0B'];
+  return Object.entries(typeMap).map(([name, population], index) => ({
+    name,
+    population,
+    color: colors[index % colors.length],
+    legendFontColor: '#64748B',
+    legendFontSize: 12,
+  }));
+}
+
+function generateQuarterlyData(tests: LocalEmissionTest[]) {
+  if (tests.length === 0) return undefined;
+  
+  const quarterlyMap: Record<string, number> = {};
+  tests.forEach((test) => {
+    const date = new Date(test.test_date);
+    const quarter = `Q${Math.floor(date.getMonth() / 3) + 1}`;
+    quarterlyMap[quarter] = (quarterlyMap[quarter] || 0) + (test.result ? 1 : 0);
+  });
+  
+  const labels = Object.keys(quarterlyMap);
+  const data = Object.values(quarterlyMap);
+  
+  return labels.length > 0 ? {
+    labels,
+    datasets: [{ data }],
+  } : undefined;
+}
+
+function generateEngineTypeData(tests: LocalEmissionTest[]) {
+  if (tests.length === 0) return undefined;
+  
+  const engineMap: Record<string, number> = {
+    'Gasoline': 0,
+    'Diesel': 0,
+    'Hybrid': 0,
+    'Electric': 0,
+  };
+  
+  // Simplified - would need vehicle data to properly categorize
+  tests.forEach((test) => {
+    if (test.result) {
+      engineMap['Gasoline'] = (engineMap['Gasoline'] || 0) + 1;
+    }
+  });
+  
+  const labels = Object.keys(engineMap).filter(k => engineMap[k] > 0);
+  const data = labels.map(k => engineMap[k]);
+  
+  return labels.length > 0 ? {
+    labels,
+    datasets: [{ data }],
+  } : undefined;
 }

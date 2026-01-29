@@ -67,7 +67,7 @@ const testFormSchema = z.object({
   result: z.union([z.boolean(), z.null()]).optional(),
   co_level: z.number().min(0).max(100).optional(),
   hc_level: z.number().min(0).max(10000).optional(),
-  smoke_opacity: z.number().min(0).max(100).optional(),
+  opacimeter_result: z.number().min(0).max(100).optional(),
   remarks: z.string().optional(),
   technician_name: z.string().min(3).optional(),
   testing_center: z.string().min(3).optional(),
@@ -126,7 +126,7 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
     result: initialValues?.result ?? null,
     co_level: initialValues?.co_level,
     hc_level: initialValues?.hc_level,
-    smoke_opacity: initialValues?.smoke_opacity,
+    opacimeter_result: initialValues?.opacimeter_result,
     remarks: initialValues?.remarks,
     technician_name: initialValues?.technician_name,
     testing_center: initialValues?.testing_center,
@@ -137,6 +137,10 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
     resolver: zodResolver(testFormSchema),
     defaultValues,
   });
+
+  // Determine if vehicle is Gasoline or Diesel
+  const isGasoline = selectedVehicle?.engine_type?.toLowerCase().includes('gasoline');
+  const isDiesel = selectedVehicle?.engine_type?.toLowerCase().includes('diesel');
 
   // Form submission
   const handleSubmit = (values: TestFormValues) => {
@@ -337,18 +341,64 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
         />
 
         {/* Emission Measurements */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isGasoline && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="co_level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CO Level (%)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 1.93"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="hc_level"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>HC Level (ppm)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="e.g., 1300"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {isDiesel && (
           <FormField
             control={form.control}
-            name="co_level"
+            name="opacimeter_result"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>CO Level (%)</FormLabel>
+                <FormLabel>Opacimeter Test Result (%)</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder="e.g., 1.93"
+                    placeholder="e.g., 15.5"
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     value={field.value ?? ''}
@@ -358,49 +408,7 @@ export const EmissionTestForm: React.FC<EmissionTestFormProps> = ({
               </FormItem>
             )}
           />
-
-          <FormField
-            control={form.control}
-            name="hc_level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>HC Level (ppm)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g., 1300"
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                    value={field.value ?? ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="smoke_opacity"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Smoke Opacity (%) - Optional</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g., 25.5"
-                  {...field}
-                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                  value={field.value ?? ''}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField

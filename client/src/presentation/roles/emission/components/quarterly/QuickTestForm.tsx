@@ -35,6 +35,7 @@ const testFormSchema = z.object({
     test_date: z.string(),
     co_level: z.number().min(0).max(100).optional(),
     hc_level: z.number().min(0).max(10000).optional(),
+    opacimeter_result: z.number().min(0).max(100).optional(),
     remarks: z.string().optional(),
 });
 
@@ -68,6 +69,7 @@ export function QuickTestForm({
             test_date: testToEdit?.test_date ? new Date(testToEdit.test_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             co_level: testToEdit?.co_level,
             hc_level: testToEdit?.hc_level,
+            opacimeter_result: testToEdit?.opacimeter_result,
             remarks: testToEdit?.remarks,
         },
     });
@@ -79,6 +81,7 @@ export function QuickTestForm({
                 test_date: testToEdit.test_date ? new Date(testToEdit.test_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                 co_level: testToEdit.co_level,
                 hc_level: testToEdit.hc_level,
+                opacimeter_result: testToEdit.opacimeter_result,
                 remarks: testToEdit.remarks || "",
             });
         } else if (isOpen) {
@@ -87,6 +90,7 @@ export function QuickTestForm({
                 test_date: new Date().toISOString().split('T')[0],
                 co_level: undefined,
                 hc_level: undefined,
+                opacimeter_result: undefined,
                 remarks: "",
             });
         }
@@ -103,6 +107,7 @@ export function QuickTestForm({
             test_date: data.test_date,
             co_level: data.co_level,
             hc_level: data.hc_level,
+            opacimeter_result: data.opacimeter_result,
             remarks: data.remarks || "",
         };
 
@@ -111,6 +116,10 @@ export function QuickTestForm({
     };
 
     const quarterName = `Q${quarter}`;
+    
+    // Determine if vehicle is Gasoline or Diesel
+    const isGasoline = vehicle?.engine_type?.toLowerCase().includes('gasoline');
+    const isDiesel = vehicle?.engine_type?.toLowerCase().includes('diesel');
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -184,38 +193,66 @@ export function QuickTestForm({
                         />
 
                         {/* Emission Measurements */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <FormField
-                                control={form.control}
-                                name="co_level"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">CO Level</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                className="h-10 border-slate-200 focus:ring-blue-500"
-                                                {...field}
-                                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                                                value={field.value ?? ''}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {isGasoline && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField
+                                    control={form.control}
+                                    name="co_level"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">CO Level (%)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="e.g. 1.93"
+                                                    className="h-10 border-slate-200 focus:ring-blue-500"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                    value={field.value ?? ''}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
 
+                                <FormField
+                                    control={form.control}
+                                    name="hc_level"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">HC Level (ppm)</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="e.g. 1300"
+                                                    className="h-10 border-slate-200 focus:ring-blue-500"
+                                                    {...field}
+                                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                    value={field.value ?? ''}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        )}
+
+                        {isDiesel && (
                             <FormField
                                 control={form.control}
-                                name="hc_level"
+                                name="opacimeter_result"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">HC Level</FormLabel>
+                                        <FormLabel className="text-xs font-bold uppercase tracking-wider text-slate-500">Opacimeter Test Result (%)</FormLabel>
                                         <FormControl>
                                             <Input
                                                 type="number"
                                                 step="0.01"
+                                                placeholder="e.g. 15.5"
                                                 className="h-10 border-slate-200 focus:ring-blue-500"
                                                 {...field}
                                                 onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
@@ -226,7 +263,7 @@ export function QuickTestForm({
                                     </FormItem>
                                 )}
                             />
-                        </div>
+                        )}
 
                         {/* Remarks */}
                         <FormField

@@ -336,9 +336,9 @@ export interface EmissionTest {
   year: number;
   result: boolean | null;
   remarks?: string;
-  co_level?: number; // Carbon monoxide level (percentage)
-  hc_level?: number; // Hydrocarbon level (ppm)
-  smoke_opacity?: number; // Smoke opacity percentage
+  co_level?: number; // Carbon monoxide level (percentage) - For GASOLINE vehicles
+  hc_level?: number; // Hydrocarbon level (ppm) - For GASOLINE vehicles
+  opacimeter_result?: number; // Opacimeter test result (smoke opacity %) - For DIESEL vehicles
   technician_name?: string;
   testing_center?: string;
   created_by: string;
@@ -355,7 +355,7 @@ export interface EmissionTestInput {
   remarks?: string;
   co_level?: number;
   hc_level?: number;
-  smoke_opacity?: number;
+  opacimeter_result?: number;
   technician_name?: string;
   testing_center?: string;
 }

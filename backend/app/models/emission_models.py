@@ -109,9 +109,9 @@ class Test(Base):
     year = Column(Integer, nullable=False)
     result = Column(Boolean, nullable=False)  # Simple pass/fail
     remarks = Column(String(500), nullable=True)  # Optional remarks
-    co_level = Column(Numeric(5, 2), nullable=True)  # Carbon monoxide level (percentage, e.g., 1.93)
-    hc_level = Column(Numeric(10, 2), nullable=True)  # Hydrocarbon level (ppm, e.g., 1300)
-    smoke_opacity = Column(Numeric(5, 2), nullable=True)  # Smoke opacity percentage
+    co_level = Column(Numeric(5, 2), nullable=True)  # Carbon monoxide level (percentage) - For GASOLINE vehicles
+    hc_level = Column(Numeric(10, 2), nullable=True)  # Hydrocarbon level (ppm) - For GASOLINE vehicles
+    opacimeter_result = Column(Numeric(5, 2), nullable=True)  # Opacimeter test result (smoke opacity %) - For DIESEL vehicles
     technician_name = Column(String(255), nullable=True)  # Technician who performed the test
     testing_center = Column(String(255), nullable=True)  # Testing center name
     created_by_id = Column("created_by", UUID(as_uuid=True), ForeignKey("app_auth.users.id"), nullable=True)

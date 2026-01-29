@@ -30,7 +30,7 @@ const formSchema = z.object({
     result: z.boolean(),
     co_level: z.number().min(0).max(100).optional(),
     hc_level: z.number().min(0).max(10000).optional(),
-    smoke_opacity: z.number().min(0).max(100).optional(),
+    opacimeter_result: z.number().min(0).max(100).optional(),
     remarks: z.string().optional(),
     technician_name: z.string().min(3).optional(),
     testing_center: z.string().min(3).optional(),
@@ -71,7 +71,7 @@ export function EmissionTestForm({
             result: initialValues?.result ?? false,
             co_level: initialValues?.co_level || 0,
             hc_level: initialValues?.hc_level || 0,
-            smoke_opacity: initialValues?.smoke_opacity || 0,
+            opacimeter_result: initialValues?.opacimeter_result || 0,
             remarks: initialValues?.remarks || '',
             technician_name: initialValues?.technician_name || '',
             testing_center: initialValues?.testing_center || '',
@@ -82,6 +82,12 @@ export function EmissionTestForm({
         label: `${v.plate_number} - ${v.driver_name}`,
         value: v.id,
     }));
+
+    // Get selected vehicle to determine fuel type
+    const selectedVehicleId = form.watch('vehicle_id');
+    const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+    const isGasoline = selectedVehicle?.engine_type?.toLowerCase().includes('gasoline');
+    const isDiesel = selectedVehicle?.engine_type?.toLowerCase().includes('diesel');
 
     return (
         <Form {...form}>
@@ -139,13 +145,55 @@ export function EmissionTestForm({
                     )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                {isGasoline && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="co_level"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>CO Level (%)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            {...field}
+                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="hc_level"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>HC Level (ppm)</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="number"
+                                            step="0.01"
+                                            {...field}
+                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                )}
+
+                {isDiesel && (
                     <FormField
                         control={form.control}
-                        name="co_level"
+                        name="opacimeter_result"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>CO Level (%)</FormLabel>
+                                <FormLabel>Opacimeter Test Result (%)</FormLabel>
                                 <FormControl>
                                     <Input
                                         type="number"
@@ -158,45 +206,7 @@ export function EmissionTestForm({
                             </FormItem>
                         )}
                     />
-
-                    <FormField
-                        control={form.control}
-                        name="hc_level"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>HC Level (ppm)</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        {...field}
-                                        onChange={(e) => field.onChange(Number(e.target.value))}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                </div>
-
-                <FormField
-                    control={form.control}
-                    name="smoke_opacity"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Smoke Opacity (%)</FormLabel>
-                            <FormControl>
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    {...field}
-                                    onChange={(e) => field.onChange(Number(e.target.value))}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
+                )}
 
                 <FormField
                     control={form.control}

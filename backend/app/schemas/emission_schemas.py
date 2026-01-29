@@ -84,9 +84,9 @@ class TestBase(BaseModel):
     year: int
     result: bool
     remarks: Optional[str] = None
-    co_level: Optional[float] = None  # Carbon monoxide level (percentage)
-    hc_level: Optional[float] = None  # Hydrocarbon level (ppm)
-    smoke_opacity: Optional[float] = None  # Smoke opacity percentage
+    co_level: Optional[float] = None  # Carbon monoxide level (percentage) - For GASOLINE vehicles
+    hc_level: Optional[float] = None  # Hydrocarbon level (ppm) - For GASOLINE vehicles
+    opacimeter_result: Optional[float] = None  # Opacimeter test result (smoke opacity %) - For DIESEL vehicles
     technician_name: Optional[str] = None
     testing_center: Optional[str] = None
 
@@ -101,7 +101,7 @@ class TestUpdate(BaseModel):
     remarks: Optional[str] = None
     co_level: Optional[float] = None
     hc_level: Optional[float] = None
-    smoke_opacity: Optional[float] = None
+    opacimeter_result: Optional[float] = None
     technician_name: Optional[str] = None
     testing_center: Optional[str] = None
 

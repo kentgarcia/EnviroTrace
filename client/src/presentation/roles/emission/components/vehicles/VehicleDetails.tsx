@@ -403,8 +403,16 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                     <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Test Date</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Period</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Result</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">CO (%)</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">HC (ppm)</TableHead>
+                    {vehicle.engine_type?.toLowerCase().includes('gasoline') && (
+                      <>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">CO (%)</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">HC (ppm)</TableHead>
+                      </>
+                    )}
+                    {vehicle.engine_type?.toLowerCase().includes('diesel') && (
+                      <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Opacimeter (%)</TableHead>
+                    )}
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -440,11 +448,23 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="py-3 text-slate-600">
-                        {test.co_level !== null && test.co_level !== undefined ? test.co_level.toFixed(2) : "—"}
-                      </TableCell>
-                      <TableCell className="py-3 text-slate-600">
-                        {test.hc_level !== null && test.hc_level !== undefined ? test.hc_level.toFixed(2) : "—"}
+                      {vehicle.engine_type?.toLowerCase().includes('gasoline') && (
+                        <>
+                          <TableCell className="py-3 text-slate-600">
+                            {test.co_level !== null && test.co_level !== undefined ? test.co_level.toFixed(2) : "—"}
+                          </TableCell>
+                          <TableCell className="py-3 text-slate-600">
+                            {test.hc_level !== null && test.hc_level !== undefined ? test.hc_level.toFixed(2) : "—"}
+                          </TableCell>
+                        </>
+                      )}
+                      {vehicle.engine_type?.toLowerCase().includes('diesel') && (
+                        <TableCell className="py-3 text-slate-600">
+                          {test.opacimeter_result !== null && test.opacimeter_result !== undefined ? test.opacimeter_result.toFixed(2) : "—"}
+                        </TableCell>
+                      )}
+                      <TableCell className="py-3 text-slate-600 text-xs">
+                        {test.remarks || "—"}
                       </TableCell>
                     </TableRow>
                   ))}

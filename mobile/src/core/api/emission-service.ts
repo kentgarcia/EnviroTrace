@@ -286,6 +286,7 @@ export interface EmissionTest {
   result: boolean | null;
   co_level?: number;
   hc_level?: number;
+  opacimeter_result?: number;
   remarks?: string;
   created_by: string;
   created_at: string;
@@ -300,6 +301,7 @@ export interface EmissionTestInput {
   result: boolean | null;
   co_level?: number;
   hc_level?: number;
+  opacimeter_result?: number;
   remarks?: string;
 }
 

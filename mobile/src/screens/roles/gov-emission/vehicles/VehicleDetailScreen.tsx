@@ -281,11 +281,12 @@ export default function VehicleDetailScreen() {
                             <Text style={styles.testQuarter}>
                               Q{test.quarter} {test.year}
                             </Text>
-                            {(test.co_level !== undefined || test.hc_level !== undefined) && (
+                            {(test.co_level !== undefined || test.hc_level !== undefined || test.opacimeter_result !== undefined) && (
                               <Text style={styles.testLevels}>
                                 {test.co_level !== undefined && `CO: ${test.co_level}%`}
                                 {test.co_level !== undefined && test.hc_level !== undefined && ' • '}
                                 {test.hc_level !== undefined && `HC: ${test.hc_level} ppm`}
+                                {test.opacimeter_result !== undefined && `Opacimeter: ${test.opacimeter_result}%`}
                               </Text>
                             )}
                           </View>

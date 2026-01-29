@@ -346,9 +346,9 @@ export default function OverviewScreen() {
         {/* Monthly Testing Trends */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Monthly Testing Trends</Text>
-          {data?.monthlyTrendsData?.labels?.length > 0 ? (
+          {data?.monthlyTrendsData?.labels && data.monthlyTrendsData.labels.length > 0 ? (
             <LineChart
-              data={data.monthlyTrendsData}
+              data={data.monthlyTrendsData!}
               width={SCREEN_WIDTH - 48}
               height={220}
               chartConfig={chartConfig}
@@ -363,9 +363,9 @@ export default function OverviewScreen() {
         {/* Vehicle Type Distribution */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Vehicle Type Distribution</Text>
-          {data?.vehicleTypeData?.length > 0 ? (
+          {data?.vehicleTypeData && data.vehicleTypeData.length > 0 ? (
             <PieChart
-              data={data.vehicleTypeData}
+              data={data.vehicleTypeData!}
               width={SCREEN_WIDTH - 48}
               height={220}
               chartConfig={chartConfig}
@@ -383,9 +383,9 @@ export default function OverviewScreen() {
         {/* Quarterly Test Results */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Quarterly Test Results</Text>
-          {data?.quarterlyData?.labels?.length > 0 ? (
+          {data?.quarterlyData?.labels && data.quarterlyData.labels.length > 0 ? (
             <BarChart
-              data={data.quarterlyData}
+              data={data.quarterlyData!}
               width={SCREEN_WIDTH - 48}
               height={220}
               yAxisLabel=""
@@ -405,9 +405,9 @@ export default function OverviewScreen() {
         {/* Engine Type Performance */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Engine Type Performance</Text>
-          {data?.engineTypeData?.labels?.length > 0 ? (
+          {data?.engineTypeData?.labels && data.engineTypeData.labels.length > 0 ? (
             <BarChart
-              data={data.engineTypeData}
+              data={data.engineTypeData!}
               width={SCREEN_WIDTH - 48}
               height={220}
               yAxisLabel=""

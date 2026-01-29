@@ -29,6 +29,7 @@ export default function AddTestScreen() {
   const [result, setResult] = useState<"pass" | "fail">("pass");
   const [coLevel, setCoLevel] = useState("");
   const [hcLevel, setHcLevel] = useState("");
+  const [opacimeterResult, setOpacimeterResult] = useState("");
   const [remarks, setRemarks] = useState("");
 
   // Plate recognition states
@@ -50,6 +51,11 @@ export default function AddTestScreen() {
 
   // Add test mutation
   const addTestMutation = useAddEmissionTest();
+
+  // Determine current vehicle (from route param, recognized, or suggestions)
+  const currentVehicle = preSelectedVehicle || recognizedVehicle;
+  const isGasoline = currentVehicle?.engine_type?.toLowerCase().includes('gasoline');
+  const isDiesel = currentVehicle?.engine_type?.toLowerCase().includes('diesel');
 
   // Quarter dropdown data
   const quarterData = [
@@ -87,6 +93,7 @@ export default function AddTestScreen() {
         result: result === "pass",
         co_level: coLevel.trim() ? parseFloat(coLevel) : undefined,
         hc_level: hcLevel.trim() ? parseFloat(hcLevel) : undefined,
+        opacimeter_result: opacimeterResult.trim() ? parseFloat(opacimeterResult) : undefined,
         remarks: remarks || undefined,
       };
 
@@ -567,13 +574,53 @@ export default function AddTestScreen() {
               </View>
 
               {/* Emission Levels */}
-              <View style={styles.rowInputs}>
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>CO Level (%)</Text>
+              {isGasoline && (
+                <View style={styles.rowInputs}>
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>CO Level (%)</Text>
+                    <View style={styles.inputContainer}>
+                      <PaperInput
+                        value={coLevel}
+                        onChangeText={setCoLevel}
+                        placeholder="0.0"
+                        keyboardType="decimal-pad"
+                        style={styles.textInput}
+                        underlineColor="transparent"
+                        activeUnderlineColor="transparent"
+                        mode="flat"
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={[styles.inputGroup, { flex: 1 }]}>
+                    <Text style={styles.inputLabel}>HC Level (ppm)</Text>
+                    <View style={styles.inputContainer}>
+                      <PaperInput
+                        value={hcLevel}
+                        onChangeText={setHcLevel}
+                        placeholder="0"
+                        keyboardType="decimal-pad"
+                        style={styles.textInput}
+                        underlineColor="transparent"
+                        activeUnderlineColor="transparent"
+                        mode="flat"
+                        textColor="#0F172A"
+                        placeholderTextColor="#94A3B8"
+                      />
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {isDiesel && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Opacimeter Test Result (%)</Text>
                   <View style={styles.inputContainer}>
                     <PaperInput
-                      value={coLevel}
-                      onChangeText={setCoLevel}
+                      value={opacimeterResult}
+                      onChangeText={setOpacimeterResult}
                       placeholder="0.0"
                       keyboardType="decimal-pad"
                       style={styles.textInput}
@@ -585,25 +632,7 @@ export default function AddTestScreen() {
                     />
                   </View>
                 </View>
-
-                <View style={[styles.inputGroup, { flex: 1 }]}>
-                  <Text style={styles.inputLabel}>HC Level (ppm)</Text>
-                  <View style={styles.inputContainer}>
-                    <PaperInput
-                      value={hcLevel}
-                      onChangeText={setHcLevel}
-                      placeholder="0"
-                      keyboardType="decimal-pad"
-                      style={styles.textInput}
-                      underlineColor="transparent"
-                      activeUnderlineColor="transparent"
-                      mode="flat"
-                      textColor="#0F172A"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                </View>
-              </View>
+              )}
 
               {/* Remarks Input */}
               <View style={styles.inputGroup}>
