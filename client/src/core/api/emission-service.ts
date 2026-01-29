@@ -24,8 +24,8 @@ export interface Vehicle {
   registration_number?: string;
   vehicle_type: string;
   wheels: number;
-  description?: string;
-  year_acquired?: number;
+  description?: string | null;
+  year_acquired?: number | null;
   created_at: string;
   updated_at: string;
   latest_test_result?: boolean | null; // Made optional since not always fetched
@@ -43,8 +43,8 @@ export interface VehicleInput {
   registration_number?: string;
   vehicle_type: string;
   wheels: number;
-  description?: string;
-  year_acquired?: number;
+  description?: string | null;
+  year_acquired?: number | null;
 }
 
 // UI-friendly vehicle input that uses office names instead of IDs
@@ -250,8 +250,46 @@ export function useAddVehicle() {
       );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+    onSuccess: (createdVehicle) => {
+      const cachedLists = queryClient.getQueriesData<VehiclesResponse>({
+        queryKey: ["vehicles"],
+      });
+
+      cachedLists.forEach(([queryKey, cached]) => {
+        if (!cached) return;
+
+        const skip = Array.isArray(queryKey) ? (queryKey[2] as number | undefined) : undefined;
+        const limit = Array.isArray(queryKey) ? (queryKey[3] as number | undefined) : undefined;
+
+        const alreadyExists = cached.vehicles.some((vehicle) => vehicle.id === createdVehicle.id);
+
+        if (skip && skip > 0) {
+          // For non-first pages, keep existing page data but update total count.
+          queryClient.setQueryData(queryKey, {
+            ...cached,
+            total: alreadyExists ? cached.total : cached.total + 1,
+          });
+          return;
+        }
+
+        const pageSize = typeof limit === "number" && limit > 0 ? limit : cached.vehicles.length + 1;
+        const updatedVehicles = alreadyExists
+          ? cached.vehicles.map((vehicle) =>
+              vehicle.id === createdVehicle.id ? createdVehicle : vehicle
+            )
+          : [createdVehicle, ...cached.vehicles];
+
+        queryClient.setQueryData(queryKey, {
+          ...cached,
+          vehicles: updatedVehicles.slice(0, pageSize),
+          total: alreadyExists ? cached.total : cached.total + 1,
+        });
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["vehicles"],
+        refetchType: "active",
+      });
     },
   });
 }
@@ -274,8 +312,14 @@ export function useUpdateVehicle() {
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-      queryClient.invalidateQueries({ queryKey: ["vehicle", variables.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["vehicles"],
+        refetchType: "active",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["vehicle", variables.id],
+        refetchType: "active",
+      });
     },
   });
 }
@@ -322,7 +366,10 @@ export function useDeleteVehicle() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({
+        queryKey: ["vehicles"],
+        refetchType: "active",
+      });
     },
   });
 }
@@ -451,8 +498,18 @@ export function useAddEmissionTest() {
       return data;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["emission-tests"] });
-      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      queryClient.invalidateQueries({
+        queryKey: ["emission-tests"],
+        refetchType: "active",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["vehicle", data.vehicle_id],
+        refetchType: "active",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["vehicles"],
+        refetchType: "active",
+      });
     },
   });
 }

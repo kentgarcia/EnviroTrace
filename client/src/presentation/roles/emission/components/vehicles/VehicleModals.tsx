@@ -61,7 +61,7 @@ export const VehicleModals: React.FC<VehicleModalsProps> = ({
       engineType: selectedVehicle.engine_type,
       wheels: selectedVehicle.wheels,
       description: selectedVehicle.description || "",
-      yearAcquired: selectedVehicle.year_acquired,
+      yearAcquired: selectedVehicle.year_acquired ?? undefined,
     };
   };
 

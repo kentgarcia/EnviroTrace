@@ -406,7 +406,6 @@ export function OfficeComplianceTable({
       showDensityToggle={true}
       showColumnVisibility={true}
       showPagination={true}
-      defaultPageSize={10}
       loadingMessage="Loading office data..."
       emptyMessage="No office data found for the selected filters."
       onRowClick={handleRowClick}

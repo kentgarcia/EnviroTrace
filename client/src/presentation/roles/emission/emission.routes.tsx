@@ -6,11 +6,11 @@ import { EmissionOverview } from "@/presentation/roles/emission/pages/overview/E
 import VehiclesPage from "@/presentation/roles/emission/pages/Vehicles";
 import QuarterlyTestingPage from "@/presentation/roles/emission/pages/QuarterlyTesting";
 import OfficesPage from "@/presentation/roles/emission/pages/Offices";
-import VehiclesDetailPage from "@/presentation/roles/emission/pages/VehiclesDetailPage";
 import TestedVehiclesDetailPage from "@/presentation/roles/emission/pages/TestedVehiclesDetailPage";
 import ComplianceDetailPage from "@/presentation/roles/emission/pages/ComplianceDetailPage";
 import DepartmentsDetailPage from "@/presentation/roles/emission/pages/DepartmentsDetailPage";
 import EmissionReports from "@/presentation/roles/emission/pages/reports/EmissionReports";
+import GovernmentEmissionSettings from "@/presentation/roles/emission/pages/settings/GovernmentEmissionSettings";
 
 const emissionLayout = createRoute({
     getParentRoute: () => rootRoute,
@@ -55,16 +55,10 @@ const reportsRoute = createRoute({
 const settingsRoute = createRoute({
     getParentRoute: () => emissionLayout,
     path: "settings",
-    component: EmissionOverview, // Placeholder as in original
+    component: GovernmentEmissionSettings,
 });
 
 // Detail pages
-const vehiclesDetailRoute = createRoute({
-    getParentRoute: () => emissionLayout,
-    path: "vehicles-detail",
-    component: VehiclesDetailPage,
-});
-
 const testedVehiclesRoute = createRoute({
     getParentRoute: () => emissionLayout,
     path: "tested-vehicles",
@@ -90,7 +84,6 @@ emissionLayout.addChildren([
     officesRoute,
     reportsRoute,
     settingsRoute,
-    vehiclesDetailRoute,
     testedVehiclesRoute,
     complianceRoute,
     departmentsRoute

@@ -364,8 +364,10 @@ interface ComprehensiveReportData {
   yearAcquired: number | null;
   co: number | null;
   hc: number | null;
+  opacimeter: number | null;
   testResult: "PASSED" | "FAILED" | "NOT TESTED";
   testDate: string | null;
+  engineType: string;
 }
 
 interface ComprehensiveReportConfig {
@@ -414,6 +416,9 @@ export const generateComprehensiveTestingReportHTML = (
         background-color: #0033A0;
         color: #FFFFFF;
       }
+      thead.table-header {
+        display: table-header-group;
+      }
       .row-number {
         background-color: #FFFFFF;
         text-align: center;
@@ -454,12 +459,14 @@ export const generateComprehensiveTestingReportHTML = (
           <th style="width: 15%;">OFFICE</th>
           <th style="width: 10%;">PLATE NUMBER</th>
           <th style="width: 12%;">VEHICLE CATEGORY</th>
+          <th style="width: 12%;">ENGINE TYPE</th>
           <th style="width: 15%;">VEHICLE DESCRIPTION</th>
           <th style="width: 8%;">YEAR ACQUIRED</th>
           <th style="width: 6%;">CO (%)</th>
           <th style="width: 6%;">HC (ppm)</th>
+          <th style="width: 8%;">OPACIMETER (%)</th>
           <th style="width: 10%;">TEST RESULT</th>
-          <th style="width: 8%;">DATE</th>
+          <th style="width: 8%;">TEST DATE</th>
         </tr>
       </thead>
       <tbody>
@@ -482,6 +489,7 @@ export const generateComprehensiveTestingReportHTML = (
         <td class="data-cell data-cell-left">${row.office}</td>
         <td class="data-cell data-cell-center">${row.identifier}</td>
         <td class="data-cell data-cell-center">${row.category}</td>
+        <td class="data-cell data-cell-center">${row.engineType || "-"}</td>
         <td class="data-cell data-cell-left">${row.description || "-"}</td>
         <td class="data-cell data-cell-center">${row.yearAcquired || "-"}</td>
         <td class="data-cell data-cell-center">${
@@ -489,6 +497,9 @@ export const generateComprehensiveTestingReportHTML = (
         }</td>
         <td class="data-cell data-cell-center">${
           row.hc !== null ? Math.round(row.hc) : "-"
+        }</td>
+        <td class="data-cell data-cell-center">${
+          row.opacimeter !== null ? row.opacimeter.toFixed(2) : "-"
         }</td>
         <td class="data-cell data-cell-center ${resultClass}">${
       row.testResult

@@ -86,7 +86,7 @@
       "eas": {
         "projectId": "966ce2df-01f4-4e40-a136-4e2c63429daa"
       },
-      "apiUrl": "https://envirotrace.up.railway.app/api/v1"
+      "apiUrl": "https://envirotrace-production.up.railway.app/api/v1"
     }
   }
 }

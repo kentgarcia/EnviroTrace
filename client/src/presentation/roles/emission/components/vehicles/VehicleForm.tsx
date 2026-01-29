@@ -129,13 +129,32 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
     engineType: initialValues ? initialValues.engineType : engineTypes[0] || "",
     wheels: initialValues ? initialValues.wheels : 4,
     description: initialValues?.description || "",
-    yearAcquired: initialValues?.yearAcquired,
+    yearAcquired: initialValues?.yearAcquired ?? undefined,
   };
 
   const form = useForm<VehicleFormValues>({
     defaultValues,
     resolver: zodResolver(vehicleSchema),
   });
+
+  // Reset form when initialValues change
+  React.useEffect(() => {
+    if (initialValues) {
+      form.reset({
+        plateNumber: initialValues.plateNumber || "",
+        chassisNumber: initialValues.chassisNumber || "",
+        registrationNumber: initialValues.registrationNumber || "",
+        driverName: initialValues.driverName,
+        contactNumber: initialValues.contactNumber || "",
+        officeName: initialValues.officeName || offices[0] || "",
+        vehicleType: initialValues.vehicleType || vehicleTypes[0] || "",
+        engineType: initialValues.engineType || engineTypes[0] || "",
+        wheels: initialValues.wheels || 4,
+        description: initialValues.description || "",
+        yearAcquired: initialValues.yearAcquired ?? undefined,
+      });
+    }
+  }, [initialValues, form, offices, vehicleTypes, engineTypes]);
 
   // State for popover open state
   const [openOffice, setOpenOffice] = useState(false);
@@ -261,14 +280,10 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                       <Command>
                         <CommandInput
                           placeholder="Search or type office..."
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                          }}
                           onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              !offices.includes(e.currentTarget.value)
-                            ) {
+                            if (e.key === "Enter") {
+                              const value = e.currentTarget.value.trim();
+                              field.onChange(value);
                               setOpenOffice(false);
                             }
                           }}
@@ -334,14 +349,10 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                       <Command>
                         <CommandInput
                           placeholder="Search or type vehicle type..."
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                          }}
                           onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              !vehicleTypes.includes(e.currentTarget.value)
-                            ) {
+                            if (e.key === "Enter") {
+                              const value = e.currentTarget.value.trim();
+                              field.onChange(value);
                               setOpenVehicleType(false);
                             }
                           }}
@@ -407,14 +418,10 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                       <Command>
                         <CommandInput
                           placeholder="Search or type engine type..."
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                          }}
                           onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              !engineTypes.includes(e.currentTarget.value)
-                            ) {
+                            if (e.key === "Enter") {
+                              const value = e.currentTarget.value.trim();
+                              field.onChange(value);
                               setOpenEngineType(false);
                             }
                           }}
@@ -488,15 +495,14 @@ export const VehicleForm: React.FC<VehicleFormProps> = ({
                 <FormControl>
                   <Input
                     type="number"
-                    min={1900}
-                    max={2026}
+                    inputMode="numeric"
                     {...field}
-                    value={field.value || ""}
+                    value={field.value ?? ""}
                     placeholder="Optional"
                     className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0]"
                     onChange={(e) => {
                       const value = e.target.value;
-                      field.onChange(value ? Number(value) : undefined);
+                      field.onChange(value === "" ? undefined : Number(value));
                     }}
                   />
                 </FormControl>

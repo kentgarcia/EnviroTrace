@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -40,7 +40,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/presentation/components/shared/ui/alert-dialog";
-import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/core/hooks/ui/use-toast";
 import {
     useUsers,
@@ -72,6 +72,8 @@ export function UserManagement() {
     const [status, setStatus] = useState<"active" | "archived" | "all">("active");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [showCreatePassword, setShowCreatePassword] = useState(false);
+    const [showEditPassword, setShowEditPassword] = useState(false);
     const { toast } = useToast();
 
     // Queries
@@ -295,6 +297,12 @@ export function UserManagement() {
         }
     };
 
+    useEffect(() => {
+        if (!isCreateDialogOpen) {
+            setShowCreatePassword(false);
+        }
+    }, [isCreateDialogOpen]);
+
     const openEditDialog = (user: User) => {
         setEditingUser(user);
         setValue("email", user.email);
@@ -306,11 +314,13 @@ export function UserManagement() {
         setValue("job_title", user.profile?.job_title || "");
         setValue("department", user.profile?.department || "");
         setValue("phone_number", user.profile?.phone_number || "");
+        setShowEditPassword(false);
     };
 
     const closeEditDialog = () => {
         setEditingUser(null);
         reset();
+        setShowEditPassword(false);
     };
 
     const handleRoleToggle = (roleValue: string, checked: boolean) => {
@@ -424,12 +434,23 @@ export function UserManagement() {
 
                                     <div>
                                         <Label htmlFor="password">Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            {...register("password", { required: "Password is required", minLength: { value: 8, message: "Password must be at least 8 characters" } })}
-                                            placeholder="••••••••"
-                                        />
+                                        <div className="relative">
+                                            <Input
+                                                id="password"
+                                                type={showCreatePassword ? "text" : "password"}
+                                                className="pr-10"
+                                                {...register("password", { required: "Password is required", minLength: { value: 8, message: "Password must be at least 8 characters" } })}
+                                                placeholder="••••••••"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCreatePassword((prev) => !prev)}
+                                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                                                aria-label={showCreatePassword ? "Hide password" : "Show password"}
+                                            >
+                                                {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
                                         {errors.password && (
                                             <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
                                         )}
@@ -742,12 +763,23 @@ export function UserManagement() {
 
                             <div>
                                 <Label htmlFor="edit-password">New Password (optional)</Label>
-                                <Input
-                                    id="edit-password"
-                                    type="password"
-                                    {...register("password", { minLength: { value: 8, message: "Password must be at least 8 characters" } })}
-                                    placeholder="Leave blank to keep current password"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="edit-password"
+                                        type={showEditPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        {...register("password", { minLength: { value: 8, message: "Password must be at least 8 characters" } })}
+                                        placeholder="Leave blank to keep current password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditPassword((prev) => !prev)}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                                        aria-label={showEditPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                                 {errors.password && (
                                     <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
                                 )}

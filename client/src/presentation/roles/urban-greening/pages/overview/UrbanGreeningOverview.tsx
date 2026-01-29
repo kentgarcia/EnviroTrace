@@ -29,6 +29,7 @@ export const UrbanGreeningOverview: React.FC = () => {
         urgencyData,
         plantingTypeData,
         speciesData,
+        saplingSpeciesFallback,
 
         // Fee data
         feeData,
@@ -41,10 +42,11 @@ export const UrbanGreeningOverview: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ["ug-dashboard-aggregated"] });
         queryClient.invalidateQueries({ queryKey: ["urban-greening-statistics"] });
         queryClient.invalidateQueries({ queryKey: ["sapling-statistics"] });
-        queryClient.invalidateQueries({ queryKey: ["tree-requests"] });
-        queryClient.invalidateQueries({ queryKey: ["urban-greening-plantings"] });
-        queryClient.invalidateQueries({ queryKey: ["sapling-records"] });
-        queryClient.invalidateQueries({ queryKey: ["fee-records"] });
+        queryClient.invalidateQueries({ queryKey: ["tree-requests-iso-overview"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-plantings"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-sapling-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["fee-records-overview"] });
+        queryClient.invalidateQueries({ queryKey: ["viz-tree-requests"] });
     };
 
     return (
@@ -77,9 +79,9 @@ export const UrbanGreeningOverview: React.FC = () => {
                     {/* Visualized Dashboard */}
                     <UGVisualDashboard
                         feeMonthly={dashboardData?.fee_monthly?.map(m => ({ month: m.label.slice(0, 3), amount: m.total })) || feeData.monthlyFees}
-                        plantingTypeData={dashboardData?.planting_type_data || plantingTypeData}
-                        speciesData={dashboardData?.species_data || speciesData}
-                        saplingSpeciesData={dashboardData?.sapling_species_data || []}
+                        plantingTypeData={(dashboardData?.planting_type_data && dashboardData.planting_type_data.length > 0) ? dashboardData.planting_type_data : plantingTypeData}
+                        speciesData={(dashboardData?.species_data && dashboardData.species_data.length > 0) ? dashboardData.species_data : speciesData}
+                        saplingSpeciesData={(dashboardData?.sapling_species_data && dashboardData.sapling_species_data.length > 0) ? dashboardData.sapling_species_data : saplingSpeciesFallback}
                         treeRequestTypeCounts={dashboardData?.tree_request_type_counts}
                         treeRequestStatusCounts={dashboardData?.tree_request_status_counts}
                         treeTypesBarPreset={dashboardData?.tree_types_bar}

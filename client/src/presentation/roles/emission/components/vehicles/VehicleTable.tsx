@@ -1,5 +1,4 @@
-import React, { useState, useRef } from "react";
-import { format } from "date-fns";
+import React, { useState, useRef, useEffect } from "react";
 import {
   ColumnDef,
   SortingState,
@@ -20,10 +19,9 @@ import {
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
 import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, X } from "lucide-react";
-import { Vehicle, VehicleFormInput } from "@/core/api/emission-service";
+import { Vehicle } from "@/core/api/emission-service";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { VehicleDetails } from "./VehicleDetails";
-import { Vehicle as ApiVehicle } from "@/core/api/emission-service";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { formatTestDate } from "@/core/utils/dateUtils";
 import {
@@ -41,7 +39,11 @@ interface VehicleTableProps {
   onView: (vehicle: Vehicle) => void;
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicle: Vehicle) => void;
-  onEditVehicle?: (id: string, data: VehicleFormInput) => Promise<void>;
+  vehicleTypes?: string[];
+  engineTypes?: string[];
+  wheelCounts?: string[];
+  offices?: string[];
+  onRefreshOffices?: () => void;
 
   // Optional TanStack Table state
   sorting?: SortingState;
@@ -106,7 +108,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onView,
   onEdit,
   onDelete,
-  onEditVehicle,
+  vehicleTypes = [],
+  engineTypes = [],
+  wheelCounts = [],
+  offices = [],
+  onRefreshOffices,
 
   // Optional TanStack Table state props (with defaults)
   sorting = [{ id: "identifier", desc: false }],
@@ -125,6 +131,22 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
 
   // Add a ref to hold the refetch function from VehicleDetails
   const detailsRefetchRef = useRef<null | (() => void)>(null);
+
+  // Keep the details panel in sync with the latest list data after mutations
+  useEffect(() => {
+    if (!detailsVehicle) return;
+
+    const updatedVehicle = vehicles.find((vehicle) => vehicle.id === detailsVehicle.id);
+
+    if (!updatedVehicle) {
+      setDetailsVehicle(null);
+      return;
+    }
+
+    if (updatedVehicle !== detailsVehicle) {
+      setDetailsVehicle(updatedVehicle);
+    }
+  }, [vehicles, detailsVehicle]);
 
   // Define columns
   const columns: ColumnDef<Vehicle>[] = [
@@ -339,15 +361,11 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             vehicle={detailsVehicle}
             isOpen={true}
             onClose={() => setDetailsVehicle(null)}
-            onEditVehicle={async (data) => {
-              if (!detailsVehicle || !onEditVehicle) return;
-              await onEditVehicle(detailsVehicle.id, data);
-              // Refetch the details after update
-              if (detailsRefetchRef.current) detailsRefetchRef.current();
-            }}
-            // Pass a callback to get the refetch function
             onRegisterRefetch={(fn) => {
               detailsRefetchRef.current = fn;
+            }}
+            onStartEdit={(vehicle) => {
+              onEdit(vehicle);
             }}
           />
         </div>
@@ -366,7 +384,6 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       showDensityToggle={true}
       showColumnVisibility={true}
       showPagination={true}
-      defaultPageSize={10}
       defaultDensity="compact"
     />
   );

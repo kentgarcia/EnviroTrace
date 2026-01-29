@@ -94,6 +94,11 @@ function getMenuItems(
         path: `${basePath}/reports`,
         icon: <FileText size={18} />,
       },
+      {
+        label: "Settings",
+        path: `${basePath}/settings`,
+        icon: <Settings size={18} />,
+      },
     ];
   } else if (dashboardType === "urban-greening") {
     return [

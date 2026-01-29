@@ -27,11 +27,33 @@ export const EmissionReports: React.FC = () => {
     // Comprehensive report filters
     const [comprehensiveStatus, setComprehensiveStatus] = useState<string>("all");
     const [comprehensiveOffice, setComprehensiveOffice] = useState<string>("all");
+    const [comprehensiveEngineType, setComprehensiveEngineType] = useState<string>("all");
 
     // Fetch data for report generation - fetch ALL vehicles (no limit)
     const { data: officesData } = useOffices();
     const { data: vehiclesData, isLoading: isLoadingVehicles } = useVehicles(undefined, 0, 10000); // Fetch up to 10,000 vehicles for reports
     const { data: emissionTests, isLoading: isLoadingTests } = useEmissionTests(); // Fetch all emission tests
+
+    const engineTypeOptions = React.useMemo(() => {
+        if (!vehiclesData?.vehicles) {
+            return [] as string[];
+        }
+
+        const deduped = new Map<string, string>();
+        vehiclesData.vehicles.forEach(vehicle => {
+            const type = vehicle.engine_type?.trim();
+            if (!type) {
+                return;
+            }
+
+            const normalized = type.toLowerCase();
+            if (!deduped.has(normalized)) {
+                deduped.set(normalized, type);
+            }
+        });
+
+        return Array.from(deduped.values()).sort((a, b) => a.localeCompare(b));
+    }, [vehiclesData?.vehicles]);
 
     const reportTypes = [
         {
@@ -95,12 +117,49 @@ export const EmissionReports: React.FC = () => {
         try {
             // Handle quarterly testing report differently
             if (reportType === "quarterly-testing") {
-                // Create vehicle test map
+                // Create vehicle test map, preferring latest tests with diesel opacimeter data
                 const vehicleTestMap = new Map();
                 (emissionTests || []).forEach(test => {
                     const existing = vehicleTestMap.get(test.vehicle_id);
-                    if (!existing || new Date(test.test_date) > new Date(existing.test_date)) {
+                    if (!existing) {
                         vehicleTestMap.set(test.vehicle_id, test);
+                        return;
+                    }
+
+                    const existingDate = existing?.test_date ? new Date(existing.test_date).getTime() : null;
+                    const incomingDate = test?.test_date ? new Date(test.test_date).getTime() : null;
+
+                    if (incomingDate === null && existingDate === null) {
+                        const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
+                        const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
+
+                        if (!existingHasOpacimeter && newHasOpacimeter) {
+                            vehicleTestMap.set(test.vehicle_id, test);
+                        }
+                        return;
+                    }
+
+                    if (existingDate === null && incomingDate !== null) {
+                        vehicleTestMap.set(test.vehicle_id, test);
+                        return;
+                    }
+
+                    if (incomingDate === null) {
+                        return;
+                    }
+
+                    if (existingDate === null || incomingDate > existingDate) {
+                        vehicleTestMap.set(test.vehicle_id, test);
+                        return;
+                    }
+
+                    if (incomingDate === existingDate) {
+                        const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
+                        const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
+
+                        if (!existingHasOpacimeter && newHasOpacimeter) {
+                            vehicleTestMap.set(test.vehicle_id, test);
+                        }
                     }
                 });
 
@@ -138,11 +197,20 @@ export const EmissionReports: React.FC = () => {
                             if (comprehensiveStatus === "failed") return test?.result === false;
                         }
 
+                        // Filter by engine type if selected
+                        if (comprehensiveEngineType !== "all") {
+                            const vehicleEngine = v.engine_type?.trim().toLowerCase() || "";
+                            if (vehicleEngine !== comprehensiveEngineType.trim().toLowerCase()) {
+                                return false;
+                            }
+                        }
+
                         return true;
                     })
                     .map(v => {
                         const test = vehicleTestMap.get(v.id);
                         const identifier = v.plate_number || v.chassis_number || v.registration_number || "N/A";
+                        const engineType = v.engine_type?.toLowerCase() || "";
                         return {
                             vehicleId: v.id,
                             driverName: v.driver_name || "N/A",
@@ -153,6 +221,8 @@ export const EmissionReports: React.FC = () => {
                             yearAcquired: v.year_acquired || null,
                             co: test?.co_level ?? null,
                             hc: test?.hc_level ?? null,
+                            opacimeter: engineType.includes("diesel") ? test?.opacimeter_result ?? null : null,
+                            engineType: v.engine_type || "",
                             testResult: (test?.result === true ? "PASSED" : test?.result === false ? "FAILED" : "NOT TESTED") as "PASSED" | "FAILED" | "NOT TESTED",
                             testDate: test?.test_date ? new Date(test.test_date).toLocaleDateString() : null,
                         };
@@ -212,12 +282,49 @@ export const EmissionReports: React.FC = () => {
         }
 
         try {
-            // Create vehicle test map
+            // Create vehicle test map, preferring latest tests with diesel opacimeter data
             const vehicleTestMap = new Map();
             (emissionTests || []).forEach(test => {
                 const existing = vehicleTestMap.get(test.vehicle_id);
-                if (!existing || new Date(test.test_date) > new Date(existing.test_date)) {
+                if (!existing) {
                     vehicleTestMap.set(test.vehicle_id, test);
+                    return;
+                }
+
+                const existingDate = existing?.test_date ? new Date(existing.test_date).getTime() : null;
+                const incomingDate = test?.test_date ? new Date(test.test_date).getTime() : null;
+
+                if (incomingDate === null && existingDate === null) {
+                    const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
+                    const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
+
+                    if (!existingHasOpacimeter && newHasOpacimeter) {
+                        vehicleTestMap.set(test.vehicle_id, test);
+                    }
+                    return;
+                }
+
+                if (existingDate === null && incomingDate !== null) {
+                    vehicleTestMap.set(test.vehicle_id, test);
+                    return;
+                }
+
+                if (incomingDate === null) {
+                    return;
+                }
+
+                if (existingDate === null || incomingDate > existingDate) {
+                    vehicleTestMap.set(test.vehicle_id, test);
+                    return;
+                }
+
+                if (incomingDate === existingDate) {
+                    const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
+                    const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
+
+                    if (!existingHasOpacimeter && newHasOpacimeter) {
+                        vehicleTestMap.set(test.vehicle_id, test);
+                    }
                 }
             });
 
@@ -254,11 +361,20 @@ export const EmissionReports: React.FC = () => {
                 });
             }
 
+            if (comprehensiveEngineType !== "all") {
+                const selectedEngine = comprehensiveEngineType.trim().toLowerCase();
+                filteredVehicles = filteredVehicles.filter(v => {
+                    const vehicleEngine = v.engine_type?.trim().toLowerCase() || "";
+                    return vehicleEngine === selectedEngine;
+                });
+            }
+
             await generateComprehensiveTestingReport({
                 year: selectedYear !== "all" ? parseInt(selectedYear) : undefined,
                 quarter: selectedQuarter !== "all" ? parseInt(selectedQuarter.replace("Q", "")) : undefined,
                 office: comprehensiveOffice !== "all" ? comprehensiveOffice : undefined,
                 status: comprehensiveStatus,
+                engineType: comprehensiveEngineType !== "all" ? comprehensiveEngineType : undefined,
                 vehicles: filteredVehicles,
                 tests: emissionTests || [],
             });
@@ -414,6 +530,23 @@ export const EmissionReports: React.FC = () => {
                                                         <SelectItem value="passed">Passed Only</SelectItem>
                                                         <SelectItem value="failed">Failed Only</SelectItem>
                                                         <SelectItem value="not-tested">Not Tested</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label>Engine Type Filter</Label>
+                                                <Select value={comprehensiveEngineType} onValueChange={setComprehensiveEngineType}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Engine Types</SelectItem>
+                                                        {engineTypeOptions.map(type => (
+                                                            <SelectItem key={type} value={type}>
+                                                                {type}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>

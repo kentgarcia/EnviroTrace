@@ -94,7 +94,7 @@ export const useOverviewData = () => {
 
   // Transform data for charts
   const treeRequestCharts = transformTreeRequestData(treeRequests || []);
-  const plantingCharts = transformPlantingData(plantingStats);
+  const plantingCharts = transformPlantingData(plantingStats, recentPlantings || []);
   const saplingCharts = transformSaplingData(saplingStats);
   const feeData = calculateFeeDataFromRecords(feeRecords || []);
 
@@ -126,6 +126,7 @@ export const useOverviewData = () => {
     urgencyData: treeRequestCharts.urgencyBar,
     plantingTypeData: plantingCharts.typeBreakdown,
     speciesData: plantingCharts.speciesBar,
+    saplingSpeciesFallback: saplingCharts.speciesBreakdown,
 
     // Fee data
     feeData,
@@ -179,31 +180,118 @@ export const transformTreeRequestData = (requests: any[]) => {
 };
 
 // Transform planting data for charts
-export const transformPlantingData = (plantingStats: any) => {
-  if (!plantingStats) return { typeBreakdown: [], speciesBar: [] };
+const normalizeLabel = (value?: string | null) =>
+  value
+    ? value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
+    : "Unknown";
 
-  const typeBreakdown = [
-    {
-      id: "ornamental_plants",
-      label: "Ornamental Plants",
-      value: plantingStats.total_ornamental_plants || 0,
-    },
-    { id: "trees", label: "Trees", value: plantingStats.total_trees || 0 },
-    { id: "seeds", label: "Seeds", value: plantingStats.total_seeds || 0 },
-    {
-      id: "seeds_private",
-      label: "Seeds (Private)",
-      value: plantingStats.total_seeds_private || 0,
-    },
-  ];
+const normalizeId = (value?: string | null) =>
+  value && value.trim()
+    ? value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_")
+    : "unknown";
 
-  // Extract species data if available
-  const speciesBar =
-    plantingStats.species_breakdown?.map((species: any) => ({
-      id: species.species_name.toLowerCase().replace(/\s+/g, "_"),
-      label: species.species_name,
-      value: species.total_quantity,
-    })) || [];
+export const transformPlantingData = (
+  plantingStats: any,
+  recentPlantings: any[] = []
+) => {
+  if (!plantingStats && (!recentPlantings || recentPlantings.length === 0))
+    return { typeBreakdown: [], speciesBar: [] };
+
+  const typeBreakdown: Array<{ id: string; label: string; value: number }> = [];
+
+  if (plantingStats?.by_type && typeof plantingStats.by_type === "object") {
+    Object.entries(plantingStats.by_type).forEach(([type, metrics]: [string, any]) => {
+      const quantity = Number(metrics?.quantity ?? metrics?.count ?? 0) || 0;
+      typeBreakdown.push({
+        id: normalizeId(type),
+        label: normalizeLabel(type),
+        value: quantity,
+      });
+    });
+  }
+
+  if (typeBreakdown.length === 0 && plantingStats) {
+    // Backward compatibility with legacy statistics payload
+    const legacyBreakdown = [
+      {
+        id: "ornamental_plants",
+        label: "Ornamental Plants",
+        value: plantingStats.total_ornamental_plants || 0,
+      },
+      { id: "trees", label: "Trees", value: plantingStats.total_trees || 0 },
+      { id: "seeds", label: "Seeds", value: plantingStats.total_seeds || 0 },
+      {
+        id: "seeds_private",
+        label: "Seeds (Private)",
+        value: plantingStats.total_seeds_private || 0,
+      },
+    ];
+    legacyBreakdown
+      .filter((item) => item.value)
+      .forEach((item) => typeBreakdown.push(item));
+  }
+
+  typeBreakdown.sort((a, b) => b.value - a.value);
+
+  const speciesAccumulator: Record<string, number> = {};
+  const registerSpecies = (name?: string, quantity?: number) => {
+    if (!name) return;
+    const safeName = name.trim();
+    if (!safeName) return;
+    const total = Number(quantity ?? 0) || 0;
+    if (total <= 0) return;
+    speciesAccumulator[safeName] = (speciesAccumulator[safeName] || 0) + total;
+  };
+
+  if (Array.isArray(plantingStats?.species_breakdown)) {
+    plantingStats.species_breakdown.forEach((species: any) => {
+      registerSpecies(species?.species_name, species?.total_quantity);
+    });
+  } else if (
+    plantingStats?.by_species &&
+    typeof plantingStats.by_species === "object"
+  ) {
+    Object.entries(plantingStats.by_species).forEach(
+      ([species, metrics]: [string, any]) => {
+        registerSpecies(species, metrics?.quantity ?? metrics?.count);
+      }
+    );
+  }
+
+  if (Object.keys(speciesAccumulator).length === 0) {
+    (recentPlantings || []).forEach((planting: any) => {
+      registerSpecies(planting?.species_name, planting?.quantity_planted);
+
+      const plantsField = planting?.plants;
+      if (Array.isArray(plantsField)) {
+        plantsField.forEach((plant: any) =>
+          registerSpecies(plant?.species_name ?? plant?.name, plant?.quantity)
+        );
+      } else if (typeof plantsField === "string" && plantsField.trim()) {
+        try {
+          const parsed = JSON.parse(plantsField);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((plant: any) =>
+              registerSpecies(
+                plant?.species_name ?? plant?.name,
+                plant?.quantity ?? plant?.qty
+              )
+            );
+          }
+        } catch (error) {
+          // Silently ignore malformed JSON
+        }
+      }
+    });
+  }
+
+  const speciesBar = Object.entries(speciesAccumulator)
+    .map(([species, total]) => ({
+      id: normalizeId(species),
+      label: species,
+      value: total,
+    }))
+    .sort((a, b) => b.value - a.value);
 
   return { typeBreakdown, speciesBar };
 };
@@ -213,27 +301,82 @@ export const transformSaplingData = (saplingStats: any) => {
   if (!saplingStats)
     return { speciesBreakdown: [], statusBreakdown: [], purposeBreakdown: [] };
 
-  const speciesBreakdown =
-    saplingStats.species_breakdown?.map((species: any) => ({
-      species: species.species_name,
-      count: species.total_quantity,
-    })) || [];
+  const speciesBreakdown: Array<{ id: string; label: string; value: number } & {
+    count?: number;
+  }> = [];
 
-  const statusBreakdown =
-    saplingStats.status_breakdown?.map((status: any) => ({
-      id: status.status,
-      label: status.status
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase()),
-      value: status.count,
-    })) || [];
+  if (saplingStats?.by_species && typeof saplingStats.by_species === "object") {
+    Object.entries(saplingStats.by_species).forEach(
+      ([species, metrics]: [string, any]) => {
+        const quantity = Number(metrics?.quantity ?? metrics?.count ?? 0) || 0;
+        const count = Number(metrics?.count ?? 0) || 0;
+        speciesBreakdown.push({
+          id: normalizeId(species),
+          label: species || "Unknown",
+          value: quantity,
+          count,
+        });
+      }
+    );
+  } else if (Array.isArray(saplingStats?.species_breakdown)) {
+    saplingStats.species_breakdown.forEach((species: any) => {
+      speciesBreakdown.push({
+        id: normalizeId(species?.species_name),
+        label: species?.species_name || "Unknown",
+        value: Number(species?.total_quantity ?? 0) || 0,
+        count: Number(species?.count ?? 0) || 0,
+      });
+    });
+  }
 
-  const purposeBreakdown =
-    saplingStats.purpose_breakdown?.map((purpose: any) => ({
-      id: purpose.purpose,
-      label: purpose.purpose.replace(/\b\w/g, (l) => l.toUpperCase()),
-      value: purpose.count,
-    })) || [];
+  speciesBreakdown.sort((a, b) => b.value - a.value);
+
+  const statusBreakdown: Array<{ id: string; label: string; value: number }> = [];
+  if (saplingStats?.by_status && typeof saplingStats.by_status === "object") {
+    Object.entries(saplingStats.by_status).forEach(
+      ([status, count]: [string, any]) => {
+        statusBreakdown.push({
+          id: normalizeId(status),
+          label: normalizeLabel(status),
+          value: Number(count ?? 0) || 0,
+        });
+      }
+    );
+  } else if (Array.isArray(saplingStats?.status_breakdown)) {
+    saplingStats.status_breakdown.forEach((status: any) => {
+      statusBreakdown.push({
+        id: normalizeId(status?.status),
+        label: normalizeLabel(status?.status),
+        value: Number(status?.count ?? 0) || 0,
+      });
+    });
+  }
+
+  statusBreakdown.sort((a, b) => b.value - a.value);
+
+  const purposeBreakdown: Array<{ id: string; label: string; value: number }> = [];
+  if (saplingStats?.by_purpose && typeof saplingStats.by_purpose === "object") {
+    Object.entries(saplingStats.by_purpose).forEach(
+      ([purpose, metrics]: [string, any]) => {
+        const quantity = Number(metrics?.quantity ?? metrics?.count ?? 0) || 0;
+        purposeBreakdown.push({
+          id: normalizeId(purpose),
+          label: normalizeLabel(purpose),
+          value: quantity,
+        });
+      }
+    );
+  } else if (Array.isArray(saplingStats?.purpose_breakdown)) {
+    saplingStats.purpose_breakdown.forEach((purpose: any) => {
+      purposeBreakdown.push({
+        id: normalizeId(purpose?.purpose),
+        label: normalizeLabel(purpose?.purpose),
+        value: Number(purpose?.count ?? 0) || 0,
+      });
+    });
+  }
+
+  purposeBreakdown.sort((a, b) => b.value - a.value);
 
   return { speciesBreakdown, statusBreakdown, purposeBreakdown };
 };

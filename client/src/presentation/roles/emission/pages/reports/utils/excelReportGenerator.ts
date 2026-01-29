@@ -419,6 +419,7 @@ interface ComprehensiveReportConfig {
   quarter?: number;
   office?: string;
   status?: string; // "all" | "passed" | "failed" | "not-tested"
+  engineType?: string;
   vehicles: VehicleWithTestData[];
   tests: EmissionTest[];
 }
@@ -426,17 +427,63 @@ interface ComprehensiveReportConfig {
 export const generateComprehensiveTestingReport = async (
   config: ComprehensiveReportConfig
 ) => {
-  const { year, quarter, office, status, vehicles, tests } = config;
+  const { year, quarter, office, status, engineType, vehicles, tests } = config;
 
   // Create a map of vehicle ID to latest test
   const vehicleTestMap = new Map<string, EmissionTest>();
   tests.forEach((test) => {
     const existing = vehicleTestMap.get(test.vehicle_id);
-    if (
-      !existing ||
-      new Date(test.test_date) > new Date(existing.test_date)
-    ) {
+    if (!existing) {
       vehicleTestMap.set(test.vehicle_id, test);
+      return;
+    }
+
+    const existingDate = existing?.test_date
+      ? new Date(existing.test_date).getTime()
+      : null;
+    const incomingDate = test?.test_date
+      ? new Date(test.test_date).getTime()
+      : null;
+
+    if (incomingDate === null && existingDate === null) {
+      const existingHasOpacimeter =
+        existing.opacimeter_result !== undefined &&
+        existing.opacimeter_result !== null;
+      const newHasOpacimeter =
+        test.opacimeter_result !== undefined &&
+        test.opacimeter_result !== null;
+
+      if (!existingHasOpacimeter && newHasOpacimeter) {
+        vehicleTestMap.set(test.vehicle_id, test);
+      }
+      return;
+    }
+
+    if (existingDate === null && incomingDate !== null) {
+      vehicleTestMap.set(test.vehicle_id, test);
+      return;
+    }
+
+    if (incomingDate === null) {
+      return;
+    }
+
+    if (existingDate === null || incomingDate > existingDate) {
+      vehicleTestMap.set(test.vehicle_id, test);
+      return;
+    }
+
+    if (incomingDate === existingDate) {
+      const existingHasOpacimeter =
+        existing.opacimeter_result !== undefined &&
+        existing.opacimeter_result !== null;
+      const newHasOpacimeter =
+        test.opacimeter_result !== undefined &&
+        test.opacimeter_result !== null;
+
+      if (!existingHasOpacimeter && newHasOpacimeter) {
+        vehicleTestMap.set(test.vehicle_id, test);
+      }
     }
   });
 
@@ -475,6 +522,14 @@ export const generateComprehensiveTestingReport = async (
     });
   }
 
+  if (engineType) {
+    const engineValue = engineType.trim().toLowerCase();
+    filteredVehicles = filteredVehicles.filter((v) => {
+      const vehicleEngine = v.engine_type?.trim().toLowerCase() || "";
+      return vehicleEngine === engineValue;
+    });
+  }
+
   // Create workbook
   const workbook = XLSX.utils.book_new();
 
@@ -485,10 +540,12 @@ export const generateComprehensiveTestingReport = async (
     "OFFICE",
     "PLATE NUMBER",
     "VEHICLE CATEGORY",
+    "ENGINE TYPE",
     "VEHICLE DESCRIPTION",
     "YEAR ACQUIRED",
     "CO (%)",
     "HC (ppm)",
+    "OPACIMETER (%)",
     "TEST RESULT",
     "DATE",
   ];
@@ -503,17 +560,32 @@ export const generateComprehensiveTestingReport = async (
       vehicle.registration_number ||
       "N/A";
 
+    const engineType = vehicle.engine_type || "";
+    const coLevel = typeof test?.co_level === "number" ? test.co_level : null;
+    const hcLevel = typeof test?.hc_level === "number" ? test.hc_level : null;
+    const opacimeterLevel =
+      engineType.toLowerCase().includes("diesel") &&
+      typeof test?.opacimeter_result === "number"
+        ? test.opacimeter_result
+        : null;
+
     dataRows.push([
       index + 1, // NO
       vehicle.driver_name || "N/A",
       vehicle.office?.name || "N/A",
       identifier,
       vehicle.vehicle_type || "N/A",
+      engineType || "N/A",
       vehicle.description || "",
-      vehicle.year_acquired || "",
-      test?.co_level?.toFixed(2) || "",
-      test?.hc_level ? Math.round(test.hc_level) : "",
-      test?.result === true ? "PASSED" : test?.result === false ? "FAILED" : "NOT TESTED",
+      vehicle.year_acquired ?? "",
+      coLevel !== null ? coLevel.toFixed(2) : "",
+      hcLevel !== null ? Math.round(hcLevel) : "",
+      opacimeterLevel !== null ? opacimeterLevel.toFixed(2) : "",
+      test?.result === true
+        ? "PASSED"
+        : test?.result === false
+        ? "FAILED"
+        : "NOT TESTED",
       test?.test_date
         ? new Date(test.test_date).toLocaleDateString()
         : "N/A",
@@ -528,13 +600,15 @@ export const generateComprehensiveTestingReport = async (
   worksheet["!cols"] = [
     { wch: 6 },  // NO
     { wch: 25 }, // DRIVER'S NAME
-    { wch: 30 }, // OFFICE
+    { wch: 28 }, // OFFICE
     { wch: 15 }, // PLATE NUMBER
-    { wch: 20 }, // VEHICLE CATEGORY
+    { wch: 18 }, // VEHICLE CATEGORY
+    { wch: 16 }, // ENGINE TYPE
     { wch: 35 }, // VEHICLE DESCRIPTION
     { wch: 12 }, // YEAR ACQUIRED
     { wch: 10 }, // CO (%)
     { wch: 10 }, // HC (ppm)
+    { wch: 12 }, // OPACIMETER (%)
     { wch: 12 }, // TEST RESULT
     { wch: 12 }, // DATE
   ];
@@ -614,6 +688,7 @@ export const generateComprehensiveTestingReport = async (
     year && `${year}`,
     quarter && `Q${quarter}`,
     office && office !== "all" ? office.substring(0, 10) : "All",
+    engineType && engineType.trim().replace(/\s+/g, "_"),
   ]
     .filter(Boolean)
     .join("_");

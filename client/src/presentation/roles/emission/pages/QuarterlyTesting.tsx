@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
-import { BarChart3, Settings, Table, Users, RefreshCw } from "lucide-react";
+import { BarChart3, Table, Users, RefreshCw } from "lucide-react";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { cn } from "@/core/utils/utils";
 import { Card } from "@/presentation/components/shared/ui/card";
@@ -8,7 +8,6 @@ import { QuarterlyTestingFilters } from "@/presentation/roles/emission/component
 import VehicleTestingSpreadsheet from "@/presentation/roles/emission/components/quarterly/VehicleTestingSpreadsheet";
 import { QuickTestForm } from "@/presentation/roles/emission/components/quarterly/QuickTestForm";
 import { QuarterlyOverview } from "@/presentation/roles/emission/components/quarterly/QuarterlyOverview";
-import { QuarterInfoEditor } from "@/presentation/roles/emission/components/quarterly/QuarterInfoEditor";
 import { useRevampedQuarterlyTesting } from "@/presentation/roles/emission/components/quarterly/useRevampedQuarterlyTesting";
 
 // Main Component
@@ -111,17 +110,6 @@ export default function QuarterlyTesting() {
                   <Table className="w-4 h-4 inline mr-2" />
                   Vehicle Testing
                 </button>
-                <button
-                  onClick={() => setActiveTab("quarters")}
-                  className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === "quarters"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
-                >
-                  <Settings className="w-4 h-4 inline mr-2" />
-                  Settings
-                </button>
               </nav>
             </div>
           </div>
@@ -155,13 +143,6 @@ export default function QuarterlyTesting() {
                   officeGroups={officeGroups}
                   selectedOffices={selectedOffices}
                 />
-              )}
-
-              {/* Manage Quarters Tab */}
-              {activeTab === "quarters" && (
-                <Card className="border border-slate-200 shadow-none bg-white p-6">
-                  <QuarterInfoEditor selectedYear={selectedYear} />
-                </Card>
               )}
 
               {/* Vehicle Testing Tab */}

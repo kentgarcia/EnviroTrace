@@ -6,7 +6,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/presentation/components/shared/ui/tabs";
-import { Input } from "@/presentation/components/shared/ui/input";
 import {
   Table,
   TableBody,
@@ -19,7 +18,6 @@ import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
 import {
   Vehicle,
-  VehicleFormInput,
   useEmissionTests
 } from "@/core/api/emission-service";
 import { useVehicle } from "@/core/api/vehicle-service";
@@ -29,22 +27,18 @@ interface VehicleDetailsProps {
   vehicle: Vehicle | null;
   isOpen: boolean;
   onClose: () => void;
-  onEditVehicle?: (data: VehicleFormInput) => void;
-  isEditing?: boolean;
   onRegisterRefetch?: (refetch: () => void) => void;
+  onStartEdit?: (vehicle: Vehicle) => void;
 }
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   vehicle,
   isOpen,
   onClose,
-  onEditVehicle,
-  isEditing: isEditingProp = false,
   onRegisterRefetch,
+  onStartEdit,
 }) => {
   const [activeTab, setActiveTab] = useState("info");
-  const [isEditing, setIsEditing] = useState(isEditingProp);
-  const [editData, setEditData] = useState<VehicleFormInput | null>(null);
 
   const {
     data: vehicleData,
@@ -62,24 +56,6 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
   const fullVehicle = vehicleData || vehicle;
   const driverHistory = fullVehicle?.driverHistory || [];
-
-  React.useEffect(() => {
-    if (isEditing && fullVehicle) {
-      setEditData({
-        plateNumber: fullVehicle.plate_number || "",
-        chassisNumber: fullVehicle.chassis_number || "",
-        registrationNumber: fullVehicle.registration_number || "",
-        driverName: fullVehicle.driver_name,
-        contactNumber: fullVehicle.contact_number || "",
-        officeName: fullVehicle.office?.name || "Unknown Office",
-        vehicleType: fullVehicle.vehicle_type,
-        engineType: fullVehicle.engine_type,
-        wheels: fullVehicle.wheels,
-        description: fullVehicle.description || "",
-        yearAcquired: fullVehicle.year_acquired,
-      });
-    }
-  }, [isEditing, fullVehicle?.id]);
 
   const {
     data: testData,
@@ -125,24 +101,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-lg border-slate-200"
-              onClick={() => setIsEditing(false)}
-            >
-              Cancel
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              className="rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white"
-              onClick={() => setIsEditing(true)}
-            >
-              Edit Details
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white"
+            onClick={() => {
+              if (!fullVehicle) return;
+              if (onStartEdit) {
+                onStartEdit(fullVehicle);
+              }
+            }}
+          >
+            Edit Details
+          </Button>
         </div>
       </div>
 
@@ -168,182 +138,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </TabsList>
 
         <TabsContent value="info" className="space-y-6 mt-0 outline-none">
-          {isEditing && editData ? (
-            <form
-              className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-xl border border-slate-200"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (onEditVehicle && editData) {
-                  await onEditVehicle(editData);
-                  setIsEditing(false);
-                }
-              }}
-            >
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Plate Number
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.plateNumber}
-                  onChange={(e) =>
-                    setEditData({ ...editData, plateNumber: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Chassis Number
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.chassisNumber}
-                  onChange={(e) =>
-                    setEditData({ ...editData, chassisNumber: e.target.value })
-                  }
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Registration Number
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.registrationNumber}
-                  onChange={(e) =>
-                    setEditData({ ...editData, registrationNumber: e.target.value })
-                  }
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Driver Name
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.driverName}
-                  onChange={(e) =>
-                    setEditData({ ...editData, driverName: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Contact Number
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.contactNumber}
-                  onChange={(e) =>
-                    setEditData({ ...editData, contactNumber: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Office
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.officeName}
-                  onChange={(e) =>
-                    setEditData({ ...editData, officeName: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Vehicle Type
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.vehicleType}
-                  onChange={(e) =>
-                    setEditData({ ...editData, vehicleType: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Engine Type
-                </label>
-                <Input
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.engineType}
-                  onChange={(e) =>
-                    setEditData({ ...editData, engineType: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Wheels
-                </label>
-                <Input
-                  type="number"
-                  min={2}
-                  max={18}
-                  className="rounded-lg border-slate-200 focus:ring-[#0033a0] focus:border-[#0033a0] h-10"
-                  value={editData.wheels}
-                  onChange={(e) =>
-                    setEditData({ ...editData, wheels: Number(e.target.value) })
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Description (Optional)
-                </label>
-                <textarea
-                  className="w-full min-h-[80px] px-3 py-2 rounded-lg border border-slate-200 focus:ring-1 focus:ring-[#0033a0] focus:border-[#0033a0] resize-none"
-                  value={editData.description || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, description: e.target.value })
-                  }
-                  placeholder="Additional notes or description about the vehicle..."
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-700">
-                  Year Acquired (Optional)
-                </label>
-                <Input
-                  type="number"
-                  min={1900}
-                  max={2026}
-                  value={editData.yearAcquired || ""}
-                  onChange={(e) =>
-                    setEditData({ ...editData, yearAcquired: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                  placeholder="Optional"
-                  className="rounded-lg"
-                />
-              </div>
-              <div className="md:col-span-2 pt-4 flex gap-3">
-                <Button 
-                  type="submit" 
-                  className="flex-1 rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white font-semibold h-10"
-                >
-                  Save Changes
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-lg border-slate-200 h-10"
-                  onClick={() => setIsEditing(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : !fullVehicle ? (
+          {!fullVehicle ? (
             <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200 text-slate-500">
               Vehicle data not available.
             </div>

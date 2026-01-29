@@ -54,15 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/presentation/components/shared/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/presentation/components/shared/ui/pagination";
+import { useSettingsStore } from "@/core/hooks/useSettingsStore";
 
 export default function Vehicles() {
   // Modal and dialog states
@@ -72,17 +64,23 @@ export default function Vehicles() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   // Pagination state
-  const [pagination, setPagination] = useState(() => {
-    const saved = localStorage.getItem("vehiclesPageSize");
-    return {
-      pageIndex: 0,
-      pageSize: saved ? Number(saved) : 25,
-    };
+  const { rowsPerPage } = useSettingsStore();
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: rowsPerPage,
   });
 
   useEffect(() => {
-    localStorage.setItem("vehiclesPageSize", String(pagination.pageSize));
-  }, [pagination.pageSize]);
+    setPagination((prev) => {
+      if (prev.pageSize === rowsPerPage) {
+        return prev;
+      }
+      return {
+        pageIndex: 0,
+        pageSize: rowsPerPage,
+      };
+    });
+  }, [rowsPerPage]);
 
   // Filter states
   const [search, setSearch] = useState("");
@@ -194,6 +192,13 @@ export default function Vehicles() {
       return;
     }
 
+    const normalizedDescription =
+      vehicleData.description === undefined
+        ? null
+        : vehicleData.description.trim() === ""
+        ? null
+        : vehicleData.description.trim();
+
     // Convert from UI VehicleFormInput to API VehicleInput
     const apiVehicleData = {
       driver_name: vehicleData.driverName,
@@ -205,8 +210,8 @@ export default function Vehicles() {
       registration_number: vehicleData.registrationNumber || undefined,
       vehicle_type: vehicleData.vehicleType,
       wheels: vehicleData.wheels,
-      description: vehicleData.description || undefined,
-      year_acquired: vehicleData.yearAcquired || undefined
+      description: normalizedDescription,
+      year_acquired: vehicleData.yearAcquired ?? null
     };
 
     try {
@@ -234,6 +239,13 @@ export default function Vehicles() {
       return;
     }
 
+    const normalizedDescription =
+      vehicle.description === undefined
+        ? null
+        : vehicle.description.trim() === ""
+        ? null
+        : vehicle.description.trim();
+
     // Convert from UI VehicleFormInput to API VehicleInput
     const apiVehicle = {
       driver_name: vehicle.driverName,
@@ -245,8 +257,8 @@ export default function Vehicles() {
       registration_number: vehicle.registrationNumber || undefined,
       vehicle_type: vehicle.vehicleType,
       wheels: vehicle.wheels,
-      description: vehicle.description || undefined,
-      year_acquired: vehicle.yearAcquired || undefined
+      description: normalizedDescription,
+      year_acquired: vehicle.yearAcquired ?? null
     };
 
     try {
@@ -486,7 +498,7 @@ export default function Vehicles() {
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 p-1">
+                      <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto p-1">
                         <DropdownMenuItem onClick={() => setOffice("")} className="rounded-md cursor-pointer">
                           All Offices
                         </DropdownMenuItem>
@@ -509,7 +521,7 @@ export default function Vehicles() {
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 p-1">
+                      <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto p-1">
                         <DropdownMenuItem onClick={() => setVehicleType("")} className="rounded-md cursor-pointer">
                           All Types
                         </DropdownMenuItem>
@@ -532,7 +544,7 @@ export default function Vehicles() {
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48 p-1">
+                      <DropdownMenuContent align="end" className="w-48 max-h-64 overflow-y-auto p-1">
                         <DropdownMenuItem onClick={() => setEngineType("")} className="rounded-md cursor-pointer">
                           All Engines
                         </DropdownMenuItem>
@@ -562,43 +574,6 @@ export default function Vehicles() {
                       onView={handleViewVehicle}
                       onEdit={handleEditVehicle}
                       onDelete={handleDeleteConfirm}
-                      onEditVehicle={async (id: string, data: VehicleFormInput) => {
-                        // Find the office ID by office name
-                        const officeId = getOfficeIdByName(data.officeName);
-                        if (!officeId) {
-                          toast.error(`Office "${data.officeName}" not found`);
-                          return;
-                        }
-
-                        // Convert from UI VehicleFormInput to API VehicleInput
-                        const apiVehicleData = {
-                          driver_name: data.driverName,
-                          contact_number: data.contactNumber,
-                          engine_type: data.engineType,
-                          office_id: officeId,
-                          plate_number: data.plateNumber || undefined,
-                          chassis_number: data.chassisNumber || undefined,
-                          registration_number: data.registrationNumber || undefined,
-                          vehicle_type: data.vehicleType,
-                          wheels: data.wheels,
-                          description: data.description || undefined,
-                          year_acquired: data.yearAcquired || undefined
-                        };
-
-                        try {
-                          await updateVehicleMutation.mutateAsync({
-                            id,
-                            vehicleData: apiVehicleData,
-                          });
-
-                          toast.success("Vehicle updated successfully");
-                          await refetch();
-                        } catch (error: any) {
-                          console.error("Error updating vehicle:", error);
-                          const errorMessage = error.response?.data?.detail || error.message || "Failed to update vehicle";
-                          toast.error(errorMessage);
-                        }
-                      }}
                     />
                   )}
                 </div>
@@ -614,7 +589,8 @@ export default function Vehicles() {
         onEditModalClose={() => {
           setEditModalOpen(false);
           setSelectedVehicle(null);
-        }} onEditVehicle={handleSaveEdit}
+        }}
+        onEditVehicle={handleSaveEdit}
         selectedVehicle={selectedVehicle}
         isLoading={isLoading}
         vehicleTypes={vehicleTypes}
@@ -622,15 +598,19 @@ export default function Vehicles() {
         wheelCounts={wheelCounts.map((w) => w.toString())}
         offices={availableOfficeNames}
         onRefreshOffices={refetchOffices}
-      />      <VehicleDetails
-        vehicle={selectedVehicle}
-        isOpen={viewModalOpen}
-        onClose={() => {
-          setViewModalOpen(false);
-          setSelectedVehicle(null);
-        }}
-        onEditVehicle={handleSaveEdit}
       />
+
+      {viewModalOpen && (
+        <VehicleDetails
+          vehicle={selectedVehicle}
+          isOpen={viewModalOpen}
+          onClose={() => {
+            setViewModalOpen(false);
+            setSelectedVehicle(null);
+          }}
+          onStartEdit={handleEditVehicle}
+        />
+      )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

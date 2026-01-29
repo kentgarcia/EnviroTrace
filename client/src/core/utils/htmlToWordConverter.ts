@@ -94,13 +94,27 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
         const thead = table.querySelector("thead");
         const tbody = table.querySelector("tbody");
 
+        let headerRows: HTMLTableRowElement[] = thead
+          ? Array.from(thead.querySelectorAll("tr"))
+          : [];
+
+        let bodyRows: HTMLTableRowElement[] = tbody
+          ? Array.from(tbody.querySelectorAll("tr"))
+          : [];
+
+        // Fallback: if the table has no thead, treat the first body row as header
+        if (headerRows.length === 0 && bodyRows.length > 0) {
+          headerRows = [bodyRows[0]];
+          bodyRows = bodyRows.slice(1);
+        }
+
         // Process header rows
-        if (thead) {
-          thead.querySelectorAll("tr").forEach((tr) => {
+        if (headerRows.length > 0) {
+          headerRows.forEach((tr) => {
             const cells: TableCell[] = [];
             tr.querySelectorAll("th, td").forEach((cell) => {
               const cellElement = cell as HTMLElement;
-              const textColor = getTextColor(cellElement);
+              const textColor = getTextColor(cellElement) || "FFFFFF";
               const bold = true; // Headers are always bold
               const bgColor = getBackgroundColor(cellElement) || "0033A0";
 
@@ -112,7 +126,7 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
                         new TextRun({
                           text: cellElement.textContent?.trim() || "",
                           bold: bold,
-                          color: textColor,
+                          color: "FFFFFF",
                           size: 18,
                           font: "Arial",
                         }),
@@ -143,6 +157,7 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
                 new TableRow({
                   children: cells,
                   cantSplit: true,
+                  tableHeader: true,
                 })
               );
             }
@@ -150,8 +165,8 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
         }
 
         // Process tbody
-        if (tbody) {
-          tbody.querySelectorAll("tr").forEach((tr) => {
+        if (bodyRows.length > 0) {
+          bodyRows.forEach((tr) => {
             const cells: TableCell[] = [];
             tr.querySelectorAll("td").forEach((cell, cellIndex) => {
               const cellElement = cell as HTMLElement;
@@ -219,6 +234,14 @@ export const exportHTMLToWord = async (html: string, fileName: string) => {
           width: {
             size: 100,
             type: WidthType.PERCENTAGE,
+          },
+          look: {
+            firstRow: true,
+            lastRow: false,
+            firstColumn: false,
+            lastColumn: false,
+            noHBand: false,
+            noVBand: false,
           },
         });
       } catch (error) {
