@@ -1,7 +1,9 @@
-from typing import Optional, Dict, Any, List
+import base64
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any, List, Callable
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import desc, or_, func
+from sqlalchemy import desc, or_, func, and_
 from uuid import UUID
 import traceback
 import re
@@ -72,9 +74,128 @@ class CRUDOffice(CRUDBase[Office, OfficeCreate, OfficeUpdate]):
         return {"offices": offices, "total": total}
 
 class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
+    _DEFAULT_LIMIT = 100
+    _MAX_LIMIT = 200
+
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Vehicle]:
         """Synchronous version of get for use with sync sessions"""
         return db.query(self.model).filter(self.model.id == id).first()
+
+    def _sanitize_limit(self, limit: Optional[int]) -> int:
+        if limit is None:
+            return self._DEFAULT_LIMIT
+        try:
+            limit_value = int(limit)
+        except (TypeError, ValueError):
+            limit_value = self._DEFAULT_LIMIT
+        return max(1, min(limit_value, self._MAX_LIMIT))
+
+    def _encode_vehicle_cursor(self, vehicle: Vehicle) -> str:
+        created_at = vehicle.created_at or datetime.now(timezone.utc)
+        payload = f"{created_at.isoformat()}|{vehicle.id}"
+        encoded = base64.urlsafe_b64encode(payload.encode("ascii")).decode("ascii")
+        return encoded
+
+    def _decode_vehicle_cursor(self, cursor: str) -> tuple[datetime, UUID]:
+        try:
+            raw = base64.urlsafe_b64decode(cursor.encode("ascii")).decode("ascii")
+            created_str, vehicle_id_str = raw.split("|", 1)
+            created_at = datetime.fromisoformat(created_str)
+            vehicle_id = UUID(vehicle_id_str)
+            return created_at, vehicle_id
+        except Exception as exc:
+            raise ValueError("Invalid pagination cursor") from exc
+
+    def _cursor_from_skip(self, base_query_factory: Callable[[], Any], skip: int) -> Optional[str]:
+        if skip <= 0:
+            return None
+
+        seed_query = (
+            base_query_factory()
+            .order_by(Vehicle.created_at.desc(), Vehicle.id.desc())
+            .offset(skip - 1)
+            .limit(1)
+        )
+        seed = seed_query.first()
+        if not seed:
+            return None
+        return self._encode_vehicle_cursor(seed)
+
+    def _has_more_older(self, base_query_factory: Callable[[], Any], vehicle: Optional[Vehicle]) -> bool:
+        if not vehicle:
+            return False
+
+        older_query = base_query_factory().filter(
+            or_(
+                Vehicle.created_at < vehicle.created_at,
+                and_(Vehicle.created_at == vehicle.created_at, Vehicle.id < vehicle.id),
+            )
+        )
+        return older_query.order_by(Vehicle.created_at.desc(), Vehicle.id.desc()).limit(1).first() is not None
+
+    def _paginate_vehicle_query(
+        self,
+        base_query_factory: Callable[[], Any],
+        *,
+        limit: int,
+        after: Optional[str],
+        before: Optional[str],
+    ) -> Dict[str, Any]:
+        if after and before:
+            raise ValueError("Cannot specify both 'after' and 'before' cursors")
+
+        limit_value = self._sanitize_limit(limit)
+
+        if before:
+            created_at_val, vehicle_id_val = self._decode_vehicle_cursor(before)
+            asc_query = (
+                base_query_factory()
+                .filter(
+                    or_(
+                        Vehicle.created_at > created_at_val,
+                        and_(Vehicle.created_at == created_at_val, Vehicle.id > vehicle_id_val),
+                    )
+                )
+                .order_by(Vehicle.created_at.asc(), Vehicle.id.asc())
+            )
+
+            rows_raw = asc_query.limit(limit_value + 1).all()
+            has_more_newer = len(rows_raw) > limit_value
+            if has_more_newer:
+                rows_raw = rows_raw[:-1]
+            vehicles = list(reversed(rows_raw))
+
+            more_older = self._has_more_older(base_query_factory, vehicles[-1] if vehicles else None)
+            more_newer = has_more_newer
+        else:
+            desc_query = base_query_factory().order_by(Vehicle.created_at.desc(), Vehicle.id.desc())
+
+            if after:
+                created_at_val, vehicle_id_val = self._decode_vehicle_cursor(after)
+                desc_query = desc_query.filter(
+                    or_(
+                        Vehicle.created_at < created_at_val,
+                        and_(Vehicle.created_at == created_at_val, Vehicle.id < vehicle_id_val),
+                    )
+                )
+
+            rows_raw = desc_query.limit(limit_value + 1).all()
+            has_more_older = len(rows_raw) > limit_value
+            vehicles = rows_raw[:limit_value] if has_more_older else rows_raw
+
+            more_older = has_more_older
+            more_newer = after is not None
+
+        next_cursor = self._encode_vehicle_cursor(vehicles[-1]) if vehicles and more_older else None
+        prev_cursor = self._encode_vehicle_cursor(vehicles[0]) if vehicles and more_newer else None
+
+        return {
+            "vehicles": vehicles,
+            "next_cursor": next_cursor,
+            "prev_cursor": prev_cursor,
+            "limit": limit_value,
+        }
+
     def create_sync(self, db: Session, *, obj_in: VehicleCreate) -> Vehicle:
         """Synchronous version of create for use with sync sessions"""
         try:
@@ -187,42 +308,82 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
             setattr(vehicle, "latest_test_date", test_date)
 
     def get_multi_with_test_info(
-        self, db: Session, *, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None
+        self,
+        db: Session,
+        *,
+        limit: int = 100,
+        filters: Optional[Dict[str, Any]] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        skip: int = 0,
     ):
-        """Get vehicles with their latest test information"""
-        query = self._apply_filters(self._base_query(db), filters)
+        """Get vehicles with their latest test information using keyset pagination"""
+        filters = filters or {}
+        limit_value = self._sanitize_limit(limit)
+        base_query_factory: Callable[[], Any] = lambda: self._apply_filters(self._base_query(db), filters)
 
-        total = query.count()
-        vehicles = (
-            query.order_by(Vehicle.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+        total = base_query_factory().count()
+
+        if skip and skip > 0 and not after and not before:
+            after = self._cursor_from_skip(base_query_factory, skip)
+
+        page = self._paginate_vehicle_query(
+            base_query_factory=base_query_factory,
+            limit=limit_value,
+            after=after,
+            before=before,
         )
+        vehicles = page["vehicles"]
 
         self._populate_latest_tests(db, vehicles)
 
-        return {"vehicles": vehicles, "total": total}
+        return {
+            "vehicles": vehicles,
+            "total": total,
+            "next_cursor": page["next_cursor"],
+            "prev_cursor": page["prev_cursor"],
+            "limit": page["limit"],
+        }
 
     def get_multi_optimized(
-        self, db: Session, *, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None
+        self,
+        db: Session,
+        *,
+        limit: int = 100,
+        filters: Optional[Dict[str, Any]] = None,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        skip: int = 0,
     ):
-        """Get vehicles without test information for faster loading"""
-        query = self._apply_filters(self._base_query(db), filters)
+        """Get vehicles without test information for faster loading using keyset pagination"""
+        filters = filters or {}
+        limit_value = self._sanitize_limit(limit)
+        base_query_factory: Callable[[], Any] = lambda: self._apply_filters(self._base_query(db), filters)
 
-        total = query.count()
-        vehicles = (
-            query.order_by(Vehicle.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+        total = base_query_factory().count()
+
+        if skip and skip > 0 and not after and not before:
+            after = self._cursor_from_skip(base_query_factory, skip)
+
+        page = self._paginate_vehicle_query(
+            base_query_factory=base_query_factory,
+            limit=limit_value,
+            after=after,
+            before=before,
         )
+        vehicles = page["vehicles"]
 
         for vehicle in vehicles:
             setattr(vehicle, "latest_test_result", None)
             setattr(vehicle, "latest_test_date", None)
 
-        return {"vehicles": vehicles, "total": total}
+        return {
+            "vehicles": vehicles,
+            "total": total,
+            "next_cursor": page["next_cursor"],
+            "prev_cursor": page["prev_cursor"],
+            "limit": page["limit"],
+        }
 
     def get_with_test_info(self, db: Session, *, id: UUID):
         """Get a specific vehicle with its latest test information"""
@@ -249,8 +410,17 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
             "wheels": [wheel[0] for wheel in wheels]
         }
     
-    def search(self, db: Session, *, search_term: str, skip: int = 0, limit: int = 100):
-        """Search vehicles by plate number, chassis number, registration number, driver name, or office"""
+    def search(
+        self,
+        db: Session,
+        *,
+        search_term: str,
+        limit: int = 100,
+        after: Optional[str] = None,
+        before: Optional[str] = None,
+        skip: int = 0,
+    ):
+        """Search vehicles by plate number, chassis number, registration number, driver name, or office using keyset pagination"""
         normalized_term = _normalize_identifier(search_term)
         conditions = []
 
@@ -272,21 +442,34 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         if not conditions:
             return {"vehicles": [], "total": 0}
 
-        query = self._base_query(db).filter(or_(*conditions))
+        def base_query_factory() -> Any:
+            return self._base_query(db).filter(or_(*conditions))
 
-        total = query.count()
-        vehicles = (
-            query.order_by(Vehicle.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+        limit_value = self._sanitize_limit(limit)
+        total = base_query_factory().count()
+
+        if skip and skip > 0 and not after and not before:
+            after = self._cursor_from_skip(base_query_factory, skip)
+
+        page = self._paginate_vehicle_query(
+            base_query_factory=base_query_factory,
+            limit=limit_value,
+            after=after,
+            before=before,
         )
+        vehicles = page["vehicles"]
 
         for vehicle in vehicles:
             setattr(vehicle, "latest_test_result", None)
             setattr(vehicle, "latest_test_date", None)
 
-        return {"vehicles": vehicles, "total": total}
+        return {
+            "vehicles": vehicles,
+            "total": total,
+            "next_cursor": page["next_cursor"],
+            "prev_cursor": page["prev_cursor"],
+            "limit": page["limit"],
+        }
 
     def get_by_plate_number(self, db: Session, *, plate_number: str) -> Optional[Vehicle]:
         """Get vehicle by plate number"""

@@ -81,6 +81,9 @@ export interface VehicleFilters {
 export interface VehiclesResponse {
   vehicles: Vehicle[];
   total: number;
+  next_cursor?: string | null;
+  prev_cursor?: string | null;
+  limit?: number;
 }
 
 interface OfficesResponse {
@@ -186,7 +189,9 @@ type VehiclesQueryKey = [
   VehicleFilters | undefined,
   number,
   number,
-  boolean
+  boolean,
+  string | null,
+  string | null
 ];
 
 export interface UseVehiclesOptions
@@ -195,18 +200,35 @@ export interface UseVehiclesOptions
     "queryKey" | "queryFn"
   > {
   includeTestData?: boolean;
+  afterCursor?: string | null;
+  beforeCursor?: string | null;
 }
 
 export async function fetchVehicles(
   filters?: VehicleFilters,
   skip = 0,
   limit = 100,
-  includeTestData = false
+  includeTestData = false,
+  afterCursor?: string | null,
+  beforeCursor?: string | null
 ) {
   const params = new URLSearchParams();
 
-  if (skip) params.append("skip", skip.toString());
+  const usingCursor = Boolean(afterCursor) || Boolean(beforeCursor);
+
+  if (!usingCursor && skip) {
+    params.append("skip", skip.toString());
+  }
+
   if (limit) params.append("limit", limit.toString());
+
+  if (afterCursor) {
+    params.append("after", afterCursor);
+  }
+
+  if (!afterCursor && beforeCursor) {
+    params.append("before", beforeCursor);
+  }
 
   if (includeTestData) {
     params.append("include_test_data", "true");
@@ -234,11 +256,32 @@ export function useVehicles(
   limit = 100,
   options?: UseVehiclesOptions
 ) {
-  const { includeTestData = false, ...queryOptions } = options ?? {};
+  const {
+    includeTestData = false,
+    afterCursor = null,
+    beforeCursor = null,
+    ...queryOptions
+  } = options ?? {};
 
   return useQuery<VehiclesResponse, unknown, VehiclesResponse, VehiclesQueryKey>({
-    queryKey: ["vehicles", filters, skip, limit, includeTestData],
-    queryFn: () => fetchVehicles(filters, skip, limit, includeTestData),
+    queryKey: [
+      "vehicles",
+      filters,
+      skip,
+      limit,
+      includeTestData,
+      afterCursor,
+      beforeCursor,
+    ],
+    queryFn: () =>
+      fetchVehicles(
+        filters,
+        skip,
+        limit,
+        includeTestData,
+        afterCursor ?? undefined,
+        beforeCursor ?? undefined
+      ),
     staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes - cache time (formerly cacheTime)
     placeholderData: (previousData) => previousData, // Keep previous data while loading new data

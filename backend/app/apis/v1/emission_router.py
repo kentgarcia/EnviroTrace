@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from uuid import UUID
@@ -184,8 +184,10 @@ def delete_office(
 @router.get("/vehicles", response_model=VehicleListResponse)
 def get_vehicles(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    after: Optional[str] = Query(None, description="Cursor pointing to the last item of the previous page"),
+    before: Optional[str] = Query(None, description="Cursor pointing to the first item of the next page"),
     plate_number: Optional[str] = None,
     chassis_number: Optional[str] = None,
     registration_number: Optional[str] = None,
@@ -205,8 +207,21 @@ def get_vehicles(
     Set include_test_data=true to include latest test results.
     """
     try:
+        if after and before:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Specify only one of 'after' or 'before' cursors",
+            )
+
         if search:
-            return crud_emission.vehicle.search(db, search_term=search, skip=skip, limit=limit)
+            return crud_emission.vehicle.search(
+                db,
+                search_term=search,
+                limit=limit,
+                after=after,
+                before=before,
+                skip=skip,
+            )
         
         filters = {}
         if plate_number:
@@ -230,9 +245,28 @@ def get_vehicles(
         
         # Choose which method to use based on include_test_data parameter
         if include_test_data:
-            return crud_emission.vehicle.get_multi_with_test_info(db, skip=skip, limit=limit, filters=filters)
+            return crud_emission.vehicle.get_multi_with_test_info(
+                db,
+                limit=limit,
+                filters=filters,
+                after=after,
+                before=before,
+                skip=skip,
+            )
         else:
-            return crud_emission.vehicle.get_multi_optimized(db, skip=skip, limit=limit, filters=filters)
+            return crud_emission.vehicle.get_multi_optimized(
+                db,
+                limit=limit,
+                filters=filters,
+                after=after,
+                before=before,
+                skip=skip,
+            )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except Exception as e:
         print(f"Error in get_vehicles: {str(e)}")
         traceback.print_exc()

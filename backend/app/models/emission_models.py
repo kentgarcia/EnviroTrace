@@ -24,7 +24,8 @@ class Office(Base):
 class Vehicle(Base):
     __tablename__ = "vehicles"
     __table_args__ = (
-        Index("idx_vehicles_office_id_created_at", "office_id", "created_at"),
+        Index("idx_vehicles_created_at_id", "created_at", "id"),
+        Index("idx_vehicles_office_id_created_at_id", "office_id", "created_at", "id"),
         Index("idx_vehicles_vehicle_type", "vehicle_type"),
         Index("idx_vehicles_engine_type", "engine_type"),
         Index("idx_vehicles_wheels", "wheels"),

@@ -218,6 +218,9 @@ class OfficeListResponse(BaseModel):
 class VehicleListResponse(BaseModel):
     vehicles: List[Vehicle]
     total: int
+    next_cursor: Optional[str] = None
+    prev_cursor: Optional[str] = None
+    limit: int
     
 class TestListResponse(BaseModel):
     tests: List[Test]

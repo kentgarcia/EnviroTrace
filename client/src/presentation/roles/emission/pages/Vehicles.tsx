@@ -57,6 +57,11 @@ import {
 } from "@/presentation/components/shared/ui/select";
 import { useSettingsStore } from "@/core/hooks/useSettingsStore";
 
+type PageCursor = {
+  after?: string | null;
+  before?: string | null;
+};
+
 export default function Vehicles() {
   // Modal and dialog states
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -71,6 +76,12 @@ export default function Vehicles() {
     pageIndex: 0,
     pageSize: rowsPerPage,
   });
+  const [pageCursors, setPageCursors] = useState<Record<number, PageCursor>>({
+    0: {},
+  });
+  const [paginationDirection, setPaginationDirection] = useState<
+    "forward" | "backward" | null
+  >(null);
 
   useEffect(() => {
     setPagination((prev) => {
@@ -82,6 +93,8 @@ export default function Vehicles() {
         pageSize: rowsPerPage,
       };
     });
+    setPageCursors({ 0: {} });
+    setPaginationDirection(null);
   }, [rowsPerPage]);
 
   // Filter states
@@ -106,6 +119,29 @@ export default function Vehicles() {
   }, [debouncedSearch, office, vehicleType, engineType]);
 
   // Get vehicles data using the new API service
+  const currentPageCursor = pageCursors[pagination.pageIndex] ?? {};
+  const storedAfter = currentPageCursor.after ?? null;
+  const storedBefore = currentPageCursor.before ?? null;
+
+  let afterCursorToUse: string | null = null;
+  let beforeCursorToUse: string | null = null;
+
+  if (paginationDirection === "backward") {
+    beforeCursorToUse = storedBefore;
+  } else if (paginationDirection === "forward") {
+    afterCursorToUse = storedAfter;
+  } else {
+    afterCursorToUse = storedAfter;
+    if (!afterCursorToUse && storedBefore) {
+      beforeCursorToUse = storedBefore;
+    }
+  }
+
+  const skipValue =
+    afterCursorToUse || beforeCursorToUse
+      ? 0
+      : pagination.pageIndex * pagination.pageSize;
+
   const {
     data: vehiclesData,
     isLoading,
@@ -113,10 +149,72 @@ export default function Vehicles() {
     refetch,
   } = useVehicles(
     filters,
-    pagination.pageIndex * pagination.pageSize,
+    skipValue,
     pagination.pageSize,
-    { includeTestData: false }
+    {
+      includeTestData: false,
+      afterCursor: afterCursorToUse,
+      beforeCursor: beforeCursorToUse,
+    }
   );
+  useEffect(() => {
+    if (!vehiclesData) {
+      return;
+    }
+
+    setPageCursors((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      if (!next[pagination.pageIndex]) {
+        next[pagination.pageIndex] = {};
+        changed = true;
+      }
+
+      const nextPageIndex = pagination.pageIndex + 1;
+      if (vehiclesData.next_cursor) {
+        const existingNext = next[nextPageIndex] ?? {};
+        if (existingNext.after !== vehiclesData.next_cursor) {
+          next[nextPageIndex] = { ...existingNext, after: vehiclesData.next_cursor };
+          changed = true;
+        }
+      } else if (next[nextPageIndex]?.after) {
+        const { after: _removed, ...rest } = next[nextPageIndex];
+        if (Object.keys(rest).length === 0) {
+          delete next[nextPageIndex];
+        } else {
+          next[nextPageIndex] = rest;
+        }
+        changed = true;
+      }
+
+      const previousPageIndex = pagination.pageIndex - 1;
+      if (previousPageIndex >= 0) {
+        if (vehiclesData.prev_cursor) {
+          const existingPrev = next[previousPageIndex] ?? {};
+          if (existingPrev.before !== vehiclesData.prev_cursor) {
+            next[previousPageIndex] = {
+              ...existingPrev,
+              before: vehiclesData.prev_cursor,
+            };
+            changed = true;
+          }
+        } else if (next[previousPageIndex]?.before) {
+          const { before: _removedBefore, ...restPrev } = next[previousPageIndex];
+          if (Object.keys(restPrev).length === 0) {
+            delete next[previousPageIndex];
+          } else {
+            next[previousPageIndex] = restPrev;
+          }
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+
+    setPaginationDirection(null);
+  }, [vehiclesData, pagination.pageIndex]);
   // Get filter options from the API
   const {
     data: filterOptions,
@@ -174,6 +272,14 @@ export default function Vehicles() {
             ? (updater as (old: PaginationState) => PaginationState)(prev)
             : updater;
 
+        if (prev.pageIndex !== next.pageIndex) {
+          setPaginationDirection(
+            next.pageIndex > prev.pageIndex ? "forward" : "backward"
+          );
+        } else if (prev.pageSize !== next.pageSize) {
+          setPaginationDirection(null);
+        }
+
         if (prev.pageSize !== next.pageSize) {
           setRowsPerPage(next.pageSize);
         }
@@ -181,7 +287,7 @@ export default function Vehicles() {
         return next;
       });
     },
-    [setPagination, setRowsPerPage]
+    [setRowsPerPage]
   );
 
   useEffect(() => {
@@ -190,14 +296,17 @@ export default function Vehicles() {
     if (pageCount === 0) {
       if (pagination.pageIndex !== 0) {
         setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+        setPaginationDirection(null);
+        setPageCursors({ 0: {} });
       }
       return;
     }
 
     if (pagination.pageIndex > pageCount - 1) {
       setPagination((prev) => ({ ...prev, pageIndex: Math.max(pageCount - 1, 0) }));
+      setPaginationDirection(null);
     }
-  }, [pageCount, pagination.pageIndex, pagination.pageSize, setPagination]);
+  }, [pageCount, pagination.pageIndex, pagination.pageSize]);
 
   useEffect(() => {
     setPagination((prev) => {
@@ -207,7 +316,9 @@ export default function Vehicles() {
 
       return { ...prev, pageIndex: 0 };
     });
-  }, [debouncedSearch, office, vehicleType, engineType, setPagination]);
+    setPageCursors({ 0: {} });
+    setPaginationDirection(null);
+  }, [debouncedSearch, office, vehicleType, engineType]);
 
   // Get unique values for filters
   const offices = useMemo(() => filterOptions?.offices || [], [filterOptions]);
