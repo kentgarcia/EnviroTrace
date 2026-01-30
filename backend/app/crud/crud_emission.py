@@ -1,12 +1,20 @@
-from typing import Optional, Dict, Any
-from sqlalchemy.orm import Session
+from typing import Optional, Dict, Any, List
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import desc, or_, func
 from uuid import UUID
 import traceback
+import re
 from app.crud.base_crud import CRUDBase
 from app.models.emission_models import Office, Vehicle, Test, TestSchedule, VehicleDriverHistory, VehicleRemarks
 from app.schemas.emission_schemas import OfficeCreate, OfficeUpdate, VehicleCreate, VehicleUpdate, TestCreate, TestUpdate, TestScheduleCreate, TestScheduleUpdate, VehicleDriverHistoryCreate, VehicleRemarksCreate, VehicleRemarksUpdate, OfficeComplianceData, OfficeComplianceSummary
+
+
+def _normalize_identifier(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = re.sub(r"[^a-z0-9]", "", value.lower())
+    return normalized or None
 
 class CRUDOffice(CRUDBase[Office, OfficeCreate, OfficeUpdate]):
     def get_sync(self, db: Session, *, id: UUID) -> Optional[Office]:
@@ -97,132 +105,136 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         db.commit()
         return obj
 
+    def _base_query(self, db: Session):
+        return db.query(Vehicle).options(selectinload(Vehicle.office))
+
+    def _apply_filters(self, query, filters: Optional[Dict[str, Any]]):
+        if not filters:
+            return query
+
+        plate_number = _normalize_identifier(filters.get("plate_number"))
+        if plate_number:
+            query = query.filter(Vehicle.plate_number_search.ilike(f"%{plate_number}%"))
+
+        chassis_number = _normalize_identifier(filters.get("chassis_number"))
+        if chassis_number:
+            query = query.filter(Vehicle.chassis_number_search.ilike(f"%{chassis_number}%"))
+
+        registration_number = _normalize_identifier(filters.get("registration_number"))
+        if registration_number:
+            query = query.filter(Vehicle.registration_number_search.ilike(f"%{registration_number}%"))
+
+        driver_name = filters.get("driver_name")
+        if driver_name:
+            query = query.filter(Vehicle.driver_name.ilike(f"%{driver_name}%"))
+
+        office_name = filters.get("office_name")
+        if office_name:
+            query = query.filter(Vehicle.office.has(Office.name == office_name))
+
+        office_id = filters.get("office_id")
+        if office_id:
+            query = query.filter(Vehicle.office_id == office_id)
+
+        vehicle_type = filters.get("vehicle_type")
+        if vehicle_type:
+            query = query.filter(Vehicle.vehicle_type == vehicle_type)
+
+        engine_type = filters.get("engine_type")
+        if engine_type:
+            query = query.filter(Vehicle.engine_type == engine_type)
+
+        wheels = filters.get("wheels")
+        if wheels is not None:
+            query = query.filter(Vehicle.wheels == wheels)
+
+        return query
+
+    def _populate_latest_tests(self, db: Session, vehicles: List[Vehicle]) -> None:
+        if not vehicles:
+            return
+
+        vehicle_ids = [vehicle.id for vehicle in vehicles]
+        latest_tests_subquery = (
+            db.query(
+                Test.vehicle_id.label("vehicle_id"),
+                Test.result.label("result"),
+                Test.test_date.label("test_date"),
+                func.row_number()
+                .over(partition_by=Test.vehicle_id, order_by=Test.test_date.desc())
+                .label("rn"),
+            )
+            .filter(Test.vehicle_id.in_(vehicle_ids))
+        ).subquery()
+
+        latest_tests = (
+            db.query(
+                latest_tests_subquery.c.vehicle_id,
+                latest_tests_subquery.c.result,
+                latest_tests_subquery.c.test_date,
+            )
+            .filter(latest_tests_subquery.c.rn == 1)
+            .all()
+        )
+
+        latest_by_vehicle = {
+            row.vehicle_id: (row.result, row.test_date) for row in latest_tests
+        }
+
+        for vehicle in vehicles:
+            result, test_date = latest_by_vehicle.get(vehicle.id, (None, None))
+            setattr(vehicle, "latest_test_result", result)
+            setattr(vehicle, "latest_test_date", test_date)
+
     def get_multi_with_test_info(
         self, db: Session, *, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None
     ):
         """Get vehicles with their latest test information"""
-        query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id)
-        
-        # Apply filters if provided
-        if filters:
-            if filters.get("plate_number"):
-                term = filters['plate_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("chassis_number"):
-                term = filters['chassis_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("registration_number"):
-                term = filters['registration_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("driver_name"):
-                query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
-            if filters.get("office_name"):
-                query = query.filter(Office.name == filters["office_name"])
-            if filters.get("office_id"):
-                query = query.filter(Vehicle.office_id == filters["office_id"])
-            if filters.get("vehicle_type"):
-                query = query.filter(Vehicle.vehicle_type == filters["vehicle_type"])
-            if filters.get("engine_type"):
-                query = query.filter(Vehicle.engine_type == filters["engine_type"])
-            if filters.get("wheels"):
-                query = query.filter(Vehicle.wheels == filters["wheels"])
-                
+        query = self._apply_filters(self._base_query(db), filters)
+
         total = query.count()
-        vehicles = query.offset(skip).limit(limit).all()
-        
-        # Fetch latest test for each vehicle
-        for vehicle in vehicles:
-            latest_test = db.query(Test)\
-                .filter(Test.vehicle_id == vehicle.id)\
-                .order_by(desc(Test.test_date))\
-                .first()
-                
-            if latest_test:
-                setattr(vehicle, "latest_test_result", latest_test.result)
-                setattr(vehicle, "latest_test_date", latest_test.test_date)
-            else:
-                setattr(vehicle, "latest_test_result", None)
-                setattr(vehicle, "latest_test_date", None)
-        
+        vehicles = (
+            query.order_by(Vehicle.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        self._populate_latest_tests(db, vehicles)
+
         return {"vehicles": vehicles, "total": total}
 
     def get_multi_optimized(
         self, db: Session, *, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None
     ):
         """Get vehicles without test information for faster loading"""
-        query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id)
-        
-        # Apply filters if provided
-        if filters:
-            if filters.get("plate_number"):
-                term = filters['plate_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("chassis_number"):
-                term = filters['chassis_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("registration_number"):
-                term = filters['registration_number'].replace('-', '')
-                query = query.filter(func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{term}%"))
-            if filters.get("driver_name"):
-                query = query.filter(Vehicle.driver_name.ilike(f"%{filters['driver_name']}%"))
-            if filters.get("office_name"):
-                query = query.filter(Office.name == filters["office_name"])
-            if filters.get("office_id"):
-                query = query.filter(Vehicle.office_id == filters["office_id"])
-            if filters.get("vehicle_type"):
-                query = query.filter(Vehicle.vehicle_type == filters["vehicle_type"])
-            if filters.get("engine_type"):
-                query = query.filter(Vehicle.engine_type == filters["engine_type"])
-            if filters.get("wheels"):
-                query = query.filter(Vehicle.wheels == filters["wheels"])
-                
+        query = self._apply_filters(self._base_query(db), filters)
+
         total = query.count()
-        vehicles = query.offset(skip).limit(limit).all()
-        
-        # Set test fields to None to indicate they weren't fetched
+        vehicles = (
+            query.order_by(Vehicle.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
         for vehicle in vehicles:
             setattr(vehicle, "latest_test_result", None)
             setattr(vehicle, "latest_test_date", None)
-        
+
         return {"vehicles": vehicles, "total": total}
+
     def get_with_test_info(self, db: Session, *, id: UUID):
         """Get a specific vehicle with its latest test information"""
-        print("DEBUG: Getting vehicle with ID:", id)
-        
-        try:
-            vehicle = db.query(Vehicle).filter(Vehicle.id == id).first()
-            print("DEBUG: Vehicle query result:", vehicle)
-            
-            if not vehicle:
-                print("DEBUG: Vehicle not found")
-                return None
-                
-            print("DEBUG: Getting latest test for vehicle")
-            latest_test = db.query(Test)\
-                .filter(Test.vehicle_id == vehicle.id)\
-                .order_by(desc(Test.test_date))\
-                .first()
-                
-            print("DEBUG: Latest test:", latest_test)
-                
-            if latest_test:
-                print("DEBUG: Setting test result and date attributes")
-                setattr(vehicle, "latest_test_result", latest_test.result)
-                setattr(vehicle, "latest_test_date", latest_test.test_date)
-            else:
-                print("DEBUG: No test found, setting null attributes")
-                setattr(vehicle, "latest_test_result", None)
-                setattr(vehicle, "latest_test_date", None)
-                
-            print("DEBUG: Returning vehicle")
-            return vehicle
-            
-        except Exception as e:
-            print("DEBUG ERROR in get_with_test_info:", str(e))
-            import traceback
-            traceback.print_exc()
-            raise
-    
+        vehicle = self._base_query(db).filter(Vehicle.id == id).first()
+
+        if not vehicle:
+            return None
+
+        self._populate_latest_tests(db, [vehicle])
+
+        return vehicle
+
     def get_unique_values(self, db: Session):
         """Get unique values for filter dropdowns"""
         offices = db.query(Office.name).distinct().all()
@@ -239,55 +251,60 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
     
     def search(self, db: Session, *, search_term: str, skip: int = 0, limit: int = 100):
         """Search vehicles by plate number, chassis number, registration number, driver name, or office"""
-        from sqlalchemy import func
-        
-        # Clean search term to remove dashes for identification fields
-        clean_term = search_term.replace('-', '')
-        
-        query = db.query(Vehicle).join(Office, Vehicle.office_id == Office.id).filter(
-            or_(
-                func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(f"%{clean_term}%"),
-                func.replace(func.coalesce(Vehicle.chassis_number, ''), '-', '').ilike(f"%{clean_term}%"),
-                func.replace(func.coalesce(Vehicle.registration_number, ''), '-', '').ilike(f"%{clean_term}%"),
-                Vehicle.driver_name.ilike(f"%{search_term}%"),
-                Office.name.ilike(f"%{search_term}%")
+        normalized_term = _normalize_identifier(search_term)
+        conditions = []
+
+        if normalized_term:
+            like_normalized = f"%{normalized_term}%"
+            conditions.extend(
+                [
+                    Vehicle.plate_number_search.ilike(like_normalized),
+                    Vehicle.chassis_number_search.ilike(like_normalized),
+                    Vehicle.registration_number_search.ilike(like_normalized),
+                ]
             )
-        )
-        
+
+        if search_term:
+            like_term = f"%{search_term}%"
+            conditions.append(Vehicle.driver_name.ilike(like_term))
+            conditions.append(Vehicle.office.has(Office.name.ilike(like_term)))
+
+        if not conditions:
+            return {"vehicles": [], "total": 0}
+
+        query = self._base_query(db).filter(or_(*conditions))
+
         total = query.count()
-        vehicles = query.offset(skip).limit(limit).all()
-        
-        # Set test fields to None to indicate they weren't fetched (for performance)
+        vehicles = (
+            query.order_by(Vehicle.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
         for vehicle in vehicles:
             setattr(vehicle, "latest_test_result", None)
             setattr(vehicle, "latest_test_date", None)
-        
+
         return {"vehicles": vehicles, "total": total}
-    
+
     def get_by_plate_number(self, db: Session, *, plate_number: str) -> Optional[Vehicle]:
         """Get vehicle by plate number"""
-        from sqlalchemy import func
-        clean = plate_number.replace('-', '')
-        
-        vehicle = db.query(Vehicle).filter(
-            func.replace(func.coalesce(Vehicle.plate_number, ''), '-', '').ilike(clean)
-        ).first()
-        
+        normalized = _normalize_identifier(plate_number)
+
+        if not normalized:
+            return None
+
+        vehicle = (
+            self._base_query(db)
+            .filter(Vehicle.plate_number_search == normalized)
+            .first()
+        )
+
         if not vehicle:
             return None
 
-        # Attach latest test info so callers can safely read these attributes
-        latest_test = db.query(Test)\
-            .filter(Test.vehicle_id == vehicle.id)\
-            .order_by(desc(Test.test_date))\
-            .first()
-
-        if latest_test:
-            setattr(vehicle, "latest_test_result", latest_test.result)
-            setattr(vehicle, "latest_test_date", latest_test.test_date)
-        else:
-            setattr(vehicle, "latest_test_result", None)
-            setattr(vehicle, "latest_test_date", None)
+        self._populate_latest_tests(db, [vehicle])
 
         return vehicle
 

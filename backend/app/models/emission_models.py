@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index, Numeric
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, Index, Numeric, Computed
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text
@@ -23,7 +23,31 @@ class Office(Base):
 
 class Vehicle(Base):
     __tablename__ = "vehicles"
-    __table_args__ = {"schema": "emission"}
+    __table_args__ = (
+        Index("idx_vehicles_office_id_created_at", "office_id", "created_at"),
+        Index("idx_vehicles_vehicle_type", "vehicle_type"),
+        Index("idx_vehicles_engine_type", "engine_type"),
+        Index("idx_vehicles_wheels", "wheels"),
+        Index(
+            "idx_vehicles_plate_number_search",
+            "plate_number_search",
+            postgresql_using="gin",
+            postgresql_ops={"plate_number_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_vehicles_chassis_number_search",
+            "chassis_number_search",
+            postgresql_using="gin",
+            postgresql_ops={"chassis_number_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_vehicles_registration_number_search",
+            "registration_number_search",
+            postgresql_using="gin",
+            postgresql_ops={"registration_number_search": "gin_trgm_ops"},
+        ),
+        {"schema": "emission"},
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     driver_name = Column(String(255), nullable=False)
@@ -33,6 +57,27 @@ class Vehicle(Base):
     plate_number = Column(String(50), nullable=True)
     chassis_number = Column(String(100), unique=True, nullable=True)
     registration_number = Column(String(100), unique=True, nullable=True)
+    plate_number_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(plate_number, ''), '[^a-z0-9]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    chassis_number_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(chassis_number, ''), '[^a-z0-9]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    registration_number_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(registration_number, ''), '[^a-z0-9]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
     vehicle_type = Column(String(100), nullable=False)
     wheels = Column(Integer, nullable=False)
     description = Column(String, nullable=True)

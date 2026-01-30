@@ -1,5 +1,5 @@
 # app/models/urban_greening_models.py
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Text, Index, Float
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Numeric, Text, Index, Float, Computed
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.sql import func, text
@@ -77,6 +77,24 @@ class UrbanGreeningProject(Base):
         Index("idx_urban_greening_project_type", "project_type"),
         Index("idx_urban_greening_project_status", "status"),
         Index("idx_urban_greening_project_code", "project_code"),
+        Index(
+            "idx_urban_greening_project_code_search",
+            "project_code_search",
+            postgresql_using="gin",
+            postgresql_ops={"project_code_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_project_location_search",
+            "location_search",
+            postgresql_using="gin",
+            postgresql_ops={"location_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_project_barangay_search",
+            "barangay_search",
+            postgresql_using="gin",
+            postgresql_ops={"barangay_search": "gin_trgm_ops"},
+        ),
         {"schema": "urban_greening"}
     )
 
@@ -85,6 +103,27 @@ class UrbanGreeningProject(Base):
     project_type = Column(String(50), nullable=False)  # tree_planting, ornamental_planting, reforestation, urban_forest, roadside_greening
     barangay = Column(String(100), nullable=True)
     location = Column(String(500), nullable=True)
+    project_code_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(project_code, ''), '[^a-z0-9]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    location_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(location, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    barangay_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(barangay, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
     latitude = Column(Numeric(10, 8), nullable=True)
     longitude = Column(Numeric(11, 8), nullable=True)
     area_sqm = Column(Numeric(10, 2), nullable=True)
@@ -285,6 +324,36 @@ class UrbanGreeningPlanting(Base):
         Index("idx_urban_greening_planting_status", "status"),
         Index("idx_urban_greening_planting_date", "planting_date"),
         Index("idx_urban_greening_planting_location", "location"),
+        Index(
+            "idx_urban_greening_planting_record_search",
+            "record_number_search",
+            postgresql_using="gin",
+            postgresql_ops={"record_number_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_planting_species_search",
+            "species_name_search",
+            postgresql_using="gin",
+            postgresql_ops={"species_name_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_planting_location_search",
+            "location_search",
+            postgresql_using="gin",
+            postgresql_ops={"location_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_planting_responsible_search",
+            "responsible_person_search",
+            postgresql_using="gin",
+            postgresql_ops={"responsible_person_search": "gin_trgm_ops"},
+        ),
+        Index(
+            "idx_urban_greening_planting_organization_search",
+            "organization_search",
+            postgresql_using="gin",
+            postgresql_ops={"organization_search": "gin_trgm_ops"},
+        ),
         {"schema": "urban_greening"}
     )
 
@@ -305,6 +374,41 @@ class UrbanGreeningPlanting(Base):
     responsible_person = Column(String(255), nullable=False)
     contact_number = Column(String(50), nullable=True)
     organization = Column(String(255), nullable=True)
+    record_number_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(record_number, ''), '[^a-z0-9]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    species_name_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(species_name, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    location_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(location, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    responsible_person_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(responsible_person, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    organization_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(organization, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
     project_name = Column(String(255), nullable=True)
     funding_source = Column(String(255), nullable=True)  # government, private, donation
     maintenance_schedule = Column(Text, nullable=True)
@@ -366,6 +470,20 @@ class SaplingRequest(Base):
     requester_name = Column(String(255), nullable=False)
     address = Column(String(500), nullable=False)
     saplings = Column(Text, nullable=False)  # JSON array string: [{ name, qty }]
+    requester_name_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(requester_name, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
+    address_search = Column(
+        String,
+        Computed(
+            "lower(regexp_replace(coalesce(address, ''), '[^a-z0-9 ]', '', 'gi'))",
+            persisted=True,
+        ),
+    )
     
     # New fields
     received_through = Column(String(255), nullable=True)

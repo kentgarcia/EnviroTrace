@@ -28,7 +28,7 @@ def _serialize_plants(entity):
 @router.get("/urban-greening/", response_model=List[UrbanGreeningPlantingInDB])
 def get_urban_greening_plantings(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=10000),
+    limit: int = Query(100, ge=1, le=1000),
     planting_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),

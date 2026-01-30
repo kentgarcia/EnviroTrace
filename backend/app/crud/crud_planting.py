@@ -2,6 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func, extract
 from datetime import date, datetime
+import re
 
 from app.crud.base_crud import CRUDBase
 from app.models.urban_greening_models import UrbanGreeningPlanting, SaplingCollection, SaplingRequest
@@ -11,6 +12,13 @@ from app.schemas.planting_schemas import (
     PlantingStatistics, SaplingStatistics,
     SaplingRequestCreate, SaplingRequestUpdate
 )
+
+
+def _normalize_text(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    normalized = re.sub(r"[^a-z0-9 ]", "", value.lower())
+    return normalized or None
 
 
 class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPlantingCreate, UrbanGreeningPlantingUpdate]):
@@ -98,9 +106,15 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
     
     def get_by_location(self, db: Session, *, location: str, skip: int = 0, limit: int = 100) -> List[UrbanGreeningPlanting]:
         """Get plantings by location (partial match)"""
-        return db.query(UrbanGreeningPlanting).filter(
-            UrbanGreeningPlanting.location.ilike(f"%{location}%")
-        ).offset(skip).limit(limit).all()
+        normalized = _normalize_text(location)
+        query = db.query(UrbanGreeningPlanting)
+
+        if normalized:
+            query = query.filter(UrbanGreeningPlanting.location_search.ilike(f"%{normalized}%"))
+        else:
+            query = query.filter(UrbanGreeningPlanting.location.ilike(f"%{location}%"))
+
+        return query.offset(skip).limit(limit).all()
     
     def get_by_monitoring_request(self, db: Session, *, monitoring_request_id: str) -> List[UrbanGreeningPlanting]:
         """Get plantings linked to a specific monitoring request"""
@@ -110,10 +124,16 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
     
     def get_by_year(self, db: Session, *, year: int, skip: int = 0, limit: int = 100) -> List[UrbanGreeningPlanting]:
         """Get urban greening plantings filtered by year"""
+        start = date(year, 1, 1)
+        end = date(year + 1, 1, 1)
+
         return (
             db.query(UrbanGreeningPlanting)
-            .filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
-            .order_by(desc(UrbanGreeningPlanting.planting_date))
+            .filter(
+                UrbanGreeningPlanting.planting_date >= start,
+                UrbanGreeningPlanting.planting_date < end,
+            )
+            .order_by(UrbanGreeningPlanting.planting_date.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -134,14 +154,33 @@ class CRUDUrbanGreeningPlanting(CRUDBase[UrbanGreeningPlanting, UrbanGreeningPla
         
         # Search term filter
         if search_term:
-            search_filter = or_(
-                UrbanGreeningPlanting.record_number.ilike(f"%{search_term}%"),
-                UrbanGreeningPlanting.species_name.ilike(f"%{search_term}%"),
-                UrbanGreeningPlanting.location.ilike(f"%{search_term}%"),
-                UrbanGreeningPlanting.responsible_person.ilike(f"%{search_term}%"),
-                UrbanGreeningPlanting.organization.ilike(f"%{search_term}%")
+            conditions = []
+            normalized = _normalize_text(search_term)
+
+            if normalized:
+                like_normalized = f"%{normalized}%"
+                conditions.extend(
+                    [
+                        UrbanGreeningPlanting.record_number_search.ilike(like_normalized),
+                        UrbanGreeningPlanting.species_name_search.ilike(like_normalized),
+                        UrbanGreeningPlanting.location_search.ilike(like_normalized),
+                        UrbanGreeningPlanting.responsible_person_search.ilike(like_normalized),
+                        UrbanGreeningPlanting.organization_search.ilike(like_normalized),
+                    ]
+                )
+
+            like_term = f"%{search_term}%"
+            conditions.extend(
+                [
+                    UrbanGreeningPlanting.record_number.ilike(like_term),
+                    UrbanGreeningPlanting.species_name.ilike(like_term),
+                    UrbanGreeningPlanting.location.ilike(like_term),
+                    UrbanGreeningPlanting.responsible_person.ilike(like_term),
+                    UrbanGreeningPlanting.organization.ilike(like_term),
+                ]
             )
-            query = query.filter(search_filter)
+
+            query = query.filter(or_(*conditions))
         
         # Type filter
         if planting_type and planting_type != "all":
@@ -377,10 +416,16 @@ class CRUDSaplingRequest(CRUDBase[SaplingRequest, SaplingRequestCreate, SaplingR
     
     def get_by_year(self, db: Session, *, year: int, skip: int = 0, limit: int = 100) -> List[SaplingRequest]:
         """Get sapling requests filtered by year"""
+        start = date(year, 1, 1)
+        end = date(year + 1, 1, 1)
+
         return (
             db.query(SaplingRequest)
-            .filter(extract('year', SaplingRequest.date_received) == year)
-            .order_by(desc(SaplingRequest.date_received))
+            .filter(
+                SaplingRequest.date_received >= start,
+                SaplingRequest.date_received < end,
+            )
+            .order_by(SaplingRequest.date_received.desc())
             .offset(skip)
             .limit(limit)
             .all()

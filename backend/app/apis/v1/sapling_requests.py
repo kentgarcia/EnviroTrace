@@ -68,7 +68,7 @@ def _serialize(obj) -> dict:
 def list_sapling_requests(
     year: Optional[int] = Query(None, description="Filter by year"),
     skip: int = Query(0, ge=0),
-    limit: int = Query(10000, ge=1, le=10000),
+    limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db)
 ):
     if year is not None:
