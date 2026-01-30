@@ -1,5 +1,5 @@
 import { useSmartQuery } from "./useSmartQuery";
-import { urbanGreeningAPI, DashboardOverview } from "../core/api/urban-greening-api";
+import { urbanGreeningAPI } from "../core/api/urban-greening-api";
 import { treeManagementService } from "../core/api/tree-management-service";
 
 export interface TreeManagementDashboardData {
@@ -16,11 +16,8 @@ export interface TreeManagementDashboardData {
   
   // Charts Data
   feeMonthly: Array<{ month: string; amount: number }>;
-  plantingTypeData: Array<{ label: string; value: number }>;
-  speciesData: Array<{ label: string; value: number }>;
   treeRequestTypeCounts: Array<{ label: string; value: number }>;
   treeRequestStatusCounts: Array<{ label: string; value: number }>;
-  treeTypesBar: Array<{ label: string; value: number }>;
   ugMonthly: Array<{ month: number; label: string; total: number }>;
   saplingsMonthly: Array<{ month: number; label: string; total: number }>;
   
@@ -41,7 +38,6 @@ export interface TreeManagementDataFilters {
  * Provides all data needed for the urban greening/tree management dashboard including:
  * - Key stats (fees, saplings, urban greening counts)
  * - Monthly fee collection data
- * - Planting breakdown by type and species
  * - Tree request analytics
  * - Recent activity for urban greening and saplings
  * 
@@ -92,11 +88,8 @@ export function useTreeManagementData(filters?: TreeManagementDataFilters) {
         
         // Charts Data
         feeMonthly: dashboardData.fee_monthly,
-        plantingTypeData: dashboardData.planting_type_data,
-        speciesData: dashboardData.species_data,
         treeRequestTypeCounts: dashboardData.tree_request_type_counts,
         treeRequestStatusCounts: dashboardData.tree_request_status_counts,
-        treeTypesBar: dashboardData.tree_types_bar,
         ugMonthly: dashboardData.ug_monthly,
         saplingsMonthly: dashboardData.saplings_monthly,
         
@@ -122,11 +115,8 @@ export function useTreeManagementData(filters?: TreeManagementDataFilters) {
         pendingRequests: 0,
         completedThisMonth: 0,
         feeMonthly: [],
-        plantingTypeData: [],
-        speciesData: [],
         treeRequestTypeCounts: [],
         treeRequestStatusCounts: [],
-        treeTypesBar: [],
         ugMonthly: [],
         saplingsMonthly: [],
         currentYear,
@@ -161,11 +151,8 @@ export function useTreeManagementData(filters?: TreeManagementDataFilters) {
       pendingRequests: 0,
       completedThisMonth: 0,
       feeMonthly: [],
-      plantingTypeData: [],
-      speciesData: [],
       treeRequestTypeCounts: [],
       treeRequestStatusCounts: [],
-      treeTypesBar: [],
       ugMonthly: [],
       saplingsMonthly: [],
       currentYear: new Date().getFullYear(),

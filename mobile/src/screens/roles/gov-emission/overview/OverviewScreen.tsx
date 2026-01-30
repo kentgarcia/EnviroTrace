@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   View,
   ScrollView,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from "react-native";
-import { Text, Surface } from "react-native-paper";
+import { Text } from "react-native-paper";
 import Icon from "../../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import ScreenLayout from "../../../../components/layout/ScreenLayout";
@@ -20,11 +20,7 @@ import Svg, {
   G,
   Rect,
 } from "react-native-svg";
-import {
-  PieChart,
-  LineChart,
-  BarChart,
-} from "react-native-chart-kit";
+import { PieChart, StackedBarChart } from "react-native-chart-kit";
 
 import { useDashboardData } from "../../../../hooks/useDashboardData";
 
@@ -34,16 +30,24 @@ export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(
-    Math.floor(new Date().getMonth() / 3) + 1
+    undefined
   );
   const [showYearPicker, setShowYearPicker] = useState(false);
   
   const navigation = useNavigation();
-  const { data, loading, refetch } = useDashboardData(selectedYear, selectedQuarter);
+  const { data, loading, error, refetch } = useDashboardData(selectedYear, selectedQuarter);
 
   // Generate year options (last 5 years)
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
+
+  const complianceRate = Math.max(0, Math.min(100, Math.round(data?.complianceRate ?? 0)));
+  const periodLabel = selectedQuarter ? `Q${selectedQuarter} ${selectedYear}` : `${selectedYear}`;
+  const topOffice = data?.topPerformingOffice;
+  const vehicleTypeData = data?.vehicleTypeDistribution;
+  const engineTypeStackedData = data?.engineTypeStackedData;
+  const hasEngineTypeData = Boolean(engineTypeStackedData?.data?.some((row) => row.some((value) => value > 0)));
+  const lastUpdatedLabel = data?.lastUpdated ? new Date(data.lastUpdated).toLocaleString() : undefined;
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -220,6 +224,13 @@ export default function OverviewScreen() {
           </ScrollView>
         </View>
 
+        {error && (
+          <View style={styles.errorBanner}>
+            <Icon name="AlertTriangle" size={16} color="#DC2626" />
+            <Text style={styles.errorBannerText}>Unable to load dashboard data. Pull to refresh.</Text>
+          </View>
+        )}
+
         {/* Year Picker Dropdown */}
         {showYearPicker && (
           <View style={styles.yearPickerContainer}>
@@ -276,16 +287,29 @@ export default function OverviewScreen() {
 
           <View style={styles.heroContent}>
             <View style={styles.heroInfo}>
-              <Text style={styles.heroLabel}>Overall Compliance • 2025</Text>
+              <Text style={styles.heroLabel}>Overall Compliance • {periodLabel}</Text>
               <Text style={styles.heroTitle}>Fleet Performance</Text>
               <View style={styles.heroBadge}>
-                <Icon name="TrendingUp" size={14} color="#FFFFFF" />
+                <Icon
+                  name={loading ? "RefreshCw" : complianceRate >= 80 ? "TrendingUp" : complianceRate >= 60 ? "Activity" : "TrendingDown"}
+                  size={14}
+                  color="#FFFFFF"
+                />
                 <Text style={styles.heroBadgeText}>
-                  {data?.complianceRate >= 80 ? "Above Target" : "Needs Attention"}
+                  {loading
+                    ? "Loading data..."
+                    : complianceRate >= 80
+                    ? "Above Target"
+                    : complianceRate >= 60
+                    ? "On Track"
+                    : "Needs Attention"}
                 </Text>
               </View>
+              {lastUpdatedLabel && (
+                <Text style={styles.heroUpdated}>Updated {lastUpdatedLabel}</Text>
+              )}
             </View>
-            <ComplianceCircle percentage={data?.complianceRate || 0} />
+            <ComplianceCircle percentage={loading ? 0 : complianceRate} />
           </View>
         </TouchableOpacity>
 
@@ -300,8 +324,8 @@ export default function OverviewScreen() {
               bg="#EFF6FF"
             />
             <StatCard
-              label="Offices"
-              value={data?.departments || 0}
+              label="Government Offices"
+              value={data?.totalOffices || data?.officeDepartments || 0}
               icon="Building2"
               color="#7C3AED"
               bg="#F5F3FF"
@@ -332,40 +356,47 @@ export default function OverviewScreen() {
               bg="#FFFBEB"
             />
             <StatCard
-              label="Top Office"
-              value={data?.topPerformingOffice?.name || "N/A"}
-              icon="Award"
-              color="#DB2777"
-              bg="#FDF2F8"
+              label="Compliance Rate"
+              value={`${complianceRate}%`}
+              icon="BadgeCheck"
+              color="#0EA5E9"
+              bg="#ECFEFF"
             />
           </View>
         </View>
 
+        {topOffice ? (
+          <View style={styles.topOfficeCard}>
+            <View style={styles.topOfficeHeader}>
+              <Icon name="Award" size={18} color="#1E40AF" />
+              <Text style={styles.topOfficeTitle}>Top Performing Office</Text>
+            </View>
+            <Text style={styles.topOfficeName}>{topOffice.name}</Text>
+            <View style={styles.topOfficeMetrics}>
+              <View style={styles.topOfficeMetric}>
+                <Text style={styles.topOfficeMetricValue}>{topOffice.complianceRate}%</Text>
+                <Text style={styles.topOfficeMetricLabel}>Compliance</Text>
+              </View>
+              <View style={styles.topOfficeMetric}>
+                <Text style={styles.topOfficeMetricValue}>{topOffice.passedCount}</Text>
+                <Text style={styles.topOfficeMetricLabel}>Passed</Text>
+              </View>
+              <View style={styles.topOfficeMetric}>
+                <Text style={styles.topOfficeMetricValue}>{topOffice.vehicleCount}</Text>
+                <Text style={styles.topOfficeMetricLabel}>Vehicles</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
+
         {/* Charts Section */}
         
-        {/* Monthly Testing Trends */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Monthly Testing Trends</Text>
-          {data?.monthlyTrendsData?.labels && data.monthlyTrendsData.labels.length > 0 ? (
-            <LineChart
-              data={data.monthlyTrendsData!}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              chartConfig={chartConfig}
-              bezier
-              style={styles.chart}
-            />
-          ) : (
-            <Text style={styles.noDataText}>No trend data available</Text>
-          )}
-        </View>
-
         {/* Vehicle Type Distribution */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Vehicle Type Distribution</Text>
-          {data?.vehicleTypeData && data.vehicleTypeData.length > 0 ? (
+          {vehicleTypeData && vehicleTypeData.length > 0 ? (
             <PieChart
-              data={data.vehicleTypeData!}
+              data={vehicleTypeData}
               width={SCREEN_WIDTH - 48}
               height={220}
               chartConfig={chartConfig}
@@ -380,45 +411,17 @@ export default function OverviewScreen() {
           )}
         </View>
 
-        {/* Quarterly Test Results */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Quarterly Test Results</Text>
-          {data?.quarterlyData?.labels && data.quarterlyData.labels.length > 0 ? (
-            <BarChart
-              data={data.quarterlyData!}
-              width={SCREEN_WIDTH - 48}
-              height={220}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Green bars
-              }}
-              style={styles.chart}
-              showValuesOnTopOfBars
-            />
-          ) : (
-            <Text style={styles.noDataText}>No quarterly data available</Text>
-          )}
-        </View>
-
         {/* Engine Type Performance */}
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Engine Type Performance</Text>
-          {data?.engineTypeData?.labels && data.engineTypeData.labels.length > 0 ? (
-            <BarChart
-              data={data.engineTypeData!}
+          {engineTypeStackedData && hasEngineTypeData ? (
+            <StackedBarChart
+              data={engineTypeStackedData}
               width={SCREEN_WIDTH - 48}
               height={220}
-              yAxisLabel=""
-              yAxisSuffix=""
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, // Purple bars
-              }}
+              chartConfig={chartConfig}
               style={styles.chart}
-              showValuesOnTopOfBars
-              verticalLabelRotation={30}
+              hideLegend={false}
             />
           ) : (
             <Text style={styles.noDataText}>No engine data available</Text>
@@ -488,6 +491,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  heroUpdated: {
+    fontSize: 11,
+    color: "rgba(255, 255, 255, 0.7)",
+    marginTop: 6,
   },
   circleContainer: {
     alignItems: "center",
@@ -645,6 +653,69 @@ const styles = StyleSheet.create({
   },
   yearOptionTextActive: {
     color: "#FFFFFF",
+  },
+  topOfficeCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 8,
+  },
+  topOfficeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  topOfficeTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  topOfficeName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1E40AF",
+  },
+  topOfficeMetrics: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  topOfficeMetric: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+  },
+  topOfficeMetricValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  topOfficeMetricLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+    marginTop: 4,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorBannerText: {
+    fontSize: 13,
+    color: "#B91C1C",
+    flex: 1,
   },
 });
 

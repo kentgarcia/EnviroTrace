@@ -6,6 +6,7 @@ import { useAuthStore } from "../../core/stores/authStore";
 import Icon from "../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import ScreenLayout from "../../components/layout/ScreenLayout";
+import { isAIAssistantEnabled } from "../../core/config/featureFlags";
 
 const roleLabels: Record<string, string> = {
     government_emission: "Government Emission",
@@ -73,21 +74,23 @@ export default function DashboardSelectorScreen() {
                         </View>
 
                         {/* AI Assistant Card */}
-                        <TouchableOpacity onPress={() => (navigation as any).navigate('AIAssistant')} activeOpacity={0.8}>
-                            <View style={styles.aiCard}>
-                                <View style={styles.aiIconContainer}>
-                                    <Icon name="Bot" size={24} color="#FFFFFF" />
-                                </View>
-                                <View style={styles.aiTextContainer}>
-                                    <Text style={styles.aiTitle}>AI Assistant</Text>
-                                    <View style={styles.aiStatus}>
-                                        <View style={styles.statusDot} />
-                                        <Text style={styles.statusText}>Online & Ready</Text>
+                        {isAIAssistantEnabled && (
+                            <TouchableOpacity onPress={() => (navigation as any).navigate('AIAssistant')} activeOpacity={0.8}>
+                                <View style={styles.aiCard}>
+                                    <View style={styles.aiIconContainer}>
+                                        <Icon name="Bot" size={24} color="#FFFFFF" />
                                     </View>
+                                    <View style={styles.aiTextContainer}>
+                                        <Text style={styles.aiTitle}>AI Assistant</Text>
+                                        <View style={styles.aiStatus}>
+                                            <View style={styles.statusDot} />
+                                            <Text style={styles.statusText}>Online & Ready</Text>
+                                        </View>
+                                    </View>
+                                    <Icon name="ChevronRight" size={20} color="#3A5A7A" />
                                 </View>
-                                <Icon name="ChevronRight" size={20} color="#3A5A7A" />
-                            </View>
-                        </TouchableOpacity>
+                            </TouchableOpacity>
+                        )}
 
                         {/* Dashboard Cards */}
                         <View style={styles.dashboardsSection}>

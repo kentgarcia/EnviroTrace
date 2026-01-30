@@ -5,7 +5,7 @@ import Icon from "../../../components/icons/Icon";
 import { useNavigation } from "@react-navigation/native";
 import ScreenLayout from "../../../components/layout/ScreenLayout";
 import Svg, { Defs, LinearGradient, Stop, Rect, Path, G, Circle } from "react-native-svg";
-import { LineChart, PieChart, BarChart } from "react-native-chart-kit";
+import { LineChart, PieChart } from "react-native-chart-kit";
 
 import { useTreeManagementData } from "../../../hooks/useTreeManagementData";
 
@@ -18,13 +18,12 @@ export default function TreeManagementOverviewScreen() {
     const [showYearPicker, setShowYearPicker] = useState(false);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [recentActivityTab, setRecentActivityTab] = useState<"ug" | "saplings">("ug");
-    const [floraTreesTab, setFloraTreesTab] = useState<"flora" | "trees">("flora");
     const [treeRequestsTab, setTreeRequestsTab] = useState<"type" | "status">("type");
     
     const navigation = useNavigation();
     
     // Pass filters to hook
-    const { data, loading, refetch } = useTreeManagementData({
+    const { data, refetch } = useTreeManagementData({
         year: selectedYear,
         month: selectedMonth,
     });
@@ -171,27 +170,6 @@ export default function TreeManagementOverviewScreen() {
         }],
     };
 
-    // Prepare planting type pie chart
-    const plantingPieData = data.plantingTypeData.map((item, index) => ({
-        name: item.label,
-        population: item.value,
-        color: ["#22c55e", "#4f46e5", "#f59e42", "#eab308", "#a3e635", "#818cf8"][index % 6],
-        legendFontColor: "#0F172A",
-        legendFontSize: 11,
-    }));
-
-    // Prepare species bar chart
-    const speciesBarData = {
-        labels: data.speciesData.slice(0, 6).length > 0 
-            ? data.speciesData.slice(0, 6).map((s) => s.label.slice(0, 8))
-            : ["N/A"],
-        datasets: [{
-            data: data.speciesData.slice(0, 6).length > 0
-                ? data.speciesData.slice(0, 6).map((s) => s.value || 0.01)
-                : [0.01],
-        }],
-    };
-
     // Prepare tree request type pie
     const treeTypePieData = data.treeRequestTypeCounts.map((item, index) => ({
         name: item.label,
@@ -209,18 +187,6 @@ export default function TreeManagementOverviewScreen() {
         legendFontColor: "#0F172A",
         legendFontSize: 11,
     }));
-
-    // Prepare tree types bar chart
-    const treeTypesBarData = {
-        labels: data.treeTypesBar.slice(0, 5).length > 0
-            ? data.treeTypesBar.slice(0, 5).map((t) => t.label.slice(0, 8))
-            : ["N/A"],
-        datasets: [{
-            data: data.treeTypesBar.slice(0, 5).length > 0
-                ? data.treeTypesBar.slice(0, 5).map((t) => t.value || 0.01)
-                : [0.01],
-        }],
-    };
 
     return (
         <ScreenLayout
@@ -506,26 +472,6 @@ export default function TreeManagementOverviewScreen() {
                     </View>
                 </View>
 
-                {/* Urban Greening Breakdown */}
-                <View style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>Urban Greening Breakdown {data.currentYear}</Text>
-                    {plantingPieData.length > 0 ? (
-                        <PieChart
-                            data={plantingPieData}
-                            width={SCREEN_WIDTH - 48}
-                            height={220}
-                            chartConfig={chartConfig}
-                            accessor="population"
-                            backgroundColor="transparent"
-                            paddingLeft="15"
-                            center={[10, 0]}
-                            absolute
-                        />
-                    ) : (
-                        <Text style={styles.noDataText}>No planting data available</Text>
-                    )}
-                </View>
-
                 {/* Tree Requests & Clearance Status */}
                 <View style={styles.chartContainer}>
                     <View style={styles.chartHeader}>
@@ -580,67 +526,6 @@ export default function TreeManagementOverviewScreen() {
                         <Text style={styles.noDataText}>No data available</Text>
                     )}
                 </View>
-
-                {/* Flora vs Trees to Cut/Prune */}
-                <View style={styles.chartContainer}>
-                    <View style={styles.chartHeader}>
-                        <Text style={styles.chartTitle}>Flora vs Trees</Text>
-                        <View style={styles.tabContainer}>
-                            <TouchableOpacity
-                                style={[styles.tab, floraTreesTab === "flora" && styles.tabActive]}
-                                onPress={() => setFloraTreesTab("flora")}
-                            >
-                                <Text style={[styles.tabText, floraTreesTab === "flora" && styles.tabTextActive]}>
-                                    Flora
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.tab, floraTreesTab === "trees" && styles.tabActive]}
-                                onPress={() => setFloraTreesTab("trees")}
-                            >
-                                <Text style={[styles.tabText, floraTreesTab === "trees" && styles.tabTextActive]}>
-                                    Trees
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    {floraTreesTab === "flora" && data.speciesData.length > 0 && (
-                        <BarChart
-                            data={speciesBarData}
-                            width={SCREEN_WIDTH - 48}
-                            height={220}
-                            yAxisLabel=""
-                            yAxisSuffix=""
-                            chartConfig={{
-                                ...chartConfig,
-                                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-                            }}
-                            style={styles.chart}
-                            showValuesOnTopOfBars
-                        />
-                    )}
-                    {floraTreesTab === "trees" && data.treeTypesBar.length > 0 && (
-                        <BarChart
-                            data={treeTypesBarData}
-                            width={SCREEN_WIDTH - 48}
-                            height={220}
-                            yAxisLabel=""
-                            yAxisSuffix=""
-                            chartConfig={{
-                                ...chartConfig,
-                                color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
-                            }}
-                            style={styles.chart}
-                            showValuesOnTopOfBars
-                        />
-                    )}
-                    {((floraTreesTab === "flora" && data.speciesData.length === 0) || 
-                      (floraTreesTab === "trees" && data.treeTypesBar.length === 0)) && (
-                        <Text style={styles.noDataText}>No data available</Text>
-                    )}
-                </View>
-
-
 
                 <View style={styles.bottomSpacer} />
             </ScrollView>

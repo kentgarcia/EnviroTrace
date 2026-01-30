@@ -1,148 +1,268 @@
-import { database, LocalEmissionTest } from "../core/database/database";
+import apiClient from "../core/api/api-client";
 import { useSmartQuery } from "./useSmartQuery";
+import {
+  Vehicle,
+  EmissionTest,
+  OfficeComplianceResponse,
+} from "../core/api/emission-service";
+
+interface VehiclesResponse {
+  vehicles: Vehicle[];
+  total: number;
+}
+
+interface TestsResponse {
+  tests: EmissionTest[];
+  total: number;
+}
+
+interface PieChartSlice {
+  name: string;
+  population: number;
+  color: string;
+  legendFontColor: string;
+  legendFontSize: number;
+}
+
+interface StackedBarChartData {
+  labels: string[];
+  legend: string[];
+  data: number[][];
+  barColors: string[];
+}
+
+interface DashboardOfficeSummary {
+  id: string;
+  label: string;
+  complianceRate: number;
+  passedCount: number;
+  vehicleCount: number;
+}
+
+interface TopOffice {
+  name: string;
+  complianceRate: number;
+  passedCount: number;
+  vehicleCount: number;
+}
+
+interface VehicleSummary {
+  vehicleId: string;
+  latestTestResult: boolean | null;
+  vehicleType: string;
+  engineType: string;
+  wheels: number;
+  officeName: string;
+}
 
 export interface DashboardData {
   totalVehicles: number;
+  totalOffices: number;
   testedVehicles: number;
   complianceRate: number;
-  departments: number;
-  lastTestDate?: string;
-  recentTests: (LocalEmissionTest & { vehicle_plate?: string })[];
-  pendingSyncCount: number;
-  chartData?: any;
   passedTests: number;
   failedTests: number;
   pendingTests: number;
-  topPerformingOffice?: { name: string };
-  monthlyTrendsData?: {
-    labels: string[];
-    datasets: { data: number[] }[];
-  };
-  vehicleTypeData?: Array<{
-    name: string;
-    population: number;
-    color: string;
-    legendFontColor: string;
-    legendFontSize: number;
-  }>;
-  quarterlyData?: {
-    labels: string[];
-    datasets: { data: number[] }[];
-  };
-  engineTypeData?: {
-    labels: string[];
-    datasets: { data: number[] }[];
-  };
+  officeDepartments: number;
+  topPerformingOffice?: TopOffice;
+  vehicleTypeDistribution?: PieChartSlice[];
+  engineTypeStackedData?: StackedBarChartData;
+  officeComplianceData: DashboardOfficeSummary[];
+  lastUpdated?: string;
 }
 
-/**
- * Hook for fetching government emission dashboard data with smart caching.
- * 
- * Features:
- * - Instant UI with cached data from previous sessions
- * - Background refresh when data is stale (>2 min old)
- * - Automatic refresh when app comes to foreground
- * - Offline support with cached data
- * - Data persists across app restarts (up to 24 hours)
- */
+const VEHICLES_ENDPOINT = "/emission/vehicles";
+const OFFICE_COMPLIANCE_ENDPOINT = "/emission/offices/compliance";
+const TESTS_ENDPOINT = "/emission/tests";
+
+const PIE_COLORS = ["#1E40AF", "#7C3AED", "#16A34A", "#DC2626", "#F59E0B", "#0891B2", "#f97316"];
+
+const EMPTY_DASHBOARD_DATA: DashboardData = {
+  totalVehicles: 0,
+  totalOffices: 0,
+  testedVehicles: 0,
+  complianceRate: 0,
+  passedTests: 0,
+  failedTests: 0,
+  pendingTests: 0,
+  officeDepartments: 0,
+  officeComplianceData: [],
+};
+
 export function useDashboardData(year?: number, quarter?: number) {
-  // Fetch dashboard stats from local database
   const fetchDashboardStats = async (): Promise<DashboardData> => {
     try {
-      const stats = await database.getDashboardStats();
-      const vehicles = await database.getVehicles();
-      let tests = await database.getEmissionTests();
+      const vehicleParams = {
+        include_test_data: "true",
+        limit: 1000,
+      } as const;
 
-      // Filter tests by year and quarter if specified
-      if (year || quarter) {
-        tests = tests.filter((test) => {
-          const testDate = new Date(test.test_date);
-          const testYear = testDate.getFullYear();
-          const testQuarter = Math.floor(testDate.getMonth() / 3) + 1;
-          
-          if (year && testYear !== year) return false;
-          if (quarter && testQuarter !== quarter) return false;
-          return true;
-        });
+      const complianceParams: Record<string, string | number> = {};
+      if (year) complianceParams.year = year;
+      if (typeof quarter === "number") complianceParams.quarter = quarter;
+
+      const testParams: Record<string, string | number> = {};
+      if (year) testParams.year = year;
+      if (typeof quarter === "number") testParams.quarter = quarter;
+
+      const [vehiclesResponse, officeComplianceResponse, testsResponse] = await Promise.all([
+        apiClient.get<VehiclesResponse>(VEHICLES_ENDPOINT, { params: vehicleParams }),
+        apiClient.get<OfficeComplianceResponse>(OFFICE_COMPLIANCE_ENDPOINT, { params: complianceParams }),
+        apiClient.get<TestsResponse>(TESTS_ENDPOINT, { params: testParams }),
+      ]);
+
+      if (vehiclesResponse.status >= 400) {
+        const message = (vehiclesResponse.data as any)?.message || "Unable to load vehicles";
+        throw new Error(message);
       }
 
-      // Calculate tested vehicles (vehicles with at least one test)
-      const vehicleIds = vehicles.map((v) => v.id);
-      const testedVehicleIds = new Set(tests.map((t) => t.vehicle_id));
-      const testedCount = vehicleIds.filter((id) =>
-        testedVehicleIds.has(id)
-      ).length;
+      if (officeComplianceResponse.status >= 400) {
+        const message = (officeComplianceResponse.data as any)?.message || "Unable to load office compliance";
+        throw new Error(message);
+      }
 
-      // Calculate test results
-      const passedTests = tests.filter((t) => t.result === true).length;
-      const failedTests = tests.filter((t) => t.result === false).length;
-      const pendingTests = tests.filter((t) => t.result === null || t.result === undefined).length;
-      const totalTests = tests.length;
-      const complianceRate =
-        totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0;
+      if (testsResponse.status >= 400) {
+        const message = (testsResponse.data as any)?.message || "Unable to load emission tests";
+        throw new Error(message);
+      }
 
-      // Get last test date
-      const sortedTests = [...tests].sort(
-        (a, b) =>
-          new Date(b.test_date).getTime() - new Date(a.test_date).getTime()
-      );
-      const lastTestDate =
-        sortedTests.length > 0 ? sortedTests[0].test_date : undefined;
+      const vehicles = vehiclesResponse.data?.vehicles ?? [];
+      const complianceData = officeComplianceResponse.data ?? {
+        offices: [],
+        summary: {
+          total_offices: 0,
+          total_vehicles: 0,
+          total_compliant: 0,
+          overall_compliance_rate: 0,
+        },
+        total: 0,
+      };
+      const offices = complianceData.offices ?? [];
+      const summary = complianceData.summary;
+      const apiTests = testsResponse.data?.tests ?? [];
 
-      // Get recent tests with plate numbers
-      const recentTestsRaw = await database.getEmissionTests({ limit: 5 });
-      const recentTests = await Promise.all(
-        recentTestsRaw.map(async (test) => {
-          const vehicle = await database.getVehicleById(test.vehicle_id);
-          return {
-            ...test,
-            vehicle_plate: vehicle?.plate_number || "Unknown",
-          };
-        })
-      );
+      const filteredTests = apiTests.filter((test) => {
+        const matchesYear = year ? test.year === year : true;
+        const matchesQuarter = typeof quarter === "number" ? test.quarter === quarter : true;
+        return matchesYear && matchesQuarter;
+      });
 
-      // Generate monthly trends data (simplified)
-      const monthlyTrendsData = generateMonthlyTrends(tests);
+      const testsByVehicle = new Map<string, EmissionTest[]>();
+      filteredTests.forEach((test) => {
+        const current = testsByVehicle.get(test.vehicle_id) ?? [];
+        current.push(test);
+        testsByVehicle.set(test.vehicle_id, current);
+      });
 
-      // Generate vehicle type distribution (simplified)
-      const vehicleTypeData = generateVehicleTypeData(vehicles, tests);
+      const vehicleSummaries: VehicleSummary[] = vehicles.map((vehicle) => {
+        const testsForVehicle = testsByVehicle.get(vehicle.id) ?? [];
+        const latestTest = [...testsForVehicle]
+          .sort((a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime())[0];
 
-      // Generate quarterly data (simplified)
-      const quarterlyData = generateQuarterlyData(tests);
+        let latestResult: boolean | null = null;
+        if (latestTest) {
+          latestResult = latestTest.result;
+        } else if (vehicle.latest_test_result !== undefined) {
+          latestResult = vehicle.latest_test_result;
+        }
 
-      // Generate engine type data (simplified)
-      const engineTypeData = generateEngineTypeData(tests);
+        return {
+          vehicleId: vehicle.id,
+          latestTestResult: latestResult ?? null,
+          vehicleType: vehicle.vehicle_type || "Unknown",
+          engineType: vehicle.engine_type || "Unknown",
+          wheels: vehicle.wheels || 0,
+          officeName: vehicle.office?.name || "Unknown",
+        };
+      });
+
+      const passedTests = vehicleSummaries.filter((summary) => summary.latestTestResult === true).length;
+      const failedTests = vehicleSummaries.filter((summary) => summary.latestTestResult === false).length;
+      const pendingTests = vehicleSummaries.filter((summary) => summary.latestTestResult === null).length;
+      const testedVehicles = passedTests + failedTests;
+      const totalVehiclesFromSummary = summary?.total_vehicles ?? vehiclesResponse.data?.total ?? vehicles.length;
+      const totalOfficesFromSummary = summary?.total_offices ?? complianceData.total ?? offices.length;
+      const complianceRateBase = passedTests + failedTests;
+      const complianceRate = complianceRateBase > 0 ? Math.round((passedTests / complianceRateBase) * 100) : 0;
+
+      const officeComplianceData: DashboardOfficeSummary[] = offices.map((office) => ({
+        id: office.office_name,
+        label: office.office_name,
+        complianceRate: Math.round(office.compliance_rate ?? 0),
+        passedCount: office.compliant_vehicles ?? 0,
+        vehicleCount: office.total_vehicles ?? 0,
+      }));
+
+      const topPerformingOfficeSource = officeComplianceData
+        .filter((office) => office.vehicleCount > 0)
+        .sort((a, b) => b.complianceRate - a.complianceRate)[0];
+
+      const topPerformingOffice: TopOffice | undefined = topPerformingOfficeSource
+        ? {
+            name: topPerformingOfficeSource.label,
+            complianceRate: topPerformingOfficeSource.complianceRate,
+            passedCount: topPerformingOfficeSource.passedCount,
+            vehicleCount: topPerformingOfficeSource.vehicleCount,
+          }
+        : undefined;
+
+      const vehicleTypeCount = new Map<string, number>();
+      vehicleSummaries.forEach((summary) => {
+        const current = vehicleTypeCount.get(summary.vehicleType) ?? 0;
+        vehicleTypeCount.set(summary.vehicleType, current + 1);
+      });
+
+      const vehicleTypeDistribution: PieChartSlice[] | undefined = vehicleTypeCount.size > 0
+        ? Array.from(vehicleTypeCount.entries()).map(([vehicleType, population], index) => ({
+            name: vehicleType,
+            population,
+            color: PIE_COLORS[index % PIE_COLORS.length],
+            legendFontColor: "#4B5563",
+            legendFontSize: 12,
+          }))
+        : undefined;
+
+      const engineTypeStats = new Map<string, { passed: number; failed: number; pending: number }>();
+      vehicleSummaries.forEach((summary) => {
+        const current = engineTypeStats.get(summary.engineType) ?? { passed: 0, failed: 0, pending: 0 };
+        if (summary.latestTestResult === true) {
+          current.passed += 1;
+        } else if (summary.latestTestResult === false) {
+          current.failed += 1;
+        } else {
+          current.pending += 1;
+        }
+        engineTypeStats.set(summary.engineType, current);
+      });
+
+      const engineTypeEntries = Array.from(engineTypeStats.entries()).filter(([, stats]) => stats.passed || stats.failed || stats.pending);
+      const engineTypeStackedData: StackedBarChartData | undefined = engineTypeEntries.length > 0
+        ? {
+            labels: engineTypeEntries.map(([engineType]) => engineType),
+            legend: ["Passed", "Failed", "Pending"],
+            data: engineTypeEntries.map(([, stats]) => [stats.passed, stats.failed, stats.pending]),
+            barColors: ["#22c55e", "#ef4444", "#f59e0b"],
+          }
+        : undefined;
 
       return {
-        totalVehicles: stats.totalVehicles,
-        testedVehicles: testedCount,
+        totalVehicles: totalVehiclesFromSummary,
+        totalOffices: totalOfficesFromSummary,
+        testedVehicles,
         complianceRate,
-        departments: stats.totalOffices,
-        lastTestDate,
-        recentTests,
-        pendingSyncCount: stats.pendingSync,
         passedTests,
         failedTests,
         pendingTests,
-        topPerformingOffice: { name: "City Hall" }, // Placeholder
-        monthlyTrendsData,
-        vehicleTypeData,
-        quarterlyData,
-        engineTypeData,
+        officeDepartments: totalOfficesFromSummary,
+        topPerformingOffice,
+        vehicleTypeDistribution,
+        engineTypeStackedData,
+        officeComplianceData,
+        lastUpdated: new Date().toISOString(),
       };
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);
-      return {
-        totalVehicles: 0,
-        testedVehicles: 0,
-        complianceRate: 0,
-        departments: 0,
-        recentTests: [],
-        pendingSyncCount: 0,
-        passedTests: 0,
-        failedTests: 0,
-        pendingTests: 0,
-      };
+      throw error;
     }
   };
 
@@ -157,23 +277,13 @@ export function useDashboardData(year?: number, quarter?: number) {
   } = useSmartQuery<DashboardData>({
     queryKey: ["dashboard-stats", year, quarter],
     queryFn: fetchDashboardStats,
-    staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
-    cacheTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
-    refetchOnAppFocus: true, // Refresh when app comes to foreground
+    staleTime: 2 * 60 * 1000,
+    cacheTime: 24 * 60 * 60 * 1000,
+    refetchOnAppFocus: true,
   });
 
   return {
-    data: data ?? {
-      totalVehicles: 0,
-      testedVehicles: 0,
-      complianceRate: 0,
-      departments: 0,
-      recentTests: [],
-      pendingSyncCount: 0,
-      passedTests: 0,
-      failedTests: 0,
-      pendingTests: 0,
-    },
+    data: data ?? EMPTY_DASHBOARD_DATA,
     loading: isLoading,
     error,
     refetch,
@@ -181,87 +291,4 @@ export function useDashboardData(year?: number, quarter?: number) {
     isFromCache,
     isStale,
   };
-}
-
-// Helper functions for chart data generation
-function generateMonthlyTrends(tests: LocalEmissionTest[]) {
-  if (tests.length === 0) return undefined;
-  
-  const monthlyMap: Record<string, number> = {};
-  tests.forEach((test) => {
-    const month = new Date(test.test_date).toLocaleDateString('en-US', { month: 'short' });
-    monthlyMap[month] = (monthlyMap[month] || 0) + 1;
-  });
-  
-  const labels = Object.keys(monthlyMap);
-  const data = Object.values(monthlyMap);
-  
-  return labels.length > 0 ? {
-    labels,
-    datasets: [{ data }],
-  } : undefined;
-}
-
-function generateVehicleTypeData(vehicles: any[], tests: LocalEmissionTest[]) {
-  if (vehicles.length === 0) return undefined;
-  
-  const typeMap: Record<string, number> = {};
-  vehicles.forEach((vehicle) => {
-    const type = vehicle.vehicle_type || 'Unknown';
-    typeMap[type] = (typeMap[type] || 0) + 1;
-  });
-  
-  const colors = ['#1E40AF', '#7C3AED', '#16A34A', '#DC2626', '#F59E0B'];
-  return Object.entries(typeMap).map(([name, population], index) => ({
-    name,
-    population,
-    color: colors[index % colors.length],
-    legendFontColor: '#64748B',
-    legendFontSize: 12,
-  }));
-}
-
-function generateQuarterlyData(tests: LocalEmissionTest[]) {
-  if (tests.length === 0) return undefined;
-  
-  const quarterlyMap: Record<string, number> = {};
-  tests.forEach((test) => {
-    const date = new Date(test.test_date);
-    const quarter = `Q${Math.floor(date.getMonth() / 3) + 1}`;
-    quarterlyMap[quarter] = (quarterlyMap[quarter] || 0) + (test.result ? 1 : 0);
-  });
-  
-  const labels = Object.keys(quarterlyMap);
-  const data = Object.values(quarterlyMap);
-  
-  return labels.length > 0 ? {
-    labels,
-    datasets: [{ data }],
-  } : undefined;
-}
-
-function generateEngineTypeData(tests: LocalEmissionTest[]) {
-  if (tests.length === 0) return undefined;
-  
-  const engineMap: Record<string, number> = {
-    'Gasoline': 0,
-    'Diesel': 0,
-    'Hybrid': 0,
-    'Electric': 0,
-  };
-  
-  // Simplified - would need vehicle data to properly categorize
-  tests.forEach((test) => {
-    if (test.result) {
-      engineMap['Gasoline'] = (engineMap['Gasoline'] || 0) + 1;
-    }
-  });
-  
-  const labels = Object.keys(engineMap).filter(k => engineMap[k] > 0);
-  const data = labels.map(k => engineMap[k]);
-  
-  return labels.length > 0 ? {
-    labels,
-    datasets: [{ data }],
-  } : undefined;
 }

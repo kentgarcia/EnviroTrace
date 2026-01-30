@@ -124,7 +124,10 @@ Create a `.env` file in the mobile directory:
 
 ```bash
 EXPO_PUBLIC_API_URL=http://localhost:8000/api/v1
+EXPO_PUBLIC_ENABLE_AI_ASSISTANT=true
 ```
+
+Set `EXPO_PUBLIC_ENABLE_AI_ASSISTANT` to `false` in environments where the AI assistant should be hidden.
 
 ## 📊 Database Schema
 
