@@ -16,7 +16,8 @@ import {
   fetchTreeByCode,
   createTree,
   updateTree,
-  deleteTree,
+  archiveTree,
+  restoreTree,
   createTreesBatch,
   fetchMonitoringLogs,
   createMonitoringLog,
@@ -67,17 +68,26 @@ export const useCreateSpecies = () => {
 
 // ==================== Tree Inventory Hooks ====================
 
-export const useTreeInventory = (params?: {
-  status?: string;
-  health?: string;
-  species?: string;
-  barangay?: string;
-  search?: string;
-}) => {
+export const useTreeInventory = (
+  params?: {
+    skip?: number;
+    limit?: number;
+    status?: string;
+    health?: string;
+    species?: string;
+    barangay?: string;
+    search?: string;
+    is_archived?: boolean;
+  },
+  options?: {
+    enabled?: boolean;
+  }
+) => {
   return useQuery({
     queryKey: ["tree-inventory", params],
     queryFn: () => fetchTrees(params),
     staleTime: 60_000,
+    enabled: options?.enabled ?? true,
   });
 };
 
@@ -425,14 +435,25 @@ export const useTreeMutations = () => {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTree,
+  const archiveMutation = useMutation({
+    mutationFn: archiveTree,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tree-inventory"] });
-      toast.success("Tree removed from inventory");
+      toast.success("Tree archived successfully");
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.detail || "Failed to delete tree");
+      toast.error(error.response?.data?.detail || "Failed to archive tree");
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: restoreTree,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree-inventory"] });
+      toast.success("Tree restored successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || "Failed to restore tree");
     },
   });
 
@@ -450,7 +471,8 @@ export const useTreeMutations = () => {
   return {
     createMutation,
     updateMutation,
-    deleteMutation,
+    archiveMutation,
+    restoreMutation,
     batchCreateMutation,
   };
 };

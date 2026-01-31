@@ -1,10 +1,11 @@
 # app/schemas/tree_inventory_schemas.py
 """Tree Inventory System Schemas"""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from datetime import date, datetime
 from typing import Optional, List, Union, Any
 from uuid import UUID
+import re
 
 
 # ==================== Photo Metadata Schema ====================
@@ -146,6 +147,9 @@ class TreeInventoryBase(BaseModel):
     notes: Optional[str] = None
 
 
+TREE_CODE_PATTERN = re.compile(r"^TAG-\d{4}-\d{6}$")
+
+
 class TreeInventoryCreate(BaseModel):
     tree_code: Optional[str] = None  # Auto-generated if not provided
     species: Optional[str] = None  # Scientific name (optional)
@@ -166,6 +170,19 @@ class TreeInventoryCreate(BaseModel):
     planting_project_id: Optional[UUID] = None
     photos: Optional[List[Union[str, TreePhotoMetadata]]] = []  # Can be URLs or metadata objects
     notes: Optional[str] = None
+
+    @validator("tree_code", pre=True)
+    def validate_tree_code(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            clean_value = value.strip()
+            if clean_value == "":
+                return None
+            if not TREE_CODE_PATTERN.match(clean_value):
+                raise ValueError("Tree code must follow TAG-YYYY-XXXXXX format")
+            return clean_value
+        raise ValueError("Tree code must be a string")
 
 
 class TreeInventoryUpdate(BaseModel):
@@ -194,6 +211,20 @@ class TreeInventoryUpdate(BaseModel):
     replacement_tree_id: Optional[UUID] = None
     photos: Optional[List[Union[str, TreePhotoMetadata]]] = None  # Can be URLs or metadata objects
     notes: Optional[str] = None
+    is_archived: Optional[bool] = None
+
+    @validator("tree_code", pre=True)
+    def validate_tree_code(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            clean_value = value.strip()
+            if clean_value == "":
+                return None
+            if not TREE_CODE_PATTERN.match(clean_value):
+                raise ValueError("Tree code must follow TAG-YYYY-XXXXXX format")
+            return clean_value
+        raise ValueError("Tree code must be a string")
 
 
 class TreeInventoryInDB(TreeInventoryBase):
@@ -201,6 +232,8 @@ class TreeInventoryInDB(TreeInventoryBase):
     tree_code: str
     created_at: datetime
     updated_at: Optional[datetime] = None
+    is_archived: bool = False
+    archived_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -250,6 +283,8 @@ class TreeInventoryResponse(TreeInventoryInDB):
             notes=db_obj.notes,
             created_at=db_obj.created_at,
             updated_at=db_obj.updated_at,
+            is_archived=getattr(db_obj, "is_archived", False),
+            archived_at=getattr(db_obj, "archived_at", None),
             monitoring_logs_count=logs_count,
             last_inspection_date=last_inspection
         )

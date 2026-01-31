@@ -74,7 +74,7 @@ function getMenuItems(
         path: `${basePath}/overview`,
       },
       {
-        label: "Tree Registry",
+        label: "Tree Inventory",
         path: `${basePath}/tree-inventory`,
       },
       {

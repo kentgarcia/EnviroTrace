@@ -15,8 +15,10 @@ import React, { useState, useMemo, useCallback, useRef, memo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { Button } from "@/presentation/components/shared/ui/button";
+import { Input } from "@/presentation/components/shared/ui/input";
 import {
   Layers,
+  Search,
   TreePine,
   Loader2,
   X,
@@ -32,7 +34,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
-import { useSmartTreesInBounds, useSmartTreeClusters, useTreeById } from "../logic/useTreeInventory";
+import { latLngBounds } from "leaflet";
+import { useDebounce } from "@/core/hooks/useDebounce";
+import { useSmartTreesInBounds, useSmartTreeClusters, useTreeById, useTreeInventory } from "../logic/useTreeInventory";
 import { TreeMapItem, TreeCluster, BoundsParams, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
 import "leaflet/dist/leaflet.css";
 
@@ -472,16 +476,56 @@ const TreeDetailSidePanel = ({
   );
 };
 
+// Auto-fit map bounds when search results change
+const SearchResultsFitter = ({ trees }: { trees: TreeMapItem[] }) => {
+  const map = useMap();
+  const lastKeyRef = useRef<string>("");
+
+  React.useEffect(() => {
+    if (!trees.length) return;
+
+    const key = trees
+      .map((tree) => tree.id)
+      .sort()
+      .join("|");
+
+    if (lastKeyRef.current === key) {
+      return;
+    }
+
+    lastKeyRef.current = key;
+
+    if (trees.length === 1) {
+      const [tree] = trees;
+      map.flyTo([tree.latitude, tree.longitude], Math.max(map.getZoom(), 17), {
+        duration: 0.6,
+      });
+      return;
+    }
+
+    const bounds = latLngBounds(
+      trees.map((tree) => [tree.latitude, tree.longitude] as [number, number])
+    );
+    map.fitBounds(bounds.pad(0.2));
+  }, [map, trees]);
+
+  return null;
+};
+
 // Main component
 const TreeInventoryMap: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | undefined>();
   const [filterHealth, setFilterHealth] = useState<string | undefined>();
   const [viewportBounds, setViewportBounds] = useState<BoundsParams | null>(null);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
 
+  const debouncedSearch = useDebounce(searchTerm, 400);
+  const isSearchMode = debouncedSearch.trim().length > 0;
+
   // Determine whether to use clusters or individual markers
-  const useClusters = zoom < CLUSTER_ZOOM_THRESHOLD;
+  const useClusters = !isSearchMode && zoom < CLUSTER_ZOOM_THRESHOLD;
 
   // Build filter params for viewport (actual viewport, not expanded)
   const filterParams = useMemo(() => viewportBounds ? ({
@@ -489,6 +533,69 @@ const TreeInventoryMap: React.FC = () => {
     status: filterStatus,
     health: filterHealth,
   }) : null, [viewportBounds, filterStatus, filterHealth]);
+
+  const searchParams = useMemo(() => {
+    if (!isSearchMode) return undefined;
+    const trimmed = debouncedSearch.trim();
+    if (!trimmed) return undefined;
+
+    const params: {
+      search: string;
+      limit: number;
+      status?: string;
+      health?: string;
+    } = {
+      search: trimmed,
+      limit: 200,
+    };
+
+    if (filterStatus) params.status = filterStatus;
+    if (filterHealth) params.health = filterHealth;
+
+    return params;
+  }, [isSearchMode, debouncedSearch, filterStatus, filterHealth]);
+
+  const {
+    data: searchResults = [],
+    isLoading: isLoadingSearch,
+    isFetching: isFetchingSearch,
+  } = useTreeInventory(searchParams, { enabled: isSearchMode });
+
+  const searchTrees = useMemo<TreeMapItem[]>(() => {
+    if (!isSearchMode) return [];
+
+    const validStatuses = new Set<TreeMapItem["status"]>(["alive", "cut", "dead", "replaced"]);
+    const validHealth = new Set<TreeMapItem["health"]>(["healthy", "needs_attention", "diseased", "dead"]);
+
+    return searchResults
+      .filter(
+        (tree) =>
+          typeof tree.latitude === "number" &&
+          typeof tree.longitude === "number"
+      )
+      .map((tree) => {
+        const status = validStatuses.has(tree.status as TreeMapItem["status"])
+          ? (tree.status as TreeMapItem["status"])
+          : "alive";
+
+        const health = validHealth.has(tree.health as TreeMapItem["health"])
+          ? (tree.health as TreeMapItem["health"])
+          : "healthy";
+
+        return {
+          id: tree.id,
+          tree_code: tree.tree_code,
+          species: tree.species || tree.common_name || "",
+          common_name: tree.common_name,
+          latitude: tree.latitude as number,
+          longitude: tree.longitude as number,
+          address: tree.address,
+          barangay: tree.barangay,
+          status,
+          health,
+        };
+      });
+  }, [isSearchMode, searchResults]);
 
   // Use smart caching hooks - fetches expanded bounds, renders viewport
   const { 
@@ -498,7 +605,7 @@ const TreeInventoryMap: React.FC = () => {
     isUsingCache: isTreesFromCache,
   } = useSmartTreesInBounds(
     useClusters ? null : filterParams,
-    { enabled: !useClusters && !!viewportBounds, limit: 1000 }
+    { enabled: !isSearchMode && !useClusters && !!viewportBounds, limit: 1000 }
   );
 
   const { 
@@ -509,15 +616,34 @@ const TreeInventoryMap: React.FC = () => {
   } = useSmartTreeClusters(
     useClusters ? filterParams : null,
     zoom,
-    { enabled: useClusters && !!viewportBounds }
+    { enabled: !isSearchMode && useClusters && !!viewportBounds }
   );
 
-  const isLoading = useClusters ? isLoadingClusters : isLoadingTrees;
-  const isFetching = useClusters ? isFetchingClusters : isFetchingTrees;
-  const isUsingCache = useClusters ? isClustersFromCache : isTreesFromCache;
+  const hasSearchResults = searchTrees.length > 0;
+  const isLoading = isSearchMode
+    ? isLoadingSearch && !hasSearchResults
+    : useClusters
+    ? isLoadingClusters
+    : isLoadingTrees;
+  const isFetching = isSearchMode
+    ? isFetchingSearch
+    : useClusters
+    ? isFetchingClusters
+    : isFetchingTrees;
+  const isUsingCache = isSearchMode
+    ? false
+    : useClusters
+    ? isClustersFromCache
+    : isTreesFromCache;
 
   // Memoized markers
   const markers = useMemo(() => {
+    if (isSearchMode) {
+      return searchTrees.map((tree) => (
+        <TreeMarker key={`search-${tree.id}`} tree={tree} onTreeClick={setSelectedTreeId} />
+      ));
+    }
+
     if (useClusters) {
       return clustersData.map((cluster, idx) => (
         <ClusterMarker key={`cluster-${idx}`} cluster={cluster} />
@@ -530,7 +656,7 @@ const TreeInventoryMap: React.FC = () => {
         onTreeClick={setSelectedTreeId}
       />
     ));
-  }, [useClusters, clustersData, treesData]);
+  }, [isSearchMode, searchTrees, useClusters, clustersData, treesData]);
 
   // Callbacks
   const handleBoundsChange = useCallback((newBounds: BoundsParams) => {
@@ -550,9 +676,13 @@ const TreeInventoryMap: React.FC = () => {
   }, []);
 
   // Count display
-  const displayCount = useClusters 
+  const displayCount = isSearchMode
+    ? searchTrees.length
+    : useClusters
     ? clustersData.reduce((sum, c) => sum + c.tree_count, 0)
     : treesData.length;
+
+  const displayLabel = isSearchMode ? "matches" : useClusters ? "total" : "visible";
 
   return (
     <Card className="h-full flex flex-col">
@@ -562,8 +692,13 @@ const TreeInventoryMap: React.FC = () => {
             <TreePine className="w-5 h-5" />
             Tree Locations
             <Badge variant="outline" className="ml-2">
-              {displayCount} {useClusters ? "total" : "visible"}
+              {displayCount} {displayLabel}
             </Badge>
+            {isSearchMode && (
+              <Badge className="ml-2 bg-blue-50 text-blue-700 border-blue-100">
+                Searching
+              </Badge>
+            )}
             {isFetching && (
               <Loader2 className="w-4 h-4 animate-spin text-gray-400 ml-2" />
             )}
@@ -573,34 +708,66 @@ const TreeInventoryMap: React.FC = () => {
 
       <CardContent className="flex-1 p-0 relative overflow-hidden">
         {/* Filter Controls */}
-        <div className={`absolute top-4 z-[1000] bg-white rounded-lg border p-2 space-y-1 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
-          <div className="text-xs font-medium text-gray-500 mb-2 flex items-center gap-1">
-            <Layers className="w-3 h-3" />
-            Filters
+        <div className={`absolute top-4 z-[1000] bg-white rounded-lg border p-3 space-y-2 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
+          <div className="w-[240px] space-y-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by code, species, or location..."
+                className="pl-8 pr-8 h-9 text-sm rounded-md"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {isSearchMode && (
+              <div className="text-[11px] text-gray-500">
+                {isFetchingSearch
+                  ? "Searching..."
+                  : hasSearchResults
+                  ? `${searchTrees.length} matches`
+                  : "No matches found"}
+              </div>
+            )}
+
+            <div className="text-xs font-medium text-gray-500 flex items-center gap-1">
+              <Layers className="w-3 h-3" />
+              Filters
+            </div>
+
+            <select 
+              value={filterStatus || "all"}
+              onChange={(e) => handleFilterChange("status", e.target.value)}
+              className="w-full text-xs px-2 py-1 border rounded"
+            >
+              <option value="all">All Status</option>
+              <option value="alive">🟢 Alive</option>
+              <option value="cut">🔴 Cut</option>
+              <option value="dead">⚫ Dead</option>
+              <option value="replaced">🔵 Replaced</option>
+            </select>
+
+            <select 
+              value={filterHealth || "all"}
+              onChange={(e) => handleFilterChange("health", e.target.value)}
+              className="w-full text-xs px-2 py-1 border rounded"
+            >
+              <option value="all">All Health</option>
+              <option value="healthy">💚 Healthy</option>
+              <option value="needs_attention">💛 Needs Attention</option>
+              <option value="diseased">🧡 Diseased</option>
+            </select>
           </div>
-          
-          <select 
-            value={filterStatus || "all"}
-            onChange={(e) => handleFilterChange("status", e.target.value)}
-            className="w-full text-xs px-2 py-1 border rounded"
-          >
-            <option value="all">All Status</option>
-            <option value="alive">🟢 Alive</option>
-            <option value="cut">🔴 Cut</option>
-            <option value="dead">⚫ Dead</option>
-            <option value="replaced">🔵 Replaced</option>
-          </select>
-          
-          <select 
-            value={filterHealth || "all"}
-            onChange={(e) => handleFilterChange("health", e.target.value)}
-            className="w-full text-xs px-2 py-1 border rounded"
-          >
-            <option value="all">All Health</option>
-            <option value="healthy">💚 Healthy</option>
-            <option value="needs_attention">💛 Needs Attention</option>
-            <option value="diseased">🧡 Diseased</option>
-          </select>
         </div>
 
         {/* Legend */}
@@ -642,10 +809,32 @@ const TreeInventoryMap: React.FC = () => {
         {/* Zoom indicator with cache status */}
         <div className={`absolute top-32 z-[1000] bg-white rounded-lg border px-3 py-2 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
           <div className="text-xs text-gray-500">
-            Zoom: {zoom} {useClusters ? "(clustered)" : "(individual)"}
+            {isSearchMode
+              ? `Search mode · zoom ${zoom}`
+              : `Zoom: ${zoom} ${useClusters ? "(clustered)" : "(individual)"}`}
           </div>
-          <div className={`text-xs mt-1 ${isUsingCache ? "text-green-600" : "text-blue-600"}`}>
-            {isFetching ? "⏳ Fetching..." : isUsingCache ? "✓ Using cache" : "📡 Ready"}
+          <div
+            className={`text-xs mt-1 ${
+              isSearchMode
+                ? hasSearchResults
+                  ? "text-blue-600"
+                  : "text-red-500"
+                : isUsingCache
+                ? "text-green-600"
+                : "text-blue-600"
+            }`}
+          >
+            {isSearchMode
+              ? isFetching
+                ? "⏳ Searching..."
+                : hasSearchResults
+                ? "✓ Results ready"
+                : "⚠ No matches"
+              : isFetching
+              ? "⏳ Fetching..."
+              : isUsingCache
+              ? "✓ Using cache"
+              : "📡 Ready"}
           </div>
         </div>
 
@@ -665,6 +854,10 @@ const TreeInventoryMap: React.FC = () => {
             onBoundsChange={handleBoundsChange}
             onZoomChange={handleZoomChange}
           />
+
+          {isSearchMode && searchTrees.length > 0 && (
+            <SearchResultsFitter trees={searchTrees} />
+          )}
           
           {markers}
         </MapContainer>
@@ -674,7 +867,9 @@ const TreeInventoryMap: React.FC = () => {
           <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-[1001]">
             <div className="text-center">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-              <p className="mt-2 text-sm text-gray-600">Loading trees...</p>
+              <p className="mt-2 text-sm text-gray-600">
+                {isSearchMode ? "Searching trees..." : "Loading trees..."}
+              </p>
             </div>
           </div>
         )}

@@ -5,11 +5,12 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { TreeInventory, TreeInventoryCreate, TreeSpecies, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
+import { TreeInventory, TreeInventoryCreate, TreeSpecies, TreePhotoMetadata, fetchNextTreeCode } from "@/core/api/tree-inventory-api";
 import { useTreeSpecies, useCreateSpecies } from "../logic/useTreeInventory";
 import TreeImageUpload, { UploadedImage } from "./TreeImageUpload";
 import { Save, X, MapPin, Plus, Search, Loader2 } from "lucide-react";
@@ -50,6 +51,8 @@ interface TreeFormProps {
   onSave: (data: TreeInventoryCreate) => Promise<void>;
   onCancel: () => void;
 }
+
+const TREE_CODE_PATTERN = /^TAG-\d{4}-\d{6}$/;
 
 // Search control component for the map
 const SearchControl: React.FC<{ onLocationSelect: (lat: number, lng: number, address: string) => void }> = ({ onLocationSelect }) => {
@@ -119,6 +122,18 @@ const TreeForm: React.FC<TreeFormProps> = ({
   const [speciesSearch, setSpeciesSearch] = useState("");
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [barangaySearch, setBarangaySearch] = useState("");
+  const initialTreeCode = (initialData?.tree_code ?? "").toUpperCase();
+  const [treeCode, setTreeCode] = useState(initialTreeCode);
+  const [isAutoCode, setIsAutoCode] = useState(() => {
+    if (mode === "add") {
+      return true;
+    }
+    if (!initialTreeCode) {
+      return true;
+    }
+    return TREE_CODE_PATTERN.test(initialTreeCode);
+  });
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Get all barangay names (memoized for performance)
   const allBarangays = useMemo(() => getAllBarangayNames(), []);
@@ -130,6 +145,57 @@ const TreeForm: React.FC<TreeFormProps> = ({
       .filter(b => b.toLowerCase().includes(barangaySearch.toLowerCase()))
       .slice(0, 100); // Limit to 100 results
   }, [allBarangays, barangaySearch]);
+
+  const suggestedYear = useMemo(() => {
+    if (formData.planted_date) {
+      const parsedDate = new Date(formData.planted_date);
+      if (!Number.isNaN(parsedDate.getTime())) {
+        return parsedDate.getFullYear();
+      }
+    }
+    return new Date().getFullYear();
+  }, [formData.planted_date]);
+
+  const currentCodeYear = useMemo(() => {
+    const match = treeCode.match(/^TAG-(\d{4})-\d{6}$/);
+    return match ? Number(match[1]) : null;
+  }, [treeCode]);
+
+  const shouldFetchSuggestion = useMemo(() => {
+    if (!isAutoCode) return false;
+    if (!treeCode) return true;
+    if (mode === "add" && !treeCode) return true;
+    if (currentCodeYear !== null && currentCodeYear !== suggestedYear) return true;
+    return false;
+  }, [currentCodeYear, isAutoCode, mode, suggestedYear, treeCode]);
+
+  const suggestionQuery = useQuery({
+    queryKey: ["tree-inventory", "next-tree-code", suggestedYear],
+    queryFn: () => fetchNextTreeCode(suggestedYear),
+    enabled: shouldFetchSuggestion,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!isAutoCode) return;
+    const nextCode = suggestionQuery.data?.tree_code?.toUpperCase();
+    if (nextCode && nextCode !== treeCode) {
+      setTreeCode(nextCode);
+    }
+  }, [isAutoCode, suggestionQuery.data, treeCode]);
+
+  useEffect(() => {
+    const normalizedInitialCode = (initialData?.tree_code ?? "").toUpperCase();
+    setTreeCode(normalizedInitialCode);
+    if (mode === "add") {
+      setIsAutoCode(true);
+    } else if (!normalizedInitialCode) {
+      setIsAutoCode(true);
+    } else {
+      setIsAutoCode(TREE_CODE_PATTERN.test(normalizedInitialCode));
+    }
+    setFormError(null);
+  }, [initialData?.tree_code, mode]);
 
   // Fetch species from database
   const { data: speciesList = [], isLoading: speciesLoading } = useTreeSpecies();
@@ -173,6 +239,23 @@ const TreeForm: React.FC<TreeFormProps> = ({
     common_name: "",
     local_name: "",
   });
+
+  const handleTreeCodeChange = useCallback((value: string) => {
+    setTreeCode(value.toUpperCase());
+    setIsAutoCode(false);
+    setFormError(null);
+  }, []);
+
+  const handleUseSuggestedCode = useCallback(async () => {
+    setIsAutoCode(true);
+    setFormError(null);
+    setTreeCode("");
+    const result = await suggestionQuery.refetch({ throwOnError: false, cancelRefetch: false });
+    const nextCode = result.data?.tree_code?.toUpperCase();
+    if (nextCode) {
+      setTreeCode(nextCode);
+    }
+  }, [suggestionQuery]);
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -323,6 +406,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setIsSubmitting(true);
     try {
       // Convert photos to the format expected by the API
@@ -337,6 +421,8 @@ const TreeForm: React.FC<TreeFormProps> = ({
             uploaded_by_email: photo.uploaded_by_email,
           }))
         : undefined;
+
+      const normalizedTreeCode = treeCode.trim().toUpperCase();
 
       const payload: TreeInventoryCreate = {
         species: formData.species || undefined,
@@ -354,9 +440,15 @@ const TreeForm: React.FC<TreeFormProps> = ({
         notes: formData.notes || undefined,
         photos: photosPayload,
       };
+
+      if (normalizedTreeCode) {
+        payload.tree_code = normalizedTreeCode;
+      }
       await onSave(payload);
     } catch (error) {
       console.error("Error saving tree:", error);
+      const apiError = (error as any)?.response?.data?.detail;
+      setFormError(typeof apiError === "string" ? apiError : "Failed to save tree");
     } finally {
       setIsSubmitting(false);
     }
@@ -380,6 +472,54 @@ const TreeForm: React.FC<TreeFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Tree Code */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Tree Code</h3>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div className="flex-1">
+            <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Code</Label>
+            <Input
+              value={treeCode}
+              onChange={(e) => handleTreeCodeChange(e.target.value)}
+              placeholder="TAG-2027-000001"
+              className="mt-1"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleUseSuggestedCode}
+            className="sm:mt-5"
+            disabled={suggestionQuery.isLoading || suggestionQuery.isFetching}
+          >
+            {(suggestionQuery.isLoading || suggestionQuery.isFetching) && (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            )}
+            {isAutoCode ? "Regenerate" : "Use suggested"}
+          </Button>
+        </div>
+        <div className="text-xs text-gray-500">
+          {isAutoCode ? (
+            suggestionQuery.isFetching ? (
+              "Generating next available code..."
+            ) : (
+              `Automatically generated using ${suggestedYear}.`
+            )
+          ) : (
+            <span className="text-amber-600">Manual override active. Ensure the code follows TAG-YYYY-XXXXXX.</span>
+          )}
+        </div>
+        {suggestionQuery.isError && (
+          <div className="text-xs text-red-500">
+            Unable to fetch a suggested code right now. Please retry or enter a code manually.
+          </div>
+        )}
+        {formError && (
+          <div className="text-xs text-red-600">{formError}</div>
+        )}
+      </div>
+
       {/* Species Selection */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Tree Species</h3>

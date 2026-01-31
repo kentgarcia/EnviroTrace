@@ -3,10 +3,12 @@
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, desc, or_
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from uuid import UUID
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import json
+import re
 
 from app.models.tree_inventory_models import TreeInventory, TreeMonitoringLog, PlantingProject, TreeSpecies
 from app.schemas.tree_inventory_schemas import (
@@ -19,6 +21,26 @@ from app.schemas.tree_inventory_schemas import (
     AnnualCarbonSequestrationStats, CarbonLossStats,
     SpeciesComposition, SpeciesCarbonData
 )
+
+
+class DuplicateTreeCodeError(Exception):
+    """Raised when a tree code already exists."""
+
+
+TREE_CODE_PATTERN = re.compile(r"^TAG-(?P<year>\d{4})-(\d{6})$")
+
+
+def _extract_year_from_code(tree_code: Optional[str]) -> Optional[int]:
+    if not tree_code:
+        return None
+    match = TREE_CODE_PATTERN.match(tree_code)
+    if not match:
+        return None
+    return int(match.group("year"))
+
+
+def _is_duplicate_tree_code_error(error: IntegrityError) -> bool:
+    return "tree_code" in str(getattr(error, "orig", ""))
 
 
 # ==================== Tree Species CRUD ====================
@@ -99,25 +121,32 @@ def count_trees_using_species(db: Session, common_name: str) -> int:
 
 # ==================== Tree Code Generation ====================
 
-def generate_tree_code(db: Session) -> str:
+def generate_tree_code(db: Session, year: Optional[int] = None) -> str:
     """Generate unique tree code: TAG-YYYY-XXXXXX"""
-    year = datetime.now().year
-    prefix = f"TAG-{year}-"
-    
+    try:
+        target_year = int(year) if year is not None else datetime.now().year
+    except (TypeError, ValueError):
+        target_year = datetime.now().year
+
+    target_year = max(1900, min(target_year, 9999))
+    prefix = f"TAG-{target_year}-"
+
     # Find the highest number for this year
-    result = db.query(func.max(TreeInventory.tree_code))\
-        .filter(TreeInventory.tree_code.like(f"{prefix}%"))\
+    result = (
+        db.query(func.max(TreeInventory.tree_code))
+        .filter(TreeInventory.tree_code.like(f"{prefix}%"))
         .scalar()
-    
+    )
+
     if result:
         try:
             last_num = int(result.replace(prefix, ""))
             new_num = last_num + 1
-        except:
+        except Exception:
             new_num = 1
     else:
         new_num = 1
-    
+
     return f"{prefix}{str(new_num).zfill(6)}"
 
 
@@ -152,11 +181,14 @@ def get_all_trees(
     health: Optional[str] = None,
     species: Optional[str] = None,
     barangay: Optional[str] = None,
-    search: Optional[str] = None
+    search: Optional[str] = None,
+    is_archived: Optional[bool] = False
 ) -> List[TreeInventory]:
     """Get all trees with optional filters"""
     query = db.query(TreeInventory)
     
+    if is_archived is not None:
+        query = query.filter(TreeInventory.is_archived == is_archived)
     if status:
         query = query.filter(TreeInventory.status == status)
     if health:
@@ -189,7 +221,9 @@ def get_tree_by_code(db: Session, tree_code: str) -> Optional[TreeInventory]:
 def create_tree(db: Session, tree_data: TreeInventoryCreate) -> TreeInventory:
     """Create new tree in inventory"""
     # Generate tree code if not provided
-    tree_code = tree_data.tree_code or generate_tree_code(db)
+    planted_date = tree_data.planted_date
+    target_year = planted_date.year if planted_date else datetime.now().year
+    tree_code = tree_data.tree_code or generate_tree_code(db, target_year)
     
     # Convert photos list to JSON string
     photos_json = None
@@ -223,7 +257,15 @@ def create_tree(db: Session, tree_data: TreeInventoryCreate) -> TreeInventory:
     )
     
     db.add(db_tree)
-    db.commit()
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if _is_duplicate_tree_code_error(exc):
+            raise DuplicateTreeCodeError from exc
+        raise
+
     db.refresh(db_tree)
     return db_tree
 
@@ -239,22 +281,70 @@ def update_tree(db: Session, tree_id: UUID, tree_data: TreeInventoryUpdate) -> O
     # Handle photos field
     if 'photos' in update_data and update_data['photos'] is not None:
         update_data['photos'] = json.dumps(update_data['photos'])
+
+    # Normalize empty tree code to trigger regeneration logic
+    if 'tree_code' in update_data and update_data['tree_code'] is None:
+        update_data.pop('tree_code')
+
+    manual_tree_code_provided = 'tree_code' in update_data
+
+    if not manual_tree_code_provided:
+        # Determine if planted date is changing and whether existing code follows the auto pattern
+        new_planted_date = update_data.get('planted_date', db_tree.planted_date)
+        target_year = new_planted_date.year if new_planted_date else datetime.now().year
+        existing_year = _extract_year_from_code(db_tree.tree_code)
+
+        if 'planted_date' in update_data and existing_year is not None and existing_year != target_year:
+            update_data['tree_code'] = generate_tree_code(db, target_year)
+        elif db_tree.tree_code is None:
+            update_data['tree_code'] = generate_tree_code(db, target_year)
     
     for key, value in update_data.items():
         setattr(db_tree, key, value)
     
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if _is_duplicate_tree_code_error(exc):
+            raise DuplicateTreeCodeError from exc
+        raise
+
     db.refresh(db_tree)
     return db_tree
 
 
 def delete_tree(db: Session, tree_id: UUID) -> bool:
-    """Delete tree from inventory"""
+    """Archive tree from inventory (legacy delete alias)"""
+    return archive_tree(db, tree_id)
+
+
+def archive_tree(db: Session, tree_id: UUID) -> bool:
+    """Mark tree as archived"""
     db_tree = get_tree_by_id(db, tree_id)
     if not db_tree:
         return False
-    
-    db.delete(db_tree)
+
+    if db_tree.is_archived:
+        return True
+
+    db_tree.is_archived = True
+    db_tree.archived_at = datetime.now(timezone.utc)
+    db.commit()
+    return True
+
+
+def restore_tree(db: Session, tree_id: UUID) -> bool:
+    """Restore archived tree"""
+    db_tree = get_tree_by_id(db, tree_id)
+    if not db_tree:
+        return False
+
+    if not db_tree.is_archived:
+        return True
+
+    db_tree.is_archived = False
+    db_tree.archived_at = None
     db.commit()
     return True
 
@@ -262,6 +352,7 @@ def delete_tree(db: Session, tree_id: UUID) -> bool:
 def get_trees_for_map(db: Session) -> List[TreeInventory]:
     """Get all trees with location for map display"""
     return db.query(TreeInventory)\
+        .filter(TreeInventory.is_archived == False)\
         .filter(TreeInventory.latitude.isnot(None))\
         .filter(TreeInventory.longitude.isnot(None))\
         .all()
@@ -297,7 +388,8 @@ def get_trees_in_bounds(
         }
     )
     
-    return [dict(row._mapping) for row in result.fetchall()]
+    rows = [dict(row._mapping) for row in result.fetchall()]
+    return [row for row in rows if not row.get("is_archived")]
 
 
 def get_tree_clusters(
@@ -473,23 +565,25 @@ def delete_project(db: Session, project_id: UUID) -> bool:
 def get_tree_inventory_stats(db: Session) -> TreeInventoryStats:
     """Get comprehensive tree inventory statistics"""
     current_year = datetime.now().year
+    active_clause = (TreeInventory.is_archived == False)
+    active_clause = (TreeInventory.is_archived == False)
     
     # Total counts by status
-    total = db.query(func.count(TreeInventory.id)).scalar() or 0
-    alive = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'alive').scalar() or 0
-    cut = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'cut').scalar() or 0
-    dead = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'dead').scalar() or 0
+    total = db.query(func.count(TreeInventory.id)).filter(active_clause).scalar() or 0
+    alive = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'alive').scalar() or 0
+    cut = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'cut').scalar() or 0
+    dead = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'dead').scalar() or 0
     
     # Health counts
-    healthy = db.query(func.count(TreeInventory.id)).filter(TreeInventory.health == 'healthy').scalar() or 0
-    needs_attention = db.query(func.count(TreeInventory.id)).filter(TreeInventory.health == 'needs_attention').scalar() or 0
-    diseased = db.query(func.count(TreeInventory.id)).filter(TreeInventory.health == 'diseased').scalar() or 0
+    healthy = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.health == 'healthy').scalar() or 0
+    needs_attention = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.health == 'needs_attention').scalar() or 0
+    diseased = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.health == 'diseased').scalar() or 0
     
     # This year's activity
     planted_this_year = db.query(func.count(TreeInventory.id))\
-        .filter(extract('year', TreeInventory.planted_date) == current_year).scalar() or 0
+        .filter(active_clause, extract('year', TreeInventory.planted_date) == current_year).scalar() or 0
     cut_this_year = db.query(func.count(TreeInventory.id))\
-        .filter(extract('year', TreeInventory.cutting_date) == current_year).scalar() or 0
+        .filter(active_clause, extract('year', TreeInventory.cutting_date) == current_year).scalar() or 0
     
     # Replacement ratio
     replacement_ratio = None
@@ -500,7 +594,7 @@ def get_tree_inventory_stats(db: Session) -> TreeInventoryStats:
     top_species = db.query(
         TreeInventory.species,
         func.count(TreeInventory.id).label('count')
-    ).filter(TreeInventory.status == 'alive')\
+    ).filter(active_clause, TreeInventory.status == 'alive')\
      .group_by(TreeInventory.species)\
      .order_by(desc('count'))\
      .limit(10).all()
@@ -509,7 +603,7 @@ def get_tree_inventory_stats(db: Session) -> TreeInventoryStats:
     by_barangay = db.query(
         TreeInventory.barangay,
         func.count(TreeInventory.id).label('count')
-    ).filter(TreeInventory.barangay.isnot(None))\
+    ).filter(active_clause, TreeInventory.barangay.isnot(None))\
      .group_by(TreeInventory.barangay)\
      .order_by(desc('count'))\
      .limit(10).all()
@@ -570,22 +664,22 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     # ==================== Tree Count & Composition ====================
     
     # Basic counts
-    total_trees = db.query(func.count(TreeInventory.id)).scalar() or 0
-    alive_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'alive').scalar() or 0
-    cut_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'cut').scalar() or 0
-    dead_trees = db.query(func.count(TreeInventory.id)).filter(TreeInventory.status == 'dead').scalar() or 0
+    total_trees = db.query(func.count(TreeInventory.id)).filter(active_clause).scalar() or 0
+    alive_trees = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'alive').scalar() or 0
+    cut_trees = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'cut').scalar() or 0
+    dead_trees = db.query(func.count(TreeInventory.id)).filter(active_clause, TreeInventory.status == 'dead').scalar() or 0
     
     # Native vs endangered - join with species table
     native_subquery = db.query(func.count(TreeInventory.id))\
         .join(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
         .filter(TreeSpecies.is_native == True)\
-        .filter(TreeInventory.status == 'alive')\
+        .filter(active_clause, TreeInventory.status == 'alive')\
         .scalar() or 0
     
     endangered_subquery = db.query(func.count(TreeInventory.id))\
         .join(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
         .filter(TreeSpecies.is_endangered == True)\
-        .filter(TreeInventory.status == 'alive')\
+        .filter(active_clause, TreeInventory.status == 'alive')\
         .scalar() or 0
     
     native_count = native_subquery
@@ -599,7 +693,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
         TreeSpecies.is_native,
         func.count(TreeInventory.id).label('count')
     ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
-     .filter(TreeInventory.status == 'alive')\
+     .filter(active_clause, TreeInventory.status == 'alive')\
      .group_by(TreeInventory.common_name, TreeSpecies.scientific_name, TreeSpecies.is_native)\
      .order_by(desc('count'))\
      .all()
@@ -636,7 +730,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
         TreeSpecies.co2_stored_mature_avg_kg,
         TreeSpecies.co2_absorbed_kg_per_year
     ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
-     .filter(TreeInventory.status == 'alive')\
+     .filter(active_clause, TreeInventory.status == 'alive')\
      .group_by(
          TreeInventory.common_name,
          TreeSpecies.scientific_name,
@@ -701,7 +795,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     
     # Trees planted this year
     trees_planted_this_year = db.query(func.count(TreeInventory.id))\
-        .filter(extract('year', TreeInventory.planted_date) == current_year)\
+        .filter(active_clause, extract('year', TreeInventory.planted_date) == current_year)\
         .scalar() or 0
     
     # CO2 from new plantings (newly planted trees absorb less initially)
@@ -710,7 +804,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
         func.count(TreeInventory.id),
         func.avg(TreeSpecies.co2_absorbed_kg_per_year)
     ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
-     .filter(extract('year', TreeInventory.planted_date) == current_year)\
+     .filter(active_clause, extract('year', TreeInventory.planted_date) == current_year)\
      .first()
     
     new_tree_count = new_planting_co2[0] or 0
@@ -730,6 +824,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     # Trees removed this year
     trees_removed_this_year = db.query(func.count(TreeInventory.id))\
         .filter(
+            active_clause,
             extract('year', TreeInventory.cutting_date) == current_year
         ).scalar() or 0
     
@@ -743,7 +838,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
         TreeSpecies.decay_years_min,
         TreeSpecies.decay_years_max
     ).outerjoin(TreeSpecies, TreeInventory.common_name == TreeSpecies.common_name)\
-     .filter(extract('year', TreeInventory.cutting_date) == current_year)\
+     .filter(active_clause, extract('year', TreeInventory.cutting_date) == current_year)\
      .group_by(
          TreeInventory.cutting_reason,
          TreeSpecies.co2_stored_mature_avg_kg,

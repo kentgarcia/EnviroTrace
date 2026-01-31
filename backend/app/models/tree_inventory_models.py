@@ -72,6 +72,7 @@ class TreeInventory(Base):
         Index("idx_tree_inventory_health", "health"),
         Index("idx_tree_inventory_barangay", "barangay"),
         Index("idx_tree_inventory_location", "latitude", "longitude"),
+        Index("idx_tree_inventory_archived", "is_archived"),
         {"schema": "urban_greening"}
     )
 
@@ -92,6 +93,8 @@ class TreeInventory(Base):
     # Current Status
     status = Column(String(50), nullable=False, default='alive')  # alive, cut, dead, replaced
     health = Column(String(50), nullable=False, default='healthy')  # healthy, needs_attention, diseased, dead
+    is_archived = Column(Boolean, nullable=False, default=False, server_default=text("false"))
+    archived_at = Column(DateTime(timezone=True), nullable=True)
     
     # Physical Characteristics
     height_meters = Column(Float, nullable=True)

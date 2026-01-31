@@ -11,9 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/presentation
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Label } from "@/presentation/components/shared/ui/label";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/presentation/components/shared/ui/alert-dialog";
+import {
   X,
   Edit,
-  Trash2,
   Leaf,
   AlertTriangle,
   MapPin,
@@ -26,6 +35,8 @@ import {
   Image as ImageIcon,
   User,
   ZoomIn,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { TreeInventory, MonitoringLogCreate, TreePhotoMetadata } from "@/core/api/tree-inventory-api";
 import { useTreeMonitoringLogs, useMonitoringMutations } from "../logic/useTreeInventory";
@@ -34,17 +45,26 @@ interface TreeDetailPanelProps {
   tree: TreeInventory;
   onClose: () => void;
   onEdit: () => void;
-  onDelete: () => void;
+  onArchive: () => Promise<void> | void;
+  onRestore: () => Promise<void> | void;
+  isArchived: boolean;
+  isArchiving: boolean;
+  isRestoring: boolean;
 }
 
 const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   tree,
   onClose,
   onEdit,
-  onDelete,
+  onArchive,
+  onRestore,
+  isArchived,
+  isArchiving,
+  isRestoring,
 }) => {
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [logForm, setLogForm] = useState<{
     health_status: "healthy" | "needs_attention" | "diseased" | "dead";
     notes: string;
@@ -58,6 +78,7 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   // Fetch monitoring logs for this tree
   const { data: monitoringLogs = [], isLoading: logsLoading } = useTreeMonitoringLogs(tree.id);
   const { createMutation } = useMonitoringMutations();
+  const archiveActionPending = isArchived ? isRestoring : isArchiving;
 
   const statusColors: Record<string, string> = {
     alive: "bg-green-100 text-green-800 border-green-200",
@@ -158,6 +179,12 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
                 {tree.health === "needs_attention" && <AlertTriangle className="w-3 h-3 mr-1" />}
                 {tree.health.replace("_", " ").toUpperCase()}
               </Badge>
+              {isArchived && (
+                <Badge className="bg-slate-800 text-white border-slate-700 flex items-center gap-1">
+                  <Archive className="w-3 h-3" />
+                  Archived
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -230,6 +257,11 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
             )}
             {tree.cutting_date && (
               <div className="text-red-600"><span className="text-gray-500">Cut:</span> {formatDate(tree.cutting_date)}</div>
+            )}
+            {tree.archived_at && (
+              <div className="text-xs text-gray-500">
+                Archived: {formatDateTime(tree.archived_at)}
+              </div>
             )}
             <div className="text-xs text-gray-400">Last updated: {formatDate(tree.updated_at)}</div>
           </div>
@@ -341,20 +373,64 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
             variant="outline"
             className="flex-1 rounded-lg"
             onClick={onEdit}
+            disabled={archiveActionPending}
           >
             <Edit className="w-4 h-4 mr-2" />
             Edit
           </Button>
           <Button
             variant="outline"
-            className="flex-1 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={onDelete}
+            className={`flex-1 rounded-lg ${
+              isArchived
+                ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+            }`}
+            onClick={() => setArchiveDialogOpen(true)}
+            disabled={archiveActionPending}
           >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete
+            {isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
+            {archiveActionPending ? "Processing..." : isArchived ? "Restore" : "Archive"}
           </Button>
         </div>
       </CardContent>
+
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isArchived ? "Restore tree record?" : "Archive tree record?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isArchived
+                ? "Restoring will move this tree back into the active registry."
+                : "Archiving removes the tree from active views without deleting its history."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setArchiveDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (archiveActionPending) return;
+                if (isArchived) {
+                  await onRestore();
+                } else {
+                  await onArchive();
+                }
+                setArchiveDialogOpen(false);
+              }}
+              disabled={archiveActionPending}
+            >
+              {archiveActionPending
+                ? "Please wait..."
+                : isArchived
+                ? "Restore tree"
+                : "Archive tree"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Monitoring Log Dialog */}
       <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>

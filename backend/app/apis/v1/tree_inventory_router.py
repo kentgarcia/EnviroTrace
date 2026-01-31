@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime
 
 from app.db.database import get_db
 from app.schemas.tree_inventory_schemas import (
@@ -95,11 +96,22 @@ def get_all_trees(
     species: Optional[str] = Query(None, description="Filter by species (partial match)"),
     barangay: Optional[str] = Query(None, description="Filter by barangay (partial match)"),
     search: Optional[str] = Query(None, description="Search by code, species, name, or address"),
+    is_archived: Optional[bool] = Query(False, description="Filter by archived status. Set to null to include all."),
     db: Session = Depends(get_db)
 ):
     """Get all trees in inventory with optional filters"""
-    trees = crud.get_all_trees(db, skip, limit, status, health, species, barangay, search)
+    trees = crud.get_all_trees(db, skip, limit, status, health, species, barangay, search, is_archived)
     return [TreeInventoryResponse.from_db_model(t) for t in trees]
+
+
+@router.get("/trees/next-code")
+def preview_tree_code(
+    year: Optional[int] = Query(None, ge=1900, le=9999, description="Year used to generate the code"),
+    db: Session = Depends(get_db)
+):
+    """Preview the next available tree code for a specific year."""
+    target_year = year if year is not None else datetime.now().year
+    return {"tree_code": crud.generate_tree_code(db, target_year)}
 
 
 @router.get("/trees/map", response_model=List[TreeInventoryResponse])
@@ -193,24 +205,38 @@ def get_tree_by_code(tree_code: str, db: Session = Depends(get_db)):
 @router.post("/trees", response_model=TreeInventoryResponse, status_code=201)
 def create_tree(tree_data: TreeInventoryCreate, db: Session = Depends(get_db)):
     """Create a new tree in the inventory"""
-    tree = crud.create_tree(db, tree_data)
+    try:
+        tree = crud.create_tree(db, tree_data)
+    except crud.DuplicateTreeCodeError:
+        raise HTTPException(status_code=409, detail="Tree code already exists")
     return TreeInventoryResponse.from_db_model(tree)
 
 
 @router.put("/trees/{tree_id}", response_model=TreeInventoryResponse)
 def update_tree(tree_id: UUID, tree_data: TreeInventoryUpdate, db: Session = Depends(get_db)):
     """Update a tree in the inventory"""
-    tree = crud.update_tree(db, tree_id, tree_data)
+    try:
+        tree = crud.update_tree(db, tree_id, tree_data)
+    except crud.DuplicateTreeCodeError:
+        raise HTTPException(status_code=409, detail="Tree code already exists")
     if not tree:
         raise HTTPException(status_code=404, detail="Tree not found")
     return TreeInventoryResponse.from_db_model(tree)
 
 
 @router.delete("/trees/{tree_id}", status_code=204)
-def delete_tree(tree_id: UUID, db: Session = Depends(get_db)):
-    """Delete a tree from the inventory"""
-    if not crud.delete_tree(db, tree_id):
+def archive_tree(tree_id: UUID, db: Session = Depends(get_db)):
+    """Archive a tree from the inventory"""
+    if not crud.archive_tree(db, tree_id):
         raise HTTPException(status_code=404, detail="Tree not found")
+
+
+@router.post("/trees/{tree_id}/restore", status_code=200)
+def restore_tree(tree_id: UUID, db: Session = Depends(get_db)):
+    """Restore an archived tree"""
+    if not crud.restore_tree(db, tree_id):
+        raise HTTPException(status_code=404, detail="Tree not found")
+    return {"message": "Tree restored successfully"}
 
 
 # ==================== Monitoring Log Endpoints ====================

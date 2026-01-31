@@ -131,6 +131,8 @@ export interface TreeInventory {
   updated_at?: string;
   monitoring_logs_count?: number;
   last_inspection_date?: string;
+  is_archived: boolean;
+  archived_at?: string;
 }
 
 export interface TreeInventoryCreate {
@@ -162,6 +164,7 @@ export interface TreeInventoryUpdate extends Partial<TreeInventoryCreate> {
   death_cause?: string;
   cutting_request_id?: string;
   replacement_tree_id?: string;
+  is_archived?: boolean;
 }
 
 export interface TreeMonitoringLog {
@@ -335,6 +338,7 @@ export interface TreeMapItem {
   barangay?: string;
   status: 'alive' | 'cut' | 'dead' | 'replaced';
   health: 'healthy' | 'needs_attention' | 'diseased' | 'dead';
+  is_archived?: boolean;
 }
 
 // Cluster data for map clustering
@@ -367,6 +371,7 @@ export const fetchTrees = async (params?: {
   species?: string;
   barangay?: string;
   search?: string;
+  is_archived?: boolean;
 }): Promise<TreeInventory[]> => {
   const searchParams = new URLSearchParams();
   if (params?.skip) searchParams.append('skip', String(params.skip));
@@ -376,6 +381,9 @@ export const fetchTrees = async (params?: {
   if (params?.species) searchParams.append('species', params.species);
   if (params?.barangay) searchParams.append('barangay', params.barangay);
   if (params?.search) searchParams.append('search', params.search);
+  if (typeof params?.is_archived === 'boolean') {
+    searchParams.append('is_archived', String(params.is_archived));
+  }
   
   const queryString = searchParams.toString();
   const url = `/tree-inventory/trees${queryString ? `?${queryString}` : ''}`;
@@ -440,6 +448,17 @@ export const fetchTreeByCode = async (code: string): Promise<TreeInventory> => {
   return res.data;
 };
 
+export const fetchNextTreeCode = async (year?: number): Promise<{ tree_code: string }> => {
+  const searchParams = new URLSearchParams();
+  if (typeof year === "number") {
+    searchParams.append("year", String(year));
+  }
+  const query = searchParams.toString();
+  const url = `/tree-inventory/trees/next-code${query ? `?${query}` : ""}`;
+  const res = await apiClient.get(url);
+  return res.data;
+};
+
 export const createTree = async (data: TreeInventoryCreate): Promise<TreeInventory> => {
   const res = await apiClient.post('/tree-inventory/trees', data);
   return res.data;
@@ -452,6 +471,15 @@ export const updateTree = async (id: string, data: TreeInventoryUpdate): Promise
 
 export const deleteTree = async (id: string): Promise<void> => {
   await apiClient.delete(`/tree-inventory/trees/${id}`);
+};
+
+export const archiveTree = async (id: string): Promise<void> => {
+  await apiClient.delete(`/tree-inventory/trees/${id}`);
+};
+
+export const restoreTree = async (id: string): Promise<{ message: string }> => {
+  const res = await apiClient.post(`/tree-inventory/trees/${id}/restore`);
+  return res.data;
 };
 
 export const createTreesBatch = async (trees: TreeInventoryCreate[]): Promise<TreeInventory[]> => {

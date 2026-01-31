@@ -22,8 +22,8 @@ import {
   Leaf,
   AlertTriangle,
   XCircle,
-  Eye,
-  QrCode,
+  Archive,
+  ArchiveRestore,
   ClipboardList
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
@@ -52,6 +52,7 @@ const TreeInventoryPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(search?.status || "all");
   const [healthFilter, setHealthFilter] = useState<string>(search?.health || "all");
+  const [showArchived, setShowArchived] = useState(false);
   
   // Form dialog state - open if action=add in URL
   const [isFormOpen, setIsFormOpen] = useState(search?.action === "add");
@@ -66,9 +67,10 @@ const TreeInventoryPage: React.FC = () => {
     status: statusFilter !== "all" ? statusFilter : undefined,
     health: healthFilter !== "all" ? healthFilter : undefined,
     search: searchTerm || undefined,
+    is_archived: showArchived,
   });
   const { data: stats } = useTreeStats();
-  const { createMutation, updateMutation, deleteMutation } = useTreeMutations();
+  const { createMutation, updateMutation, archiveMutation, restoreMutation } = useTreeMutations();
 
   // Table columns
   const columns: ColumnDef<TreeInventory>[] = useMemo(() => [
@@ -135,10 +137,19 @@ const TreeInventoryPage: React.FC = () => {
     },
     {
       accessorKey: "barangay",
-      header: "Location",
+      header: "Barangay",
       cell: ({ row }) => (
         <div className="text-sm">
-          {row.original.barangay || row.original.address || "—"}
+          {row.original.barangay || "—"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "address",
+      header: "Address",
+      cell: ({ row }) => (
+        <div className="text-sm">
+          {row.original.address || "—"}
         </div>
       ),
     },
@@ -179,11 +190,14 @@ const TreeInventoryPage: React.FC = () => {
     setIsFormOpen(false);
   };
 
-  const handleDeleteTree = async (tree: TreeInventory) => {
-    if (confirm(`Are you sure you want to remove tree ${tree.tree_code} from the inventory?`)) {
-      await deleteMutation.mutateAsync(tree.id);
-      setDetailTree(null);
-    }
+  const handleArchiveTree = async (tree: TreeInventory) => {
+    await archiveMutation.mutateAsync(tree.id);
+    setDetailTree(null);
+  };
+
+  const handleRestoreTree = async (tree: TreeInventory) => {
+    await restoreMutation.mutateAsync(tree.id);
+    setDetailTree(null);
   };
 
   return (
@@ -262,7 +276,7 @@ const TreeInventoryPage: React.FC = () => {
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
                     {/* <CardTitle className="flex items-center gap-2">
                       <TreePine className="w-5 h-5" />
-                      Tree Registry
+                      Tree Inventory
                     </CardTitle> */}
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col overflow-hidden">
@@ -300,6 +314,15 @@ const TreeInventoryPage: React.FC = () => {
                         <option value="needs_attention">Needs Attention</option>
                         <option value="diseased">Diseased</option>
                       </select>
+                      <Button
+                        type="button"
+                        variant={showArchived ? "default" : "outline"}
+                        onClick={() => setShowArchived((prev) => !prev)}
+                        className={`rounded-lg text-sm flex items-center gap-2 ${showArchived ? "bg-slate-900 text-white" : "bg-white"}`}
+                      >
+                        {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                        {showArchived ? "Show Active" : "View Archived"}
+                      </Button>
                                     <Button
                 onClick={handleAddTree}
                 className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
@@ -337,7 +360,11 @@ const TreeInventoryPage: React.FC = () => {
                     tree={detailTree}
                     onClose={() => setDetailTree(null)}
                     onEdit={() => handleEditTree(detailTree)}
-                    onDelete={() => handleDeleteTree(detailTree)}
+                    onArchive={() => handleArchiveTree(detailTree)}
+                    onRestore={() => handleRestoreTree(detailTree)}
+                    isArchived={detailTree.is_archived}
+                    isArchiving={archiveMutation.isPending}
+                    isRestoring={restoreMutation.isPending}
                   />
                 ) : (
                   <Card className="h-full">
