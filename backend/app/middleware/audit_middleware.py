@@ -8,7 +8,8 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.responses import Response, StreamingResponse
+from starlette.types import Message
 
 from app.services.audit_service import audit_service, MAX_PAYLOAD_CHARS
 
@@ -17,6 +18,10 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
     """Intercepts requests/responses and forwards them to the audit service."""
 
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
+        # Skip logging OPTIONS requests (CORS preflight)
+        if request.method.upper() == "OPTIONS":
+            return await call_next(request)
+
         started = time.perf_counter()
         body_bytes = await self._capture_request_body(request)
 
@@ -34,8 +39,15 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             )
             raise
 
+        # Capture response body by reading it
+        response_body = b""
+        async for chunk in response.body_iterator:
+            response_body += chunk
+
         latency_ms = int((time.perf_counter() - started) * 1000)
-        response_payload, response_summary = self._extract_response_payload(response)
+        response_payload, response_summary = self._extract_response_payload_from_body(
+            response_body, response
+        )
 
         await audit_service.write_request_audit(
             request=request,
@@ -47,7 +59,13 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             latency_ms=latency_ms,
         )
 
-        return response
+        # Return a new response with the captured body
+        return Response(
+            content=response_body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type,
+        )
 
     async def _capture_request_body(self, request: Request) -> Optional[bytes]:
         if request.method.upper() in {"GET", "DELETE", "OPTIONS"}:
@@ -64,8 +82,9 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         request._receive = receive  # type: ignore[attr-defined]
         return body if body else None
 
-    def _extract_response_payload(self, response: Response) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-        body: Optional[bytes] = getattr(response, "body", None)
+    def _extract_response_payload_from_body(
+        self, body: bytes, response: Response
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         if not body:
             return None, self._build_response_summary(response)
 
