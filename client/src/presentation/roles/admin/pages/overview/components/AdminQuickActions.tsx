@@ -6,6 +6,7 @@ import {
     Activity,
     Users,
     Monitor,
+    Shield,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
@@ -71,6 +72,13 @@ export const AdminQuickActions: React.FC = () => {
             icon: <Monitor className="w-6 h-6 text-orange-600" />,
             onClick: () => navigate({ to: "/admin/session-management" }),
             color: "bg-orange-100",
+        },
+        {
+            title: "Audit Logs",
+            description: "View ISO-compliant system activity audit trail",
+            icon: <Shield className="w-6 h-6 text-red-600" />,
+            onClick: () => navigate({ to: "/admin/audit-logs" }),
+            color: "bg-red-100",
         },
         {
             title: "View System Health",

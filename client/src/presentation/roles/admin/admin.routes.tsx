@@ -5,6 +5,7 @@ import DashboardLayout from "@/presentation/components/shared/layout/DashboardLa
 import { AdminOverview } from "./pages/overview/AdminOverview";
 import { UserManagement } from "./pages/user-management/UserManagement";
 import { SessionManagement } from "./pages/session-management/SessionManagement";
+import { AuditLogs } from "./pages/audit-logs/AuditLogs";
 
 const adminLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -34,10 +35,17 @@ const sessionManagementRoute = createRoute({
     component: SessionManagement,
 });
 
+const auditLogsRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
+    path: "audit-logs",
+    component: AuditLogs,
+});
+
 adminLayoutRoute.addChildren([
     adminOverviewRoute,
     userManagementRoute,
-    sessionManagementRoute
+    sessionManagementRoute,
+    auditLogsRoute
 ]);
 
 export const adminRoutes = [adminLayoutRoute];

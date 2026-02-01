@@ -686,37 +686,33 @@ const TreeInventoryMap: React.FC = () => {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2 shrink-0">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <TreePine className="w-5 h-5" />
-            Tree Locations
-            <Badge variant="outline" className="ml-2">
-              {displayCount} {displayLabel}
-            </Badge>
-            {isSearchMode && (
-              <Badge className="ml-2 bg-blue-50 text-blue-700 border-blue-100">
-                Searching
+      <CardHeader className="pb-4 shrink-0">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            <CardTitle className="flex items-center gap-2">
+              <TreePine className="w-5 h-5" />
+              Tree Locations
+              <Badge variant="outline" className="ml-2">
+                {displayCount} {displayLabel}
               </Badge>
-            )}
-            {isFetching && (
-              <Loader2 className="w-4 h-4 animate-spin text-gray-400 ml-2" />
-            )}
-          </CardTitle>
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-1 p-0 relative overflow-hidden">
-        {/* Filter Controls */}
-        <div className={`absolute top-4 z-[1000] bg-white rounded-lg border p-3 space-y-2 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
-          <div className="w-[240px] space-y-2">
+              {isSearchMode && (
+                <Badge className="ml-2 bg-blue-50 text-blue-700 border-blue-100">
+                  Searching
+                </Badge>
+              )}
+              {isFetching && (
+                <Loader2 className="w-4 h-4 animate-spin text-gray-400 ml-2" />
+              )}
+            </CardTitle>
+          </div>
+          <div className="w-full lg:w-80">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search by code, species, or location..."
-                className="pl-8 pr-8 h-9 text-sm rounded-md"
+                className="pl-8 pr-9 h-9 text-sm rounded-md"
               />
               {searchTerm && (
                 <button
@@ -729,17 +725,23 @@ const TreeInventoryMap: React.FC = () => {
                 </button>
               )}
             </div>
-
-            {isSearchMode && (
-              <div className="text-[11px] text-gray-500">
-                {isFetchingSearch
+            <div className="text-[11px] text-gray-500 mt-1">
+              {isSearchMode
+                ? isFetchingSearch
                   ? "Searching..."
                   : hasSearchResults
                   ? `${searchTrees.length} matches`
-                  : "No matches found"}
-              </div>
-            )}
+                  : "No matches found"
+                : "Search by tree code, species, barangay, or address"}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
 
+      <CardContent className="flex-1 p-0 relative overflow-hidden">
+        {/* Filter Controls */}
+        <div className={`absolute top-4 z-[1000] bg-white rounded-lg border p-3 space-y-2 transition-all ${selectedTreeId ? "left-4" : "right-4"}`}>
+          <div className="w-[220px] space-y-2">
             <div className="text-xs font-medium text-gray-500 flex items-center gap-1">
               <Layers className="w-3 h-3" />
               Filters

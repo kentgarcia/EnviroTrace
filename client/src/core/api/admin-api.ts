@@ -79,6 +79,44 @@ export interface AssignRoleRequest {
   role: string;
 }
 
+export interface AuditLog {
+  id: string;
+  event_id: string;
+  event_name: string;
+  module_name: string;
+  path: string;
+  method: string;
+  status_code: number;
+  ip_address?: string;
+  user_agent?: string;
+  request_payload?: Record<string, any>;
+  response_payload?: Record<string, any>;
+  occurred_at: string;
+  occurred_at_iso: string;
+  occurred_at_gmt: string;
+  user_id?: string;
+  user_email?: string;
+  session_id?: string;
+  latency_ms?: number;
+}
+
+export interface AuditLogListResponse {
+  items: AuditLog[];
+  total: number;
+}
+
+export interface AuditLogFilters {
+  module_name?: string;
+  user_email?: string;
+  event_id?: string;
+  status_code?: number;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  skip?: number;
+  limit?: number;
+}
+
 class AdminApiService extends ApiService {
   // Dashboard endpoints
   async getDashboardStats(): Promise<AdminDashboardStats> {
@@ -145,6 +183,34 @@ class AdminApiService extends ApiService {
   async getAvailableRoles(): Promise<UserRole[]> {
     return this.get<UserRole[]>("/admin/roles");
   }
+
+  // Audit log endpoints
+  async getAuditLogs(filters?: AuditLogFilters): Promise<AuditLogListResponse> {
+    const queryParams = new URLSearchParams();
+    if (filters?.module_name)
+      queryParams.append("module_name", filters.module_name);
+    if (filters?.user_email)
+      queryParams.append("user_email", filters.user_email);
+    if (filters?.event_id) queryParams.append("event_id", filters.event_id);
+    if (filters?.status_code !== undefined)
+      queryParams.append("status_code", filters.status_code.toString());
+    if (filters?.date_from) queryParams.append("date_from", filters.date_from);
+    if (filters?.date_to) queryParams.append("date_to", filters.date_to);
+    if (filters?.search) queryParams.append("search", filters.search);
+    if (filters?.skip !== undefined)
+      queryParams.append("skip", filters.skip.toString());
+    if (filters?.limit !== undefined)
+      queryParams.append("limit", filters.limit.toString());
+
+    const url = `/admin/audit/logs${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+    return this.get<AuditLogListResponse>(url);
+  }
+
+  async getAuditLogById(logId: string): Promise<AuditLog> {
+    return this.get<AuditLog>(`/admin/audit/logs/${logId}`);
+  }
 }
 
 export const adminApiService = new AdminApiService();
@@ -200,6 +266,22 @@ export const useAvailableRoles = () => {
     queryKey: ["admin", "roles"],
     queryFn: () => adminApiService.getAvailableRoles(),
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// React Query hooks for audit logs
+export const useAuditLogs = (filters?: AuditLogFilters) => {
+  return useQuery({
+    queryKey: ["admin", "audit-logs", filters],
+    queryFn: () => adminApiService.getAuditLogs(filters),
+  });
+};
+
+export const useAuditLog = (logId: string) => {
+  return useQuery({
+    queryKey: ["admin", "audit-logs", logId],
+    queryFn: () => adminApiService.getAuditLogById(logId),
+    enabled: !!logId,
   });
 };
 

@@ -8,6 +8,7 @@ from app.apis.v1.api import api_v1_router
 from app.db.database import engine
 
 from app.middleware.cors_exception_handler import CORSExceptionMiddleware
+from app.middleware.audit_middleware import AuditLoggingMiddleware
 
 # Lifespan for startup/shutdown events (FastAPI's new way)
 @asynccontextmanager
@@ -52,6 +53,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global audit logging middleware - must wrap business handlers
+app.add_middleware(AuditLoggingMiddleware)
 
 app.include_router(api_v1_router, prefix="/api/v1")
 

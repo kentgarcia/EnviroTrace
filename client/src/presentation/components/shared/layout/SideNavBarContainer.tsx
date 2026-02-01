@@ -20,7 +20,8 @@ import {
   PanelLeftOpen,
   Info,
   HelpCircle,
-  Leaf
+  Leaf,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -65,6 +66,11 @@ function getMenuItems(
         label: "Sessions",
         path: `${basePath}/session-management`,
         icon: <History size={18} />,
+      },
+      {
+        label: "Audit Logs",
+        path: `${basePath}/audit-logs`,
+        icon: <Shield size={18} />,
       },
     ];
   } else if (dashboardType === "government-emission") {

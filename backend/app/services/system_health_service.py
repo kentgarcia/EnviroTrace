@@ -6,6 +6,7 @@ from typing import List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from app.models.auth_models import User, ActivityLog, UserSession, FailedLogin
+from app.models.audit_models import AuditLog
 
 
 class SystemHealthService:
@@ -175,27 +176,50 @@ class SystemHealthService:
             
             registrations_data = registrations_query.fetchall()
             
-            # Get monthly login activity (from activity logs)
+            # Get monthly login activity (audit logs preferred, fall back to legacy activity logs)
             logins_query = await db.execute(
                 select(
-                    func.extract('year', ActivityLog.created_at).label('year'),
-                    func.extract('month', ActivityLog.created_at).label('month'),
-                    func.count(ActivityLog.id).label('logins')
+                    func.extract('year', AuditLog.occurred_at).label('year'),
+                    func.extract('month', AuditLog.occurred_at).label('month'),
+                    func.count(AuditLog.id).label('logins')
                 ).where(
                     and_(
-                        ActivityLog.created_at >= six_months_ago,
-                        ActivityLog.activity_type == 'login'
+                        AuditLog.occurred_at >= six_months_ago,
+                        AuditLog.event_id == 'POST_API_V1_AUTH_LOGIN',
+                        AuditLog.status_code >= 200,
+                        AuditLog.status_code < 400
                     )
                 ).group_by(
-                    func.extract('year', ActivityLog.created_at),
-                    func.extract('month', ActivityLog.created_at)
+                    func.extract('year', AuditLog.occurred_at),
+                    func.extract('month', AuditLog.occurred_at)
                 ).order_by(
-                    func.extract('year', ActivityLog.created_at),
-                    func.extract('month', ActivityLog.created_at)
+                    func.extract('year', AuditLog.occurred_at),
+                    func.extract('month', AuditLog.occurred_at)
                 )
             )
-            
+
             logins_data = logins_query.fetchall()
+
+            if not logins_data:
+                legacy_logins_query = await db.execute(
+                    select(
+                        func.extract('year', ActivityLog.created_at).label('year'),
+                        func.extract('month', ActivityLog.created_at).label('month'),
+                        func.count(ActivityLog.id).label('logins')
+                    ).where(
+                        and_(
+                            ActivityLog.created_at >= six_months_ago,
+                            ActivityLog.activity_type == 'login'
+                        )
+                    ).group_by(
+                        func.extract('year', ActivityLog.created_at),
+                        func.extract('month', ActivityLog.created_at)
+                    ).order_by(
+                        func.extract('year', ActivityLog.created_at),
+                        func.extract('month', ActivityLog.created_at)
+                    )
+                )
+                logins_data = legacy_logins_query.fetchall()
             
             # Create monthly data structure
             months = []
@@ -234,15 +258,31 @@ class SystemHealthService:
                     month_end = datetime(month['year'], month['month'] + 1, 1)
                 
                 active_users_query = await db.execute(
-                    select(func.count(func.distinct(ActivityLog.user_id))).where(
+                    select(func.count(func.distinct(AuditLog.user_id))).where(
                         and_(
-                            ActivityLog.created_at >= month_start,
-                            ActivityLog.created_at < month_end,
-                            ActivityLog.activity_type == 'login'
+                            AuditLog.occurred_at >= month_start,
+                            AuditLog.occurred_at < month_end,
+                            AuditLog.event_id == 'POST_API_V1_AUTH_LOGIN',
+                            AuditLog.status_code >= 200,
+                            AuditLog.status_code < 400
                         )
                     )
                 )
-                month['activeUsers'] = active_users_query.scalar() or 0
+                active_users = active_users_query.scalar()
+
+                if not active_users:
+                    legacy_active_query = await db.execute(
+                        select(func.count(func.distinct(ActivityLog.user_id))).where(
+                            and_(
+                                ActivityLog.created_at >= month_start,
+                                ActivityLog.created_at < month_end,
+                                ActivityLog.activity_type == 'login'
+                            )
+                        )
+                    )
+                    active_users = legacy_active_query.scalar()
+
+                month['activeUsers'] = active_users or 0
             
             return [
                 {

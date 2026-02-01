@@ -42,6 +42,24 @@ const getAllBarangayNames = (): string[] => {
   return barangays.map((b: PhilLocation) => b.name);
 };
 
+// Normalize initial photos to the uploader's shape
+const normalizeInitialPhotos = (photos?: (string | TreePhotoMetadata)[]): UploadedImage[] => {
+  if (!photos) {
+    return [];
+  }
+  return photos.map((photo) => {
+    if (typeof photo === "string") {
+      return {
+        url: photo,
+        filename: photo.split("/").pop() || "image.jpg",
+        size: 0,
+        uploaded_at: new Date().toISOString(),
+      };
+    }
+    return photo as UploadedImage;
+  });
+};
+
 // Default center - San Fernando, Pampanga
 const DEFAULT_CENTER: [number, number] = [15.0287, 120.6880];
 
@@ -146,6 +164,23 @@ const TreeForm: React.FC<TreeFormProps> = ({
       .slice(0, 100); // Limit to 100 results
   }, [allBarangays, barangaySearch]);
 
+  const [formData, setFormData] = useState({
+    species: initialData?.species || "",
+    common_name: initialData?.common_name || "",
+    status: initialData?.status || "alive",
+    health: initialData?.health || "healthy",
+    latitude: initialData?.latitude || null as number | null,
+    longitude: initialData?.longitude || null as number | null,
+    address: initialData?.address || "",
+    barangay: initialData?.barangay || "",
+    planted_date: initialData?.planted_date || "",
+    height_meters: initialData?.height_meters || null as number | null,
+    diameter_cm: initialData?.diameter_cm || null as number | null,
+    age_years: initialData?.age_years || null as number | null,
+    notes: initialData?.notes || "",
+    photos: normalizeInitialPhotos(initialData?.photos),
+  });
+
   const suggestedYear = useMemo(() => {
     if (formData.planted_date) {
       const parsedDate = new Date(formData.planted_date);
@@ -200,39 +235,6 @@ const TreeForm: React.FC<TreeFormProps> = ({
   // Fetch species from database
   const { data: speciesList = [], isLoading: speciesLoading } = useTreeSpecies();
   const createSpeciesMutation = useCreateSpecies();
-
-  // Normalize initial photos to UploadedImage format
-  const normalizeInitialPhotos = (photos?: (string | TreePhotoMetadata)[]): UploadedImage[] => {
-    if (!photos) return [];
-    return photos.map((photo) => {
-      if (typeof photo === "string") {
-        return {
-          url: photo,
-          filename: photo.split("/").pop() || "image.jpg",
-          size: 0,
-          uploaded_at: new Date().toISOString(),
-        };
-      }
-      return photo as UploadedImage;
-    });
-  };
-
-  const [formData, setFormData] = useState({
-    species: initialData?.species || "",
-    common_name: initialData?.common_name || "",
-    status: initialData?.status || "alive",
-    health: initialData?.health || "healthy",
-    latitude: initialData?.latitude || null as number | null,
-    longitude: initialData?.longitude || null as number | null,
-    address: initialData?.address || "",
-    barangay: initialData?.barangay || "",
-    planted_date: initialData?.planted_date || "",
-    height_meters: initialData?.height_meters || null as number | null,
-    diameter_cm: initialData?.diameter_cm || null as number | null,
-    age_years: initialData?.age_years || null as number | null,
-    notes: initialData?.notes || "",
-    photos: normalizeInitialPhotos(initialData?.photos),
-  });
 
   const [customSpecies, setCustomSpecies] = useState({
     scientific_name: "",
