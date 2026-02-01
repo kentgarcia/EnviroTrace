@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import uuid
 
-from app.apis.deps import get_current_user_async, get_db_session, require_roles
+from app.apis.deps import get_current_user_async, get_db_session, require_roles, require_super_admin
 from app.models.auth_models import User, UserRoleMapping, Profile, UserRoleEnum
 from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
@@ -357,10 +357,10 @@ async def get_available_roles(
 @router.get("/permissions")
 async def get_all_permissions(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin])),
+    current_user: User = Depends(require_super_admin()),
     grouped: bool = Query(False, description="Return permissions grouped by module and entity")
 ):
-    """Get all available permissions, optionally grouped"""
+    """Get all available permissions, optionally grouped (super admin only)"""
     result = await permission_service.get_all_permissions(db, grouped=grouped)
     
     # If grouped, convert Permission objects to dicts for JSON serialization
@@ -383,9 +383,9 @@ async def get_all_permissions(
 async def get_role_permissions(
     role: UserRoleEnum,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_super_admin())
 ):
-    """Get all permissions assigned to a specific role"""
+    """Get all permissions assigned to a specific role (super admin only)"""
     return await permission_service.get_role_permissions(db, role=role)
 
 
@@ -394,9 +394,9 @@ async def assign_permission_to_role(
     role: UserRoleEnum,
     permission_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_super_admin())
 ):
-    """Assign a single permission to a role"""
+    """Assign a single permission to a role (super admin only)"""
     await permission_service.assign_permission_to_role(db, role=role, permission_id=permission_id)
     return {"message": f"Permission {permission_id} assigned to role {role.value}"}
 
@@ -406,9 +406,9 @@ async def assign_permissions_to_role_bulk(
     role: UserRoleEnum,
     bulk_assign: RolePermissionBulkAssign,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_super_admin())
 ):
-    """Assign multiple permissions to a role"""
+    """Assign multiple permissions to a role (super admin only)"""
     return await permission_service.assign_permissions_to_role_bulk(db, role=role, bulk_assign=bulk_assign)
 
 
@@ -417,9 +417,9 @@ async def remove_permission_from_role(
     role: UserRoleEnum,
     permission_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_super_admin())
 ):
-    """Remove a permission from a role"""
+    """Remove a permission from a role (super admin only)"""
     await permission_service.remove_permission_from_role(db, role=role, permission_id=permission_id)
     return {"message": f"Permission {permission_id} removed from role {role.value}"}
 
@@ -428,7 +428,61 @@ async def remove_permission_from_role(
 async def get_user_permissions(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_super_admin())
 ):
-    """Get all permissions for a specific user"""
+    """Get all permissions for a specific user (super admin only)"""
     return await permission_service.get_user_permissions(db, user_id=user_id)
+
+
+@router.get("/roles/{role}/users", response_model=List[UserFullPublic])
+async def get_users_by_role(
+    role: UserRoleEnum,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_super_admin()),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000)
+):
+    """Get all users with a specific role (super admin only)"""
+    # Get user IDs with this role
+    result = await db.execute(
+        select(UserRoleMapping.user_id)
+        .where(UserRoleMapping.role == role)
+        .distinct()
+        .offset(skip)
+        .limit(limit)
+    )
+    user_ids = [row[0] for row in result.fetchall()]
+    
+    if not user_ids:
+        return []
+    
+    # Get full user details
+    users_with_details = await auth_service.get_users_with_details(db=db, user_ids=user_ids)
+    return users_with_details
+
+
+@router.get("/roles/{role}/users", response_model=List[UserFullPublic])
+async def get_users_by_role(
+    role: UserRoleEnum,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_super_admin()),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000)
+):
+    """Get all users with a specific role (super admin only)"""
+    # Get user IDs with this role
+    result = await db.execute(
+        select(UserRoleMapping.user_id)
+        .where(UserRoleMapping.role == role)
+        .distinct()
+        .offset(skip)
+        .limit(limit)
+    )
+    user_ids = [row[0] for row in result.fetchall()]
+    
+    if not user_ids:
+        return []
+    
+    # Get full user details
+    users_with_details = await auth_service.get_users_with_details(db=db, user_ids=user_ids)
+    return users_with_details
