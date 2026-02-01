@@ -84,8 +84,8 @@ export interface AuditLog {
   event_id: string;
   event_name: string;
   module_name: string;
-  path: string;
-  method: string;
+  route_path: string;
+  http_method: string;
   status_code: number;
   ip_address?: string;
   user_agent?: string;

@@ -18,8 +18,8 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
     """Intercepts requests/responses and forwards them to the audit service."""
 
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
-        # Skip logging OPTIONS requests (CORS preflight)
-        if request.method.upper() == "OPTIONS":
+        # Skip logging OPTIONS (CORS preflight) and GET requests
+        if request.method.upper() in {"OPTIONS", "GET"}:
             return await call_next(request)
 
         started = time.perf_counter()

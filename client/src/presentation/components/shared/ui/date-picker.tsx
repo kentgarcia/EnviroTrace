@@ -14,12 +14,14 @@ interface DatePickerProps {
   selected?: Date;
   onSelect?: (date: Date | undefined) => void;
   placeholderText?: string;
+  className?: string;
 }
 
 export function DatePicker({
   selected,
   onSelect,
   placeholderText = "Pick a date",
+  className,
 }: DatePickerProps) {
   return (
     <Popover>
@@ -27,8 +29,9 @@ export function DatePicker({
         <Button
           variant={"outline"}
           className={cn(
-            "w-[240px] justify-start text-left font-normal",
-            !selected && "text-muted-foreground"
+            "w-full justify-start text-left font-normal",
+            !selected && "text-muted-foreground",
+            className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

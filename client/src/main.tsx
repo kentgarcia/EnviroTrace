@@ -7,6 +7,9 @@ import "./index.css";
 import "leaflet/dist/leaflet.css";
 import "react-leaflet-markercluster/styles";
 
+// Import react-day-picker CSS
+import "react-day-picker/style.css";
+
 // Import Inter font
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
