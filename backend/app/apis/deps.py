@@ -4,14 +4,14 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 import uuid
 from datetime import datetime
 
 from app.core import security
 from app.core.config import settings
 from app.db.database import get_db_session, SessionLocal # Import SessionLocal from database.py
-from app.models.auth_models import User, UserRoleEnum # SQLAlchemy model
+from app.models.auth_models import User, UserRoleEnum, Role # SQLAlchemy model
 from app.schemas.token_schemas import TokenPayload # Pydantic schema for token payload
 from app.crud.crud_user import user as crud_user # CRUD operations for user
 from app.crud.crud_session import session_crud
@@ -171,10 +171,19 @@ def require_roles(allowed_roles: List[UserRoleEnum]) -> Callable:
         from app.models.auth_models import UserRoleMapping
         
         result = await db.execute(
-            select(UserRoleMapping.role).where(UserRoleMapping.user_id == current_user.id)
+            select(Role.slug)
+            .join(UserRoleMapping, UserRoleMapping.role_id == Role.id)
+            .where(UserRoleMapping.user_id == current_user.id)
         )
-        user_roles = [row[0] for row in result.fetchall()]
-        
+        role_slugs = [row[0] for row in result.fetchall()]
+
+        user_roles = []
+        for slug in role_slugs:
+            try:
+                user_roles.append(UserRoleEnum(slug))
+            except ValueError:
+                continue
+
         # Check if user has any of the required roles or is super admin
         if current_user.is_super_admin or any(role in user_roles for role in allowed_roles):
             return current_user
@@ -217,7 +226,7 @@ def require_permissions(required_permissions: List[str]) -> Callable:
         result = await db.execute(
             select(Permission.name)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .where(UserRoleMapping.user_id == current_user.id)
             .distinct()
         )
@@ -265,7 +274,7 @@ def require_permissions_sync(required_permissions: List[str]) -> Callable:
         result = db.execute(
             select(Permission.name)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .where(UserRoleMapping.user_id == current_user.id)
             .distinct()
         )

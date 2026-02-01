@@ -8,7 +8,7 @@ from sqlalchemy import delete
 from sqlalchemy.orm import selectinload
 
 from app.crud.base_crud import CRUDBase
-from app.models.auth_models import User, UserRoleMapping, UserRoleEnum
+from app.models.auth_models import User, UserRoleMapping, Role
 from app.schemas.user_schemas import UserCreate, UserUpdate
 from app.core.security import get_password_hash, verify_password
 
@@ -55,8 +55,16 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             await db.commit()
 
         if roles_to_assign:
-            for role_enum in roles_to_assign:
-                user_role_mapping = UserRoleMapping(user_id=db_obj.id, role=role_enum)
+            result = await db.execute(select(Role).where(Role.slug.in_(roles_to_assign)))
+            roles = {role.slug: role for role in result.scalars().all()}
+
+            missing = [slug for slug in roles_to_assign if slug not in roles]
+            if missing:
+                raise ValueError(f"Roles not found: {', '.join(missing)}")
+
+            for role_slug in roles_to_assign:
+                role_obj = roles[role_slug]
+                user_role_mapping = UserRoleMapping(user_id=db_obj.id, role_id=role_obj.id)
                 db.add(user_role_mapping)
             await db.commit()
             await db.refresh(db_obj) # Refresh again to load roles if relationship is configured to do so, or query separately
@@ -113,10 +121,18 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         if roles_to_set is not None: # If roles list is provided (even if empty)
             # Delete existing roles
             await db.execute(delete(UserRoleMapping).where(UserRoleMapping.user_id == db_obj.id))
-            # Add new roles
-            for role_enum in roles_to_set:
-                user_role_mapping = UserRoleMapping(user_id=db_obj.id, role=role_enum)
-                db.add(user_role_mapping)
+
+            if roles_to_set:
+                result = await db.execute(select(Role).where(Role.slug.in_(roles_to_set)))
+                roles = {role.slug: role for role in result.scalars().all()}
+                missing = [slug for slug in roles_to_set if slug not in roles]
+                if missing:
+                    raise ValueError(f"Roles not found: {', '.join(missing)}")
+
+                for role_slug in roles_to_set:
+                    role_obj = roles[role_slug]
+                    user_role_mapping = UserRoleMapping(user_id=db_obj.id, role_id=role_obj.id)
+                    db.add(user_role_mapping)
         
         await db.commit()
         await db.refresh(db_obj)
@@ -142,7 +158,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     async def get_user_roles(self, db: AsyncSession, *, user_id: uuid.UUID) -> List[UserRoleEnum]:
         result = await db.execute(
-            select(UserRoleMapping.role).filter(UserRoleMapping.user_id == user_id)
+            select(Role.slug)
+            .join(UserRoleMapping, UserRoleMapping.role_id == Role.id)
+            .filter(UserRoleMapping.user_id == user_id)
         )
         return result.scalars().all()
 

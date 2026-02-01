@@ -152,10 +152,11 @@ SELECT
     u.is_super_admin,
     p.first_name || ' ' || p.last_name as full_name,
     p.job_title,
-    array_agg(ur.role) as roles
+    array_agg(r.slug) as roles
 FROM app_auth.users u
 LEFT JOIN app_auth.profiles p ON u.id = p.user_id
 LEFT JOIN app_auth.user_roles ur ON u.id = ur.user_id
+LEFT JOIN app_auth.roles r ON ur.role_id = r.id
 WHERE u.email LIKE '%@envirotrace.com'
 GROUP BY u.email, u.is_super_admin, p.first_name, p.last_name, p.job_title
 ORDER BY u.email;

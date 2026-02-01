@@ -3,7 +3,6 @@ import uuid
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, ForwardRef, Annotated, TYPE_CHECKING
 from datetime import datetime
-from app.models.auth_models import UserRoleEnum # Import the enum
 
 # Use TYPE_CHECKING for imports to avoid circular dependencies at runtime
 if TYPE_CHECKING:
@@ -15,7 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=8)
-    roles: Optional[List[UserRoleEnum]] = None # For assigning roles on creation
+    roles: Optional[List[str]] = None # Role slugs to assign on creation
     # Profile fields
     first_name: Optional[str] = Field(default=None, max_length=100)
     last_name: Optional[str] = Field(default=None, max_length=100)
@@ -28,7 +27,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(default=None, min_length=8)
     is_super_admin: Optional[bool] = None
     is_active: Optional[bool] = None # Assuming you might add is_active to User model
-    roles: Optional[List[UserRoleEnum]] = None
+    roles: Optional[List[str]] = None
     # Profile fields
     first_name: Optional[str] = Field(default=None, max_length=100)
     last_name: Optional[str] = Field(default=None, max_length=100)
@@ -62,7 +61,7 @@ class UserWithProfile(UserPublic):
         from_attributes = True
 
 class UserWithRoles(UserPublic):
-    assigned_roles: List[UserRoleEnum] = []
+    assigned_roles: List[str] = []
     permissions: List[str] = []  # List of permission names (e.g., ['vehicle.create', 'office.view'])
 
 class UserFullPublic(UserWithProfile, UserWithRoles):
@@ -70,7 +69,7 @@ class UserFullPublic(UserWithProfile, UserWithRoles):
 
 # For UserRoleMapping
 class UserRoleMappingBase(BaseModel):
-    role: UserRoleEnum
+    role_slug: str
 
 class UserRoleMappingCreate(UserRoleMappingBase):
     user_id: uuid.UUID

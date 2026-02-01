@@ -180,7 +180,7 @@ class AuthService:
         """Efficiently fetch multiple users with their profiles, roles, and permissions in batch queries"""
         from sqlalchemy.orm import selectinload
         from sqlalchemy import select
-        from app.models.auth_models import User, UserRoleMapping, Profile, RolePermission, Permission
+        from app.models.auth_models import User, UserRoleMapping, Profile, RolePermission, Permission, Role
         
         # Fetch all users with profiles in a single query
         result = await db.execute(
@@ -192,23 +192,24 @@ class AuthService:
         
         # Fetch all role mappings for these users in a single query
         roles_result = await db.execute(
-            select(UserRoleMapping)
+            select(UserRoleMapping.user_id, Role.slug)
+            .join(Role, Role.id == UserRoleMapping.role_id)
             .where(UserRoleMapping.user_id.in_(user_ids))
         )
-        role_mappings = roles_result.scalars().all()
+        role_rows = roles_result.fetchall()
         
         # Organize roles by user_id for quick lookup
         user_roles_map = {}
-        for mapping in role_mappings:
-            if mapping.user_id not in user_roles_map:
-                user_roles_map[mapping.user_id] = []
-            user_roles_map[mapping.user_id].append(mapping.role)
+        for user_id, role_slug in role_rows:
+            if user_id not in user_roles_map:
+                user_roles_map[user_id] = []
+            user_roles_map[user_id].append(role_slug)
         
         # Fetch permissions for all users in a single query
         permissions_result = await db.execute(
             select(Permission.name, UserRoleMapping.user_id)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .where(UserRoleMapping.user_id.in_(user_ids))
             .distinct()
         )

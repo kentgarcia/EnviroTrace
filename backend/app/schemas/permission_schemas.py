@@ -3,7 +3,7 @@ import uuid
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
-from app.models.auth_models import UserRoleEnum, PermissionActionEnum
+from app.models.auth_models import PermissionActionEnum
 
 
 class PermissionBase(BaseModel):
@@ -37,14 +37,30 @@ class PermissionGrouped(BaseModel):
     entities: dict[str, List[PermissionPublic]]  # entity_type -> list of permissions
 
 
-# For RolePermission
-class RolePermissionBase(BaseModel):
-    role: UserRoleEnum
-    permission_id: uuid.UUID
+class RoleBase(BaseModel):
+    display_name: str = Field(max_length=150)
+    description: Optional[str] = None
 
 
-class RolePermissionCreate(RolePermissionBase):
-    pass
+class RoleCreate(RoleBase):
+    slug: Optional[str] = Field(default=None, max_length=150)
+    is_system: bool = False
+
+
+class RoleUpdate(BaseModel):
+    display_name: Optional[str] = Field(default=None, max_length=150)
+    description: Optional[str] = None
+
+
+class RolePublic(RoleBase):
+    id: uuid.UUID
+    slug: str
+    is_system: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class RolePermissionBulkAssign(BaseModel):
@@ -52,23 +68,15 @@ class RolePermissionBulkAssign(BaseModel):
     permission_ids: List[uuid.UUID]
 
 
-class RolePermissionPublic(RolePermissionBase):
-    id: uuid.UUID
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class RoleWithPermissions(BaseModel):
     """Role with its assigned permissions"""
-    role: UserRoleEnum
+    role: RolePublic
     permissions: List[PermissionPublic]
 
 
 class UserPermissionsResponse(BaseModel):
     """Response containing user's permissions (from all their roles)"""
     user_id: uuid.UUID
-    roles: List[UserRoleEnum]
-    permissions: List[str]  # Just the permission names for efficiency
+    roles: List[str]  # role slugs
+    permissions: List[str]
     is_super_admin: bool

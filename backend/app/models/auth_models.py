@@ -1,14 +1,36 @@
 import enum
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, Text, Integer
+from typing import Optional
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SAEnum, UniqueConstraint, Index, Text
 from sqlalchemy.dialects.postgresql import UUID, INET
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text # For server_default text
 from app.db.database import Base # Use the Base from database.py
 
 class UserRoleEnum(str, enum.Enum):
+    """System seeded roles maintained for backward compatibility."""
+
     admin = "admin"
     urban_greening = "urban_greening"
     government_emission = "government_emission"
+
+
+class Role(Base):
+    __tablename__ = "roles"
+    __table_args__ = (
+        Index("idx_auth_roles_slug", "slug", unique=True),
+        {"schema": "app_auth"},
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    slug = Column(String(150), nullable=False, unique=True)
+    display_name = Column(String(150), nullable=False)
+    description = Column(Text, nullable=True)
+    is_system = Column(Boolean, nullable=False, server_default="false")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user_roles = relationship("UserRoleMapping", back_populates="role", cascade="all, delete-orphan")
+    role_permissions = relationship("RolePermission", back_populates="role", cascade="all, delete-orphan")
 
 class User(Base):
     __tablename__ = "users"
@@ -34,17 +56,23 @@ class User(Base):
 class UserRoleMapping(Base):
     __tablename__ = "user_roles"
     __table_args__ = (
-        UniqueConstraint("user_id", "role", name="uq_user_roles_user_id_role"),
+        UniqueConstraint("user_id", "role_id", name="uq_user_roles_user_id_role_id"),
         Index("idx_auth_user_roles_user_id", "user_id"),
+        Index("idx_auth_user_roles_role_id", "role_id"),
         {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), nullable=False)
-    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="app_auth"), nullable=False) # Use the enum name that exists in DB
+    role_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.roles.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="roles")
+    role = relationship("Role", back_populates="user_roles")
+
+    @property
+    def role_slug(self) -> Optional[str]:
+        return self.role.slug if self.role else None
 
 
 class PermissionActionEnum(str, enum.Enum):
@@ -78,17 +106,18 @@ class Permission(Base):
 class RolePermission(Base):
     __tablename__ = "role_permissions"
     __table_args__ = (
-        UniqueConstraint("role", "permission_id", name="uq_role_permissions_role_permission"),
-        Index("idx_auth_role_permissions_role", "role"),
+        UniqueConstraint("role_id", "permission_id", name="uq_role_permissions_role_id_permission"),
+        Index("idx_auth_role_permissions_role_id", "role_id"),
         Index("idx_auth_role_permissions_permission_id", "permission_id"),
         {"schema": "app_auth"}
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
-    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="app_auth"), nullable=False)
+    role_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.roles.id", ondelete="CASCADE"), nullable=False)
     permission_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.permissions.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    role = relationship("Role", back_populates="role_permissions")
     permission = relationship("Permission", back_populates="role_permissions")
 
 

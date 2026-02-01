@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy import and_, delete
 from app.crud.base_crud import CRUDBase
-from app.models.auth_models import Permission, RolePermission, UserRoleEnum, UserRoleMapping
+from app.models.auth_models import Permission, RolePermission, UserRoleMapping
 from app.schemas.permission_schemas import PermissionCreate, PermissionUpdate
 import uuid
 
@@ -48,13 +48,13 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         return grouped
 
     async def get_permissions_for_role(
-        self, db: AsyncSession, role: UserRoleEnum
+        self, db: AsyncSession, role_id: uuid.UUID
     ) -> List[Permission]:
         """Get all permissions assigned to a role"""
         result = await db.execute(
             select(Permission)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .filter(RolePermission.role == role)
+            .filter(RolePermission.role_id == role_id)
         )
         return result.scalars().all()
 
@@ -65,21 +65,21 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         result = await db.execute(
             select(Permission)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .filter(UserRoleMapping.user_id == user_id)
             .distinct()
         )
         return result.scalars().all()
 
     async def assign_permission_to_role(
-        self, db: AsyncSession, role: UserRoleEnum, permission_id: uuid.UUID
+        self, db: AsyncSession, role_id: uuid.UUID, permission_id: uuid.UUID
     ) -> RolePermission:
         """Assign a permission to a role"""
         # Check if already exists
         result = await db.execute(
             select(RolePermission).filter(
                 and_(
-                    RolePermission.role == role,
+                    RolePermission.role_id == role_id,
                     RolePermission.permission_id == permission_id
                 )
             )
@@ -89,21 +89,21 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             return existing
         
         # Create new assignment
-        role_permission = RolePermission(role=role, permission_id=permission_id)
+        role_permission = RolePermission(role_id=role_id, permission_id=permission_id)
         db.add(role_permission)
         await db.commit()
         await db.refresh(role_permission)
         return role_permission
 
     async def assign_permissions_to_role_bulk(
-        self, db: AsyncSession, role: UserRoleEnum, permission_ids: List[uuid.UUID]
+        self, db: AsyncSession, role_id: uuid.UUID, permission_ids: List[uuid.UUID]
     ) -> List[RolePermission]:
         """Assign multiple permissions to a role"""
         # Get existing assignments
         result = await db.execute(
             select(RolePermission).filter(
                 and_(
-                    RolePermission.role == role,
+                    RolePermission.role_id == role_id,
                     RolePermission.permission_id.in_(permission_ids)
                 )
             )
@@ -115,7 +115,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         new_assignments = []
         for perm_id in permission_ids:
             if perm_id not in existing_ids:
-                role_permission = RolePermission(role=role, permission_id=perm_id)
+                role_permission = RolePermission(role_id=role_id, permission_id=perm_id)
                 db.add(role_permission)
                 new_assignments.append(role_permission)
         
@@ -127,13 +127,13 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         return list(existing) + new_assignments
 
     async def remove_permission_from_role(
-        self, db: AsyncSession, role: UserRoleEnum, permission_id: uuid.UUID
+        self, db: AsyncSession, role_id: uuid.UUID, permission_id: uuid.UUID
     ) -> bool:
         """Remove a permission from a role"""
         result = await db.execute(
             delete(RolePermission).filter(
                 and_(
-                    RolePermission.role == role,
+                    RolePermission.role_id == role_id,
                     RolePermission.permission_id == permission_id
                 )
             )
@@ -142,11 +142,11 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         return result.rowcount > 0
 
     async def remove_all_permissions_from_role(
-        self, db: AsyncSession, role: UserRoleEnum
+        self, db: AsyncSession, role_id: uuid.UUID
     ) -> int:
         """Remove all permissions from a role"""
         result = await db.execute(
-            delete(RolePermission).filter(RolePermission.role == role)
+            delete(RolePermission).filter(RolePermission.role_id == role_id)
         )
         await db.commit()
         return result.rowcount
@@ -158,7 +158,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         result = await db.execute(
             select(Permission.id)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .filter(
                 and_(
                     UserRoleMapping.user_id == user_id,
@@ -176,7 +176,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         result = await db.execute(
             select(Permission.name)
             .join(RolePermission, Permission.id == RolePermission.permission_id)
-            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .join(UserRoleMapping, RolePermission.role_id == UserRoleMapping.role_id)
             .filter(UserRoleMapping.user_id == user_id)
             .distinct()
         )

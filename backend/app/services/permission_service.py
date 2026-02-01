@@ -5,11 +5,15 @@ from typing import List, Optional
 import uuid
 
 from app.crud.crud_permission import permission_crud
+from app.crud.crud_role import role_crud
 from app.crud.crud_user import user as crud_user
-from app.models.auth_models import UserRoleEnum, User
+from app.models.auth_models import User
 from app.schemas.permission_schemas import (
     PermissionPublic,
     PermissionCreate,
+    RolePublic,
+    RoleCreate,
+    RoleUpdate,
     RoleWithPermissions,
     UserPermissionsResponse,
     RolePermissionBulkAssign
@@ -59,17 +63,75 @@ class PermissionService:
         
         return await permission_crud.create(db, obj_in=permission_in)
 
+    async def list_roles(self, db: AsyncSession) -> list[RolePublic]:
+        roles = await role_crud.get_multi(db, skip=0, limit=1000)
+        return [RolePublic.model_validate(role) for role in roles]
+
+    async def get_role_by_slug(self, db: AsyncSession, slug: str) -> RolePublic:
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
+        return RolePublic.model_validate(role)
+
+    async def create_role(self, db: AsyncSession, role_in: RoleCreate) -> RolePublic:
+        role = await role_crud.create(db, obj_in=role_in)
+        return RolePublic.model_validate(role)
+
+    async def update_role(self, db: AsyncSession, slug: str, update: RoleUpdate) -> RolePublic:
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
+        if role.is_system and update.display_name is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="System roles cannot be renamed"
+            )
+        updated = await role_crud.update(db, db_obj=role, obj_in=update)
+        return RolePublic.model_validate(updated)
+
+    async def delete_role(self, db: AsyncSession, slug: str) -> None:
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
+        if role.is_system:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="System roles cannot be deleted"
+            )
+        await role_crud.remove(db, id=role.id)
+
     async def get_role_permissions(
-        self, db: AsyncSession, role: UserRoleEnum
+        self, db: AsyncSession, slug: str
     ) -> RoleWithPermissions:
         """Get all permissions for a specific role"""
-        permissions = await permission_crud.get_permissions_for_role(db, role=role)
-        return RoleWithPermissions(role=role, permissions=permissions)
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
+        permissions = await permission_crud.get_permissions_for_role(db, role_id=role.id)
+        return RoleWithPermissions(role=RolePublic.model_validate(role), permissions=permissions)
 
     async def assign_permission_to_role(
-        self, db: AsyncSession, role: UserRoleEnum, permission_id: uuid.UUID
+        self, db: AsyncSession, slug: str, permission_id: uuid.UUID
     ) -> None:
         """Assign a single permission to a role"""
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
         # Verify permission exists
         permission = await permission_crud.get(db, id=permission_id)
         if not permission:
@@ -79,13 +141,19 @@ class PermissionService:
             )
         
         await permission_crud.assign_permission_to_role(
-            db, role=role, permission_id=permission_id
+            db, role_id=role.id, permission_id=permission_id
         )
 
     async def assign_permissions_to_role_bulk(
-        self, db: AsyncSession, role: UserRoleEnum, bulk_assign: RolePermissionBulkAssign
+        self, db: AsyncSession, slug: str, bulk_assign: RolePermissionBulkAssign
     ) -> RoleWithPermissions:
         """Assign multiple permissions to a role"""
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
         # Verify all permissions exist
         for perm_id in bulk_assign.permission_ids:
             permission = await permission_crud.get(db, id=perm_id)
@@ -96,29 +164,41 @@ class PermissionService:
                 )
         
         await permission_crud.assign_permissions_to_role_bulk(
-            db, role=role, permission_ids=bulk_assign.permission_ids
+            db, role_id=role.id, permission_ids=bulk_assign.permission_ids
         )
         
-        return await self.get_role_permissions(db, role=role)
+        return await self.get_role_permissions(db, slug=slug)
 
     async def remove_permission_from_role(
-        self, db: AsyncSession, role: UserRoleEnum, permission_id: uuid.UUID
+        self, db: AsyncSession, slug: str, permission_id: uuid.UUID
     ) -> None:
         """Remove a permission from a role"""
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
         removed = await permission_crud.remove_permission_from_role(
-            db, role=role, permission_id=permission_id
+            db, role_id=role.id, permission_id=permission_id
         )
         if not removed:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Permission assignment not found for role '{role}' and permission ID {permission_id}"
+                detail=f"Permission assignment not found for role '{slug}' and permission ID {permission_id}"
             )
 
     async def remove_all_permissions_from_role(
-        self, db: AsyncSession, role: UserRoleEnum
+        self, db: AsyncSession, slug: str
     ) -> int:
         """Remove all permissions from a role"""
-        return await permission_crud.remove_all_permissions_from_role(db, role=role)
+        role = await role_crud.get_by_slug(db, slug=slug)
+        if not role:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Role '{slug}' not found"
+            )
+        return await permission_crud.remove_all_permissions_from_role(db, role_id=role.id)
 
     async def check_user_permission(
         self, db: AsyncSession, user_id: uuid.UUID, permission_name: str

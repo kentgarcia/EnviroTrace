@@ -6,7 +6,7 @@ import { AdminOverview } from "./pages/overview/AdminOverview";
 import { UserManagement } from "./pages/user-management/UserManagement";
 import { SessionManagement } from "./pages/session-management/SessionManagement";
 import { AuditLogs } from "./pages/audit-logs/AuditLogs";
-import { PermissionManagementNew as PermissionManagement } from "./pages/permission-management/PermissionManagementNew";
+import { PermissionManagementNew as PermissionManagement } from "./pages/permission-management/PermissionManagement";
 
 const adminLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
