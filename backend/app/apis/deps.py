@@ -185,3 +185,99 @@ def require_roles(allowed_roles: List[UserRoleEnum]) -> Callable:
         )
     
     return role_checker
+
+
+def require_permissions(required_permissions: List[str]) -> Callable:
+    """
+    Dependency to require specific permissions for accessing endpoints.
+    User must have at least ONE of the required permissions (OR logic).
+    Super admins bypass all permission checks.
+    
+    Args:
+        required_permissions: List of permission names (e.g., ['vehicle.create', 'vehicle.update'])
+    
+    Returns:
+        User object if authorized
+        
+    Raises:
+        403 Forbidden if user lacks required permissions
+    """
+    async def permission_checker(
+        current_user: User = Depends(get_current_user_async),
+        db: AsyncSession = Depends(get_db_session)
+    ) -> User:
+        # Super admins bypass all permission checks
+        if current_user.is_super_admin:
+            return current_user
+        
+        # Get user's permissions through their roles
+        from sqlalchemy import select
+        from app.models.auth_models import UserRoleMapping, RolePermission, Permission
+        
+        result = await db.execute(
+            select(Permission.name)
+            .join(RolePermission, Permission.id == RolePermission.permission_id)
+            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .where(UserRoleMapping.user_id == current_user.id)
+            .distinct()
+        )
+        user_permissions = [row[0] for row in result.fetchall()]
+        
+        # Check if user has any of the required permissions
+        if any(perm in user_permissions for perm in required_permissions):
+            return current_user
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied. Required permissions: {required_permissions}"
+        )
+    
+    return permission_checker
+
+
+def require_permissions_sync(required_permissions: List[str]) -> Callable:
+    """
+    Synchronous version of require_permissions for sync endpoints.
+    User must have at least ONE of the required permissions (OR logic).
+    Super admins bypass all permission checks.
+    
+    Args:
+        required_permissions: List of permission names (e.g., ['vehicle.create', 'vehicle.update'])
+    
+    Returns:
+        User object if authorized
+        
+    Raises:
+        403 Forbidden if user lacks required permissions
+    """
+    def permission_checker(
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ) -> User:
+        # Super admins bypass all permission checks
+        if current_user.is_super_admin:
+            return current_user
+        
+        # Get user's permissions through their roles
+        from sqlalchemy import select
+        from app.models.auth_models import UserRoleMapping, RolePermission, Permission
+        
+        result = db.execute(
+            select(Permission.name)
+            .join(RolePermission, Permission.id == RolePermission.permission_id)
+            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .where(UserRoleMapping.user_id == current_user.id)
+            .distinct()
+        )
+        user_permissions = [row[0] for row in result.fetchall()]
+        
+        # Check if user has any of the required permissions
+        if any(perm in user_permissions for perm in required_permissions):
+            return current_user
+        
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied. Required permissions: {required_permissions}"
+        )
+    
+    return permission_checker

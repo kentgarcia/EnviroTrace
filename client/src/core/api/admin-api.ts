@@ -274,6 +274,10 @@ export const useAuditLogs = (filters?: AuditLogFilters) => {
   return useQuery({
     queryKey: ["admin", "audit-logs", filters],
     queryFn: () => adminApiService.getAuditLogs(filters),
+    staleTime: 0, // Always consider data stale to ensure fresh logs
+    refetchInterval: 10000, // Auto-refetch every 10 seconds
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
+    refetchOnMount: true, // Refetch when component mounts
   });
 };
 

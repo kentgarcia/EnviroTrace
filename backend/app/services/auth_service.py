@@ -125,6 +125,12 @@ class AuthService:
         
         roles = await crud_user.get_user_roles(db, user_id=user_model.id)
         
+        # Get user permissions (empty list for super admins as they have all permissions)
+        from app.crud.crud_permission import permission_crud
+        permissions = []
+        if not user_model.is_super_admin:
+            permissions = await permission_crud.get_user_permission_names(db, user_id=user_model.id)
+        
         # Get profile data
         profile_data = None
         if user_model.profile:
@@ -141,7 +147,7 @@ class AuthService:
                 "updated_at": user_model.profile.updated_at,
             }
         
-        # Create UserFullPublic response (includes profile and roles)
+        # Create UserFullPublic response (includes profile, roles, and permissions)
         user_data = {
             "id": user_model.id,
             "email": user_model.email,
@@ -151,16 +157,17 @@ class AuthService:
             "updated_at": user_model.updated_at,
             "deleted_at": user_model.deleted_at,
             "assigned_roles": roles,
+            "permissions": permissions,
             "profile": profile_data
         }
         
         return UserFullPublic(**user_data)
     
     async def get_users_with_details(self, db: AsyncSession, user_ids: List[uuid.UUID]) -> List[UserFullPublic]:
-        """Efficiently fetch multiple users with their profiles and roles in batch queries"""
+        """Efficiently fetch multiple users with their profiles, roles, and permissions in batch queries"""
         from sqlalchemy.orm import selectinload
         from sqlalchemy import select
-        from app.models.auth_models import User, UserRoleMapping, Profile
+        from app.models.auth_models import User, UserRoleMapping, Profile, RolePermission, Permission
         
         # Fetch all users with profiles in a single query
         result = await db.execute(
@@ -184,6 +191,23 @@ class AuthService:
                 user_roles_map[mapping.user_id] = []
             user_roles_map[mapping.user_id].append(mapping.role)
         
+        # Fetch permissions for all users in a single query
+        permissions_result = await db.execute(
+            select(Permission.name, UserRoleMapping.user_id)
+            .join(RolePermission, Permission.id == RolePermission.permission_id)
+            .join(UserRoleMapping, RolePermission.role == UserRoleMapping.role)
+            .where(UserRoleMapping.user_id.in_(user_ids))
+            .distinct()
+        )
+        permission_mappings = permissions_result.fetchall()
+        
+        # Organize permissions by user_id
+        user_permissions_map = {}
+        for perm_name, user_id in permission_mappings:
+            if user_id not in user_permissions_map:
+                user_permissions_map[user_id] = []
+            user_permissions_map[user_id].append(perm_name)
+        
         # Build UserFullPublic objects
         users_with_details = []
         for user_model in users:
@@ -202,6 +226,9 @@ class AuthService:
                     "updated_at": user_model.profile.updated_at,
                 }
             
+            # Super admins get empty permissions list as they have all permissions
+            permissions = [] if user_model.is_super_admin else user_permissions_map.get(user_model.id, [])
+            
             user_data = {
                 "id": user_model.id,
                 "email": user_model.email,
@@ -211,6 +238,7 @@ class AuthService:
                 "updated_at": user_model.updated_at,
                 "deleted_at": user_model.deleted_at,
                 "assigned_roles": user_roles_map.get(user_model.id, []),
+                "permissions": permissions,
                 "profile": profile_data
             }
             users_with_details.append(UserFullPublic(**user_data))

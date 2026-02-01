@@ -63,6 +63,7 @@ class UserWithProfile(UserPublic):
 
 class UserWithRoles(UserPublic):
     assigned_roles: List[UserRoleEnum] = []
+    permissions: List[str] = []  # List of permission names (e.g., ['vehicle.create', 'office.view'])
 
 class UserFullPublic(UserWithProfile, UserWithRoles):
     pass

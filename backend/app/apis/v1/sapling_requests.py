@@ -4,6 +4,8 @@ from typing import List, Optional
 import json
 
 from app.db.database import get_db
+from app.apis.deps import require_permissions_sync
+from app.models.auth_models import User
 from app.schemas.planting_schemas import (
     SaplingRequestCreate,
     SaplingRequestUpdate,
@@ -69,7 +71,8 @@ def list_sapling_requests(
     year: Optional[int] = Query(None, description="Filter by year"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_request.view']))
 ):
     if year is not None:
         items = sapling_request_crud.get_by_year(db, year=year, skip=skip, limit=limit)
@@ -79,7 +82,11 @@ def list_sapling_requests(
 
 
 @router.get("/{request_id}")
-def get_sapling_request(request_id: str, db: Session = Depends(get_db)):
+def get_sapling_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_request.view']))
+):
     req = sapling_request_crud.get(db, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Sapling request not found")
@@ -87,14 +94,19 @@ def get_sapling_request(request_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/")
-def create_sapling_request(request: SaplingRequestCreate, db: Session = Depends(get_db)):
+def create_sapling_request(
+    request: SaplingRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_request.create']))
+):
     obj = sapling_request_crud.create(db, obj_in=request)
     return _serialize(obj)
 
 
 @router.put("/{request_id}")
 def update_sapling_request(
-    request_id: str, request: SaplingRequestUpdate, db: Session = Depends(get_db)
+    request_id: str, request: SaplingRequestUpdate, db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_request.update']))
 ):
     db_obj = sapling_request_crud.get(db, request_id)
     if not db_obj:
@@ -104,7 +116,11 @@ def update_sapling_request(
 
 
 @router.delete("/{request_id}", response_model=bool)
-def delete_sapling_request(request_id: str, db: Session = Depends(get_db)):
+def delete_sapling_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_request.delete']))
+):
     deleted = sapling_request_crud.remove(db, id=request_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Sapling request not found")

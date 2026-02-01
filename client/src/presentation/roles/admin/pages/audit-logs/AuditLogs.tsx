@@ -16,7 +16,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/presentation/components/shared/ui/sheet";
-import { Search, Shield, User, Globe, Clock, Loader2, Download, CalendarIcon } from "lucide-react";
+import { Search, Shield, User, Globe, Clock, Loader2, Download, CalendarIcon, RefreshCw } from "lucide-react";
 import { useAuditLogs, AuditLog } from "@/core/api/admin-api";
 import { getAuditDescription } from "./auditDescriptions";
 import {
@@ -151,8 +151,8 @@ export function AuditLogs() {
         status_code: statusCodeFilter === "all" ? undefined : parseInt(statusCodeFilter),
         user_email: userEmailFilter || undefined,
         search: searchFilter || undefined,
-        date_from: dateFrom ? format(dateFrom, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-        date_to: dateTo ? format(dateTo, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+        date_from: dateFrom ? dateFrom.toISOString() : undefined,
+        date_to: dateTo ? dateTo.toISOString() : undefined,
         skip: (page - 1) * pageSize,
         limit: pageSize,
     };
@@ -163,7 +163,7 @@ export function AuditLogs() {
     }, [moduleFilter, statusCodeFilter, userEmailFilter, searchFilter, dateFrom, dateTo]);
 
     // Query for logs list
-    const { data: logsResponse, isLoading, error } = useAuditLogs(filters);
+    const { data: logsResponse, isLoading, error, refetch, isFetching } = useAuditLogs(filters);
     const logs = logsResponse?.items || [];
     const totalCount = logsResponse?.total || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -250,6 +250,15 @@ export function AuditLogs() {
                         <p className="text-gray-600">ISO-compliant system activity audit trail</p>
                     </div>
                     <div className="flex items-center gap-4">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                        >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </Button>
                         <Select onValueChange={(value) => handleDownload(value as 'txt' | 'json' | 'csv')}>
                             <SelectTrigger className="w-[180px]">
                                 <Download className="w-4 h-4 mr-2" />
@@ -282,9 +291,11 @@ export function AuditLogs() {
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Time Range Button with Popover */}
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" className="justify-start text-left font-normal">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Time Range</label>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {dateFrom && dateTo ? (
                                             <span>
@@ -293,9 +304,9 @@ export function AuditLogs() {
                                         ) : (
                                             <span>Time Range</span>
                                         )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-4" align="start">
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-4" align="start">
                                     <div className="space-y-4">
                                         <div>
                                             <label className="text-sm font-semibold mb-2 block">Quick Range</label>
@@ -350,8 +361,9 @@ export function AuditLogs() {
                                             </div>
                                         </div>
                                     </div>
-                                </PopoverContent>
-                            </Popover>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">Module</label>
@@ -510,10 +522,11 @@ export function AuditLogs() {
             </div>
 
             {/* Detail Drawer */}
-            <Sheet open={!!selectedLogId} onOpenChange={(open) => !open && setSelectedLogId(null)}>
+            <Sheet open={!!selectedLogId} onOpenChange={(open) => !open && setSelectedLogId(null)} modal={true}>
                 <SheetContent 
                     side="right" 
-                    className="w-full sm:max-w-2xl overflow-y-auto [&]:transition-none [&]:duration-0 [&]:animate-none"
+                    className="w-full sm:max-w-2xl overflow-y-auto !transition-none !duration-0 !animate-none data-[state=open]:!animate-none data-[state=closed]:!animate-none data-[state=open]:!slide-in-from-right-0 data-[state=closed]:!slide-out-to-right-0"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <SheetHeader>
                         <SheetTitle>Audit Log Details</SheetTitle>

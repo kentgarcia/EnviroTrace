@@ -2,7 +2,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import date
 from sqlalchemy.orm import Session
-from app.apis.deps import get_db, get_current_user
+from app.apis.deps import get_db, require_permissions_sync
 from app.models.auth_models import User
 from app.crud.crud_tree_management import tree_management_request, tree_request, processing_standards, dropdown_options
 from app.schemas.tree_management_schemas import (
@@ -16,7 +16,10 @@ from app.schemas.tree_management_schemas import (
 router = APIRouter()
 
 @router.get("/stats")
-def get_tree_management_stats(db: Session = Depends(get_db)):
+def get_tree_management_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get statistics for tree management requests.
     Returns counts by status, total trees affected, and fees collected.
@@ -103,7 +106,8 @@ def read_tree_management_requests(
     year: int = Query(None, description="Filter by year (extracted from request_date)"),
     status: str = Query(None, description="Filter by status"),
     type: str = Query(None, description="Filter by request type"),
-    search: str = Query(None, description="Search in requester name, address, or request number")
+    search: str = Query(None, description="Search in requester name, address, or request number"),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
 ):
     """
     Retrieve tree management requests with optional filters.
@@ -137,7 +141,8 @@ def read_tree_management_requests(
 def read_tree_management_requests_by_month(
     year: int = Query(..., description="Year, e.g. 2025"),
     month: int = Query(..., ge=1, le=12, description="Month 1-12"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
 ):
     """Retrieve tree management requests for a specific month/year."""
     try:
@@ -154,7 +159,11 @@ def read_tree_management_requests_by_month(
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
 @router.post("", response_model=TreeManagementRequest)
-def create_tree_management_request(request_in: TreeManagementRequestCreate, db: Session = Depends(get_db)):
+def create_tree_management_request(
+    request_in: TreeManagementRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.create']))
+):
     """
     Create new tree management request.
     Request number will be auto-generated in TR{YEAR}-{sequential} format.
@@ -163,7 +172,11 @@ def create_tree_management_request(request_in: TreeManagementRequestCreate, db: 
     return TreeManagementRequest.from_db_model(created_obj)
 
 @router.get("/{request_id}", response_model=TreeManagementRequest)
-def read_tree_management_request(request_id: str, db: Session = Depends(get_db)):
+def read_tree_management_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get tree management request by ID.
     """
@@ -173,7 +186,12 @@ def read_tree_management_request(request_id: str, db: Session = Depends(get_db))
     return TreeManagementRequest.from_db_model(request_obj)
 
 @router.put("/{request_id}", response_model=TreeManagementRequest)
-def update_tree_management_request(request_id: str, request_in: TreeManagementRequestUpdate, db: Session = Depends(get_db)):
+def update_tree_management_request(
+    request_id: str,
+    request_in: TreeManagementRequestUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """
     Update tree management request.
     """
@@ -184,7 +202,11 @@ def update_tree_management_request(request_id: str, request_in: TreeManagementRe
     return TreeManagementRequest.from_db_model(updated_obj)
 
 @router.delete("/{request_id}")
-def delete_tree_management_request(request_id: str, db: Session = Depends(get_db)):
+def delete_tree_management_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.delete']))
+):
     """
     Delete tree management request.
     """
@@ -195,7 +217,11 @@ def delete_tree_management_request(request_id: str, db: Session = Depends(get_db
     return {"message": "Tree management request deleted successfully"}
 
 @router.get("/request-number/{request_number}", response_model=TreeManagementRequest)
-def read_tree_management_request_by_number(request_number: str, db: Session = Depends(get_db)):
+def read_tree_management_request_by_number(
+    request_number: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get tree management request by request number.
     """
@@ -205,7 +231,11 @@ def read_tree_management_request_by_number(request_number: str, db: Session = De
     return TreeManagementRequest.from_db_model(request_obj)
 
 @router.get("/type/{request_type}", response_model=List[TreeManagementRequest])
-def read_tree_management_requests_by_type(request_type: str, db: Session = Depends(get_db)):
+def read_tree_management_requests_by_type(
+    request_type: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get tree management requests by type.
     """
@@ -213,7 +243,11 @@ def read_tree_management_requests_by_type(request_type: str, db: Session = Depen
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
 @router.get("/status/{status}", response_model=List[TreeManagementRequest])
-def read_tree_management_requests_by_status(status: str, db: Session = Depends(get_db)):
+def read_tree_management_requests_by_status(
+    status: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get tree management requests by status.
     """
@@ -221,7 +255,11 @@ def read_tree_management_requests_by_status(status: str, db: Session = Depends(g
     return [TreeManagementRequest.from_db_model(req) for req in requests]
 
 @router.get("/requester/{requester_name}", response_model=List[TreeManagementRequest])
-def read_tree_management_requests_by_requester(requester_name: str, db: Session = Depends(get_db)):
+def read_tree_management_requests_by_requester(
+    requester_name: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get tree management requests by requester name.
     """
@@ -236,7 +274,10 @@ def read_tree_management_requests_by_requester(requester_name: str, db: Session 
 #     return tree_management_request.get_by_urgency_level(db, urgency_level=urgency_level)
 
 @router.get("/pending/all", response_model=List[TreeManagementRequest])
-def read_pending_tree_management_requests(db: Session = Depends(get_db)):
+def read_pending_tree_management_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """
     Get pending tree management requests.
     """
@@ -247,7 +288,8 @@ def read_pending_tree_management_requests(db: Session = Depends(get_db)):
 @router.get("/by-monitoring-request/{monitoring_request_id}", response_model=List[TreeManagementRequest])
 def get_tree_management_by_monitoring_request(
     monitoring_request_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
 ):
     """Get all tree management requests linked to a specific monitoring request"""
     requests = tree_management_request.get_by_monitoring_request(db, monitoring_request_id=monitoring_request_id)
@@ -267,7 +309,7 @@ def get_tree_management_by_monitoring_request(
 def create_tree_request(
     request_in: TreeRequestCreate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['tree_request.create']))
 ):
     """Create new ISO-compliant tree request with all 4 phases"""
     created_obj = tree_request.create_sync(db=db, obj_in=request_in, current_user_id=str(current_user.id))
@@ -281,7 +323,8 @@ def read_tree_requests(
     status: Optional[str] = Query(None, description="Filter by overall status"),
     request_type: Optional[str] = Query(None, description="Filter by request type"),
     year: Optional[int] = Query(None, description="Filter by year"),
-    is_archived: bool = Query(False, description="Filter by archived status")
+    is_archived: bool = Query(False, description="Filter by archived status"),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
 ):
     """Get all tree requests with analytics"""
     from sqlalchemy import extract
@@ -304,7 +347,11 @@ def read_tree_requests(
     return [tree_request.get_with_analytics(db, str(req.id)) for req in requests]
 
 @router.get("/v2/requests/{request_id}", response_model=Dict[str, Any])
-def read_tree_request(request_id: str, db: Session = Depends(get_db)):
+def read_tree_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """Get tree request by ID with analytics"""
     result = tree_request.get_with_analytics(db, request_id)
     if not result:
@@ -316,7 +363,7 @@ def update_tree_request(
     request_id: str, 
     request_in: TreeRequestUpdate, 
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
 ):
     """Update tree request"""
     from app.models.urban_greening_models import TreeRequest
@@ -333,7 +380,11 @@ def update_tree_request(
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
 @router.delete("/v2/requests/{request_id}")
-def delete_tree_request(request_id: str, db: Session = Depends(get_db)):
+def delete_tree_request(
+    request_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.delete']))
+):
     """Delete tree request"""
     from app.models.urban_greening_models import TreeRequest
     request_obj = db.query(TreeRequest).filter(TreeRequest.id == request_id).first()
@@ -346,7 +397,12 @@ def delete_tree_request(request_id: str, db: Session = Depends(get_db)):
 
 # Phase-specific update endpoints
 @router.patch("/v2/requests/{request_id}/receiving", response_model=Dict[str, Any])
-def update_receiving_phase(request_id: str, phase_data: UpdateReceivingPhase, db: Session = Depends(get_db)):
+def update_receiving_phase(
+    request_id: str,
+    phase_data: UpdateReceivingPhase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """Update receiving phase of a tree request"""
     updated_obj = tree_request.update_receiving_phase(db, request_id=request_id, phase_data=phase_data)
     if not updated_obj:
@@ -354,7 +410,12 @@ def update_receiving_phase(request_id: str, phase_data: UpdateReceivingPhase, db
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
 @router.patch("/v2/requests/{request_id}/inspection", response_model=Dict[str, Any])
-def update_inspection_phase(request_id: str, phase_data: UpdateInspectionPhase, db: Session = Depends(get_db)):
+def update_inspection_phase(
+    request_id: str,
+    phase_data: UpdateInspectionPhase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """Update inspection phase of a tree request"""
     updated_obj = tree_request.update_inspection_phase(db, request_id=request_id, phase_data=phase_data)
     if not updated_obj:
@@ -362,7 +423,12 @@ def update_inspection_phase(request_id: str, phase_data: UpdateInspectionPhase, 
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
 @router.patch("/v2/requests/{request_id}/requirements", response_model=Dict[str, Any])
-def update_requirements_phase(request_id: str, phase_data: UpdateRequirementsPhase, db: Session = Depends(get_db)):
+def update_requirements_phase(
+    request_id: str,
+    phase_data: UpdateRequirementsPhase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """Update requirements phase of a tree request"""
     updated_obj = tree_request.update_requirements_phase(db, request_id=request_id, phase_data=phase_data)
     if not updated_obj:
@@ -370,7 +436,12 @@ def update_requirements_phase(request_id: str, phase_data: UpdateRequirementsPha
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
 @router.patch("/v2/requests/{request_id}/clearance", response_model=Dict[str, Any])
-def update_clearance_phase(request_id: str, phase_data: UpdateClearancePhase, db: Session = Depends(get_db)):
+def update_clearance_phase(
+    request_id: str,
+    phase_data: UpdateClearancePhase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """Update clearance phase of a tree request"""
     updated_obj = tree_request.update_clearance_phase(db, request_id=request_id, phase_data=phase_data)
     if not updated_obj:
@@ -378,7 +449,12 @@ def update_clearance_phase(request_id: str, phase_data: UpdateClearancePhase, db
     return tree_request.get_with_analytics(db, str(updated_obj.id))
 
 @router.patch("/v2/requests/{request_id}/denr", response_model=Dict[str, Any])
-def update_denr_phase(request_id: str, phase_data: UpdateDENRPhase, db: Session = Depends(get_db)):
+def update_denr_phase(
+    request_id: str,
+    phase_data: UpdateDENRPhase,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.update']))
+):
     """Update DENR phase of a tree request"""
     updated_obj = tree_request.update_denr_phase(db, request_id=request_id, phase_data=phase_data)
     if not updated_obj:
@@ -390,24 +466,35 @@ def update_denr_phase(request_id: str, phase_data: UpdateDENRPhase, db: Session 
 def get_delayed_requests(
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
 ):
     """Get all delayed requests"""
     return tree_request.get_delayed_requests(db, skip=skip, limit=limit)
 
 @router.get("/v2/analytics/summary", response_model=Dict[str, Any])
-def get_analytics_summary(db: Session = Depends(get_db)):
+def get_analytics_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_request.view']))
+):
     """Get summary analytics for dashboard"""
     return tree_request.get_analytics_summary(db)
 
 # Processing standards endpoints
 @router.get("/v2/processing-standards", response_model=List[ProcessingStandardsInDB])
-def get_all_processing_standards(db: Session = Depends(get_db)):
+def get_all_processing_standards(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.view']))
+):
     """Get all processing standards"""
     return processing_standards.get_all_standards(db)
 
 @router.get("/v2/processing-standards/{request_type}", response_model=ProcessingStandardsInDB)
-def get_processing_standards_by_type(request_type: str, db: Session = Depends(get_db)):
+def get_processing_standards_by_type(
+    request_type: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.view']))
+):
     """Get processing standards for a specific request type"""
     standards = processing_standards.get_by_request_type(db, request_type=request_type)
     if not standards:
@@ -418,7 +505,8 @@ def get_processing_standards_by_type(request_type: str, db: Session = Depends(ge
 def update_processing_standards(
     request_type: str,
     standards_in: ProcessingStandardsUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.update']))
 ):
     """Update processing standards for a specific request type"""
     # Check if exists
@@ -441,7 +529,11 @@ def update_processing_standards(
     return updated_standards
 
 @router.delete("/v2/processing-standards/{request_type}")
-def delete_processing_standards(request_type: str, db: Session = Depends(get_db)):
+def delete_processing_standards(
+    request_type: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.delete']))
+):
     """Delete processing standards for a specific request type"""
     success = processing_standards.remove_by_request_type(db, request_type=request_type)
     if not success:
@@ -455,7 +547,8 @@ def delete_processing_standards(request_type: str, db: Session = Depends(get_db)
 def get_all_dropdown_options(
     field_name: Optional[str] = None,
     active_only: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.view']))
 ):
     """Get all dropdown options, optionally filtered by field name"""
     if field_name:
@@ -463,7 +556,11 @@ def get_all_dropdown_options(
     return dropdown_options.get_multi(db)
 
 @router.post("/v2/dropdown-options", response_model=DropdownOptionInDB)
-def create_dropdown_option(option_in: DropdownOptionCreate, db: Session = Depends(get_db)):
+def create_dropdown_option(
+    option_in: DropdownOptionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.create']))
+):
     """Create a new dropdown option"""
     return dropdown_options.create_option(db, obj_in=option_in)
 
@@ -471,7 +568,8 @@ def create_dropdown_option(option_in: DropdownOptionCreate, db: Session = Depend
 def update_dropdown_option(
     option_id: str,
     option_in: DropdownOptionUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.update']))
 ):
     """Update a dropdown option"""
     updated_option = dropdown_options.update_option(db, id=option_id, obj_in=option_in)
@@ -480,7 +578,11 @@ def update_dropdown_option(
     return updated_option
 
 @router.delete("/v2/dropdown-options/{option_id}")
-def delete_dropdown_option(option_id: str, db: Session = Depends(get_db)):
+def delete_dropdown_option(
+    option_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['processing_standard.delete']))
+):
     """Delete (soft delete) a dropdown option"""
     success = dropdown_options.delete_option(db, id=option_id)
     if not success:

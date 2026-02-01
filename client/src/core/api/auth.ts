@@ -41,12 +41,17 @@ export async function signIn(email: string, password: string) {
       useAuthStore.getState().setRoles(roles as UserRole[]);
     }
 
+    // Extract and store user permissions
+    const permissions = user.permissions || [];
+    useAuthStore.getState().setPermissions(permissions);
+
     // Store user data (handle both camelCase and snake_case fields)
     useAuthStore.getState().setUserData({
       id: user.id,
       email: user.email,
       lastSignInAt: user.lastSignInAt || user.last_sign_in_at,
       isSuperAdmin: user.isSuperAdmin || user.is_super_admin || false,
+      permissions: permissions,
     });
 
     return {
@@ -110,12 +115,17 @@ export async function getCurrentUser(): Promise<UserData> {
       useAuthStore.getState().setRoles(roles as UserRole[]);
     }
 
+    // Extract and store user permissions
+    const permissions = data.permissions || [];
+    useAuthStore.getState().setPermissions(permissions);
+
     // Store user data (handle both camelCase and snake_case fields)
     useAuthStore.getState().setUserData({
       id: data.id,
       email: data.email,
       lastSignInAt: data.lastSignInAt || data.last_sign_in_at,
       isSuperAdmin: data.isSuperAdmin || data.is_super_admin || false,
+      permissions: permissions,
     });
 
     return data;
@@ -184,6 +194,8 @@ export function useAuth() {
         // Map both types of role structures
         roles: (user as any).roles || [],
         assigned_roles: (user as any).assigned_roles || [],
+        // Map permissions
+        permissions: (user as any).permissions || [],
       };
 
       // Store user data in auth store
@@ -197,6 +209,10 @@ export function useAuth() {
       if (rolesArray.length > 0) {
         useAuthStore.getState().setRoles(rolesArray);
       }
+
+      // Store permissions
+      const permissions = userData.permissions || [];
+      useAuthStore.getState().setPermissions(permissions);
     }
   }, [user, token]);
 

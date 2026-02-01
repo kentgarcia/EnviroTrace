@@ -5,6 +5,7 @@ import { persist } from "zustand/middleware";
 interface AuthState {
   token: string | null;
   roles: UserRole[];
+  permissions: string[];
   userId: string | null;
   email: string | null;
   lastSignInAt: string | null;
@@ -18,6 +19,13 @@ interface AuthState {
   setRoles: (roles: UserRole[]) => void;
   hasRole: (role: UserRole) => boolean;
   clearRoles: () => void;
+
+  // User permission operations
+  setPermissions: (permissions: string[]) => void;
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
+  hasAllPermissions: (permissions: string[]) => boolean;
+  clearPermissions: () => void;
 
   // User data operations
   setUserData: (userData: Partial<UserData>) => void;
@@ -33,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
       // State
       token: null,
       roles: [],
+      permissions: [],
       userId: null,
       email: null,
       lastSignInAt: null,
@@ -45,7 +54,30 @@ export const useAuthStore = create<AuthState>()(
       // User role operations
       setRoles: (roles) => set({ roles }),
       hasRole: (role) => get().roles.includes(role),
-      clearRoles: () => set({ roles: [] }), // User data operations
+      clearRoles: () => set({ roles: [] }),
+
+      // User permission operations
+      setPermissions: (permissions) => set({ permissions }),
+      hasPermission: (permission) => {
+        // Super admins have all permissions
+        if (get().isSuperAdmin) return true;
+        return get().permissions.includes(permission);
+      },
+      hasAnyPermission: (permissions) => {
+        // Super admins have all permissions
+        if (get().isSuperAdmin) return true;
+        const userPermissions = get().permissions;
+        return permissions.some((perm) => userPermissions.includes(perm));
+      },
+      hasAllPermissions: (permissions) => {
+        // Super admins have all permissions
+        if (get().isSuperAdmin) return true;
+        const userPermissions = get().permissions;
+        return permissions.every((perm) => userPermissions.includes(perm));
+      },
+      clearPermissions: () => set({ permissions: [] }),
+
+      // User data operations
       setUserData: (userData) =>
         set({
           userId: userData.id || get().userId,
@@ -60,6 +92,7 @@ export const useAuthStore = create<AuthState>()(
               : userData.is_super_admin !== undefined
               ? userData.is_super_admin
               : get().isSuperAdmin,
+          permissions: userData.permissions || get().permissions,
         }),
       clearUserData: () =>
         set({
@@ -67,6 +100,7 @@ export const useAuthStore = create<AuthState>()(
           email: null,
           lastSignInAt: null,
           isSuperAdmin: false,
+          permissions: [],
         }),
 
       // Reset entire store
@@ -74,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           token: null,
           roles: [],
+          permissions: [],
           userId: null,
           email: null,
           lastSignInAt: null,

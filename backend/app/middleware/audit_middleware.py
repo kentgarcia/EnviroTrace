@@ -21,6 +21,10 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
         # Skip logging OPTIONS (CORS preflight) only
         if request.method.upper() == "OPTIONS":
             return await call_next(request)
+        
+        # Skip logging GET requests to audit logs endpoint to avoid recursive logging
+        if request.method.upper() == "GET" and request.url.path == "/api/v1/admin/audit/logs":
+            return await call_next(request)
 
         started = time.perf_counter()
         body_bytes = await self._capture_request_body(request)

@@ -11,8 +11,12 @@ from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
     UserRoleMappingCreate, UserFullPublic
 )
+from app.schemas.permission_schemas import (
+    PermissionPublic, RoleWithPermissions, RolePermissionBulkAssign, UserPermissionsResponse
+)
 from app.services.auth_service import auth_service
 from app.services.system_health_service import SystemHealthService
+from app.services.permission_service import permission_service
 
 router = APIRouter()
 
@@ -346,3 +350,70 @@ async def get_available_roles(
     
     return [{"value": role.value, "label": role.value.replace("_", " ").title()} 
             for role in UserRoleEnum]
+
+
+# Permission Management Endpoints
+
+@router.get("/permissions", response_model=List[PermissionPublic])
+async def get_all_permissions(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin])),
+    grouped: bool = Query(False, description="Return permissions grouped by module and entity")
+):
+    """Get all available permissions, optionally grouped"""
+    return await permission_service.get_all_permissions(db, grouped=grouped)
+
+
+@router.get("/roles/{role}/permissions", response_model=RoleWithPermissions)
+async def get_role_permissions(
+    role: UserRoleEnum,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Get all permissions assigned to a specific role"""
+    return await permission_service.get_role_permissions(db, role=role)
+
+
+@router.post("/roles/{role}/permissions/{permission_id}")
+async def assign_permission_to_role(
+    role: UserRoleEnum,
+    permission_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Assign a single permission to a role"""
+    await permission_service.assign_permission_to_role(db, role=role, permission_id=permission_id)
+    return {"message": f"Permission {permission_id} assigned to role {role.value}"}
+
+
+@router.post("/roles/{role}/permissions/bulk", response_model=RoleWithPermissions)
+async def assign_permissions_to_role_bulk(
+    role: UserRoleEnum,
+    bulk_assign: RolePermissionBulkAssign,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Assign multiple permissions to a role"""
+    return await permission_service.assign_permissions_to_role_bulk(db, role=role, bulk_assign=bulk_assign)
+
+
+@router.delete("/roles/{role}/permissions/{permission_id}")
+async def remove_permission_from_role(
+    role: UserRoleEnum,
+    permission_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Remove a permission from a role"""
+    await permission_service.remove_permission_from_role(db, role=role, permission_id=permission_id)
+    return {"message": f"Permission {permission_id} removed from role {role.value}"}
+
+
+@router.get("/users/{user_id}/permissions", response_model=UserPermissionsResponse)
+async def get_user_permissions(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+):
+    """Get all permissions for a specific user"""
+    return await permission_service.get_user_permissions(db, user_id=user_id)

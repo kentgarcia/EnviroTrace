@@ -67,6 +67,66 @@ const requireRole = (
   }
 };
 
+const requirePermission = (
+  requiredPermissions: string | string[],
+  errorMessage: string = "Access denied. You don't have the required permissions"
+) => {
+  const { permissions, isSuperAdmin, hasPermission, hasAnyPermission } =
+    useAuthStore.getState();
+
+  // Super admins bypass permission checks
+  if (isSuperAdmin) {
+    return;
+  }
+
+  // Check permissions
+  let hasAccess = false;
+  if (typeof requiredPermissions === "string") {
+    hasAccess = hasPermission(requiredPermissions);
+  } else if (Array.isArray(requiredPermissions)) {
+    hasAccess = hasAnyPermission(requiredPermissions);
+  }
+
+  if (!hasAccess) {
+    toast.error(errorMessage, {
+      duration: 5000,
+      id: "permission-denied",
+    });
+    throw redirect({
+      to: "/dashboard-selection",
+      replace: true,
+    });
+  }
+};
+
+const requirePermissions = (
+  requiredPermissions: string[],
+  requireAll: boolean = false,
+  errorMessage: string = "Access denied. You don't have the required permissions"
+) => {
+  const { permissions, isSuperAdmin } = useAuthStore.getState();
+  
+  // Super admins bypass all permission checks
+  if (isSuperAdmin) {
+    return;
+  }
+  
+  const hasPermission = requireAll
+    ? requiredPermissions.every((perm) => permissions.includes(perm))
+    : requiredPermissions.some((perm) => permissions.includes(perm));
+  
+  if (!hasPermission) {
+    toast.error(errorMessage, {
+      duration: 5000,
+      id: "access-denied-permission",
+    });
+    throw redirect({
+      to: "/dashboard-selection",
+      replace: true,
+    });
+  }
+};
+
 // Define routes
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,

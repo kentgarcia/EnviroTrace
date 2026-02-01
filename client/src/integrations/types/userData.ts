@@ -8,6 +8,7 @@ export interface UserData {
   email?: string;
   roles?: UserRole[];
   assigned_roles?: UserRole[]; // Added to match backend response format
+  permissions?: string[]; // User permissions from backend
   lastSignInAt?: string;
   last_sign_in_at?: string; // Added to match backend response format
   isSuperAdmin?: boolean;

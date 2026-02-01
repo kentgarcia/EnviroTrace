@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 import json
 
-from app.apis.deps import get_db, get_current_user
+from app.apis.deps import get_db, require_permissions_sync
 from app.models.auth_models import User
 from app.crud.crud_urban_greening_project import urban_greening_project_crud
 from app.schemas.urban_greening_project_schemas import (
@@ -53,7 +53,7 @@ def list_urban_greening_projects(
     search: Optional[str] = Query(None),
     year: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.view']))
 ) -> Any:
     """
     Get list of urban greening projects with optional filters
@@ -73,7 +73,7 @@ def list_urban_greening_projects(
 @router.get("/stats")
 def get_project_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.view']))
 ) -> Any:
     """
     Get statistics for urban greening projects
@@ -85,7 +85,7 @@ def get_project_stats(
 def get_urban_greening_project(
     project_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.view']))
 ) -> Any:
     """
     Get a specific urban greening project by ID
@@ -103,7 +103,7 @@ def get_urban_greening_project(
 def create_urban_greening_project(
     project_in: UrbanGreeningProjectCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.create']))
 ) -> Any:
     """
     Create a new urban greening project
@@ -117,7 +117,7 @@ def update_urban_greening_project(
     project_id: str,
     project_in: UrbanGreeningProjectUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.update']))
 ) -> Any:
     """
     Update an urban greening project
@@ -137,7 +137,7 @@ def update_urban_greening_project(
 def delete_urban_greening_project(
     project_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_permissions_sync(['urban_project.delete']))
 ) -> None:
     """
     Delete an urban greening project

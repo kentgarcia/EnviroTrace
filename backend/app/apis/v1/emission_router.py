@@ -5,7 +5,7 @@ from sqlalchemy import desc
 from uuid import UUID
 import traceback
 
-from app.apis.deps import get_db, get_current_active_user
+from app.apis.deps import get_db, require_permissions_sync
 from app.crud import crud_emission
 from app.models.auth_models import User
 from app.models.emission_models import VehicleDriverHistory, Test as TestModel
@@ -29,7 +29,7 @@ def get_offices(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.view']))
 ):
     """
     Get all offices with optional search.
@@ -53,7 +53,7 @@ def create_office(
     *,
     db: Session = Depends(get_db),
     office_in: OfficeCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.create']))
 ):
     """
     Create new office.
@@ -78,7 +78,7 @@ def get_office_compliance(
     search_term: Optional[str] = None,
     year: Optional[int] = None,
     quarter: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.view']))
 ):
     """
     Get office compliance data aggregated from vehicles and tests.
@@ -108,7 +108,7 @@ def get_office_compliance(
 def get_office(
     office_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.view']))
 ):
     """
     Get a specific office by ID.
@@ -128,7 +128,7 @@ def update_office(
     office_id: UUID,
     db: Session = Depends(get_db),
     office_in: OfficeUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.update']))
 ):    
     """
     Update an office.
@@ -157,7 +157,7 @@ def update_office(
 def delete_office(
     office_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['office.delete']))
 ):
     """
     Delete an office.
@@ -199,7 +199,7 @@ def get_vehicles(
     wheels: Optional[int] = None,
     search: Optional[str] = None,
     include_test_data: bool = False,  # New parameter to optionally include test data
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get all vehicles with optional filtering.
@@ -280,7 +280,7 @@ def get_vehicles(
 def get_vehicle_by_plate(
     plate_number: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get vehicle by exact plate number match.
@@ -299,7 +299,7 @@ def create_vehicle(
     *,
     db: Session = Depends(get_db),
     vehicle_in: VehicleCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.create']))
 ):
     """
     Create new vehicle.
@@ -368,7 +368,7 @@ def create_vehicle(
 def get_vehicle(
     vehicle_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get a specific vehicle by ID.
@@ -388,7 +388,7 @@ def update_vehicle(
     vehicle_id: UUID,
     db: Session = Depends(get_db),
     vehicle_in: VehicleUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.update']))
 ):    
     """
     Update a vehicle.
@@ -477,7 +477,7 @@ def update_vehicle(
 def delete_vehicle(
     vehicle_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.delete']))
 ):    
     """
     Delete a vehicle.
@@ -495,7 +495,7 @@ def delete_vehicle(
 @router.get("/vehicles/filters/options")
 def get_filter_options(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get unique values for filter dropdowns.
@@ -520,7 +520,7 @@ def get_tests(
     vehicle_id: Optional[UUID] = None,
     quarter: Optional[int] = None,
     year: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['test.view']))
 ):
     """
     Get all tests or tests for a specific vehicle, optionally filtered by quarter and year.
@@ -555,7 +555,7 @@ def create_test(
     *,
     db: Session = Depends(get_db),
     test_in: TestCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['test.create']))
 ):    
     """
     Create a new test record.
@@ -576,7 +576,7 @@ def create_test(
 def get_test(
     test_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['test.view']))
 ):
     """
     Get a specific test by ID.
@@ -596,7 +596,7 @@ def update_test(
     test_id: UUID,
     db: Session = Depends(get_db),
     test_in: TestUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['test.update']))
 ):
     """
     Update a test record.
@@ -616,7 +616,7 @@ def update_test(
 def delete_test(
     test_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['test.delete']))
 ):
     """
     Delete a test record.
@@ -638,7 +638,7 @@ def get_test_schedules(
     skip: int = 0,
     limit: int = 100,
     year: Optional[int] = None,    quarter: Optional[int] = None,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['schedule.view']))
 ):
     """
     Get all test schedules or filter by year and quarter.
@@ -657,7 +657,7 @@ def create_test_schedule(
     *,
     db: Session = Depends(get_db),
     schedule_in: TestScheduleCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['schedule.create']))
 ):
     """
     Create a new test schedule.
@@ -670,7 +670,7 @@ def create_test_schedule(
 def get_test_schedule(
     schedule_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['schedule.view']))
 ):
     """
     Get a specific test schedule by ID.
@@ -690,7 +690,7 @@ def update_test_schedule(
     schedule_id: UUID,
     db: Session = Depends(get_db),
     schedule_in: TestScheduleUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['schedule.update']))
 ):
     """
     Update a test schedule.
@@ -710,7 +710,7 @@ def update_test_schedule(
 def delete_test_schedule(
     schedule_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['schedule.delete']))
 ):
     """
     Delete a test schedule.
@@ -732,7 +732,7 @@ def get_driver_history(
     skip: int = 0,
     limit: int = 100,
     vehicle_id: Optional[UUID] = None,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get driver history for all vehicles or a specific vehicle.
@@ -750,7 +750,7 @@ def get_vehicle_remarks(
     vehicle_id: UUID,
     year: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
     Get remarks for a specific vehicle and year.
@@ -769,7 +769,7 @@ def update_vehicle_remarks(
     year: int,
     remarks_data: VehicleRemarksUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permissions_sync(['vehicle.update']))
 ):
     """
     Update or create remarks for a specific vehicle and year.

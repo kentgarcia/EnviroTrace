@@ -3,7 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
 
-from app.apis.deps import get_db
+from app.apis.deps import get_db, require_permissions_sync
+from app.models.auth_models import User
 import json
 from app.crud.crud_planting import urban_greening_planting_crud, sapling_collection_crud
 from app.schemas.planting_schemas import (
@@ -33,7 +34,8 @@ def get_urban_greening_plantings(
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     year: Optional[int] = Query(None, description="Filter by year"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.view']))
 ):
     """Get all urban greening planting records with optional filters"""
     if year is not None:
@@ -56,7 +58,8 @@ def get_urban_greening_plantings(
 @router.post("/urban-greening/", response_model=UrbanGreeningPlantingInDB)
 def create_urban_greening_planting(
     planting_data: UrbanGreeningPlantingCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.create']))
 ):
     """Create a new urban greening planting record"""
     # Generate unique record number
@@ -95,7 +98,8 @@ def create_urban_greening_planting(
 @router.get("/urban-greening/{planting_id}", response_model=UrbanGreeningPlantingInDB)
 def get_urban_greening_planting(
     planting_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.view']))
 ):
     """Get a specific urban greening planting record"""
     planting = urban_greening_planting_crud.get(db, id=planting_id)
@@ -113,7 +117,8 @@ def get_urban_greening_planting(
 def update_urban_greening_planting(
     planting_id: UUID,
     planting_data: UrbanGreeningPlantingUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.update']))
 ):
     """Update an urban greening planting record"""
     planting = urban_greening_planting_crud.get(db, id=planting_id)
@@ -152,7 +157,8 @@ def update_urban_greening_planting(
 @router.delete("/urban-greening/{planting_id}")
 def delete_urban_greening_planting(
     planting_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.delete']))
 ):
     """Delete an urban greening planting record"""
     planting = urban_greening_planting_crud.get(db, id=planting_id)
@@ -167,13 +173,17 @@ def get_plantings_by_type(
     planting_type: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.view']))
 ):
     """Get urban greening plantings by type"""
     return urban_greening_planting_crud.get_by_type(db, planting_type=planting_type, skip=skip, limit=limit)
 
 @router.get("/urban-greening/statistics/", response_model=PlantingStatistics)
-def get_urban_greening_statistics(db: Session = Depends(get_db)):
+def get_urban_greening_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.view']))
+):
     """Get urban greening planting statistics"""
     return urban_greening_planting_crud.get_statistics(db)
 
@@ -185,7 +195,8 @@ def get_sapling_collections(
     purpose: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.view']))
 ):
     """Get all sapling collection records with optional filters"""
     if search or purpose or status:
@@ -202,7 +213,8 @@ def get_sapling_collections(
 @router.post("/saplings/", response_model=SaplingCollectionInDB)
 def create_sapling_collection(
     collection_data: SaplingCollectionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.create']))
 ):
     """Create a new sapling collection record"""
     # Generate unique collection number
@@ -228,7 +240,8 @@ def create_sapling_collection(
 @router.get("/saplings/{collection_id}", response_model=SaplingCollectionInDB)
 def get_sapling_collection(
     collection_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.view']))
 ):
     """Get a specific sapling collection record"""
     collection = sapling_collection_crud.get(db, id=collection_id)
@@ -240,7 +253,8 @@ def get_sapling_collection(
 def update_sapling_collection(
     collection_id: UUID,
     collection_data: SaplingCollectionUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.update']))
 ):
     """Update a sapling collection record"""
     collection = sapling_collection_crud.get(db, id=collection_id)
@@ -252,7 +266,8 @@ def update_sapling_collection(
 @router.delete("/saplings/{collection_id}")
 def delete_sapling_collection(
     collection_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.delete']))
 ):
     """Delete a sapling collection record"""
     collection = sapling_collection_crud.get(db, id=collection_id)
@@ -267,13 +282,17 @@ def get_collections_by_species(
     species_name: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.view']))
 ):
     """Get sapling collections by species name"""
     return sapling_collection_crud.get_by_species(db, species_name=species_name, skip=skip, limit=limit)
 
 @router.get("/saplings/statistics/", response_model=SaplingStatistics)
-def get_sapling_statistics(db: Session = Depends(get_db)):
+def get_sapling_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['sapling_collection.view']))
+):
     """Get sapling collection statistics"""
     return sapling_collection_crud.get_statistics(db)
 
@@ -281,7 +300,8 @@ def get_sapling_statistics(db: Session = Depends(get_db)):
 @router.get("/urban-greening/by-monitoring-request/{monitoring_request_id}", response_model=List[UrbanGreeningPlantingInDB])
 def get_plantings_by_monitoring_request(
     monitoring_request_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['planting.view']))
 ):
     """Get all urban greening planting records linked to a specific monitoring request"""
     items = urban_greening_planting_crud.get_by_monitoring_request(db, monitoring_request_id=monitoring_request_id)

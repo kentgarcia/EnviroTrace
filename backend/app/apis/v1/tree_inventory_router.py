@@ -8,6 +8,8 @@ from uuid import UUID
 from datetime import datetime
 
 from app.db.database import get_db
+from app.apis.deps import require_permissions_sync
+from app.models.auth_models import User
 from app.schemas.tree_inventory_schemas import (
     TreeInventoryCreate, TreeInventoryUpdate, TreeInventoryResponse,
     TreeMonitoringLogCreate, TreeMonitoringLogResponse,
@@ -26,14 +28,19 @@ router = APIRouter(prefix="/tree-inventory", tags=["Tree Inventory"])
 def get_all_species(
     search: Optional[str] = Query(None, description="Search by scientific, common, or local name"),
     include_inactive: bool = Query(False, description="Include inactive species"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_species.view']))
 ):
     """Get all tree species for dropdown selection"""
     return crud.get_all_species(db, search, include_inactive)
 
 
 @router.get("/species/{species_id}", response_model=TreeSpeciesResponse)
-def get_species_by_id(species_id: UUID, db: Session = Depends(get_db)):
+def get_species_by_id(
+    species_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_species.view']))
+):
     """Get a specific tree species by ID"""
     species = crud.get_species_by_id(db, species_id)
     if not species:
@@ -42,7 +49,11 @@ def get_species_by_id(species_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/species", response_model=TreeSpeciesResponse, status_code=201)
-def create_species(species_data: TreeSpeciesCreate, db: Session = Depends(get_db)):
+def create_species(
+    species_data: TreeSpeciesCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_species.create']))
+):
     """Add a new tree species to the database"""
     # Check if already exists by scientific name (if provided)
     if species_data.scientific_name:
@@ -53,7 +64,12 @@ def create_species(species_data: TreeSpeciesCreate, db: Session = Depends(get_db
 
 
 @router.put("/species/{species_id}", response_model=TreeSpeciesResponse)
-def update_species(species_id: UUID, species_data: TreeSpeciesUpdate, db: Session = Depends(get_db)):
+def update_species(
+    species_id: UUID,
+    species_data: TreeSpeciesUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_species.update']))
+):
     """Update a tree species"""
     species = crud.update_species(db, species_id, species_data)
     if not species:
@@ -62,7 +78,11 @@ def update_species(species_id: UUID, species_data: TreeSpeciesUpdate, db: Sessio
 
 
 @router.delete("/species/{species_id}", status_code=200)
-def delete_species(species_id: UUID, db: Session = Depends(get_db)):
+def delete_species(
+    species_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_species.delete']))
+):
     """
     Soft delete a tree species (marks as inactive).
     Returns count of trees currently using this species.
@@ -97,7 +117,8 @@ def get_all_trees(
     barangay: Optional[str] = Query(None, description="Filter by barangay (partial match)"),
     search: Optional[str] = Query(None, description="Search by code, species, name, or address"),
     is_archived: Optional[bool] = Query(False, description="Filter by archived status. Set to null to include all."),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
 ):
     """Get all trees in inventory with optional filters"""
     trees = crud.get_all_trees(db, skip, limit, status, health, species, barangay, search, is_archived)
@@ -107,7 +128,8 @@ def get_all_trees(
 @router.get("/trees/next-code")
 def preview_tree_code(
     year: Optional[int] = Query(None, ge=1900, le=9999, description="Year used to generate the code"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
 ):
     """Preview the next available tree code for a specific year."""
     target_year = year if year is not None else datetime.now().year
@@ -115,7 +137,10 @@ def preview_tree_code(
 
 
 @router.get("/trees/map", response_model=List[TreeInventoryResponse])
-def get_trees_for_map(db: Session = Depends(get_db)):
+def get_trees_for_map(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
+):
     """Get all trees with location data for map visualization"""
     trees = crud.get_trees_for_map(db)
     return [TreeInventoryResponse.from_db_model(t) for t in trees]
@@ -130,7 +155,8 @@ def get_trees_in_bounds(
     status: Optional[str] = Query(None, description="Filter by status"),
     health: Optional[str] = Query(None, description="Filter by health"),
     limit: int = Query(500, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
 ):
     """Get trees within bounding box using PostGIS spatial query"""
     return crud.get_trees_in_bounds(db, min_lat, min_lng, max_lat, max_lng, status, health, limit)
@@ -145,7 +171,8 @@ def get_tree_clusters(
     zoom: int = Query(14, ge=1, le=20, description="Map zoom level"),
     status: Optional[str] = Query(None, description="Filter by status"),
     health: Optional[str] = Query(None, description="Filter by health"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
 ):
     """Get clustered tree data for map visualization at different zoom levels"""
     # Calculate grid size based on zoom level (smaller grid = more clusters at lower zoom)
@@ -161,13 +188,19 @@ def get_tree_clusters(
 
 
 @router.get("/trees/stats", response_model=TreeInventoryStats)
-def get_tree_stats(db: Session = Depends(get_db)):
+def get_tree_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
+):
     """Get tree inventory statistics"""
     return crud.get_tree_inventory_stats(db)
 
 
 @router.get("/trees/carbon-statistics", response_model=TreeCarbonStatistics)
-def get_carbon_statistics(db: Session = Depends(get_db)):
+def get_carbon_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
+):
     """
     Get comprehensive tree carbon statistics including:
     - Tree Count & Composition (total, per species, native vs exotic)
@@ -179,7 +212,11 @@ def get_carbon_statistics(db: Session = Depends(get_db)):
 
 
 @router.get("/trees/{tree_id}", response_model=TreeInventoryResponse)
-def get_tree(tree_id: UUID, db: Session = Depends(get_db)):
+def get_tree(
+    tree_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
+):
     """Get a specific tree by ID"""
     tree = crud.get_tree_by_id(db, tree_id)
     if not tree:
@@ -194,7 +231,11 @@ def get_tree(tree_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/trees/code/{tree_code}", response_model=TreeInventoryResponse)
-def get_tree_by_code(tree_code: str, db: Session = Depends(get_db)):
+def get_tree_by_code(
+    tree_code: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.view']))
+):
     """Get a specific tree by tree code (for QR scanning)"""
     tree = crud.get_tree_by_code(db, tree_code)
     if not tree:
@@ -203,7 +244,11 @@ def get_tree_by_code(tree_code: str, db: Session = Depends(get_db)):
 
 
 @router.post("/trees", response_model=TreeInventoryResponse, status_code=201)
-def create_tree(tree_data: TreeInventoryCreate, db: Session = Depends(get_db)):
+def create_tree(
+    tree_data: TreeInventoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.create']))
+):
     """Create a new tree in the inventory"""
     try:
         tree = crud.create_tree(db, tree_data)
@@ -213,7 +258,12 @@ def create_tree(tree_data: TreeInventoryCreate, db: Session = Depends(get_db)):
 
 
 @router.put("/trees/{tree_id}", response_model=TreeInventoryResponse)
-def update_tree(tree_id: UUID, tree_data: TreeInventoryUpdate, db: Session = Depends(get_db)):
+def update_tree(
+    tree_id: UUID,
+    tree_data: TreeInventoryUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.update']))
+):
     """Update a tree in the inventory"""
     try:
         tree = crud.update_tree(db, tree_id, tree_data)
@@ -225,14 +275,22 @@ def update_tree(tree_id: UUID, tree_data: TreeInventoryUpdate, db: Session = Dep
 
 
 @router.delete("/trees/{tree_id}", status_code=204)
-def archive_tree(tree_id: UUID, db: Session = Depends(get_db)):
+def archive_tree(
+    tree_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.delete']))
+):
     """Archive a tree from the inventory"""
     if not crud.archive_tree(db, tree_id):
         raise HTTPException(status_code=404, detail="Tree not found")
 
 
 @router.post("/trees/{tree_id}/restore", status_code=200)
-def restore_tree(tree_id: UUID, db: Session = Depends(get_db)):
+def restore_tree(
+    tree_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.update']))
+):
     """Restore an archived tree"""
     if not crud.restore_tree(db, tree_id):
         raise HTTPException(status_code=404, detail="Tree not found")
@@ -242,14 +300,22 @@ def restore_tree(tree_id: UUID, db: Session = Depends(get_db)):
 # ==================== Monitoring Log Endpoints ====================
 
 @router.get("/trees/{tree_id}/monitoring", response_model=List[TreeMonitoringLogResponse])
-def get_monitoring_logs(tree_id: UUID, db: Session = Depends(get_db)):
+def get_monitoring_logs(
+    tree_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['monitoring_log.view']))
+):
     """Get all monitoring logs for a tree"""
     logs = crud.get_monitoring_logs(db, tree_id)
     return [TreeMonitoringLogResponse.from_db_model(log) for log in logs]
 
 
 @router.post("/monitoring", response_model=TreeMonitoringLogResponse, status_code=201)
-def create_monitoring_log(log_data: TreeMonitoringLogCreate, db: Session = Depends(get_db)):
+def create_monitoring_log(
+    log_data: TreeMonitoringLogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['monitoring_log.create']))
+):
     """Create a new monitoring log (also updates tree health)"""
     # Verify tree exists
     tree = crud.get_tree_by_id(db, log_data.tree_id)
@@ -269,7 +335,8 @@ def get_all_projects(
     project_type: Optional[str] = Query(None, description="Filter by type: replacement, urban_greening, reforestation"),
     status: Optional[str] = Query(None, description="Filter by status: planned, ongoing, completed, cancelled"),
     search: Optional[str] = Query(None, description="Search by code, name, or organization"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.view']))
 ):
     """Get all planting projects with optional filters"""
     projects = crud.get_all_projects(db, skip, limit, project_type, status, search)
@@ -277,13 +344,20 @@ def get_all_projects(
 
 
 @router.get("/projects/stats", response_model=PlantingProjectStats)
-def get_project_stats(db: Session = Depends(get_db)):
+def get_project_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.view']))
+):
     """Get planting project statistics"""
     return crud.get_planting_project_stats(db)
 
 
 @router.get("/projects/{project_id}", response_model=PlantingProjectResponse)
-def get_project(project_id: UUID, db: Session = Depends(get_db)):
+def get_project(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.view']))
+):
     """Get a specific planting project by ID"""
     project = crud.get_project_by_id(db, project_id)
     if not project:
@@ -292,14 +366,23 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/projects", response_model=PlantingProjectResponse, status_code=201)
-def create_project(project_data: PlantingProjectCreate, db: Session = Depends(get_db)):
+def create_project(
+    project_data: PlantingProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.create']))
+):
     """Create a new planting project"""
     project = crud.create_project(db, project_data)
     return PlantingProjectResponse.from_db_model(project)
 
 
 @router.put("/projects/{project_id}", response_model=PlantingProjectResponse)
-def update_project(project_id: UUID, project_data: PlantingProjectUpdate, db: Session = Depends(get_db)):
+def update_project(
+    project_id: UUID,
+    project_data: PlantingProjectUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.update']))
+):
     """Update a planting project"""
     project = crud.update_project(db, project_id, project_data)
     if not project:
@@ -308,7 +391,11 @@ def update_project(project_id: UUID, project_data: PlantingProjectUpdate, db: Se
 
 
 @router.delete("/projects/{project_id}", status_code=204)
-def delete_project(project_id: UUID, db: Session = Depends(get_db)):
+def delete_project(
+    project_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree_project.delete']))
+):
     """Delete a planting project"""
     if not crud.delete_project(db, project_id):
         raise HTTPException(status_code=404, detail="Project not found")
@@ -317,7 +404,11 @@ def delete_project(project_id: UUID, db: Session = Depends(get_db)):
 # ==================== Batch Operations ====================
 
 @router.post("/trees/batch", response_model=List[TreeInventoryResponse], status_code=201)
-def create_trees_batch(trees_data: List[TreeInventoryCreate], db: Session = Depends(get_db)):
+def create_trees_batch(
+    trees_data: List[TreeInventoryCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.create']))
+):
     """Create multiple trees in a single request (for bulk import)"""
     created_trees = []
     for tree_data in trees_data:
@@ -330,7 +421,8 @@ def create_trees_batch(trees_data: List[TreeInventoryCreate], db: Session = Depe
 def add_trees_to_project(
     project_id: UUID,
     trees_data: List[TreeInventoryCreate],
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(['tree.create']))
 ):
     """Add multiple trees to a planting project"""
     # Verify project exists

@@ -47,6 +47,51 @@ class UserRoleMapping(Base):
     user = relationship("User", back_populates="roles")
 
 
+class PermissionActionEnum(str, enum.Enum):
+    create = "create"
+    view = "view"
+    update = "update"
+    delete = "delete"
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+    __table_args__ = (
+        Index("idx_auth_permissions_name", "name"),
+        Index("idx_auth_permissions_module", "module_name"),
+        Index("idx_auth_permissions_entity", "entity_type"),
+        {"schema": "app_auth"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    name = Column(String(100), unique=True, nullable=False)  # e.g., 'vehicle.create'
+    description = Column(Text, nullable=True)
+    module_name = Column(String(100), nullable=False)  # e.g., 'emission', 'urban_greening', 'admin'
+    entity_type = Column(String(100), nullable=False)  # e.g., 'vehicle', 'office', 'tree_species'
+    action = Column(SAEnum(PermissionActionEnum, name="permission_action", schema="app_auth"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    role_permissions = relationship("RolePermission", back_populates="permission", cascade="all, delete-orphan")
+
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+    __table_args__ = (
+        UniqueConstraint("role", "permission_id", name="uq_role_permissions_role_permission"),
+        Index("idx_auth_role_permissions_role", "role"),
+        Index("idx_auth_role_permissions_permission_id", "permission_id"),
+        {"schema": "app_auth"}
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+    role = Column(SAEnum(UserRoleEnum, name="user_role", schema="app_auth"), nullable=False)
+    permission_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.permissions.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    permission = relationship("Permission", back_populates="role_permissions")
+
+
 class Profile(Base):
     __tablename__ = "profiles"
     __table_args__ = (
