@@ -6,13 +6,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func, text # For server_default text
 from app.db.database import Base # Use the Base from database.py
 
-class UserRoleEnum(str, enum.Enum):
-    """System seeded roles maintained for backward compatibility."""
-
-    admin = "admin"
-    urban_greening = "urban_greening"
-    government_emission = "government_emission"
-
 
 class Role(Base):
     __tablename__ = "roles"

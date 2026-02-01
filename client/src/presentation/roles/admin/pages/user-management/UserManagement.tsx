@@ -58,7 +58,6 @@ import { useForm } from "react-hook-form";
 interface UserFormData {
     email: string;
     password?: string;
-    is_super_admin: boolean;
     roles: string[];
     first_name?: string;
     last_name?: string;
@@ -67,13 +66,20 @@ interface UserFormData {
     phone_number?: string;
 }
 
+interface PasswordResetFormData {
+    new_password: string;
+    confirm_password: string;
+}
+
 export function UserManagement() {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState<"active" | "archived" | "all">("active");
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
     const [showCreatePassword, setShowCreatePassword] = useState(false);
-    const [showEditPassword, setShowEditPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { toast } = useToast();
 
     // Queries
@@ -94,13 +100,20 @@ export function UserManagement() {
         defaultValues: {
             email: "",
             password: "",
-            is_super_admin: false,
             roles: [],
             first_name: "",
             last_name: "",
             job_title: "",
             department: "",
             phone_number: ""
+        }
+    });
+
+    // Form for password reset
+    const { register: registerPassword, handleSubmit: handleSubmitPassword, reset: resetPassword, watch: watchPassword, formState: { errors: passwordErrors } } = useForm<PasswordResetFormData>({
+        defaultValues: {
+            new_password: "",
+            confirm_password: ""
         }
     });
 
@@ -111,7 +124,7 @@ export function UserManagement() {
             const createData: CreateUserRequest = {
                 email: data.email,
                 password: data.password!,
-                is_super_admin: data.is_super_admin,
+                is_super_admin: false,
                 roles: data.roles,
                 first_name: data.first_name || undefined,
                 last_name: data.last_name || undefined,
@@ -167,7 +180,7 @@ export function UserManagement() {
         try {
             const updateData: UpdateUserRequest = {
                 email: data.email,
-                is_super_admin: data.is_super_admin,
+                is_super_admin: false,
                 roles: data.roles,
                 first_name: data.first_name || undefined,
                 last_name: data.last_name || undefined,
@@ -175,10 +188,6 @@ export function UserManagement() {
                 department: data.department || undefined,
                 phone_number: data.phone_number || undefined
             };
-
-            if (data.password) {
-                updateData.password = data.password;
-            }
 
             await updateUserMutation.mutateAsync({ userId: editingUser.id, userData: updateData });
             setEditingUser(null);
@@ -306,21 +315,66 @@ export function UserManagement() {
     const openEditDialog = (user: User) => {
         setEditingUser(user);
         setValue("email", user.email);
-        setValue("is_super_admin", user.is_super_admin);
         setValue("roles", user.assigned_roles);
-        setValue("password", ""); // Don't pre-fill password
         setValue("first_name", user.profile?.first_name || "");
         setValue("last_name", user.profile?.last_name || "");
         setValue("job_title", user.profile?.job_title || "");
         setValue("department", user.profile?.department || "");
         setValue("phone_number", user.profile?.phone_number || "");
-        setShowEditPassword(false);
     };
 
     const closeEditDialog = () => {
         setEditingUser(null);
         reset();
-        setShowEditPassword(false);
+    };
+
+    const openPasswordResetDialog = (user: User) => {
+        setPasswordResetUser(user);
+        resetPassword();
+    };
+
+    const closePasswordResetDialog = () => {
+        setPasswordResetUser(null);
+        resetPassword();
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
+    };
+
+    const handlePasswordReset = async (data: PasswordResetFormData) => {
+        if (!passwordResetUser) return;
+
+        if (data.new_password !== data.confirm_password) {
+            toast({
+                title: "Error",
+                description: "Passwords do not match",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        try {
+            const updateData: UpdateUserRequest = {
+                email: passwordResetUser.email,
+                is_super_admin: false,
+                roles: passwordResetUser.assigned_roles,
+                password: data.new_password,
+            };
+
+            await updateUserMutation.mutateAsync({ userId: passwordResetUser.id, userData: updateData });
+            closePasswordResetDialog();
+            toast({
+                title: "Success",
+                description: "Password updated successfully!",
+                variant: "default",
+            });
+        } catch (error: any) {
+            console.error("Failed to reset password:", error);
+            toast({
+                title: "Error",
+                description: error?.response?.data?.detail || "Failed to reset password. Please try again.",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleRoleToggle = (roleValue: string, checked: boolean) => {
@@ -505,14 +559,6 @@ export function UserManagement() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id="is_super_admin"
-                                            {...register("is_super_admin")}
-                                        />
-                                        <Label htmlFor="is_super_admin">Super Admin</Label>
-                                    </div>
-
                                     <div>
                                         <Label>Roles</Label>
                                         <div className="space-y-2 mt-2">
@@ -692,6 +738,15 @@ export function UserManagement() {
                                                                     <Edit className="w-4 h-4" />
                                                                 </Button>
 
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => openPasswordResetDialog(user)}
+                                                                    title="Reset Password"
+                                                                >
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                                </Button>
+
                                                                 <AlertDialog>
                                                                     <AlertDialogTrigger asChild>
                                                                         <Button variant="outline" size="sm">
@@ -761,30 +816,6 @@ export function UserManagement() {
                                 )}
                             </div>
 
-                            <div>
-                                <Label htmlFor="edit-password">New Password (optional)</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="edit-password"
-                                        type={showEditPassword ? "text" : "password"}
-                                        className="pr-10"
-                                        {...register("password", { minLength: { value: 8, message: "Password must be at least 8 characters" } })}
-                                        placeholder="Leave blank to keep current password"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowEditPassword((prev) => !prev)}
-                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-                                        aria-label={showEditPassword ? "Hide password" : "Show password"}
-                                    >
-                                        {showEditPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {errors.password && (
-                                    <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
-                                )}
-                            </div>
-
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="edit-first_name">First Name</Label>
@@ -834,14 +865,6 @@ export function UserManagement() {
                                 </div>
                             </div>
 
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="edit-is_super_admin"
-                                    {...register("is_super_admin")}
-                                />
-                                <Label htmlFor="edit-is_super_admin">Super Admin</Label>
-                            </div>
-
                             <div>
                                 <Label>Roles</Label>
                                 <div className="space-y-2 mt-2">
@@ -866,6 +889,90 @@ export function UserManagement() {
                             <Button type="submit" disabled={updateUserMutation.isPending}>
                                 {updateUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                                 Update User
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Password Reset Dialog */}
+            <Dialog open={!!passwordResetUser} onOpenChange={(open) => !open && closePasswordResetDialog()}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={handleSubmitPassword(handlePasswordReset)}>
+                        <DialogHeader>
+                            <DialogTitle>Reset Password</DialogTitle>
+                            <DialogDescription>
+                                Set a new password for {passwordResetUser?.email}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4 py-4">
+                            <div>
+                                <Label htmlFor="new_password">New Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="new_password"
+                                        type={showNewPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        {...registerPassword("new_password", { 
+                                            required: "Password is required",
+                                            minLength: { value: 8, message: "Password must be at least 8 characters" } 
+                                        })}
+                                        placeholder="••••••••"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword((prev) => !prev)}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                                        aria-label={showNewPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                {passwordErrors.new_password && (
+                                    <p className="text-sm text-red-600 mt-1">{passwordErrors.new_password.message}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <Label htmlFor="confirm_password">Confirm Password</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="confirm_password"
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        className="pr-10"
+                                        {...registerPassword("confirm_password", { 
+                                            required: "Please confirm password",
+                                            validate: (val: string) => {
+                                                if (watchPassword('new_password') !== val) {
+                                                    return "Passwords do not match";
+                                                }
+                                            }
+                                        })}
+                                        placeholder="••••••••"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
+                                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                {passwordErrors.confirm_password && (
+                                    <p className="text-sm text-red-600 mt-1">{passwordErrors.confirm_password.message}</p>
+                                )}
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={closePasswordResetDialog}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={updateUserMutation.isPending}>
+                                {updateUserMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                                Reset Password
                             </Button>
                         </DialogFooter>
                     </form>

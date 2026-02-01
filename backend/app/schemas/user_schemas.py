@@ -48,7 +48,6 @@ class UserInDBBase(UserBase):
 
 # Separate schema for user output, possibly with profile/roles
 class UserPublic(UserInDBBase):
-    # roles: List[UserRoleEnum] # You'd fetch and populate this
     pass # Add profile or other nested data as needed
 
 class UserWithProfile(UserPublic):

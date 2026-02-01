@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, desc
+from sqlalchemy import select, func, and_, desc, delete
 from typing import List, Optional
 from datetime import datetime, timedelta
 import uuid
@@ -212,18 +212,27 @@ async def update_user(
     if roles_to_assign is not None:
         # Remove existing roles
         await db.execute(
-            select(UserRoleMapping).where(UserRoleMapping.user_id == user_id)
+            delete(UserRoleMapping).where(UserRoleMapping.user_id == user_id)
         )
-        existing_roles = await db.execute(
-            select(UserRoleMapping).where(UserRoleMapping.user_id == user_id)
-        )
-        for role_mapping in existing_roles.scalars().all():
-            await db.delete(role_mapping)
         
-        # Add new roles
-        for role in roles_to_assign:
-            new_role_mapping = UserRoleMapping(user_id=user_id, role=role)
-            db.add(new_role_mapping)
+        # Add new roles by fetching Role objects first
+        if roles_to_assign:
+            result = await db.execute(
+                select(Role).where(Role.slug.in_(roles_to_assign))
+            )
+            roles = {role.slug: role for role in result.scalars().all()}
+            
+            missing = [slug for slug in roles_to_assign if slug not in roles]
+            if missing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Roles not found: {', '.join(missing)}"
+                )
+            
+            for role_slug in roles_to_assign:
+                role_obj = roles[role_slug]
+                user_role_mapping = UserRoleMapping(user_id=user_id, role_id=role_obj.id)
+                db.add(user_role_mapping)
     
     await db.commit()
     await db.refresh(user)

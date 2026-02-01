@@ -181,7 +181,21 @@ class AdminApiService extends ApiService {
   }
 
   async getAvailableRoles(): Promise<UserRole[]> {
-    return this.get<UserRole[]>("/admin/roles");
+    const roles = await this.get<Array<{
+      id: string;
+      slug: string;
+      display_name: string;
+      description?: string;
+      is_system: boolean;
+      created_at: string;
+      updated_at: string;
+    }>>("/admin/roles");
+    
+    // Transform backend response to frontend format
+    return roles.map(role => ({
+      value: role.slug,
+      label: role.display_name
+    }));
   }
 
   // Audit log endpoints
