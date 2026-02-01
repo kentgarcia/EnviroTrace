@@ -14,6 +14,7 @@ from app.schemas.profile_schemas import ProfileCreate
 from app.schemas.token_schemas import Token
 from app.models.auth_models import User, DeviceTypeEnum
 from app.core.security import create_access_token, verify_password
+from app.core.config import settings
 
 class AuthService:
     async def register_user(self, db: AsyncSession, *, user_in: UserCreate) -> UserFullPublic:
@@ -32,6 +33,11 @@ class AuthService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="An archived account exists with this email. Please contact an administrator to reactivate the account instead of creating a new one.",
             )
+        
+        # Check if user email is in super admin list
+        super_admin_emails = settings.get_super_admin_emails()
+        if user_in.email.lower() in super_admin_emails:
+            user_in.is_super_admin = True
         
         user = await crud_user.create(db, obj_in=user_in)
         
@@ -84,6 +90,13 @@ class AuthService:
             )
         # if not user.is_active: # Add is_active to User model if needed
         #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+        
+        # Auto-promote to super admin if email matches
+        super_admin_emails = settings.get_super_admin_emails()
+        if user.email.lower() in super_admin_emails and not user.is_super_admin:
+            user.is_super_admin = True
+            await db.commit()
+            await db.refresh(user)
         
         # Extract request metadata
         ip_address = None

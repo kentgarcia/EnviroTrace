@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     OCR_PROVIDER: str = "gemini"  # "gemini" or "ocr_space"
     OCR_SPACE_API_KEY: Optional[str] = None
     
+    # Super Admin Configuration
+    # Comma-separated list of emails that should have super admin privileges
+    SUPER_ADMIN_EMAILS: str = ""
+    
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None
       # CORS settings
@@ -37,6 +41,12 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
+    
+    def get_super_admin_emails(self) -> List[str]:
+        """Parse SUPER_ADMIN_EMAILS and return as list"""
+        if not self.SUPER_ADMIN_EMAILS:
+            return []
+        return [email.strip().lower() for email in self.SUPER_ADMIN_EMAILS.split(",") if email.strip()]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', extra='ignore')
 

@@ -281,3 +281,21 @@ def require_permissions_sync(required_permissions: List[str]) -> Callable:
         )
     
     return permission_checker
+
+
+def require_super_admin() -> Callable:
+    """
+    Dependency to require super admin status for accessing endpoints.
+    Only users with is_super_admin=True can access.
+    """
+    async def super_admin_checker(
+        current_user: User = Depends(get_current_user_async)
+    ) -> User:
+        if not current_user.is_super_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Super admin privileges required."
+            )
+        return current_user
+    
+    return super_admin_checker

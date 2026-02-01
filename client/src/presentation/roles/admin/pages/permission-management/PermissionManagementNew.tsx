@@ -68,15 +68,12 @@ const roleInfoMap: Record<UserRole, RoleInfo> = {
 };
 
 export function PermissionManagementNew() {
-  const { token, user } = useAuthStore();
+  const { token, isSuperAdmin } = useAuthStore();
   const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState<UserRole>("admin");
   const [viewUsersDialogOpen, setViewUsersDialogOpen] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-
-  // Check if user is superadmin
-  const isSuperAdmin = user?.is_super_admin ?? false;
 
   // Fetch all permissions (flat list)
   const { data: allPermissions, isLoading: loadingPermissions } = useQuery({
