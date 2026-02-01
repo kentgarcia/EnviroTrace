@@ -354,14 +354,29 @@ async def get_available_roles(
 
 # Permission Management Endpoints
 
-@router.get("/permissions", response_model=List[PermissionPublic])
+@router.get("/permissions")
 async def get_all_permissions(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles([UserRoleEnum.admin])),
     grouped: bool = Query(False, description="Return permissions grouped by module and entity")
 ):
     """Get all available permissions, optionally grouped"""
-    return await permission_service.get_all_permissions(db, grouped=grouped)
+    result = await permission_service.get_all_permissions(db, grouped=grouped)
+    
+    # If grouped, convert Permission objects to dicts for JSON serialization
+    if grouped and isinstance(result, dict):
+        serialized = {}
+        for module_name, entities in result.items():
+            serialized[module_name] = {}
+            for entity_type, permissions in entities.items():
+                serialized[module_name][entity_type] = [
+                    PermissionPublic.model_validate(perm).model_dump()
+                    for perm in permissions
+                ]
+        return serialized
+    
+    # If not grouped, return list (FastAPI will serialize with response_model)
+    return [PermissionPublic.model_validate(perm) for perm in result]
 
 
 @router.get("/roles/{role}/permissions", response_model=RoleWithPermissions)

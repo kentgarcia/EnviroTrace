@@ -6,6 +6,7 @@ import { AdminOverview } from "./pages/overview/AdminOverview";
 import { UserManagement } from "./pages/user-management/UserManagement";
 import { SessionManagement } from "./pages/session-management/SessionManagement";
 import { AuditLogs } from "./pages/audit-logs/AuditLogs";
+import { PermissionManagement } from "./pages/permission-management/PermissionManagement";
 
 const adminLayoutRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -41,11 +42,18 @@ const auditLogsRoute = createRoute({
     component: AuditLogs,
 });
 
+const permissionManagementRoute = createRoute({
+    getParentRoute: () => adminLayoutRoute,
+    path: "permission-management",
+    component: PermissionManagement,
+});
+
 adminLayoutRoute.addChildren([
     adminOverviewRoute,
     userManagementRoute,
     sessionManagementRoute,
-    auditLogsRoute
+    auditLogsRoute,
+    permissionManagementRoute
 ]);
 
 export const adminRoutes = [adminLayoutRoute];

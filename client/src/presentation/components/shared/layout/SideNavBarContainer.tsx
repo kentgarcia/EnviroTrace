@@ -21,7 +21,8 @@ import {
   Info,
   HelpCircle,
   Leaf,
-  Shield
+  Shield,
+  KeyRound
 } from "lucide-react";
 import { useAuth } from "@/core/api/auth";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
@@ -61,6 +62,11 @@ function getMenuItems(
         label: "Users",
         path: `${basePath}/user-management`,
         icon: <Users size={18} />,
+      },
+      {
+        label: "Permissions",
+        path: `${basePath}/permission-management`,
+        icon: <KeyRound size={18} />,
       },
       {
         label: "Sessions",
