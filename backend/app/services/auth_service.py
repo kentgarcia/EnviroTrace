@@ -9,7 +9,7 @@ import uuid
 from app.crud.crud_user import user as crud_user
 from app.crud.crud_profile import profile as crud_profile
 from app.crud.crud_session import session_crud
-from app.schemas.user_schemas import UserCreate, UserPublic, UserWithRoles, UserFullPublic, UserRoleEnum
+from app.schemas.user_schemas import UserCreate, UserPublic, UserWithRoles, UserFullPublic
 from app.schemas.profile_schemas import ProfileCreate
 from app.schemas.token_schemas import Token
 from app.models.auth_models import User, DeviceTypeEnum

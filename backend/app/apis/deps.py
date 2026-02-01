@@ -11,7 +11,7 @@ from datetime import datetime
 from app.core import security
 from app.core.config import settings
 from app.db.database import get_db_session, SessionLocal # Import SessionLocal from database.py
-from app.models.auth_models import User, UserRoleEnum, Role # SQLAlchemy model
+from app.models.auth_models import User, Role # SQLAlchemy model
 from app.schemas.token_schemas import TokenPayload # Pydantic schema for token payload
 from app.crud.crud_user import user as crud_user # CRUD operations for user
 from app.crud.crud_session import session_crud
@@ -158,9 +158,12 @@ async def get_current_active_user_async(
     #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
     return current_user
 
-def require_roles(allowed_roles: List[UserRoleEnum]) -> Callable:
+def require_roles(allowed_roles: List[str]) -> Callable:
     """
-    Dependency to require specific roles for accessing endpoints
+    Dependency to require specific roles for accessing endpoints.
+    
+    Args:
+        allowed_roles: List of role slugs (e.g., ['admin', 'urban_greening'])
     """
     async def role_checker(
         current_user: User = Depends(get_current_user_async),
@@ -175,22 +178,15 @@ def require_roles(allowed_roles: List[UserRoleEnum]) -> Callable:
             .join(UserRoleMapping, UserRoleMapping.role_id == Role.id)
             .where(UserRoleMapping.user_id == current_user.id)
         )
-        role_slugs = [row[0] for row in result.fetchall()]
-
-        user_roles = []
-        for slug in role_slugs:
-            try:
-                user_roles.append(UserRoleEnum(slug))
-            except ValueError:
-                continue
+        user_role_slugs = [row[0] for row in result.fetchall()]
 
         # Check if user has any of the required roles or is super admin
-        if current_user.is_super_admin or any(role in user_roles for role in allowed_roles):
+        if current_user.is_super_admin or any(role in user_role_slugs for role in allowed_roles):
             return current_user
         
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied. Required roles: {[role.value for role in allowed_roles]}"
+            detail=f"Access denied. Required roles: {allowed_roles}"
         )
     
     return role_checker

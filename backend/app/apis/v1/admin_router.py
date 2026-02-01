@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import uuid
 
 from app.apis.deps import get_current_user_async, get_db_session, require_roles, require_super_admin
-from app.models.auth_models import User, UserRoleMapping, Profile, UserRoleEnum, Role
+from app.models.auth_models import User, UserRoleMapping, Profile, Role
 from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
     UserRoleMappingCreate, UserFullPublic
@@ -31,7 +31,7 @@ router = APIRouter()
 @router.get("/dashboard/stats")
 async def get_admin_dashboard_stats(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Get admin dashboard statistics"""
     
@@ -59,7 +59,7 @@ async def get_admin_dashboard_stats(
 @router.get("/dashboard/user-activity")
 async def get_user_activity_data(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Get user activity data for charts"""
     
@@ -69,7 +69,7 @@ async def get_user_activity_data(
 @router.get("/dashboard/system-health")
 async def get_system_health_data(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Get system health metrics"""
     
@@ -82,7 +82,7 @@ async def get_system_health_data(
 @router.get("/users", response_model=List[UserFullPublic])
 async def get_all_users(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin])),
+    current_user: User = Depends(require_roles(["admin"])),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None),
@@ -124,7 +124,7 @@ async def get_all_users(
 async def create_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Create a new user (admin only)"""
     
@@ -134,7 +134,7 @@ async def create_user(
 async def get_user_by_id(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Get a specific user by ID"""
     
@@ -152,7 +152,7 @@ async def update_user(
     user_id: uuid.UUID,
     user_update: UserUpdate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Update a user (admin only)"""
     
@@ -234,7 +234,7 @@ async def update_user(
 async def delete_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Soft delete a user (admin only)"""
     
@@ -264,7 +264,7 @@ async def delete_user(
 async def reactivate_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Reactivate an archived user account (admin only)"""
     
@@ -275,7 +275,7 @@ async def assign_role_to_user(
     user_id: uuid.UUID,
     role_data: UserRoleMappingCreate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Assign a role to a user"""
 
@@ -330,7 +330,7 @@ async def remove_role_from_user(
     user_id: uuid.UUID,
     role_slug: str,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Remove a role from a user"""
 
@@ -366,7 +366,7 @@ async def remove_role_from_user(
 @router.get("/roles", response_model=List[RolePublic])
 async def get_available_roles(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles([UserRoleEnum.admin]))
+    current_user: User = Depends(require_roles(["admin"]))
 ):
     """Get all available roles (system and custom)."""
 

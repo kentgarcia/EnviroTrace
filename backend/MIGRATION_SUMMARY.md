@@ -18,6 +18,7 @@ Your EnviroTrace backend has been successfully configured to migrate from a loca
 3. **`scripts/test_supabase_connection.py`** - Connection testing and verification script
 4. **`scripts/setup_supabase.bat`** - Windows one-click setup script
 5. **`scripts/setup_supabase.sh`** - Linux/Mac one-click setup script
+6. **`alembic/versions/add_dynamic_roles_table.py`** - Migrates enum-based roles to the new dynamic roles table
 
 ## Your Supabase Configuration
 

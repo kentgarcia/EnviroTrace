@@ -156,7 +156,8 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         )
         return result.scalars().first()
 
-    async def get_user_roles(self, db: AsyncSession, *, user_id: uuid.UUID) -> List[UserRoleEnum]:
+    async def get_user_roles(self, db: AsyncSession, *, user_id: uuid.UUID) -> List[str]:
+        """Get list of role slugs for a user"""
         result = await db.execute(
             select(Role.slug)
             .join(UserRoleMapping, UserRoleMapping.role_id == Role.id)
