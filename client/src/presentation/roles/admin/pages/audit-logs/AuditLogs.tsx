@@ -18,6 +18,7 @@ import {
 } from "@/presentation/components/shared/ui/sheet";
 import { Search, Shield, User, Globe, Clock, Loader2, Download, CalendarIcon } from "lucide-react";
 import { useAuditLogs, AuditLog } from "@/core/api/admin-api";
+import { getAuditDescription } from "./auditDescriptions";
 import {
     Pagination,
     PaginationContent,
@@ -100,7 +101,7 @@ export function AuditLogs() {
             content = logs.map(log => 
                 `[${format(new Date(log.occurred_at), 'yyyy-MM-dd HH:mm:ss')}] ` +
                 `${log.status_code} ${log.http_method} ${log.module_name} - ` +
-                `${log.event_name} - User: ${log.user_email || 'Anonymous'} - ` +
+                `${getAuditDescription(log)} - User: ${log.user_email || 'Anonymous'} - ` +
                 `Latency: ${log.latency_ms || 'N/A'}ms`
             ).join('\n');
             filename += '.txt';
@@ -110,7 +111,7 @@ export function AuditLogs() {
             filename += '.json';
             mimeType = 'application/json';
         } else if (fileFormat === 'csv') {
-            const headers = ['Timestamp', 'Status', 'Method', 'Module', 'Action', 'User', 'IP', 'Latency (ms)'];
+            const headers = ['Timestamp', 'Status', 'Method', 'Module', 'Description', 'User', 'IP', 'Latency (ms)'];
             const escapeCSV = (val: any) => {
                 const str = String(val);
                 if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -123,7 +124,7 @@ export function AuditLogs() {
                 log.status_code,
                 log.http_method,
                 log.module_name,
-                log.event_name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+                getAuditDescription(log),
                 log.user_email || 'Anonymous',
                 log.ip_address || 'N/A',
                 log.latency_ms || 'N/A'
@@ -150,8 +151,8 @@ export function AuditLogs() {
         status_code: statusCodeFilter === "all" ? undefined : parseInt(statusCodeFilter),
         user_email: userEmailFilter || undefined,
         search: searchFilter || undefined,
-        date_from: dateFrom ? format(dateFrom, "yyyy-MM-dd") : undefined,
-        date_to: dateTo ? format(dateTo, "yyyy-MM-dd") : undefined,
+        date_from: dateFrom ? format(dateFrom, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+        date_to: dateTo ? format(dateTo, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
         skip: (page - 1) * pageSize,
         limit: pageSize,
     };
@@ -430,7 +431,7 @@ export function AuditLogs() {
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Status</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Method</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Module</TableHead>
-                                            <TableHead className="h-9 px-3 text-xs font-semibold">Action</TableHead>
+                                            <TableHead className="h-9 px-3 text-xs font-semibold">Description</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold">User</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold text-right">Latency</TableHead>
                                         </TableRow>
@@ -460,8 +461,8 @@ export function AuditLogs() {
                                                     </Badge>
                                                 </TableCell>
 
-                                                <TableCell className="py-2 px-3 text-xs text-gray-700 truncate max-w-xs" title={log.event_name}>
-                                                    {log.event_name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                <TableCell className="py-2 px-3 text-xs text-gray-700 truncate max-w-xs" title={getAuditDescription(log)}>
+                                                    {getAuditDescription(log)}
                                                 </TableCell>
 
                                                 <TableCell className="py-2 px-3 text-xs text-gray-500 truncate max-w-[140px]" title={log.user_email || 'Anonymous'}>
@@ -535,8 +536,12 @@ export function AuditLogs() {
                                         <div className="font-mono text-sm break-all">{selectedLog.event_id}</div>
                                     </div>
                                     <div>
+                                        <label className="text-xs text-gray-500 block mb-1">Description</label>
+                                        <div className="text-sm font-medium text-gray-800">{getAuditDescription(selectedLog)}</div>
+                                    </div>
+                                    <div>
                                         <label className="text-xs text-gray-500 block mb-1">Event Name</label>
-                                        <div className="text-sm break-words">{selectedLog.event_name}</div>
+                                        <div className="text-sm text-gray-600 font-mono text-xs">{selectedLog.event_name}</div>
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500 block mb-1">Module</label>

@@ -18,8 +18,8 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
     """Intercepts requests/responses and forwards them to the audit service."""
 
     async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
-        # Skip logging OPTIONS (CORS preflight) and GET requests
-        if request.method.upper() in {"OPTIONS", "GET"}:
+        # Skip logging OPTIONS (CORS preflight) only
+        if request.method.upper() == "OPTIONS":
             return await call_next(request)
 
         started = time.perf_counter()
@@ -39,33 +39,52 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             )
             raise
 
-        # Capture response body by reading it
+        # Handle different response types
         response_body = b""
-        async for chunk in response.body_iterator:
-            response_body += chunk
+        if isinstance(response, StreamingResponse):
+            # For streaming responses, we can't capture the body without consuming it
+            # Just log metadata
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            await audit_service.write_request_audit(
+                request=request,
+                request_body=body_bytes,
+                response_status=response.status_code,
+                response_payload=None,
+                response_summary="Streaming response",
+                error=None,
+                latency_ms=latency_ms,
+            )
+            return response
+        else:
+            # Capture response body by reading it
+            if hasattr(response, 'body_iterator'):
+                async for chunk in response.body_iterator:
+                    response_body += chunk
+            elif hasattr(response, 'body'):
+                response_body = response.body
 
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        response_payload, response_summary = self._extract_response_payload_from_body(
-            response_body, response
-        )
+            latency_ms = int((time.perf_counter() - started) * 1000)
+            response_payload, response_summary = self._extract_response_payload_from_body(
+                response_body, response
+            )
 
-        await audit_service.write_request_audit(
-            request=request,
-            request_body=body_bytes,
-            response_status=response.status_code,
-            response_payload=response_payload,
-            response_summary=response_summary,
-            error=None,
-            latency_ms=latency_ms,
-        )
+            await audit_service.write_request_audit(
+                request=request,
+                request_body=body_bytes,
+                response_status=response.status_code,
+                response_payload=response_payload,
+                response_summary=response_summary,
+                error=None,
+                latency_ms=latency_ms,
+            )
 
-        # Return a new response with the captured body
-        return Response(
-            content=response_body,
-            status_code=response.status_code,
-            headers=dict(response.headers),
-            media_type=response.media_type,
-        )
+            # Return a new response with the captured body
+            return Response(
+                content=response_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=response.media_type,
+            )
 
     async def _capture_request_body(self, request: Request) -> Optional[bytes]:
         if request.method.upper() in {"GET", "DELETE", "OPTIONS"}:
