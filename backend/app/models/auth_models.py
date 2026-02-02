@@ -156,7 +156,7 @@ class UserSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), nullable=False)
-    supabase_session_id = Column(String(255), unique=True, nullable=False)  # Supabase session identifier
+    supabase_session_id = Column(Text, unique=True, nullable=False)  # Supabase JWT access token (can be 800-1200+ chars)
     device_type = Column(SAEnum(DeviceTypeEnum, name="device_type", schema="app_auth"), nullable=False, server_default="unknown")
     device_name = Column(String(255), nullable=True)  # Device model/name
     ip_address = Column(INET, nullable=True)
