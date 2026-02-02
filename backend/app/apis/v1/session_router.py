@@ -24,9 +24,9 @@ async def get_all_sessions(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     device_type: Optional[DeviceTypeEnum] = Query(None),
-    is_active: Optional[bool] = Query(None)
+    is_active: Optional[bool] = Query(True, description="Filter by active status. True=active only, False=inactive only, null=all sessions")
 ):
-    """Get all user sessions (admin only)"""
+    """Get all user sessions (admin only). By default, shows only active sessions."""
     sessions = await session_crud.get_all_sessions_with_users(
         db,
         skip=skip,
@@ -41,7 +41,7 @@ async def get_all_sessions(
         session_data = {
             "id": session.id,
             "user_id": session.user_id,
-            "session_token": session.session_token,
+            "session_token": session.supabase_session_id,  # Use supabase_session_id, not session_token
             "device_type": session.device_type,
             "device_name": session.device_name,
             "ip_address": str(session.ip_address) if session.ip_address else None,

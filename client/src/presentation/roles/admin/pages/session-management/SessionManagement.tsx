@@ -48,14 +48,14 @@ import {
 
 export function SessionManagement() {
     const [deviceFilter, setDeviceFilter] = useState<string>("");
-    const [statusFilter, setStatusFilter] = useState<string>("");
+    const [statusFilter, setStatusFilter] = useState<string>("active");  // Default to active sessions
     const [page, setPage] = useState(1);
     const pageSize = 10;
     const { toast } = useToast();
 
     // Parse filters for API
     const deviceType = deviceFilter === "all" || !deviceFilter ? undefined : deviceFilter;
-    const isActive = statusFilter === "all" || !statusFilter ? undefined : statusFilter === "active";
+    const isActive = statusFilter === "all" ? undefined : statusFilter === "active";
 
     // Reset page when filters change
     React.useEffect(() => {
@@ -239,7 +239,12 @@ export function SessionManagement() {
                     {/* Sessions Table */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Active Sessions ({sessions.length})</CardTitle>
+                            <CardTitle>
+                                {statusFilter === "active" && "Active Sessions"}
+                                {statusFilter === "inactive" && "Inactive Sessions"}
+                                {statusFilter === "all" && "All Sessions"}
+                                {!statusFilter && "Sessions"} ({sessions.length})
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             {isLoading ? (

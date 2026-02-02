@@ -44,6 +44,11 @@ export default function DashboardSelection() {
   };
 
   const hasRole = (role: UserRole) => {
+    // Super admins have access to all dashboards
+    if (user?.is_super_admin) {
+      return true;
+    }
+
     const hasDirectRole =
       user?.assigned_roles?.includes(role) ||
       user?.assigned_roles?.includes("admin") ||
@@ -254,7 +259,7 @@ export default function DashboardSelection() {
           )}
         </motion.div>
 
-        {!hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
+        {!user?.is_super_admin && !hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
           <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
             <ShieldCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-slate-900">No Dashboards Available</h4>

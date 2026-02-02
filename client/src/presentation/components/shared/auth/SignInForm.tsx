@@ -111,14 +111,12 @@ export function SignInForm() {
         shouldRedirect = true;
         redirectPath = "/verify-email";
         toast.info("Please verify your email address");
-        return; // Exit early, don't show error
       }
       // Check for PENDING_APPROVAL (403 with specific error code)
       else if (errorDetail.includes("PENDING_APPROVAL")) {
         shouldRedirect = true;
         redirectPath = "/pending-approval";
         toast.info("Your account is pending admin approval");
-        return; // Exit early, don't show error
       }
       // Check for 401 Unauthorized
       else if (error?.response?.status === 401) {

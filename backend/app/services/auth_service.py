@@ -196,8 +196,15 @@ class AuthService:
             if not internal_user.email_confirmed_at:
                 internal_user.email_confirmed_at = datetime.now(timezone.utc)
                 internal_user.last_sign_in_at = datetime.now(timezone.utc)
-                await db.commit()
-                await db.refresh(internal_user)
+            
+            # Auto-promote to super admin if email matches (for existing users)
+            super_admin_emails = settings.get_super_admin_emails()
+            if email.lower() in super_admin_emails and not internal_user.is_super_admin:
+                internal_user.is_super_admin = True
+                internal_user.is_approved = True  # Auto-approve super admins
+                
+            await db.commit()
+            await db.refresh(internal_user)
         
         # Check if account needs admin approval
         if not internal_user.is_approved and not internal_user.is_super_admin:

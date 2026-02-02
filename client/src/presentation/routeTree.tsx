@@ -57,7 +57,13 @@ const requireRole = (
   allowedRoles: UserRole[],
   errorMessage: string = "Access denied. You need appropriate role to access this page"
 ) => {
-  const roles = useAuthStore.getState().roles;
+  const { roles, isSuperAdmin } = useAuthStore.getState();
+  
+  // Super admins bypass role checks
+  if (isSuperAdmin) {
+    return;
+  }
+  
   if (!roles.some((role) => allowedRoles.includes(role))) {
     toast.error(errorMessage, {
       duration: 5000,

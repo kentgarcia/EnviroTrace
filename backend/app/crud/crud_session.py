@@ -65,6 +65,10 @@ class CRUDSession(CRUDBase[UserSession, SessionCreate, SessionUpdate]):
         )
         return result.scalars().first()
     
+    async def get_active_session_by_token(self, db: AsyncSession, *, token: str) -> Optional[UserSession]:
+        """Get active session by JWT token (alias for get_active_session_by_supabase_id)"""
+        return await self.get_active_session_by_supabase_id(db, supabase_session_id=token)
+    
     async def get_user_sessions(
         self,
         db: AsyncSession,
