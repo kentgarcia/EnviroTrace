@@ -40,7 +40,9 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/presentation/components/shared/ui/alert-dialog";
-import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon, Eye, EyeOff } from "lucide-react";
+import { MultiSelect } from "@/presentation/components/shared/ui/multi-select";
+import { ScrollArea } from "@/presentation/components/shared/ui/scroll-area";
+import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useToast } from "@/core/hooks/ui/use-toast";
 import {
     useUsers,
@@ -48,12 +50,17 @@ import {
     useUpdateUser,
     useDeleteUser,
     useReactivateUser,
+    useApproveUser,
+    useRevokeUserApproval,
     useAvailableRoles,
     CreateUserRequest,
     UpdateUserRequest,
     User
 } from "@/core/api/admin-api";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 
 interface UserFormData {
     email: string;
@@ -77,23 +84,60 @@ export function UserManagement() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+    const [viewPermissionsUser, setViewPermissionsUser] = useState<User | null>(null);
     const [showCreatePassword, setShowCreatePassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { toast } = useToast();
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
     // Queries
     const { data: users = [], isLoading, error } = useUsers({ 
         search: search || undefined,
         status: status 
     });
-    const { data: availableRoles = [] } = useAvailableRoles();
+    const { data: availableRoles = [], isLoading: isLoadingRoles, error: rolesError } = useAvailableRoles();
+
+    useEffect(() => {
+        if (rolesError) {
+            console.error("Failed to load roles:", rolesError);
+            toast({
+                title: "Warning",
+                description: "Failed to load available roles. Please refresh the page.",
+                variant: "destructive",
+            });
+        }
+    }, [rolesError, toast]);
+
+    // Fetch user permissions
+    const { data: userPermissions, isLoading: loadingPermissions } = useQuery({
+        queryKey: ["admin", "users", viewPermissionsUser?.id, "permissions"],
+        queryFn: async () => {
+            if (!viewPermissionsUser) return null;
+            const response = await fetch(
+                `${apiUrl}/admin/users/${viewPermissionsUser.id}/permissions`,
+                {
+                    headers: { Authorization: `Bearer ${useAuthStore.getState().token}` },
+                }
+            );
+            if (!response.ok) throw new Error("Failed to fetch user permissions");
+            return response.json() as Promise<{
+                user_id: string;
+                roles: string[];
+                permissions: string[];
+                is_super_admin: boolean;
+            }>;
+        },
+        enabled: !!viewPermissionsUser,
+    });
 
     // Mutations
     const createUserMutation = useCreateUser();
     const updateUserMutation = useUpdateUser();
     const deleteUserMutation = useDeleteUser();
     const reactivateUserMutation = useReactivateUser();
+    const approveUserMutation = useApproveUser();
+    const revokeUserApprovalMutation = useRevokeUserApproval();
 
     // Form for create/edit
     const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<UserFormData>({
@@ -117,7 +161,7 @@ export function UserManagement() {
         }
     });
 
-    const watchedRoles = watch("roles");
+    const watchedRoles = watch("roles") || [];
 
     const handleCreateUser = async (data: UserFormData) => {
         try {
@@ -306,6 +350,78 @@ export function UserManagement() {
         }
     };
 
+    const handleApproveUser = async (userId: string, userEmail: string) => {
+        try {
+            await approveUserMutation.mutateAsync(userId);
+            toast({
+                title: "Success",
+                description: `User ${userEmail} has been approved successfully!`,
+                variant: "default",
+            });
+        } catch (error: any) {
+            console.error("Failed to approve user:", error);
+
+            let errorMessage = "Failed to approve user. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail;
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleRevokeUserApproval = async (userId: string, userEmail: string) => {
+        try {
+            await revokeUserApprovalMutation.mutateAsync(userId);
+            toast({
+                title: "Success",
+                description: `User ${userEmail}'s approval has been revoked.`,
+                variant: "default",
+            });
+        } catch (error: any) {
+            console.error("Failed to revoke user approval:", error);
+
+            let errorMessage = "Failed to revoke user approval. Please try again.";
+
+            if (error?.response?.data?.detail) {
+                const detail = error.response.data.detail;
+                if (Array.isArray(detail)) {
+                    errorMessage = detail.map((err: any) => err.msg || err.message || JSON.stringify(err)).join(", ");
+                } else if (typeof detail === "string") {
+                    errorMessage = detail;
+                } else {
+                    errorMessage = JSON.stringify(detail);
+                }
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error?.message) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Error",
+                description: errorMessage,
+                variant: "destructive",
+            });
+        }
+    };
+
     useEffect(() => {
         if (!isCreateDialogOpen) {
             setShowCreatePassword(false);
@@ -377,13 +493,8 @@ export function UserManagement() {
         }
     };
 
-    const handleRoleToggle = (roleValue: string, checked: boolean) => {
-        const currentRoles = watchedRoles || [];
-        if (checked) {
-            setValue("roles", [...currentRoles, roleValue]);
-        } else {
-            setValue("roles", currentRoles.filter(role => role !== roleValue));
-        }
+    const handleRolesChange = (values: string[]) => {
+        setValue("roles", values, { shouldDirty: true, shouldTouch: true });
     };
 
     const formatDate = (dateString: string) => {
@@ -561,17 +672,22 @@ export function UserManagement() {
 
                                     <div>
                                         <Label>Roles</Label>
-                                        <div className="space-y-2 mt-2">
-                                            {availableRoles.map((role) => (
-                                                <div key={role.value} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`role-${role.value}`}
-                                                        checked={watchedRoles?.includes(role.value) || false}
-                                                        onCheckedChange={(checked) => handleRoleToggle(role.value, checked as boolean)}
-                                                    />
-                                                    <Label htmlFor={`role-${role.value}`}>{role.label}</Label>
+                                        <div className="mt-2">
+                                            {isLoadingRoles ? (
+                                                <div className="flex items-center justify-center p-3 border rounded-md bg-muted/30">
+                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    <span className="text-sm text-muted-foreground">Loading roles...</span>
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <MultiSelect
+                                                    items={availableRoles}
+                                                    selectedValues={watchedRoles}
+                                                    onChange={handleRolesChange}
+                                                    placeholder="Select roles..."
+                                                    emptyMessage="No roles available."
+                                                    maxDisplayItems={2}
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -625,6 +741,7 @@ export function UserManagement() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>User</TableHead>
+                                            <TableHead>Status</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Job Title</TableHead>
                                             <TableHead>Department</TableHead>
@@ -660,6 +777,23 @@ export function UserManagement() {
                                                                 </Badge>
                                                             )}
                                                         </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1">
+                                                        {!user.email_confirmed_at ? (
+                                                            <Badge variant="secondary" className="text-xs w-fit">
+                                                                Email Not Verified
+                                                            </Badge>
+                                                        ) : !user.is_approved && !user.is_super_admin ? (
+                                                            <Badge variant="outline" className="text-xs w-fit border-amber-500 text-amber-700">
+                                                                Pending Approval
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-xs w-fit border-green-500 text-green-700">
+                                                                Approved
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -746,6 +880,72 @@ export function UserManagement() {
                                                                 >
                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                                                 </Button>
+
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => setViewPermissionsUser(user)}
+                                                                    title="View Permissions"
+                                                                >
+                                                                    <KeyRound className="w-4 h-4" />
+                                                                </Button>
+
+                                                                {/* Approval buttons */}
+                                                                {user.email_confirmed_at && !user.is_super_admin && (
+                                                                    <>
+                                                                        {!user.is_approved ? (
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="outline" size="sm" className="text-green-600">
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Approve User</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            Are you sure you want to approve {user.email}? This will grant them full access to the system.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                        <AlertDialogAction
+                                                                                            onClick={() => handleApproveUser(user.id, user.email)}
+                                                                                            className="bg-green-600 hover:bg-green-700"
+                                                                                        >
+                                                                                            Approve
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        ) : (
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="outline" size="sm" className="text-amber-600">
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>Revoke Approval</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            Are you sure you want to revoke approval for {user.email}? This will block their access until approved again.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                                        <AlertDialogAction
+                                                                                            onClick={() => handleRevokeUserApproval(user.id, user.email)}
+                                                                                            className="bg-amber-600 hover:bg-amber-700"
+                                                                                        >
+                                                                                            Revoke
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        )}
+                                                                    </>
+                                                                )}
 
                                                                 <AlertDialog>
                                                                     <AlertDialogTrigger asChild>
@@ -867,17 +1067,22 @@ export function UserManagement() {
 
                             <div>
                                 <Label>Roles</Label>
-                                <div className="space-y-2 mt-2">
-                                    {availableRoles.map((role) => (
-                                        <div key={role.value} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`edit-role-${role.value}`}
-                                                checked={watchedRoles?.includes(role.value) || false}
-                                                onCheckedChange={(checked) => handleRoleToggle(role.value, checked as boolean)}
-                                            />
-                                            <Label htmlFor={`edit-role-${role.value}`}>{role.label}</Label>
+                                <div className="mt-2">
+                                    {isLoadingRoles ? (
+                                        <div className="flex items-center justify-center p-3 border rounded-md bg-muted/30">
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            <span className="text-sm text-muted-foreground">Loading roles...</span>
                                         </div>
-                                    ))}
+                                    ) : (
+                                        <MultiSelect
+                                            items={availableRoles}
+                                            selectedValues={watchedRoles}
+                                            onChange={handleRolesChange}
+                                            placeholder="Select roles..."
+                                            emptyMessage="No roles available."
+                                            maxDisplayItems={2}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -976,6 +1181,104 @@ export function UserManagement() {
                             </Button>
                         </DialogFooter>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* View Permissions Dialog */}
+            <Dialog open={!!viewPermissionsUser} onOpenChange={(open) => !open && setViewPermissionsUser(null)}>
+                <DialogContent className="sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>User Permissions</DialogTitle>
+                        <DialogDescription>
+                            View all permissions for {viewPermissionsUser?.email}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {loadingPermissions ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                            </div>
+                        ) : userPermissions ? (
+                            <>
+                                {/* Super Admin Badge */}
+                                {userPermissions.is_super_admin && (
+                                    <Alert className="bg-red-50 border-red-200">
+                                        <Shield className="h-4 w-4 text-red-600" />
+                                        <AlertDescription className="text-red-800">
+                                            This user is a <strong>Super Admin</strong> with unrestricted access to all system features.
+                                            Super admin status is controlled by the SUPER_ADMIN_EMAILS environment variable.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+
+                                {/* User Info */}
+                                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                        <UserIcon className="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium">
+                                            {viewPermissionsUser?.profile?.first_name} {viewPermissionsUser?.profile?.last_name}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">{viewPermissionsUser?.email}</p>
+                                    </div>
+                                </div>
+
+                                {/* Roles */}
+                                <div>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                        <Shield className="h-4 w-4" />
+                                        Assigned Roles ({userPermissions.roles.length})
+                                    </h4>
+                                    {userPermissions.roles.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2">
+                                            {userPermissions.roles.map((role) => {
+                                                const roleInfo = availableRoles.find(r => r.value === role);
+                                                return (
+                                                    <Badge key={role} variant="secondary" className="text-sm">
+                                                        {roleInfo?.label || role}
+                                                    </Badge>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No roles assigned</p>
+                                    )}
+                                </div>
+
+                                {/* Permissions */}
+                                <div>
+                                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                        <KeyRound className="h-4 w-4" />
+                                        Permissions ({userPermissions.is_super_admin ? 'All' : userPermissions.permissions.length})
+                                    </h4>
+                                    {userPermissions.is_super_admin ? (
+                                        <p className="text-sm text-muted-foreground italic">Super admins have access to all permissions and bypass permission checks.</p>
+                                    ) : userPermissions.permissions.length > 0 ? (
+                                        <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                                            <div className="space-y-1">
+                                                {userPermissions.permissions.sort().map((permission) => (
+                                                    <div key={permission} className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/50">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                                                        <code className="text-xs font-mono">{permission}</code>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No specific permissions granted</p>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-8">No permission data available</p>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button onClick={() => setViewPermissionsUser(null)}>Close</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

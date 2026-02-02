@@ -37,7 +37,9 @@ class UserUpdate(BaseModel):
 
 class UserInDBBase(UserBase):
     id: uuid.UUID
-    # is_active: bool # If you add it
+    supabase_user_id: Optional[uuid.UUID] = None  # Supabase Auth user ID
+    email_confirmed_at: Optional[datetime] = None  # Email verification timestamp
+    is_approved: bool = False  # Admin approval status
     last_sign_in_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime

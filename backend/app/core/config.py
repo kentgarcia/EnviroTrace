@@ -9,10 +9,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 600  # 10 hours
     ALGORITHM: str = "HS256"
     
-    # Supabase Configuration
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_ANON_KEY: Optional[str] = None
-    SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    # Supabase Configuration (Required for Auth)
+    SUPABASE_URL: str
+    SUPABASE_ANON_KEY: str
+    SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_JWT_SECRET: str  # From Supabase Dashboard -> Settings -> API
     
     # Gemini API Configuration
     GOOGLE_API_KEY: Optional[str] = None

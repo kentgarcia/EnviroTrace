@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.crud.base_crud import CRUDBase
 from app.models.auth_models import User, UserRoleMapping, Role
 from app.schemas.user_schemas import UserCreate, UserUpdate
-from app.core.security import get_password_hash, verify_password
+from app.core.security import verify_password  # Remove get_password_hash and verify_password (no longer used)
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     def get_sync(self, db: Session, *, id: Any) -> Optional[User]:
@@ -25,8 +25,31 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(query)
         return result.scalars().first()
 
-    async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
+    async def get_by_supabase_id(self, db: AsyncSession, *, supabase_user_id: uuid.UUID) -> Optional[User]:
+        """
+        Create user with Supabase integration.
+        Password handling is done by Supabase Auth, so this creates the internal user record.
+        """
         from app.models.auth_models import Profile
+        from app.schemas.profile_schemas import ProfileCreate
+        
+        roles_to_assign = obj_in.roles
+        # Extract profile fields
+        profile_fields = {
+            "first_name": obj_in.first_name,
+            "last_name": obj_in.last_name,
+            "job_title": obj_in.job_title,
+            "department": obj_in.department,
+            "phone_number": obj_in.phone_number,
+        }
+        
+        create_data = obj_in.model_dump(exclude={
+            "password", "roles", "first_name", "last_name", 
+            "job_title", "department", "phone_number"
+        })
+        
+        # Create user without password (handled by Supabase)
+        db_obj = User(**create_data
         from app.schemas.profile_schemas import ProfileCreate
         
         roles_to_assign = obj_in.roles
@@ -76,10 +99,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         self, 
         db: AsyncSession, 
         *, 
-        db_obj: User, 
-        obj_in: Union[UserUpdate, Dict[str, Any]]
-    ) -> User:
-        from app.models.auth_models import Profile
+        # Password updates should be handled through Supabase Auth, not here
+        if "password" in update_data:
+            del update_data["password"]  # Ignore password updates
         
         update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
 
@@ -133,14 +155,11 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
                     role_obj = roles[role_slug]
                     user_role_mapping = UserRoleMapping(user_id=db_obj.id, role_id=role_obj.id)
                     db.add(user_role_mapping)
-        
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
-
-    async def authenticate(self, db: AsyncSession, *, email: str, password: str) -> Optional[User]:
-        user = await self.get_by_email(db, email=email, include_deleted=False)
-        if not user:
+        """
+        DEPRECATED: Authentication is now handled by Supabase Auth.
+        This method is kept for backward compatibility but should not be used.
+        """
+        raise NotImplementedError("Authentication is now handled by Supabase Auth. Use supabase_client.sign_in_with_password() instead."):
             return None
         # if not user.is_active: # Add is_active to User model if needed
         #     return None 

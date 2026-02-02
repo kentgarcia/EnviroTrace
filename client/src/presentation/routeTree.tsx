@@ -6,6 +6,8 @@ import {
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import SignIn from "@/presentation/pages/public/SignIn";
+import VerifyEmail from "@/presentation/pages/public/VerifyEmail";
+import PendingApproval from "@/presentation/pages/public/PendingApproval";
 import DashboardSelection from "@/presentation/pages/public/DashboardSelection";
 import ProfilePage from "@/presentation/pages/public/ProfilePage";
 import TermsOfService from "@/presentation/pages/public/TermsOfService";
@@ -134,6 +136,18 @@ const indexRoute = createRoute({
   component: SignIn,
 });
 
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/verify-email",
+  component: VerifyEmail,
+});
+
+const pendingApprovalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/pending-approval",
+  component: PendingApproval,
+});
+
 const dashboardSelectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard-selection",
@@ -163,6 +177,8 @@ const privacyRoute = createRoute({
 const unauthorizedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/403",
+  verifyEmailRoute,
+  pendingApprovalRoute,
   component: Unauthorized,
 });
 

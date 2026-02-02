@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, select
 import uuid
 from datetime import datetime
 
-from app.core import security
+from app.core import supabase_client
 from app.core.config import settings
 from app.db.database import get_db_session, SessionLocal # Import SessionLocal from database.py
 from app.models.auth_models import User, Role # SQLAlchemy model
@@ -36,76 +36,71 @@ async def get_async_db() -> AsyncSession: # type: ignore
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
 ) -> User:
+    """
+    Get current user from Supabase JWT token (synchronous version).
+    Verifies Supabase JWT and queries user by supabase_user_id.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    payload = security.decode_token(token)
-    if payload is None:
-        raise credentials_exception
     
-    user_id_str: Optional[str] = payload.get("sub")
-    if user_id_str is None:
+    # Verify Supabase JWT and extract user ID
+    try:
+        supabase_user_id = supabase_client.get_user_id_from_token(token)
+    except HTTPException:
         raise credentials_exception
     
     try:
-        user_id = uuid.UUID(user_id_str)
+        supabase_uuid = uuid.UUID(supabase_user_id)
     except ValueError:
-        raise credentials_exception # Invalid UUID format in token
-
-    token_data = TokenPayload(sub=user_id) # Pydantic validation
+        raise credentials_exception
     
-    user_obj = crud_user.get_sync(db, id=token_data.sub) # Use sync version for sync database session
+    # Query user by supabase_user_id
+    user_obj = crud_user.get_by_supabase_id_sync(db, supabase_user_id=supabase_uuid)
     if not user_obj:
         raise credentials_exception
-    # if not user_obj.is_active: # Add is_active to User model if you have it
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+    
     return user_obj
 
 # Async version of get_current_user for use with async database sessions
 async def get_current_user_async(
     db: AsyncSession = Depends(get_db_session), token: str = Depends(reusable_oauth2)
 ) -> User:
+    """
+    Get current user from Supabase JWT token (async version).
+    Verifies Supabase JWT, checks session is active, and queries user by supabase_user_id.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    # First check if the session exists and is active
-    session = await session_crud.get_active_session_by_token(db, token=token)
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expired or terminated. Please log in again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    # Update last activity timestamp
-    await session_crud.update_activity(db, session_id=session.id)
-    
-    # Decode the token to get user info
-    payload = security.decode_token(token)
-    if payload is None:
-        raise credentials_exception
-    
-    user_id_str: Optional[str] = payload.get("sub")
-    if user_id_str is None:
+    # Verify Supabase JWT and extract user ID
+    try:
+        supabase_user_id = supabase_client.get_user_id_from_token(token)
+    except HTTPException:
         raise credentials_exception
     
     try:
-        user_id = uuid.UUID(user_id_str)
+        supabase_uuid = uuid.UUID(supabase_user_id)
     except ValueError:
-        raise credentials_exception # Invalid UUID format in token
-
-    token_data = TokenPayload(sub=user_id) # Pydantic validation
+        raise credentials_exception
     
-    user_obj = await crud_user.get(db, id=token_data.sub) # Use 'sub' as user_id - note the await
+    # Check if the session exists and is active (optional - can be removed if session tracking not needed)
+    session = await session_crud.get_active_session_by_supabase_id(db, supabase_session_id=token)
+    if session:
+        # Update last activity timestamp
+        await session_crud.update_activity(db, session_id=session.id)
+    # Note: Not raising error if session not found, as Supabase handles session validity
+    
+    # Query user by supabase_user_id
+    user_obj = await crud_user.get_by_supabase_id(db, supabase_user_id=supabase_uuid)
     if not user_obj:
         raise credentials_exception
-    # if not user_obj.is_active: # Add is_active to User model if you have it
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+    
     return user_obj
 
 def get_current_active_superuser(

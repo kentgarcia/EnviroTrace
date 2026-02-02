@@ -279,6 +279,96 @@ async def reactivate_user(
     
     return await auth_service.reactivate_user(db=db, user_id=user_id)
 
+@router.post("/users/{user_id}/approve", response_model=UserFullPublic)
+async def approve_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    """
+    Approve a user account after email verification (admin only).
+    Users must verify their email first, then wait for admin approval before they can login.
+    """
+    
+    result = await db.execute(
+        select(User).where(and_(User.id == user_id, User.deleted_at.is_(None)))
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super admin accounts are auto-approved"
+        )
+    
+    if not user.email_confirmed_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User must verify their email before approval"
+        )
+    
+    if user.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already approved"
+        )
+    
+    # Approve the user
+    user.is_approved = True
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+    
+    return await auth_service.get_user_details(db=db, user_id=user_id)
+
+@router.post("/users/{user_id}/revoke-approval", response_model=UserFullPublic)
+async def revoke_user_approval(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    """
+    Revoke approval for a user account (admin only).
+    User will no longer be able to login until re-approved.
+    """
+    
+    result = await db.execute(
+        select(User).where(and_(User.id == user_id, User.deleted_at.is_(None)))
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user.is_super_admin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot revoke approval for super admin accounts"
+        )
+    
+    if not user.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not currently approved"
+        )
+    
+    # Revoke approval
+    user.is_approved = False
+    user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(user)
+    
+    return await auth_service.get_user_details(db=db, user_id=user_id)
+
 @router.post("/users/{user_id}/roles", response_model=UserWithRoles)
 async def assign_role_to_user(
     user_id: uuid.UUID,

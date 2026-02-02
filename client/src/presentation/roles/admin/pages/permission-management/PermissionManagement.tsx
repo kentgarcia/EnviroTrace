@@ -7,10 +7,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { ScrollArea } from "@/presentation/components/shared/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/presentation/components/shared/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/presentation/components/shared/ui/alert-dialog";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { Shield, Users, Key, Lock, Eye, AlertCircle, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Shield, Users, Key, Lock, Eye, AlertCircle, Plus, Pencil, Trash2, Loader2, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
@@ -117,6 +127,8 @@ export function PermissionManagementNew() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [viewUsersDialogOpen, setViewUsersDialogOpen] = useState(false);
   const [createRoleDialogOpen, setCreateRoleDialogOpen] = useState(false);
+  const [deleteRoleDialogOpen, setDeleteRoleDialogOpen] = useState(false);
+  const [removeAllUsersDialogOpen, setRemoveAllUsersDialogOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
 
@@ -138,6 +150,7 @@ export function PermissionManagementNew() {
       return response.json() as Promise<Permission[]>;
     },
     enabled: isSuperAdmin,
+    staleTime: 5 * 60 * 1000, // 5 minutes - permissions rarely change
   });
 
   // Fetch available roles
@@ -153,6 +166,7 @@ export function PermissionManagementNew() {
       return response.json() as Promise<RoleSummary[]>;
     },
     enabled: isSuperAdmin,
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 
   useEffect(() => {
@@ -183,6 +197,7 @@ export function PermissionManagementNew() {
       return response.json() as Promise<RolePermissions>;
     },
     enabled: isSuperAdmin && Boolean(selectedRole),
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 
   // Fetch users by role
@@ -202,6 +217,7 @@ export function PermissionManagementNew() {
       return response.json() as Promise<UserPublic[]>;
     },
     enabled: isSuperAdmin && viewUsersDialogOpen && Boolean(selectedRole),
+    staleTime: 60 * 1000, // 1 minute - user role assignments change more frequently
   });
 
   const currentRole = selectedRole
@@ -295,6 +311,79 @@ export function PermissionManagementNew() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to create role: ${error.message}`);
+    },
+  });
+
+  const deleteRole = useMutation({
+    mutationFn: async (roleSlug: string) => {
+      const response = await fetch(`${apiUrl}/admin/roles/${roleSlug}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || "Failed to delete role");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "roles"] });
+      toast.success("Role deleted successfully");
+      setDeleteRoleDialogOpen(false);
+      setSelectedRole(null);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete role: ${error.message}`);
+    },
+  });
+
+  const removeRoleFromUser = useMutation({
+    mutationFn: async ({ userId, roleSlug }: { userId: string; roleSlug: string }) => {
+      const response = await fetch(`${apiUrl}/admin/users/${userId}/roles/${roleSlug}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove role from user");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "roles", selectedRole, "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success("Role removed from user");
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to remove role: ${error.message}`);
+    },
+  });
+
+  const removeRoleFromAllUsers = useMutation({
+    mutationFn: async (roleSlug: string) => {
+      if (!roleUsers || roleUsers.length === 0) {
+        throw new Error("No users to remove role from");
+      }
+
+      // Remove role from all users sequentially
+      const promises = roleUsers.map(user => 
+        fetch(`${apiUrl}/admin/users/${user.id}/roles/${roleSlug}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      );
+
+      await Promise.all(promises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "roles", selectedRole, "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success("Role removed from all users");
+      setRemoveAllUsersDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to remove role from all users: ${error.message}`);
     },
   });
 
@@ -414,18 +503,50 @@ export function PermissionManagementNew() {
                       {loadingRoleUsers ? (
                         <div className="text-center py-8">Loading...</div>
                       ) : roleUsers && roleUsers.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
+                          <div className="flex justify-end px-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => setRemoveAllUsersDialogOpen(true)}
+                              disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
+                            >
+                              <UserMinus className="mr-2 h-4 w-4" />
+                              Remove Role from All Users
+                            </Button>
+                          </div>
                           {roleUsers.map((user) => (
                             <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-medium">
                                   {user.profile?.first_name} {user.profile?.last_name}
                                 </p>
                                 <p className="text-sm text-muted-foreground">{user.email}</p>
                               </div>
-                              {user.is_super_admin && (
-                                <Badge variant="destructive">Super Admin</Badge>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {user.is_super_admin && (
+                                  <Badge variant="destructive" title="Controlled by SUPER_ADMIN_EMAILS environment variable">
+                                    <Shield className="w-3 h-3 mr-1" />
+                                    Super Admin
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (selectedRole) {
+                                      removeRoleFromUser.mutate({ userId: user.id, roleSlug: selectedRole });
+                                    }
+                                  }}
+                                  disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
+                                >
+                                  {removeRoleFromUser.isPending ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <UserMinus className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -495,9 +616,20 @@ export function PermissionManagementNew() {
                     <Badge variant="secondary">
                       {rolePermissions.permissions.length} / {totalPermissions} permissions
                     </Badge>
-                    <p className="text-sm text-muted-foreground max-w-xl">
+                    <p className="text-sm text-muted-foreground max-w-xl flex-1">
                       {currentRole.description || "No description provided."}
                     </p>
+                    {!currentRole.is_system && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeleteRoleDialogOpen(true)}
+                        disabled={deleteRole.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Role
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -619,8 +751,136 @@ export function PermissionManagementNew() {
               </ScrollArea>
             </CardContent>
           </Card>
-
       </div>
+
+      {/* Create Role Dialog */}
+      <Dialog open={createRoleDialogOpen} onOpenChange={setCreateRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Role</DialogTitle>
+            <DialogDescription>
+              Create a custom role with specific permissions
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="role-name">Role Name</Label>
+              <Input
+                id="role-name"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="e.g., Data Analyst"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="role-description">Description (Optional)</Label>
+              <Textarea
+                id="role-description"
+                value={newRoleDescription}
+                onChange={(e) => setNewRoleDescription(e.target.value)}
+                placeholder="Describe the purpose of this role..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateRoleDialogOpen(false);
+                setNewRoleName("");
+                setNewRoleDescription("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!newRoleName.trim()) {
+                  toast.error("Role name is required");
+                  return;
+                }
+                createRole.mutate({
+                  displayName: newRoleName,
+                  description: newRoleDescription || undefined,
+                });
+              }}
+              disabled={createRole.isPending || !newRoleName.trim()}
+            >
+              {createRole.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Role
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Role Confirmation Dialog */}
+      <AlertDialog open={deleteRoleDialogOpen} onOpenChange={setDeleteRoleDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the role "{currentRole?.display_name}"?
+              {roleUsers && roleUsers.length > 0 ? (
+                <span className="block mt-2 text-red-600 font-medium">
+                  Warning: This role is currently assigned to {roleUsers.length} user(s). 
+                  Please remove the role from all users before deleting it.
+                </span>
+              ) : (
+                <span className="block mt-2">
+                  This action cannot be undone. The role and all its permission assignments will be permanently deleted.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedRole) {
+                  deleteRole.mutate(selectedRole);
+                }
+              }}
+              disabled={deleteRole.isPending || (roleUsers && roleUsers.length > 0)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteRole.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete Role
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Role from All Users Confirmation Dialog */}
+      <AlertDialog open={removeAllUsersDialogOpen} onOpenChange={setRemoveAllUsersDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Role from All Users</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the "{currentRole?.display_name}" role from all {roleUsers?.length ?? 0} user(s)?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedRole) {
+                  removeRoleFromAllUsers.mutate(selectedRole);
+                }
+              }}
+              disabled={removeRoleFromAllUsers.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {removeRoleFromAllUsers.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Remove from All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

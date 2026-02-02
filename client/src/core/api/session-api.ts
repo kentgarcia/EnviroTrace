@@ -107,7 +107,7 @@ export const useAllSessions = (params?: {
   return useQuery({
     queryKey: ["admin", "sessions", params],
     queryFn: () => sessionApiService.getAllSessions(params),
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 60 * 1000, // 1 minute - sessions don't change that rapidly
   });
 };
 
@@ -121,6 +121,7 @@ export const useUserSessions = (
     queryFn: () =>
       sessionApiService.getUserSessions(userId, activeOnly, deviceType),
     enabled: !!userId,
+    staleTime: 60 * 1000, // 1 minute cache
   });
 };
 
@@ -154,5 +155,6 @@ export const useMySessions = () => {
   return useQuery({
     queryKey: ["sessions", "me"],
     queryFn: () => sessionApiService.getMySessions(),
+    staleTime: 60 * 1000, // 1 minute cache
   });
 };

@@ -10,7 +10,6 @@ from sqlalchemy.orm import selectinload
 from app.crud.base_crud import CRUDBase
 from app.models.auth_models import UserSession, User, Profile, DeviceTypeEnum
 from app.schemas.session_schemas import SessionCreate, SessionUpdate
-from app.core.security import create_access_token
 from app.core.config import settings
 
 
@@ -20,23 +19,18 @@ class CRUDSession(CRUDBase[UserSession, SessionCreate, SessionUpdate]):
         db: AsyncSession,
         *,
         user_id: uuid.UUID,
+        supabase_session_id: str,
+        expires_at: datetime,
         device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
         device_name: Optional[str] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
     ) -> UserSession:
-        """Create a new user session with token"""
-        # Generate JWT token
-        access_token = create_access_token(subject=user_id)
-        
-        # Calculate expiration
-        expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        expires_at = datetime.utcnow() + expires_delta
-        
+        """Create a new user session with Supabase session ID"""
         # Create session object
         db_session = UserSession(
             user_id=user_id,
-            session_token=access_token,
+            supabase_session_id=supabase_session_id,
             device_type=device_type,
             device_name=device_name,
             ip_address=ip_address,
@@ -51,19 +45,19 @@ class CRUDSession(CRUDBase[UserSession, SessionCreate, SessionUpdate]):
         
         return db_session
     
-    async def get_by_token(self, db: AsyncSession, *, token: str) -> Optional[UserSession]:
-        """Get session by token"""
+    async def get_by_supabase_id(self, db: AsyncSession, *, supabase_session_id: str) -> Optional[UserSession]:
+        """Get session by Supabase session ID"""
         result = await db.execute(
-            select(UserSession).where(UserSession.session_token == token)
+            select(UserSession).where(UserSession.supabase_session_id == supabase_session_id)
         )
         return result.scalars().first()
     
-    async def get_active_session_by_token(self, db: AsyncSession, *, token: str) -> Optional[UserSession]:
-        """Get active session by token"""
+    async def get_active_session_by_supabase_id(self, db: AsyncSession, *, supabase_session_id: str) -> Optional[UserSession]:
+        """Get active session by Supabase session ID"""
         result = await db.execute(
             select(UserSession).where(
                 and_(
-                    UserSession.session_token == token,
+                    UserSession.supabase_session_id == supabase_session_id,
                     UserSession.is_active == True,
                     UserSession.expires_at > datetime.utcnow()
                 )

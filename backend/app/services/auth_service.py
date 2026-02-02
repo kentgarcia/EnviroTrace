@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi import HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import uuid
+from datetime import datetime, timezone
 
 from app.crud.crud_user import user as crud_user
 from app.crud.crud_profile import profile as crud_profile
@@ -13,11 +14,21 @@ from app.schemas.user_schemas import UserCreate, UserPublic, UserWithRoles, User
 from app.schemas.profile_schemas import ProfileCreate
 from app.schemas.token_schemas import Token
 from app.models.auth_models import User, DeviceTypeEnum
-from app.core.security import create_access_token, verify_password
+from app.core import supabase_client
 from app.core.config import settings
 
 class AuthService:
-    async def register_user(self, db: AsyncSession, *, user_in: UserCreate) -> UserFullPublic:
+    async def register_user_with_supabase(
+        self, 
+        db: AsyncSession, 
+        *, 
+        user_in: UserCreate
+    ) -> Dict[str, Any]:
+        """
+        Register a new user with Supabase Auth.
+        Creates user in Supabase and sends OTP verification email.
+        Does NOT create internal user record until email is verified.
+        """
         # Check for existing active user
         existing_user = await crud_user.get_by_email(db, email=user_in.email, include_deleted=False)
         if existing_user:
@@ -31,19 +42,312 @@ class AuthService:
         if archived_user and archived_user.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="An archived account exists with this email. Please contact an administrator to reactivate the account instead of creating a new one.",
+                detail="An archived account exists with this email. Please contact an administrator to reactivate the account.",
             )
         
-        # Check if user email is in super admin list
+        # Create user in Supabase Auth
+        supabase = supabase_client.get_supabase_admin()
+        
+        try:
+            # Sign up with Supabase (automatically sends OTP email)
+            auth_response = supabase.auth.sign_up({
+                "email": user_in.email,
+                "password": user_in.password,
+                "options": {
+                    "email_redirect_to": None,  # No magic link, only OTP
+                    "data": {
+                        "first_name": user_in.first_name,
+                        "last_name": user_in.last_name
+                    }
+                }
+            })
+            
+            if not auth_response.user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to create user in Supabase Auth"
+                )
+            
+            # Store user registration data in session for later (after OTP verification)
+            # For now, just return success without creating internal user record
+            return {
+                "supabase_user_id": auth_response.user.id,
+                "email": user_in.email
+            }
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Registration failed: {str(e)}"
+            )
+    
+    async def verify_otp_and_create_session(
+        self,
+        db: AsyncSession,
+        *,
+        email: str,
+        token: str,
+        request: Optional[Request] = None,
+        device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
+        device_name: Optional[str] = None
+    ) -> Token:
+        """
+        Verify OTP code and create user session.
+        Creates internal user record if it doesn't exist.
+        """
+        # Verify OTP with Supabase
+        result = await supabase_client.verify_email_with_otp(email=email, token=token)
+        
+        supabase_user = result["user"]
+        supabase_session = result["session"]
+        
+        if not supabase_user or not supabase_session:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP verification failed"
+            )
+        
+        # Check if internal user record exists
+        supabase_user_id = uuid.UUID(supabase_user.id)
+        internal_user = await crud_user.get_by_supabase_id(db, supabase_user_id=supabase_user_id)
+        
+        if not internal_user:
+            # Create internal user record
+            # Check if email belongs to super admin
+            super_admin_emails = settings.get_super_admin_emails()
+            is_super_admin = email.lower() in super_admin_emails
+            
+            # Create user (super admins are auto-approved, others need admin approval)
+            from app.models.auth_models import User as UserModel, Profile
+            internal_user = UserModel(
+                email=email,
+                supabase_user_id=supabase_user_id,
+                email_confirmed_at=datetime.now(timezone.utc),
+                is_approved=is_super_admin,  # Auto-approve super admins only
+                is_super_admin=is_super_admin,
+                last_sign_in_at=datetime.now(timezone.utc)
+            )
+            db.add(internal_user)
+            await db.commit()
+            await db.refresh(internal_user)
+        else:
+            # Update email_confirmed_at if not set
+            if not internal_user.email_confirmed_at:
+                internal_user.email_confirmed_at = datetime.now(timezone.utc)
+                internal_user.last_sign_in_at = datetime.now(timezone.utc)
+                await db.commit()
+                await db.refresh(internal_user)
+        
+        # Create session tracking
+        await self._create_session_tracking(
+            db=db,
+            user_id=internal_user.id,
+            supabase_session=supabase_session,
+            request=request,
+            device_type=device_type,
+            device_name=device_name
+        )
+        
+        # Add approval status to response for super admins
+        response_data = {
+            "access_token": supabase_session.access_token,
+            "token_type": "bearer",
+            "refresh_token": supabase_session.refresh_token,
+            "expires_in": supabase_session.expires_in,
+            "user": supabase_user.model_dump() if hasattr(supabase_user, 'model_dump') else dict(supabase_user)
+        }
+        
+        # Add approval message for non-super-admins
+        if not internal_user.is_approved and not internal_user.is_super_admin:
+            response_data["message"] = "Email verified. Your account is pending admin approval."
+        
+        return Token(**response_data)
+    
+    async def login_with_supabase(
+        self,
+        db: AsyncSession,
+        *,
+        email: str,
+        password: str,
+        request: Optional[Request] = None,
+        device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
+        device_name: Optional[str] = None
+    ) -> Token:
+        """
+        Authenticate user with Supabase Auth.
+        Verifies email is confirmed before allowing login.
+        """
+        # Sign in with Supabase
+        result = await supabase_client.sign_in_with_password(email=email, password=password)
+        
+        supabase_user = result["user"]
+        supabase_session = result["session"]
+        
+        if not supabase_user or not supabase_session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Get internal user record
+        supabase_user_id = uuid.UUID(supabase_user.id)
+        internal_user = await crud_user.get_by_supabase_id(db, supabase_user_id=supabase_user_id)
+        
+        if not internal_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found. Please complete registration."
+            )
+        
+        # Verify email is confirmed
+        if not internal_user.email_confirmed_at:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="EMAIL_NOT_VERIFIED: Email not verified. Please verify your email before logging in."
+            )
+        
+        # Verify account is approved by admin (super admins bypass this check)
+        if not internal_user.is_approved and not internal_user.is_super_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="PENDING_APPROVAL: Account pending approval. Please wait for an administrator to approve your account."
+            )
+        
+        # Auto-promote to super admin if email matches
         super_admin_emails = settings.get_super_admin_emails()
-        if user_in.email.lower() in super_admin_emails:
-            user_in.is_super_admin = True
+        if internal_user.email.lower() in super_admin_emails and not internal_user.is_super_admin:
+            internal_user.is_super_admin = True
+            await db.commit()
+            await db.refresh(internal_user)
         
-        user = await crud_user.create(db, obj_in=user_in)
+        # Update last sign in
+        internal_user.last_sign_in_at = datetime.now(timezone.utc)
+        await db.commit()
         
-        # Get user details with profile
-        return await self.get_user_details(db=db, user_id=user.id)
-
+        # Create session tracking
+        await self._create_session_tracking(
+            db=db,
+            user_id=internal_user.id,
+            supabase_session=supabase_session,
+            request=request,
+            device_type=device_type,
+            device_name=device_name
+        )
+        
+        return Token(
+            access_token=supabase_session.access_token,
+            token_type="bearer",
+            refresh_token=supabase_session.refresh_token,
+            expires_in=supabase_session.expires_in,
+            user=supabase_user.model_dump() if hasattr(supabase_user, 'model_dump') else dict(supabase_user)
+        )
+    
+    async def refresh_session(
+        self,
+        db: AsyncSession,
+        *,
+        refresh_token: str
+    ) -> Token:
+        """
+        Refresh access token using refresh token.
+        """
+        result = await supabase_client.refresh_session(refresh_token=refresh_token)
+        
+        supabase_session = result["session"]
+        
+        if not supabase_session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Failed to refresh session"
+            )
+        
+        # Update session tracking if it exists
+        session = await session_crud.get_by_supabase_id(
+            db, 
+            supabase_session_id=supabase_session.access_token
+        )
+        if session:
+            await session_crud.update_activity(db, session_id=session.id)
+        
+        return Token(
+            access_token=supabase_session.access_token,
+            token_type="bearer",
+            refresh_token=supabase_session.refresh_token,
+            expires_in=supabase_session.expires_in
+        )
+    
+    async def logout_user(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: uuid.UUID,
+        access_token: Optional[str] = None
+    ) -> bool:
+        """
+        Log out user and terminate their session.
+        """
+        # Sign out from Supabase if token provided
+        if access_token:
+            await supabase_client.sign_out(access_token=access_token)
+        
+        # Terminate all active sessions for user
+        await session_crud.terminate_all_user_sessions(
+            db,
+            user_id=user_id,
+            reason="user_logout"
+        )
+        
+        return True
+    
+    async def resend_otp_code(self, *, email: str) -> bool:
+        """
+        Resend OTP verification code to user's email.
+        """
+        return await supabase_client.resend_otp(email=email)
+    
+    async def _create_session_tracking(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: uuid.UUID,
+        supabase_session: Any,
+        request: Optional[Request] = None,
+        device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
+        device_name: Optional[str] = None
+    ):
+        """
+        Create session tracking record for user login.
+        """
+        # Extract request metadata
+        ip_address = None
+        user_agent = None
+        if request:
+            forwarded_for = request.headers.get("X-Forwarded-For")
+            if forwarded_for:
+                ip_address = forwarded_for.split(",")[0].strip()
+            else:
+                ip_address = request.client.host if request.client else None
+            
+            user_agent = request.headers.get("User-Agent")
+        
+        # Calculate expiration from Supabase session
+        expires_at = datetime.now(timezone.utc)
+        if hasattr(supabase_session, 'expires_in') and supabase_session.expires_in:
+            from datetime import timedelta
+            expires_at = expires_at + timedelta(seconds=supabase_session.expires_in)
+        
+        # Create session with device tracking
+        await session_crud.create_session(
+            db,
+            user_id=user_id,
+            supabase_session_id=supabase_session.access_token,
+            expires_at=expires_at,
+            device_type=device_type,
+            device_name=device_name,
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+    
     async def reactivate_user(self, db: AsyncSession, *, user_id: uuid.UUID) -> UserFullPublic:
         """Reactivate an archived user account"""
         result = await db.execute(
@@ -65,70 +369,11 @@ class AuthService:
         
         # Reactivate the user
         user.deleted_at = None
-        from datetime import datetime
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc)
         await db.commit()
         await db.refresh(user)
         
         return await self.get_user_details(db=db, user_id=user.id)
-
-    async def login_user(
-        self,
-        db: AsyncSession,
-        *,
-        form_data: OAuth2PasswordRequestForm,
-        request: Optional[Request] = None,
-        device_type: DeviceTypeEnum = DeviceTypeEnum.unknown,
-        device_name: Optional[str] = None
-    ) -> Token:
-        user = await crud_user.get_by_email(db, email=form_data.username, include_deleted=False) # form_data.username is email
-        if not user or not verify_password(form_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        # if not user.is_active: # Add is_active to User model if needed
-        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
-        
-        # Auto-promote to super admin if email matches
-        super_admin_emails = settings.get_super_admin_emails()
-        if user.email.lower() in super_admin_emails and not user.is_super_admin:
-            user.is_super_admin = True
-            await db.commit()
-            await db.refresh(user)
-        
-        # Extract request metadata
-        ip_address = None
-        user_agent = None
-        if request:
-            # Get IP address from X-Forwarded-For header or direct connection
-            forwarded_for = request.headers.get("X-Forwarded-For")
-            if forwarded_for:
-                ip_address = forwarded_for.split(",")[0].strip()
-            else:
-                ip_address = request.client.host if request.client else None
-            
-            user_agent = request.headers.get("User-Agent")
-        
-        # Create session with device tracking
-        session = await session_crud.create_session(
-            db,
-            user_id=user.id,
-            device_type=device_type,
-            device_name=device_name,
-            ip_address=ip_address,
-            user_agent=user_agent
-        )
-
-        # Update last_sign_in_at
-        from datetime import datetime
-        user.last_sign_in_at = datetime.utcnow()
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        
-        return Token(access_token=session.session_token, token_type="bearer")
 
     async def get_user_details(self, db: AsyncSession, user_id: uuid.UUID) -> UserFullPublic:
         # Get user with profile loaded
@@ -165,6 +410,9 @@ class AuthService:
             "id": user_model.id,
             "email": user_model.email,
             "is_super_admin": user_model.is_super_admin,
+            "is_approved": user_model.is_approved,
+            "email_confirmed_at": user_model.email_confirmed_at,
+            "supabase_user_id": user_model.supabase_user_id,
             "last_sign_in_at": user_model.last_sign_in_at,
             "created_at": user_model.created_at,
             "updated_at": user_model.updated_at,
@@ -247,6 +495,9 @@ class AuthService:
                 "id": user_model.id,
                 "email": user_model.email,
                 "is_super_admin": user_model.is_super_admin,
+                "is_approved": user_model.is_approved,
+                "email_confirmed_at": user_model.email_confirmed_at,
+                "supabase_user_id": user_model.supabase_user_id,
                 "last_sign_in_at": user_model.last_sign_in_at,
                 "created_at": user_model.created_at,
                 "updated_at": user_model.updated_at,

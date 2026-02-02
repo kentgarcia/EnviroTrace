@@ -88,9 +88,25 @@ export function SignInForm() {
 
       // Set a user-friendly error message
       let errorMessage = "Failed to sign in. Please check your credentials.";
+      let shouldRedirect = false;
+      let redirectPath = "";
+      let redirectEmail = data.email;
+
       if (error instanceof Error) {
         if (error.message.includes("Network Error")) {
           errorMessage = "Cannot connect to the backend server. Please make sure the server is running at http://localhost:8000.";
+        } else if (error.message.includes("PENDING_APPROVAL") || error.message.includes("pending approval") || error.message.includes("pending admin approval")) {
+          // Account verified but not approved yet
+          shouldRedirect = true;
+          redirectPath = "/pending-approval";
+          toast.info("Your account is pending admin approval");
+          return; // Exit early, don't show error
+        } else if (error.message.includes("EMAIL_NOT_VERIFIED") || error.message.includes("Email not verified") || error.message.includes("verify your email")) {
+          // Email not verified yet
+          shouldRedirect = true;
+          redirectPath = "/verify-email";
+          toast.info("Please verify your email address");
+          return; // Exit early, don't show error
         } else if (error.message.includes("401")) {
           errorMessage = "Invalid email or password. Please try again.";
         } else {
@@ -98,10 +114,30 @@ export function SignInForm() {
         }
       } else if (typeof error === "string") {
         errorMessage = error;
+        
+        // Check for specific error patterns in string errors
+        if (errorMessage.includes("PENDING_APPROVAL") || errorMessage.includes("pending approval") || errorMessage.includes("pending admin approval")) {
+          shouldRedirect = true;
+          redirectPath = "/pending-approval";
+          toast.info("Your account is pending admin approval");
+          return; // Exit early, don't show error
+        } else if (errorMessage.includes("EMAIL_NOT_VERIFIED") || errorMessage.includes("Email not verified") || errorMessage.includes("verify your email")) {
+          shouldRedirect = true;
+          redirectPath = "/verify-email";
+          toast.info("Please verify your email address");
+          return; // Exit early, don't show error
+        }
       }
 
-      setAuthError(errorMessage);
-      toast.error(errorMessage);
+      if (shouldRedirect && redirectPath) {
+        // Redirect to appropriate page
+        setTimeout(() => {
+          navigate({ to: redirectPath, search: { email: redirectEmail } });
+        }, 500);
+      } else {
+        setAuthError(errorMessage);
+        toast.error(errorMessage);
+      }
     }
   };
 

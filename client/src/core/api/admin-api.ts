@@ -32,6 +32,9 @@ export interface User {
   id: string;
   email: string;
   is_super_admin: boolean;
+  is_approved: boolean;
+  email_confirmed_at?: string;
+  supabase_user_id?: string;
   last_sign_in_at?: string;
   created_at: string;
   updated_at: string;
@@ -172,6 +175,14 @@ class AdminApiService extends ApiService {
     return this.post<User>(`/admin/users/${userId}/reactivate`, {});
   }
 
+  async approveUser(userId: string): Promise<User> {
+    return this.post<User>(`/admin/users/${userId}/approve`, {});
+  }
+
+  async revokeUserApproval(userId: string): Promise<User> {
+    return this.post<User>(`/admin/users/${userId}/revoke-approval`, {});
+  }
+
   async assignRole(userId: string, roleData: AssignRoleRequest): Promise<User> {
     return this.post<User>(`/admin/users/${userId}/roles`, roleData);
   }
@@ -264,6 +275,7 @@ export const useUsers = (params?: {
   return useQuery({
     queryKey: ["admin", "users", params],
     queryFn: () => adminApiService.getUsers(params),
+    staleTime: 2 * 60 * 1000, // 2 minutes - users don't change frequently
   });
 };
 
@@ -272,6 +284,7 @@ export const useUser = (userId: string) => {
     queryKey: ["admin", "users", userId],
     queryFn: () => adminApiService.getUserById(userId),
     enabled: !!userId,
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
   });
 };
 
@@ -288,10 +301,8 @@ export const useAuditLogs = (filters?: AuditLogFilters) => {
   return useQuery({
     queryKey: ["admin", "audit-logs", filters],
     queryFn: () => adminApiService.getAuditLogs(filters),
-    staleTime: 0, // Always consider data stale to ensure fresh logs
-    refetchInterval: 10000, // Auto-refetch every 10 seconds
-    refetchOnWindowFocus: true, // Refetch when user returns to tab
-    refetchOnMount: true, // Refetch when component mounts
+    staleTime: 30 * 1000, // 30 seconds - balance between freshness and performance
+    refetchOnWindowFocus: false, // Don't auto-refetch on focus to reduce load
   });
 };
 
@@ -400,6 +411,40 @@ export const useRemoveRole = () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
       queryClient.invalidateQueries({
         queryKey: ["admin", "users", variables.userId],
+      });
+    },
+  });
+};
+
+export const useApproveUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApiService.approveUser(userId),
+    onSuccess: (data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "dashboard", "stats"],
+      });
+    },
+  });
+};
+
+export const useRevokeUserApproval = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApiService.revokeUserApproval(userId),
+    onSuccess: (data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "dashboard", "stats"],
       });
     },
   });

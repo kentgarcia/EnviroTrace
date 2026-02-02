@@ -31,7 +31,9 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column("encrypted_password", String(255), nullable=False) # Mapped from encryptedPassword
+    supabase_user_id = Column(UUID(as_uuid=True), unique=True, index=True, nullable=True)  # Supabase Auth user ID
+    email_confirmed_at = Column(DateTime(timezone=True), nullable=True)  # Email verification timestamp
+    is_approved = Column(Boolean, default=False, server_default='false', nullable=False)  # Admin approval required
     is_super_admin = Column(Boolean, default=False, server_default='false')
     last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -154,7 +156,7 @@ class UserSession(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="CASCADE"), nullable=False)
-    session_token = Column(String(255), unique=True, nullable=False)
+    supabase_session_id = Column(String(255), unique=True, nullable=False)  # Supabase session identifier
     device_type = Column(SAEnum(DeviceTypeEnum, name="device_type", schema="app_auth"), nullable=False, server_default="unknown")
     device_name = Column(String(255), nullable=True)  # Device model/name
     ip_address = Column(INET, nullable=True)
