@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import SignIn from "@/presentation/pages/public/SignIn";
 import VerifyEmail from "@/presentation/pages/public/VerifyEmail";
 import PendingApproval from "@/presentation/pages/public/PendingApproval";
+import SignUp from "@/presentation/pages/public/SignUp";
 import DashboardSelection from "@/presentation/pages/public/DashboardSelection";
 import ProfilePage from "@/presentation/pages/public/ProfilePage";
 import TermsOfService from "@/presentation/pages/public/TermsOfService";
@@ -148,6 +149,12 @@ const pendingApprovalRoute = createRoute({
   component: PendingApproval,
 });
 
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sign-up",
+  component: SignUp,
+});
+
 const dashboardSelectionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard-selection",
@@ -174,11 +181,15 @@ const privacyRoute = createRoute({
   component: PrivacyPolicy,
 });
 
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sign-in",
+  component: SignIn,
+});
+
 const unauthorizedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/403",
-  verifyEmailRoute,
-  pendingApprovalRoute,
   component: Unauthorized,
 });
 
@@ -191,6 +202,10 @@ const notFoundRoute = createRoute({
 // Create and export the router
 export const routeTree = rootRoute.addChildren([
   indexRoute,
+  signInRoute,
+  signUpRoute,
+  verifyEmailRoute,
+  pendingApprovalRoute,
   dashboardSelectionRoute,
   profileRoute,
   termsRoute,

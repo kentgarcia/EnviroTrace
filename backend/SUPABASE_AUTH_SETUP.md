@@ -39,7 +39,10 @@ This guide covers the migration from custom JWT authentication to Supabase Auth 
    - **Project URL**: `https://your-project.supabase.co`
    - **anon public** key: `eyJ...` (safe for client-side)
    - **service_role** key: `eyJ...` (⚠️ SECRET - server-side only)
-   - **JWT Secret**: Found under "JWT Settings" section
+3. Scroll down to **JWT Signing Keys** section
+4. Copy the **Public Key** (including `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` headers)
+
+**Note:** Supabase now uses RS256 asymmetric signing with public/private key pairs instead of HS256 with a shared secret. This is more secure as the private key never leaves Supabase.
 
 ### 1.4 Set Site URL and Redirect URLs
 
@@ -60,7 +63,7 @@ This guide covers the migration from custom JWT authentication to Supabase Auth 
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_JWT_SECRET=your-jwt-secret-from-dashboard
+SUPABASE_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
 
 # Existing Configuration
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/envirotrace
@@ -76,9 +79,10 @@ ALGORITHM=HS256
 
 ### 2.2 Security Notes
 
-- ⚠️ **NEVER commit** `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_JWT_SECRET` to version control
+- ⚠️ **NEVER commit** `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_JWT_PUBLIC_KEY` to version control
 - ✅ Add `.env` to `.gitignore`
 - ✅ Use different Supabase projects for dev/staging/production
+- ✅ JWT Public Key uses RS256 asymmetric signing (private key stays on Supabase, only public key is shared)
 
 ---
 
@@ -389,11 +393,18 @@ curl -X PUT http://localhost:8000/api/v1/admin/users/{user_id} \
 
 ### Error: "Could not validate credentials"
 
-**Cause**: JWT secret mismatch between Supabase and backend
+**Cause**: JWT public key mismatch or incorrect format
 
 **Fix**: 
-1. Verify `SUPABASE_JWT_SECRET` matches Supabase Dashboard → Settings → API → JWT Secret
-2. Restart backend server after .env changes
+1. Verify `SUPABASE_JWT_PUBLIC_KEY` is copied correctly from Supabase Dashboard → Settings → API → JWT Signing Keys
+2. Ensure the entire key is copied including `-----BEGIN PUBLIC KEY-----` and `-----END PUBLIC KEY-----` headers
+3. In `.env` file, wrap the key in quotes and use `\n` for line breaks
+4. Restart backend server after .env changes
+
+**Example format in .env:**
+```bash
+SUPABASE_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...\n-----END PUBLIC KEY-----"
+```
 
 ### Error: "User not found. Please complete registration."
 

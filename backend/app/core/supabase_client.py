@@ -41,7 +41,7 @@ def get_supabase_public() -> Client:
 
 def verify_supabase_jwt(token: str) -> Dict[str, Any]:
     """
-    Verify a Supabase JWT token and return the decoded payload.
+    Verify a Supabase JWT token using ES256 (ECC P-256) or RS256 algorithm with public key.
     
     Args:
         token: The JWT token from Supabase Auth (without 'Bearer ' prefix)
@@ -53,11 +53,23 @@ def verify_supabase_jwt(token: str) -> Dict[str, Any]:
         HTTPException: If token is invalid, expired, or verification fails
     """
     try:
-        # Decode and verify the JWT token
+        # Format the public key properly if not already formatted
+        public_key = settings.SUPABASE_JWT_PUBLIC_KEY
+        
+        # Determine algorithm based on key format
+        # ES256 keys start with "-----BEGIN PUBLIC KEY-----" and are shorter
+        # RS256 keys are longer RSA keys
+        algorithms = ["ES256", "RS256"]  # Try ES256 first (modern ECC), fallback to RS256
+        
+        if not public_key.startswith('-----BEGIN'):
+            # If the key is missing headers, add them
+            public_key = f"-----BEGIN PUBLIC KEY-----\n{public_key}\n-----END PUBLIC KEY-----"
+        
+        # Decode and verify the JWT with Supabase's public key
         payload = jwt.decode(
             token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            public_key,
+            algorithms=algorithms,
             audience="authenticated",
             options={"verify_aud": True}
         )

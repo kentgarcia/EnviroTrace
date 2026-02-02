@@ -66,15 +66,17 @@ export async function signIn(email: string, password: string) {
 
 /**
  * Register a new user
+ * Note: After registration, user must verify OTP before they can sign in
  */
 export async function signUp(email: string, password: string) {
   try {
     // Use the register mutation directly (for compatibility)
     const registerMutation = useRegister();
-    await registerMutation.mutateAsync({ email, password });
-
-    // After registration, sign in to get the token
-    return signIn(email, password);
+    const result = await registerMutation.mutateAsync({ email, password });
+    
+    // Return registration result (contains message and email)
+    // User needs to verify OTP before they can sign in
+    return result;
   } catch (error) {
     console.error("Sign up error:", error);
     throw error;

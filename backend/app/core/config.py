@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_ANON_KEY: str
     SUPABASE_SERVICE_ROLE_KEY: str
-    SUPABASE_JWT_SECRET: str  # From Supabase Dashboard -> Settings -> API
+    SUPABASE_JWT_PUBLIC_KEY: str  # From Supabase Dashboard -> Settings -> API -> JWT Signing Keys (supports ES256 ECC P-256 or RS256)
     
     # Gemini API Configuration
     GOOGLE_API_KEY: Optional[str] = None

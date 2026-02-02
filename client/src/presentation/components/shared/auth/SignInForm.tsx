@@ -83,8 +83,18 @@ export function SignInForm() {
       } else {
         throw new Error("Authentication failed");
       }
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Authentication error:", error);
+
+      // Extract error detail from backend response
+      let errorDetail = "";
+      if (error?.response?.data?.detail) {
+        errorDetail = typeof error.response.data.detail === "string" 
+          ? error.response.data.detail 
+          : JSON.stringify(error.response.data.detail);
+      } else if (error?.message) {
+        errorDetail = error.message;
+      }
 
       // Set a user-friendly error message
       let errorMessage = "Failed to sign in. Please check your credentials.";
@@ -92,41 +102,39 @@ export function SignInForm() {
       let redirectPath = "";
       let redirectEmail = data.email;
 
-      if (error instanceof Error) {
-        if (error.message.includes("Network Error")) {
-          errorMessage = "Cannot connect to the backend server. Please make sure the server is running at http://localhost:8000.";
-        } else if (error.message.includes("PENDING_APPROVAL") || error.message.includes("pending approval") || error.message.includes("pending admin approval")) {
-          // Account verified but not approved yet
-          shouldRedirect = true;
-          redirectPath = "/pending-approval";
-          toast.info("Your account is pending admin approval");
-          return; // Exit early, don't show error
-        } else if (error.message.includes("EMAIL_NOT_VERIFIED") || error.message.includes("Email not verified") || error.message.includes("verify your email")) {
-          // Email not verified yet
-          shouldRedirect = true;
-          redirectPath = "/verify-email";
-          toast.info("Please verify your email address");
-          return; // Exit early, don't show error
-        } else if (error.message.includes("401")) {
-          errorMessage = "Invalid email or password. Please try again.";
-        } else {
-          errorMessage = error.message;
-        }
-      } else if (typeof error === "string") {
-        errorMessage = error;
-        
-        // Check for specific error patterns in string errors
-        if (errorMessage.includes("PENDING_APPROVAL") || errorMessage.includes("pending approval") || errorMessage.includes("pending admin approval")) {
-          shouldRedirect = true;
-          redirectPath = "/pending-approval";
-          toast.info("Your account is pending admin approval");
-          return; // Exit early, don't show error
-        } else if (errorMessage.includes("EMAIL_NOT_VERIFIED") || errorMessage.includes("Email not verified") || errorMessage.includes("verify your email")) {
-          shouldRedirect = true;
-          redirectPath = "/verify-email";
-          toast.info("Please verify your email address");
-          return; // Exit early, don't show error
-        }
+      // Check for network errors
+      if (error?.code === "ERR_NETWORK" || error?.message?.includes("Network Error")) {
+        errorMessage = "Cannot connect to the backend server. Please make sure the server is running.";
+      }
+      // Check for EMAIL_NOT_VERIFIED (403 with specific error code)
+      else if (errorDetail.includes("EMAIL_NOT_VERIFIED")) {
+        shouldRedirect = true;
+        redirectPath = "/verify-email";
+        toast.info("Please verify your email address");
+        return; // Exit early, don't show error
+      }
+      // Check for PENDING_APPROVAL (403 with specific error code)
+      else if (errorDetail.includes("PENDING_APPROVAL")) {
+        shouldRedirect = true;
+        redirectPath = "/pending-approval";
+        toast.info("Your account is pending admin approval");
+        return; // Exit early, don't show error
+      }
+      // Check for 401 Unauthorized
+      else if (error?.response?.status === 401) {
+        errorMessage = "Invalid email or password. Please try again.";
+      }
+      // Check for 404 Not Found (user doesn't exist)
+      else if (error?.response?.status === 404) {
+        errorMessage = "User not found. Please complete registration.";
+      }
+      // Use backend error message if available
+      else if (errorDetail) {
+        // Clean up error message (remove error code prefixes)
+        errorMessage = errorDetail
+          .replace("EMAIL_NOT_VERIFIED:", "")
+          .replace("PENDING_APPROVAL:", "")
+          .trim();
       }
 
       if (shouldRedirect && redirectPath) {
@@ -254,6 +262,12 @@ export function SignInForm() {
         </form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-3 pt-6 border-t">
+        <div className="text-sm text-center">
+          Don't have an account?{" "}
+          <Link to="/sign-up" className="text-primary hover:underline font-medium">
+            Sign up
+          </Link>
+        </div>
         <div className="text-xs text-center text-muted-foreground leading-relaxed">
           By signing in, you agree to our{" "}
           <Link to="/terms" className="text-primary hover:underline font-medium">Terms of Service</Link>

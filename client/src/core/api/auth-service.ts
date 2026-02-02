@@ -17,10 +17,19 @@ interface RegisterCredentials {
   password: string;
 }
 
+// Interface for registration response
+interface RegisterResponse {
+  message: string;
+  email: string;
+}
+
 // Interface for token response
 interface TokenResponse {
   access_token: string;
   token_type: string;
+  refresh_token?: string;
+  expires_in?: number;
+  message?: string;
 }
 
 // Login user with email and password
@@ -62,8 +71,8 @@ const loginUser = async (
 // Register a new user
 const registerUser = async (
   credentials: RegisterCredentials
-): Promise<UserData> => {
-  const { data } = await apiClient.post<UserData>(
+): Promise<RegisterResponse> => {
+  const { data } = await apiClient.post<RegisterResponse>(
     "/auth/register",
     credentials
   );
