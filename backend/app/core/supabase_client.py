@@ -163,6 +163,7 @@ async def verify_email_with_otp(email: str, token: str) -> Dict[str, Any]:
 async def resend_otp(email: str) -> bool:
     """
     Resend OTP verification code to user's email.
+    Handles both new signups and existing unconfirmed users.
     
     Args:
         email: User's email address
@@ -176,16 +177,35 @@ async def resend_otp(email: str) -> bool:
     supabase = get_supabase_admin()
     
     try:
+        # Try to resend using the standard method first
         supabase.auth.resend({
             "type": "signup",
-            "email": email
+            "email": email,
+            "options": {
+                "email_redirect_to": None  # Ensure we send OTP, not magic link
+            }
         })
         return True
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to resend OTP: {str(e)}"
-        )
+        error_msg = str(e).lower()
+        
+        # If user doesn't exist or already confirmed, provide helpful message
+        if "not found" in error_msg or "user not found" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No unconfirmed account found with this email. Please sign up first."
+            )
+        elif "already confirmed" in error_msg or "email already confirmed" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already verified. Please sign in instead."
+            )
+        else:
+            # Generic error
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Failed to resend verification code. Please try signing up again."
+            )
 
 
 async def sign_in_with_password(email: str, password: str) -> Dict[str, Any]:

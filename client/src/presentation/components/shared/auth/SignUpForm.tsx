@@ -14,8 +14,8 @@ import {
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useRegister } from "@/core/api/auth-service";
-import { Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+import { Link } from "@tanstack/react-router";
 import {
   Alert,
   AlertDescription,
@@ -91,7 +91,13 @@ export function SignUpForm() {
       }
       // Check for duplicate email
       else if (errorDetail.includes("already exists") || errorDetail.includes("duplicate") || error?.response?.status === 409) {
-        errorMessage = "An account with this email already exists. Please sign in instead.";
+        // If user already verified and in system, tell them to sign in
+        if (errorDetail.includes("already exists in the system")) {
+          errorMessage = "An account with this email already exists. Please sign in instead.";
+        } else {
+          // Otherwise, it might be a verification issue - we auto-resend the code
+          errorMessage = "Verification code resent to your email. Please check your inbox.";
+        }
       }
       // Check for validation errors
       else if (error?.response?.status === 422) {

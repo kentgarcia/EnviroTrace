@@ -76,6 +76,23 @@ class AuthService:
             }
             
         except Exception as e:
+            error_msg = str(e).lower()
+            # If user already exists but is unconfirmed, resend OTP instead of failing
+            if "already registered" in error_msg or "user already exists" in error_msg or "already been registered" in error_msg:
+                try:
+                    # Resend OTP for existing unconfirmed user
+                    await supabase_client.resend_otp(email=user_in.email)
+                    return {
+                        "supabase_user_id": None,  # We don't have the ID yet
+                        "email": user_in.email,
+                        "resent": True
+                    }
+                except Exception as resend_error:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"User already exists but failed to resend verification: {str(resend_error)}"
+                    )
+            
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Registration failed: {str(e)}"

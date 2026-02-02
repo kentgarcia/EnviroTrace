@@ -15,8 +15,8 @@ import {
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useLogin } from "@/core/api/auth-service";
-import { Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
+import { Link } from "@tanstack/react-router";
 import {
   Alert,
   AlertDescription,
@@ -264,15 +264,28 @@ export function SignInForm() {
       <CardFooter className="flex flex-col space-y-3 pt-6 border-t">
         <div className="text-sm text-center">
           Don't have an account?{" "}
-          <Link to="/sign-up" className="text-primary hover:underline font-medium">
+          <Link
+            to="/sign-up"
+            className="text-primary hover:underline font-medium"
+          >
             Sign up
           </Link>
         </div>
         <div className="text-xs text-center text-muted-foreground leading-relaxed">
           By signing in, you agree to our{" "}
-          <Link to="/terms" className="text-primary hover:underline font-medium">Terms of Service</Link>
+          <Link
+            to="/terms"
+            className="text-primary hover:underline font-medium"
+          >
+            Terms of Service
+          </Link>
           {" "}and{" "}
-          <Link to="/privacy" className="text-primary hover:underline font-medium">Privacy Policy</Link>
+          <Link
+            to="/privacy"
+            className="text-primary hover:underline font-medium"
+          >
+            Privacy Policy
+          </Link>
         </div>
       </CardFooter>
     </Card>
