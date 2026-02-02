@@ -1,7 +1,8 @@
 # app/core/security.py
 from datetime import datetime, timedelta, timezone
 from typing import Any, Union, Optional
-from jose import jwt, JWTError
+import jwt
+from jwt.exceptions import InvalidTokenError as JWTError
 import bcrypt
 from app.core.config import settings
 import uuid
