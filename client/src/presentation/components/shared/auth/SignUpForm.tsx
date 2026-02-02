@@ -91,12 +91,17 @@ export function SignUpForm() {
       }
       // Check for duplicate email
       else if (errorDetail.includes("already exists") || errorDetail.includes("duplicate") || error?.response?.status === 409) {
+        // If verification expired, tell user to retry signup
+        if (errorDetail.includes("verification expired") || errorDetail.includes("sign up again")) {
+          errorMessage = errorDetail;  // Use backend's exact message
+        }
         // If user already verified and in system, tell them to sign in
-        if (errorDetail.includes("already exists in the system")) {
+        else if (errorDetail.includes("already exists in the system") || errorDetail.includes("Please sign in instead")) {
           errorMessage = "An account with this email already exists. Please sign in instead.";
-        } else {
-          // Otherwise, it might be a verification issue - we auto-resend the code
-          errorMessage = "Verification code resent to your email. Please check your inbox.";
+        } 
+        // Otherwise, retry signup
+        else {
+          errorMessage = errorDetail || "Please try signing up again.";
         }
       }
       // Check for validation errors

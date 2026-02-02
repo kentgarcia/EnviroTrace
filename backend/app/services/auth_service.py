@@ -77,34 +77,64 @@ class AuthService:
             
         except Exception as e:
             error_msg = str(e).lower()
-            # If user already exists in Supabase but is unconfirmed, resend OTP
+            # If user already exists in Supabase but is unconfirmed, delete them
             if "already registered" in error_msg or "user already exists" in error_msg or "already been registered" in error_msg or "user with this email already registered" in error_msg:
                 try:
-                    # Resend OTP for existing unconfirmed user
-                    await supabase_client.resend_otp(email=user_in.email)
-                    # Return success so frontend redirects to verify page
-                    return {
-                        "supabase_user_id": None,
-                        "email": user_in.email,
-                        "message": "Verification code resent to your email"
-                    }
+                    # Delete unconfirmed user to allow fresh signup
+                    # CRITICAL: Supabase's resend() doesn't actually send emails for existing unconfirmed users
+                    # The only reliable solution is to delete and recreate
+                    deleted = await supabase_client.delete_unconfirmed_user(email=user_in.email)
+                    
+                    if deleted:
+                        print(f"Deleted unconfirmed user {user_in.email}, allowing signup retry")
+                        # Now try to sign up again immediately
+                        try:
+                            auth_response = supabase.auth.sign_up({
+                                "email": user_in.email,
+                                "password": user_in.password,
+                                "options": {
+                                    "email_redirect_to": None,
+                                    "data": {
+                                        "first_name": user_in.first_name,
+                                        "last_name": user_in.last_name
+                                    }
+                                }
+                            })
+                            
+                            if auth_response.user:
+                                return {
+                                    "supabase_user_id": auth_response.user.id,
+                                    "email": user_in.email,
+                                    "message": "Verification code sent to your email"
+                                }
+                        except Exception as retry_error:
+                            print(f"Signup retry failed for {user_in.email}: {str(retry_error)}")
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Registration failed after cleanup. Please try again."
+                            )
+                    
+                    # If deletion failed, tell user to try again
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Unable to complete registration. Please try again."
+                    )
+                    
                 except HTTPException as http_exc:
-                    # If resend fails with "already confirmed", that means user is in our DB
-                    if http_exc.status_code == 400 and "already confirmed" in str(http_exc.detail).lower():
+                    # If deletion fails with "already confirmed", that means user is in our DB
+                    if http_exc.status_code == 400 and "already verified" in str(http_exc.detail).lower():
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail="An account with this email already exists. Please sign in instead."
                         )
-                    # Otherwise, let them try to sign up again
+                    # Re-raise other HTTP exceptions
+                    raise
+                    
+                except Exception as delete_error:
+                    print(f"Error handling existing user {user_in.email}: {str(delete_error)}")
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Unable to resend verification code. Please try again later."
-                    )
-                except Exception as resend_error:
-                    # Generic error - allow retry
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Registration failed. Please try again."
+                        detail="Registration failed. Please try again."
                     )
             
             raise HTTPException(
@@ -330,11 +360,45 @@ class AuthService:
         
         return True
     
-    async def resend_otp_code(self, *, email: str) -> bool:
+    async def resend_otp_code(self, *, email: str) -> dict:
         """
-        Resend OTP verification code to user's email.
+        Handle OTP resend request.
+        
+        Due to Supabase Auth limitation (resend() doesn't send emails for existing 
+        unconfirmed users), we delete the unconfirmed user so they can sign up again.
+        
+        Returns:
+            Dict indicating user should return to signup
+            
+        Raises:
+            HTTPException: With appropriate error codes
         """
-        return await supabase_client.resend_otp(email=email)
+        try:
+            # Delete unconfirmed user to allow fresh signup
+            deleted = await supabase_client.delete_unconfirmed_user(email=email)
+            
+            if deleted:
+                # User was deleted - tell frontend to redirect back to signup
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail="Verification session expired. Please sign up again to receive a new code."
+                )
+            else:
+                # Deletion failed - generic error
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Unable to resend code. Please try signing up again."
+                )
+                
+        except HTTPException:
+            # Re-raise HTTP exceptions (including our 410 Gone)
+            raise
+        except Exception as e:
+            print(f"Error in resend_otp_code for {email}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to process request. Please try again."
+            )
     
     async def _create_session_tracking(
         self,
