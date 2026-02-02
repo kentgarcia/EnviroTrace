@@ -111,14 +111,6 @@ export default function VerifyEmail() {
       const data = await response.json();
 
       if (!response.ok) {
-        // HTTP 409 Conflict or 410 Gone means verification expired - redirect to signup
-        if (response.status === 409 || response.status === 410) {
-          toast.error(data.detail || "Verification expired. Redirecting to signup...");
-          setTimeout(() => {
-            navigate({ to: "/sign-up" });
-          }, 2000);
-          return;
-        }
         throw new Error(data.detail || "Failed to resend code");
       }
 

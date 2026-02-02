@@ -362,75 +362,37 @@ class AuthService:
     
     async def resend_otp_code(self, *, email: str, password: Optional[str] = None) -> dict:
         """
-        Handle OTP resend request.
+        Resend OTP verification code to user's email.
         
-        Due to Supabase Auth limitation (resend() doesn't send emails for existing 
-        unconfirmed users), we delete the unconfirmed user and retry signup if password provided.
+        With custom SMTP provider, the standard resend() works reliably.
+        Password parameter kept for backward compatibility but not required.
         
         Args:
             email: User email
-            password: Optional password to enable automatic signup retry
+            password: Optional password (legacy, not used with working SMTP)
             
         Returns:
-            Dict with success message or error
+            Dict with success message
             
         Raises:
             HTTPException: With appropriate error codes
         """
-        supabase = supabase_client.get_supabase_admin()
-        
         try:
-            # Delete unconfirmed user to allow fresh signup
-            deleted = await supabase_client.delete_unconfirmed_user(email=email)
-            
-            if deleted and password:
-                # Password provided - automatically retry signup to send new email
-                print(f"Retrying signup for {email} after deleting unconfirmed user")
-                try:
-                    auth_response = supabase.auth.sign_up({
-                        "email": email,
-                        "password": password,
-                        "options": {
-                            "email_redirect_to": None
-                        }
-                    })
-                    
-                    if auth_response.user:
-                        return {
-                            "message": "Verification code has been resent to your email.",
-                            "email": email
-                        }
-                    else:
-                        raise Exception("Signup failed to create user")
-                        
-                except Exception as signup_error:
-                    print(f"Signup retry failed for {email}: {str(signup_error)}")
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Failed to resend code. Please try signing up again."
-                    )
-            
-            elif deleted:
-                # User deleted but no password - tell them to signup again
-                raise HTTPException(
-                    status_code=status.HTTP_410_GONE,
-                    detail="Verification session expired. Please sign up again to receive a new code."
-                )
-            else:
-                # Deletion failed
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Unable to resend code. Please try signing up again."
-                )
+            # Use standard resend - works with custom SMTP provider
+            await supabase_client.resend_otp(email=email, delete_if_unconfirmed=False)
+            return {
+                "message": "Verification code has been resent to your email.",
+                "email": email
+            }
                 
         except HTTPException:
-            # Re-raise HTTP exceptions
+            # Re-raise HTTP exceptions from resend_otp
             raise
         except Exception as e:
             print(f"Error in resend_otp_code for {email}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to process request. Please try again."
+                detail="Failed to resend verification code. Please try again."
             )
     
     async def _create_session_tracking(

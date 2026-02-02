@@ -207,22 +207,19 @@ async def delete_unconfirmed_user(email: str) -> bool:
         return False
 
 
-async def resend_otp(email: str, delete_if_unconfirmed: bool = True) -> bool:
+async def resend_otp(email: str, delete_if_unconfirmed: bool = False) -> bool:
     """
     Resend OTP verification code to user's email.
     
-    WARNING: Supabase's resend() endpoint has a known limitation - it returns HTTP 200
-    success but does NOT actually send emails for existing unconfirmed users.
-    This has been confirmed by analyzing Supabase Auth logs.
-    
-    The reliable solution is to delete the unconfirmed user first, then let signup send a fresh email.
+    With custom SMTP provider (not Supabase's rate-limited SMTP), the standard
+    resend() works reliably for both new and existing unconfirmed users.
     
     Args:
         email: User's email address
-        delete_if_unconfirmed: If True, delete unconfirmed users before allowing fresh signup
+        delete_if_unconfirmed: If True, delete user and require fresh signup (legacy fallback)
         
     Returns:
-        True if user was deleted (needs fresh signup) or resend was attempted
+        True if resend was successful
         
     Raises:
         HTTPException: For specific error conditions
@@ -230,26 +227,15 @@ async def resend_otp(email: str, delete_if_unconfirmed: bool = True) -> bool:
     supabase = get_supabase_admin()
     
     try:
-        # CRITICAL: Supabase resend() doesn't work for existing unconfirmed users
-        # Solution: Delete the user so they can sign up fresh and receive the email
-        if delete_if_unconfirmed:
-            print(f"Attempting to delete unconfirmed user {email} to enable fresh signup")
-            await delete_unconfirmed_user(email)
-            # User deleted successfully - fresh signup will now send email
-            return True
-        
-        # Fallback: Try standard resend (won't work for existing unconfirmed users)
-        # Using correct dictionary syntax per Supabase Python SDK docs
+        # Standard resend - works with custom SMTP provider
+        # Using dictionary syntax per Supabase Python SDK docs
         supabase.auth.resend({
             "type": "signup",
             "email": email
         })
-        print(f"WARNING: Called resend for {email} - may not send if user exists and is unconfirmed")
+        print(f"Resend OTP sent for {email}")
         return True
         
-    except HTTPException:
-        # Re-raise HTTP exceptions from delete_unconfirmed_user
-        raise
     except Exception as e:
         error_msg = str(e).lower()
         
