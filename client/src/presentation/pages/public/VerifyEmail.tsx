@@ -35,8 +35,8 @@ export default function VerifyEmail() {
   }, [countdown]);
 
   const handleVerify = async () => {
-    if (!email || otp.length !== 6) {
-      toast.error("Please enter your email and 6-digit code");
+    if (!email || otp.length < 6) {
+      toast.error("Please enter your email and verification code");
       return;
     }
 
@@ -156,7 +156,7 @@ export default function VerifyEmail() {
                 </Label>
                 <div className="flex justify-center">
                   <InputOTP
-                    maxLength={6}
+                    maxLength={8}
                     value={otp}
                     onChange={(value) => setOtp(value)}
                     disabled={isVerifying}
@@ -168,6 +168,8 @@ export default function VerifyEmail() {
                       <InputOTPSlot index={3} />
                       <InputOTPSlot index={4} />
                       <InputOTPSlot index={5} />
+                      <InputOTPSlot index={6} />
+                      <InputOTPSlot index={7} />
                     </InputOTPGroup>
                   </InputOTP>
                 </div>
@@ -179,7 +181,7 @@ export default function VerifyEmail() {
               <Button 
                 onClick={handleVerify} 
                 className="w-full" 
-                disabled={isVerifying || otp.length !== 6}
+                disabled={isVerifying || otp.length < 6}
               >
                 {isVerifying ? (
                   <>

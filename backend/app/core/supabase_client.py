@@ -178,7 +178,7 @@ async def resend_otp(email: str) -> bool:
     
     try:
         # Try to resend using the standard method first
-        supabase.auth.resend({
+        response = supabase.auth.resend({
             "type": "signup",
             "email": email,
             "options": {
@@ -189,18 +189,25 @@ async def resend_otp(email: str) -> bool:
     except Exception as e:
         error_msg = str(e).lower()
         
-        # If user doesn't exist or already confirmed, provide helpful message
-        if "not found" in error_msg or "user not found" in error_msg:
+        # If user doesn't exist in Supabase Auth, they need to sign up first
+        if "not found" in error_msg or "user not found" in error_msg or "invalid" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No unconfirmed account found with this email. Please sign up first."
+                detail="No pending signup found with this email. Please sign up first."
             )
-        elif "already confirmed" in error_msg or "email already confirmed" in error_msg:
+        elif "already confirmed" in error_msg or "email already confirmed" in error_msg or "email_confirmed_at" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already verified. Please sign in instead."
             )
+        elif "rate" in error_msg or "too many" in error_msg or "limit" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please wait a moment before trying again."
+            )
         else:
+            # Log the actual error for debugging
+            print(f"Resend OTP error: {str(e)}")
             # Generic error
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

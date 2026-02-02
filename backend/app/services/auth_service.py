@@ -77,20 +77,34 @@ class AuthService:
             
         except Exception as e:
             error_msg = str(e).lower()
-            # If user already exists but is unconfirmed, resend OTP instead of failing
-            if "already registered" in error_msg or "user already exists" in error_msg or "already been registered" in error_msg:
+            # If user already exists in Supabase but is unconfirmed, resend OTP
+            if "already registered" in error_msg or "user already exists" in error_msg or "already been registered" in error_msg or "user with this email already registered" in error_msg:
                 try:
                     # Resend OTP for existing unconfirmed user
                     await supabase_client.resend_otp(email=user_in.email)
+                    # Return success so frontend redirects to verify page
                     return {
-                        "supabase_user_id": None,  # We don't have the ID yet
+                        "supabase_user_id": None,
                         "email": user_in.email,
-                        "resent": True
+                        "message": "Verification code resent to your email"
                     }
-                except Exception as resend_error:
+                except HTTPException as http_exc:
+                    # If resend fails with "already confirmed", that means user is in our DB
+                    if http_exc.status_code == 400 and "already confirmed" in str(http_exc.detail).lower():
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="An account with this email already exists. Please sign in instead."
+                        )
+                    # Otherwise, let them try to sign up again
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"User already exists but failed to resend verification: {str(resend_error)}"
+                        detail=f"Unable to resend verification code. Please try again later."
+                    )
+                except Exception as resend_error:
+                    # Generic error - allow retry
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Registration failed. Please try again."
                     )
             
             raise HTTPException(
