@@ -18,11 +18,19 @@ export default function VerifyEmail() {
   const navigate = useNavigate();
   const searchParams = useSearch({ from: "/verify-email" });
   const [otp, setOtp] = useState("");
-  const [email, setEmail] = useState(searchParams?.email || "");
+  const [email, setEmail] = useState((searchParams as any)?.email || sessionStorage.getItem('signup_email') || "");
+  const [password, setPassword] = useState(sessionStorage.getItem('signup_password') || "");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [canResend, setCanResend] = useState(false);
   const [countdown, setCountdown] = useState(60);
+
+  // Clear stored password on successful verification or unmount
+  useEffect(() => {
+    return () => {
+      // Don't clear on unmount - user might navigate back
+    };
+  }, []);
 
   // Countdown timer for resend
   useEffect(() => {
@@ -57,9 +65,15 @@ export default function VerifyEmail() {
 
       // Check if account needs approval
       if (data.message && data.message.includes("pending admin approval")) {
+        // Clear stored credentials after successful verification
+        sessionStorage.removeItem('signup_password');
+        sessionStorage.removeItem('signup_email');
         toast.success("Email verified successfully!");
         navigate({ to: "/pending-approval", search: { email } });
       } else {
+        // Clear stored credentials after successful verification
+        sessionStorage.removeItem('signup_password');
+        sessionStorage.removeItem('signup_email');
         // Super admin or pre-approved account - redirect to dashboard
         toast.success("Email verified! You can now sign in.");
         navigate({ to: "/", search: { email } });
@@ -81,10 +95,17 @@ export default function VerifyEmail() {
     setIsResending(true);
 
     try {
+      const requestBody: any = { email };
+      
+      // Include password if available (enables automatic signup retry)
+      if (password) {
+        requestBody.password = password;
+      }
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -94,14 +115,14 @@ export default function VerifyEmail() {
         if (response.status === 409 || response.status === 410) {
           toast.error(data.detail || "Verification expired. Redirecting to signup...");
           setTimeout(() => {
-            navigate({ to: "/signup" });
+            navigate({ to: "/sign-up" });
           }, 2000);
           return;
         }
         throw new Error(data.detail || "Failed to resend code");
       }
 
-      toast.success("Verification code sent to your email!");
+      toast.success(data.message || "Verification code sent to your email!");
       setCanResend(false);
       setCountdown(60);
     } catch (error: any) {

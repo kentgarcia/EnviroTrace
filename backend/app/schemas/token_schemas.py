@@ -27,3 +27,4 @@ class OTPVerify(BaseModel):
 class ResendOTPRequest(BaseModel):
     """Schema for resending OTP code"""
     email: str = Field(..., description="User email address")
+    password: Optional[str] = Field(None, description="User password (optional, enables automatic retry)")

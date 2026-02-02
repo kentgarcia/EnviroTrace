@@ -63,6 +63,10 @@ export function SignUpForm() {
       // Registration successful - redirect to verify email page
       toast.success("Registration successful! Please check your email for verification code.");
 
+      // Store password temporarily for resend functionality (sessionStorage cleared on tab close)
+      sessionStorage.setItem('signup_password', data.password);
+      sessionStorage.setItem('signup_email', data.email);
+
       setTimeout(() => {
         navigate({ 
           to: "/verify-email", 

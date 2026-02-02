@@ -62,9 +62,13 @@ async def resend_otp(
 ):
     """
     Resend OTP verification code to user's email.
+    If password is provided, automatically retries signup after deleting unconfirmed user.
     """
-    await auth_service.resend_otp_code(email=resend_data.email)
-    return {
+    result = await auth_service.resend_otp_code(
+        email=resend_data.email,
+        password=resend_data.password
+    )
+    return result if result else {
         "message": "Verification code has been resent to your email."
     }
 
