@@ -116,6 +116,7 @@ export default function TopNavBarContainer({
   const { signOut, user } = useAuth();
   const clearToken = useAuthStore(state => state.clearToken);
   const roles = useAuthStore(state => state.roles);
+  const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
 
   const handleSignOut = async () => {
     await signOut();
@@ -141,7 +142,8 @@ export default function TopNavBarContainer({
   ];
 
   const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
-  const dashboardsToShow = userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
+  // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
+  const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
   const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute).map(
     (item) => {

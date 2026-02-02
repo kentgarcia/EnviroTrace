@@ -29,7 +29,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/presentation/components/shared/ui/alert-dialog";
-import { Loader2, Smartphone, Monitor, Tablet, HelpCircle, Power, PowerOff, Calendar, MapPin } from "lucide-react";
+import { Loader2, Smartphone, Monitor, Tablet, HelpCircle, Power, PowerOff, Calendar, MapPin, Filter, X } from "lucide-react";
 import { useToast } from "@/core/hooks/ui/use-toast";
 import {
     useAllSessions,
@@ -49,6 +49,11 @@ import {
 export function SessionManagement() {
     const [deviceFilter, setDeviceFilter] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("active");  // Default to active sessions
+    const [similarityFilter, setSimilarityFilter] = useState<{
+        userEmail?: string;
+        deviceType?: string;
+        ipAddress?: string;
+    } | null>(null);
     const [page, setPage] = useState(1);
     const pageSize = 10;
     const { toast } = useToast();
@@ -60,15 +65,48 @@ export function SessionManagement() {
     // Reset page when filters change
     React.useEffect(() => {
         setPage(1);
-    }, [deviceFilter, statusFilter]);
+    }, [deviceFilter, statusFilter, similarityFilter]);
 
     // Queries
-    const { data: sessions = [], isLoading, error } = useAllSessions({
+    const { data: allSessions = [], isLoading, error } = useAllSessions({
         device_type: deviceType,
         is_active: isActive,
         skip: (page - 1) * pageSize,
         limit: pageSize,
     });
+
+    // Apply client-side similarity filtering
+    const sessions = React.useMemo(() => {
+        if (!similarityFilter) return allSessions;
+
+        return allSessions.filter(session => {
+            const matchesUser = !similarityFilter.userEmail || 
+                session.user_email?.toLowerCase() === similarityFilter.userEmail.toLowerCase();
+            const matchesDevice = !similarityFilter.deviceType || 
+                session.device_type === similarityFilter.deviceType;
+            const matchesIP = !similarityFilter.ipAddress || 
+                session.ip_address === similarityFilter.ipAddress;
+            
+            return matchesUser && matchesDevice && matchesIP;
+        });
+    }, [allSessions, similarityFilter]);
+
+    const handleShowSimilar = (session: UserSession) => {
+        setSimilarityFilter({
+            userEmail: session.user_email || undefined,
+            deviceType: session.device_type,
+            ipAddress: session.ip_address || undefined,
+        });
+        toast({
+            title: "Similarity Filter Applied",
+            description: `Showing sessions matching: ${session.user_email}, ${session.device_type}, ${session.ip_address || 'any IP'}`,
+            variant: "default",
+        });
+    };
+
+    const clearSimilarityFilter = () => {
+        setSimilarityFilter(null);
+    };
 
     // Mutations
     const terminateSessionMutation = useTerminateSession();
@@ -197,6 +235,41 @@ export function SessionManagement() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
+                    {/* Similarity Filter Badge */}
+                    {similarityFilter && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Filter className="w-5 h-5 text-blue-600" />
+                                    <div>
+                                        <h3 className="font-semibold text-blue-900">Similarity Filter Active</h3>
+                                        <p className="text-sm text-blue-700 mt-1">
+                                            Showing sessions matching:
+                                            {similarityFilter.userEmail && (
+                                                <Badge className="ml-2 bg-blue-100 text-blue-800">User: {similarityFilter.userEmail}</Badge>
+                                            )}
+                                            {similarityFilter.deviceType && (
+                                                <Badge className="ml-2 bg-blue-100 text-blue-800">Device: {similarityFilter.deviceType}</Badge>
+                                            )}
+                                            {similarityFilter.ipAddress && (
+                                                <Badge className="ml-2 bg-blue-100 text-blue-800">IP: {similarityFilter.ipAddress}</Badge>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearSimilarityFilter}
+                                    className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                                >
+                                    <X className="w-4 h-4 mr-1" />
+                                    Clear
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Filters */}
                     <Card>
                         <CardHeader>
@@ -315,8 +388,17 @@ export function SessionManagement() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {session.is_active && (
-                                                        <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleShowSimilar(session)}
+                                                            title="Show similar sessions"
+                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        >
+                                                            <Filter className="w-4 h-4" />
+                                                        </Button>
+                                                        {session.is_active && (
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <Button variant="outline" size="sm">
@@ -350,8 +432,8 @@ export function SessionManagement() {
                                                                     </AlertDialogFooter>
                                                                 </AlertDialogContent>
                                                             </AlertDialog>
-                                                        </div>
-                                                    )}
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

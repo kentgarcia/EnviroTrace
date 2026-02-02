@@ -17,10 +17,10 @@ async def get_my_profile(
     """Get the profile of the current logged-in user"""
     profile = await crud_profile.get_by_user_id(db, user_id=current_user.id)
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found"
-        )
+        # Auto-create empty profile if it doesn't exist
+        from app.schemas.profile_schemas import ProfileCreate
+        profile_create = ProfileCreate(user_id=current_user.id)
+        profile = await crud_profile.create(db, obj_in=profile_create)
     return profile
 
 @router.put("/me", response_model=ProfilePublic)

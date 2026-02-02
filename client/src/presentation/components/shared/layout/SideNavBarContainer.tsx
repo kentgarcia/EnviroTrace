@@ -190,6 +190,7 @@ export default function SideNavBarContainer({
   const { signOut } = useAuth();
   const clearToken = useAuthStore(state => state.clearToken);
   const roles = useAuthStore(state => state.roles);
+  const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
   const { data: profile } = useMyProfile();
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -225,7 +226,8 @@ export default function SideNavBarContainer({
   ];
 
   const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
-  const dashboardsToShow = userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
+  // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
+  const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
   const menuItems: NavItem[] = getMenuItems(dashboardType).map(
     (item) => ({

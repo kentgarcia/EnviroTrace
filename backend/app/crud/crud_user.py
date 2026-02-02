@@ -25,6 +25,13 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(query)
         return result.scalars().first()
 
+    def get_by_supabase_id_sync(self, db: Session, *, supabase_user_id: uuid.UUID) -> Optional[User]:
+        """Get user by Supabase user ID (synchronous version)"""
+        return db.query(self.model).filter(
+            User.supabase_user_id == supabase_user_id,
+            User.deleted_at.is_(None)
+        ).first()
+
     async def get_by_supabase_id(self, db: AsyncSession, *, supabase_user_id: uuid.UUID) -> Optional[User]:
         """Get user by Supabase user ID"""
         query = select(self.model).filter(User.supabase_user_id == supabase_user_id, User.deleted_at.is_(None))
