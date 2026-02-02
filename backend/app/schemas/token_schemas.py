@@ -22,7 +22,7 @@ class TokenPayload(BaseModel):
 class OTPVerify(BaseModel):
     """Schema for OTP verification during signup"""
     email: str = Field(..., description="User email address")
-    token: str = Field(..., min_length=6, max_length=6, description="6-digit OTP code from email")
+    token: str = Field(..., min_length=6, max_length=8, description="OTP code from email (6-8 digits)")
 
 class ResendOTPRequest(BaseModel):
     """Schema for resending OTP code"""
