@@ -199,7 +199,15 @@ class AuthService:
                 await db.commit()
                 await db.refresh(internal_user)
         
-        # Create session tracking
+        # Check if account needs admin approval
+        if not internal_user.is_approved and not internal_user.is_super_admin:
+            # Email verified but not approved - do NOT create session or return tokens
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="PENDING_APPROVAL: Email verified. Your account is pending admin approval."
+            )
+        
+        # Only create session for approved users (super admins are auto-approved)
         await self._create_session_tracking(
             db=db,
             user_id=internal_user.id,
@@ -209,20 +217,14 @@ class AuthService:
             device_name=device_name
         )
         
-        # Add approval status to response for super admins
-        response_data = {
-            "access_token": supabase_session.access_token,
-            "token_type": "bearer",
-            "refresh_token": supabase_session.refresh_token,
-            "expires_in": supabase_session.expires_in,
-            "user": supabase_user.model_dump() if hasattr(supabase_user, 'model_dump') else dict(supabase_user)
-        }
-        
-        # Add approval message for non-super-admins
-        if not internal_user.is_approved and not internal_user.is_super_admin:
-            response_data["message"] = "Email verified. Your account is pending admin approval."
-        
-        return Token(**response_data)
+        # Return tokens only for approved users
+        return Token(
+            access_token=supabase_session.access_token,
+            token_type="bearer",
+            refresh_token=supabase_session.refresh_token,
+            expires_in=supabase_session.expires_in,
+            user=supabase_user.model_dump() if hasattr(supabase_user, 'model_dump') else dict(supabase_user)
+        )
     
     async def login_with_supabase(
         self,

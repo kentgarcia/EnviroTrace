@@ -60,24 +60,24 @@ export default function VerifyEmail() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle pending approval (403 with PENDING_APPROVAL code)
+        if (response.status === 403 && data.detail?.includes("PENDING_APPROVAL")) {
+          // Clear stored credentials
+          sessionStorage.removeItem('signup_password');
+          sessionStorage.removeItem('signup_email');
+          toast.success("Email verified successfully!");
+          navigate({ to: "/pending-approval", search: { email } });
+          return;
+        }
         throw new Error(data.detail || "Verification failed");
       }
 
-      // Check if account needs approval
-      if (data.message && data.message.includes("pending admin approval")) {
-        // Clear stored credentials after successful verification
-        sessionStorage.removeItem('signup_password');
-        sessionStorage.removeItem('signup_email');
-        toast.success("Email verified successfully!");
-        navigate({ to: "/pending-approval", search: { email } });
-      } else {
-        // Clear stored credentials after successful verification
-        sessionStorage.removeItem('signup_password');
-        sessionStorage.removeItem('signup_email');
-        // Super admin or pre-approved account - redirect to dashboard
-        toast.success("Email verified! You can now sign in.");
-        navigate({ to: "/", search: { email } });
-      }
+      // Success - approved user (super admin)
+      // Clear stored credentials after successful verification
+      sessionStorage.removeItem('signup_password');
+      sessionStorage.removeItem('signup_email');
+      toast.success("Email verified! You can now sign in.");
+      navigate({ to: "/", search: { email } });
     } catch (error: any) {
       console.error("Verification error:", error);
       toast.error(error.message || "Verification failed. Please try again.");
