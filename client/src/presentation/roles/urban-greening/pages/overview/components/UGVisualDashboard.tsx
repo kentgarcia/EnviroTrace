@@ -260,36 +260,43 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                     </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-                        <div className="h-[280px] min-w-0">
-                            <RechartsAreaChart
-                                title=""
-                                data={feesMonthly}
-                                height={280}
-                                color="#f59e0b"
-                                categoryFormatter={toShortMonth}
-                                noCard
-                            />
+                    {recentLoading ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="h-[280px] bg-gray-100 rounded animate-pulse" />
+                            <div className="h-[280px] bg-gray-100 rounded animate-pulse" />
                         </div>
-                        <div className="overflow-x-auto min-w-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="text-xs">Month</TableHead>
-                                        <TableHead className="text-xs text-right">Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {feesMonthly.map((row) => (
-                                        <TableRow key={row.id}>
-                                            <TableCell className="text-xs py-1">{row.label}</TableCell>
-                                            <TableCell className="text-xs py-1 text-right tabular-nums">{row.value}</TableCell>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                            <div className="h-[280px] min-w-0">
+                                <RechartsAreaChart
+                                    title=""
+                                    data={feesMonthly}
+                                    height={280}
+                                    color="#f59e0b"
+                                    categoryFormatter={toShortMonth}
+                                    noCard
+                                />
+                            </div>
+                            <div className="overflow-x-auto min-w-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="text-xs">Month</TableHead>
+                                            <TableHead className="text-xs text-right">Amount</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {feesMonthly.map((row) => (
+                                            <TableRow key={row.id}>
+                                                <TableCell className="text-xs py-1">{row.label}</TableCell>
+                                                <TableCell className="text-xs py-1 text-right tabular-nums">{row.value}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -349,15 +356,19 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                     <CardTitle className="text-base font-medium">UG Projects Plant Distribution</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                    <div className="h-[280px]">
-                        <RechartsPieChart
-                            title=""
-                            data={plantingTypeData}
-                            height={280}
-                            showLabels
-                            noCard
-                        />
-                    </div>
+                    {recentLoading ? (
+                        <div className="h-[280px] bg-gray-100 rounded animate-pulse" />
+                    ) : (
+                        <div className="h-[280px]">
+                            <RechartsPieChart
+                                title=""
+                                data={plantingTypeData}
+                                height={280}
+                                showLabels
+                                noCard
+                            />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -373,22 +384,30 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                         </TabsList>
                     </div>
                     <TabsContent value="type">
-                        <RechartsPieChart
-                            title="Requests by Type"
-                            data={treeTypePieData}
-                            height={320}
-                            legendAsList
-                            showLabels
-                        />
+                        {recentLoading ? (
+                            <div className="h-[320px] bg-gray-100 rounded animate-pulse" />
+                        ) : (
+                            <RechartsPieChart
+                                title="Requests by Type"
+                                data={treeTypePieData}
+                                height={320}
+                                legendAsList
+                                showLabels
+                            />
+                        )}
                     </TabsContent>
                     <TabsContent value="status">
-                        <RechartsPieChart
-                            title="Clearance Status"
-                            data={treeStatusPieData}
-                            height={320}
-                            legendAsList
-                            showLabels
-                        />
+                        {recentLoading ? (
+                            <div className="h-[320px] bg-gray-100 rounded animate-pulse" />
+                        ) : (
+                            <RechartsPieChart
+                                title="Clearance Status"
+                                data={treeStatusPieData}
+                                height={320}
+                                legendAsList
+                                showLabels
+                            />
+                        )}
                     </TabsContent>
                 </Tabs>
             </div>
@@ -401,14 +420,18 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                     </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                    <RechartsBarChart
-                        title=""
-                        data={speciesData.slice(0, 12)}
-                        height={300}
-                        color={["#22c55e", "#4f46e5", "#f59e42", "#eab308", "#a3e635", "#818cf8"]}
-                        insights={makeInsights(speciesData.slice(0, 12) as any)}
-                        noCard
-                    />
+                    {recentLoading ? (
+                        <div className="h-[300px] bg-gray-100 rounded animate-pulse" />
+                    ) : (
+                        <RechartsBarChart
+                            title=""
+                            data={speciesData.slice(0, 12)}
+                            height={300}
+                            color={["#22c55e", "#4f46e5", "#f59e42", "#eab308", "#a3e635", "#818cf8"]}
+                            insights={makeInsights(speciesData.slice(0, 12) as any)}
+                            noCard
+                        />
+                    )}
                 </CardContent>
             </Card>
 

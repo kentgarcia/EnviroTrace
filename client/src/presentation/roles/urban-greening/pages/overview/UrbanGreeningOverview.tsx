@@ -86,12 +86,7 @@ export const UrbanGreeningOverview: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
-                    {isLoading ? (
-                        <div className="text-center py-12">
-                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
-                            <p className="mt-2 text-gray-600">Loading dashboard...</p>
-                        </div>
-                    ) : hasError ? (
+                    {hasError ? (
                         <div className="text-center py-12 text-red-600">
                             <p>Error loading dashboard data. Please try again.</p>
                         </div>
@@ -100,7 +95,7 @@ export const UrbanGreeningOverview: React.FC = () => {
                             {/* Key Stats */}
                             <UGKeyStatsCards
                                 statCards={dashboardData?.stat_cards}
-                                loading={false}
+                                loading={isLoading}
                             />
 
                             {/* Visualized Dashboard */}
@@ -114,7 +109,7 @@ export const UrbanGreeningOverview: React.FC = () => {
                                 treeRequestStatusCounts={dashboardData?.tree_request_status_counts}
                                 treeTypesBarPreset={dashboardData?.tree_types_bar}
                                 ugMonthlyFromApi={dashboardData?.ug_monthly}
-                                recentLoading={false}
+                                recentLoading={isLoading}
                             />
                         </>
                     )}

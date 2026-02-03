@@ -61,7 +61,7 @@ def get_urban_greening_dashboard(
         UrbanGreeningProject.actual_end_date,
         UrbanGreeningProject.actual_start_date,
         UrbanGreeningProject.planting_date,
-        UrbanGreeningProject.date_received,
+        UrbanGreeningProject.date_received_of_request,
         cast(UrbanGreeningProject.created_at, Date),
     )
 
