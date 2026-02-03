@@ -47,7 +47,8 @@ export const useTreeSpecies = (search?: string) => {
   return useQuery({
     queryKey: ["tree-species", search],
     queryFn: () => fetchTreeSpecies(search),
-    staleTime: 5 * 60 * 1000, // 5 minutes - species don't change often
+    staleTime: 1 * 60 * 1000, // 1 minute - allow more frequent updates for species type changes
+    refetchOnMount: true, // Always refetch on component mount to get latest changes
   });
 };
 

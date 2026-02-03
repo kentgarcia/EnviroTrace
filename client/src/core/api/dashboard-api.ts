@@ -30,8 +30,16 @@ export interface UrbanGreeningDashboardOverview {
   ug_monthly: MonthValue[];
 }
 
-export const fetchUrbanGreeningDashboard =
-  async (): Promise<UrbanGreeningDashboardOverview> => {
-    const { data } = await apiClient.get("/dashboard/urban-greening");
-    return data;
-  };
+export const fetchUrbanGreeningDashboard = async (
+  year?: number,
+  quarter?: string
+): Promise<UrbanGreeningDashboardOverview> => {
+  const params = new URLSearchParams();
+  if (year) params.append("year", year.toString());
+  if (quarter && quarter !== "all") params.append("quarter", quarter);
+  
+  const { data } = await apiClient.get(
+    `/dashboard/urban-greening${params.toString() ? `?${params.toString()}` : ""}`
+  );
+  return data;
+};

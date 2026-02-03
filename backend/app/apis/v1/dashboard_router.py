@@ -27,7 +27,7 @@ def month_labels():
 @router.get("/urban-greening", response_model=UrbanGreeningDashboardOverview)
 def get_urban_greening_dashboard(
     year: int | None = None,
-    month: int | None = None,
+    quarter: str | None = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -35,7 +35,7 @@ def get_urban_greening_dashboard(
     
     Args:
         year: Filter by year (defaults to current year)
-        month: Optional filter by specific month (1-12)
+        quarter: Optional filter by quarter (Q1, Q2, Q3, Q4, or "all")
         db: Database session
     
     Returns:
@@ -44,7 +44,18 @@ def get_urban_greening_dashboard(
     if year is None:
         year = datetime.now().year
 
-    current_month = datetime.now().month if month is None else month
+    # Get months to filter based on quarter
+    quarter_months = None
+    if quarter and quarter != "all":
+        quarter_map = {
+            "Q1": [1, 2, 3],
+            "Q2": [4, 5, 6],
+            "Q3": [7, 8, 9],
+            "Q4": [10, 11, 12]
+        }
+        quarter_months = quarter_map.get(quarter.upper())
+    
+    current_month = datetime.now().month
 
     project_date_expr = func.coalesce(
         UrbanGreeningProject.actual_end_date,
@@ -56,16 +67,19 @@ def get_urban_greening_dashboard(
 
     # ===== STAT CARD DATA =====
     
-    # Fees - Yearly total (paid fees in selected year)
-    fees_yearly_total = db.query(
+    # Fees - Yearly total (paid fees in selected year/quarter)
+    fees_query = db.query(
         func.coalesce(func.sum(FeeRecord.amount), 0)
     ).filter(
         FeeRecord.payment_date.isnot(None),
         extract('year', FeeRecord.payment_date) == year,
         FeeRecord.status == 'paid'
-    ).scalar() or 0.0
+    )
+    if quarter_months:
+        fees_query = fees_query.filter(extract('month', FeeRecord.payment_date).in_(quarter_months))
+    fees_yearly_total = fees_query.scalar() or 0.0
     
-    # Fees - Monthly total (paid fees in current/selected month)
+    # Fees - Monthly total (paid fees in current month)
     fees_monthly_total = db.query(
         func.coalesce(func.sum(FeeRecord.amount), 0)
     ).filter(
@@ -75,18 +89,24 @@ def get_urban_greening_dashboard(
         FeeRecord.status == 'paid'
     ).scalar() or 0.0
     
-    # Urban Greening - Yearly total (quantity planted in selected year)
-    planting_yearly_total = db.query(
+    # Urban Greening - Yearly total (quantity planted in selected year/quarter)
+    planting_query = db.query(
         func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
     ).filter(
         extract('year', UrbanGreeningPlanting.planting_date) == year
-    ).scalar() or 0
+    )
+    if quarter_months:
+        planting_query = planting_query.filter(extract('month', UrbanGreeningPlanting.planting_date).in_(quarter_months))
+    planting_yearly_total = planting_query.scalar() or 0
 
-    project_yearly_total = db.query(
+    project_query = db.query(
         func.coalesce(func.sum(UrbanGreeningProject.total_plants), 0)
     ).filter(
         extract('year', project_date_expr) == year
-    ).scalar() or 0
+    )
+    if quarter_months:
+        project_query = project_query.filter(extract('month', project_date_expr).in_(quarter_months))
+    project_yearly_total = project_query.scalar() or 0
 
     urban_greening_yearly_total = planting_yearly_total + project_yearly_total
 
@@ -116,7 +136,7 @@ def get_urban_greening_dashboard(
 
     # ===== CHART DATA =====
     
-    # Monthly fees (paid amount by payment_date in current year)
+    # Monthly fees (paid amount by payment_date in current year/quarter)
     fee_query = db.query(
         extract('month', FeeRecord.payment_date).label('m'),
         func.coalesce(func.sum(FeeRecord.amount), 0)
@@ -126,24 +146,26 @@ def get_urban_greening_dashboard(
         FeeRecord.status == 'paid'
     )
     
-    if month is not None:
-        fee_query = fee_query.filter(extract('month', FeeRecord.payment_date) == month)
+    if quarter_months:
+        fee_query = fee_query.filter(extract('month', FeeRecord.payment_date).in_(quarter_months))
     
     fee_rows = fee_query.group_by(extract('month', FeeRecord.payment_date)).all()
 
     fee_by_month = {int(m): float(total) for m, total in fee_rows}
     fee_monthly: List[MonthValue] = []
-    for i, label in enumerate(month_labels(), start=1):
+    months_to_show = quarter_months if quarter_months else range(1, 13)
+    for i in months_to_show:
+        label = month_labels()[i - 1]
         fee_monthly.append(MonthValue(month=i, label=label, total=fee_by_month.get(i, 0.0)))
 
-    # Planting type breakdown (current year) - sum quantities instead of count
+    # Planting type breakdown (current year/quarter) - sum quantities instead of count
     type_query = db.query(
         UrbanGreeningPlanting.planting_type,
         func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
     ).filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
 
-    if month is not None:
-        type_query = type_query.filter(extract('month', UrbanGreeningPlanting.planting_date) == month)
+    if quarter_months:
+        type_query = type_query.filter(extract('month', UrbanGreeningPlanting.planting_date).in_(quarter_months))
 
     type_rows = type_query.group_by(UrbanGreeningPlanting.planting_type).all()
 
@@ -162,8 +184,8 @@ def get_urban_greening_dashboard(
         UrbanGreeningPlanting.planting_type != 'trees'
     )
 
-    if month is not None:
-        species_query = species_query.filter(extract('month', UrbanGreeningPlanting.planting_date) == month)
+    if quarter_months:
+        species_query = species_query.filter(extract('month', UrbanGreeningPlanting.planting_date).in_(quarter_months))
 
     species_rows = (
         species_query
@@ -183,8 +205,8 @@ def get_urban_greening_dashboard(
         extract('year', project_date_expr) == year
     )
 
-    if month is not None:
-        project_plants_query = project_plants_query.filter(extract('month', project_date_expr) == month)
+    if quarter_months:
+        project_plants_query = project_plants_query.filter(extract('month', project_date_expr).in_(quarter_months))
 
     project_plants_rows = project_plants_query.all()
 
@@ -238,14 +260,14 @@ def get_urban_greening_dashboard(
     # No sapling species data (feature removed)
     sapling_species_data: List[LabelValue] = []
 
-    # Tree request counts by type and status (current year)
+    # Tree request counts by type and status (current year/quarter)
     type_query = db.query(
         TreeRequest.request_type, 
         func.count(TreeRequest.id)
     ).filter(extract('year', TreeRequest.created_at) == year)
     
-    if month is not None:
-        type_query = type_query.filter(extract('month', TreeRequest.created_at) == month)
+    if quarter_months:
+        type_query = type_query.filter(extract('month', TreeRequest.created_at).in_(quarter_months))
     
     type_counts = type_query.group_by(TreeRequest.request_type).all()
     tree_request_type_counts = [
@@ -257,8 +279,8 @@ def get_urban_greening_dashboard(
         func.count(TreeRequest.id)
     ).filter(extract('year', TreeRequest.created_at) == year)
     
-    if month is not None:
-        status_query = status_query.filter(extract('month', TreeRequest.created_at) == month)
+    if quarter_months:
+        status_query = status_query.filter(extract('month', TreeRequest.created_at).in_(quarter_months))
     
     status_counts = status_query.group_by(TreeRequest.overall_status).all()
     tree_request_status_counts = [
@@ -268,35 +290,37 @@ def get_urban_greening_dashboard(
     # Trees to be cut/prune bar: Not available in new schema yet, return empty
     tree_types_bar = []
 
-    # Recent Activity monthly totals for current year (UG plantings and sapling requests)
-    ug_rows = (
-        db.query(
-            extract('month', UrbanGreeningPlanting.planting_date).label('m'),
-            func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
-        )
-        .filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
-        .group_by(extract('month', UrbanGreeningPlanting.planting_date))
-        .all()
-    )
+    # Recent Activity monthly totals for current year/quarter (UG plantings and projects)
+    ug_query = db.query(
+        extract('month', UrbanGreeningPlanting.planting_date).label('m'),
+        func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
+    ).filter(extract('year', UrbanGreeningPlanting.planting_date) == year)
+    
+    if quarter_months:
+        ug_query = ug_query.filter(extract('month', UrbanGreeningPlanting.planting_date).in_(quarter_months))
+    
+    ug_rows = ug_query.group_by(extract('month', UrbanGreeningPlanting.planting_date)).all()
     ug_by_month = {int(m): float(total) for m, total in ug_rows if m is not None}
 
-    project_ug_rows = (
-        db.query(
-            extract('month', project_date_expr).label('m'),
-            func.coalesce(func.sum(UrbanGreeningProject.total_plants), 0)
-        )
-        .filter(extract('year', project_date_expr) == year)
-        .group_by(extract('month', project_date_expr))
-        .all()
-    )
+    project_ug_query = db.query(
+        extract('month', project_date_expr).label('m'),
+        func.coalesce(func.sum(UrbanGreeningProject.total_plants), 0)
+    ).filter(extract('year', project_date_expr) == year)
+    
+    if quarter_months:
+        project_ug_query = project_ug_query.filter(extract('month', project_date_expr).in_(quarter_months))
+    
+    project_ug_rows = project_ug_query.group_by(extract('month', project_date_expr)).all()
 
     for m, total in project_ug_rows:
         if m is None:
             continue
         month_index = int(m)
         ug_by_month[month_index] = ug_by_month.get(month_index, 0.0) + float(total or 0)
+    
     ug_monthly: List[MonthValue] = []
-    for i, label in enumerate(month_labels(), start=1):
+    for i in months_to_show:
+        label = month_labels()[i - 1]
         ug_monthly.append(MonthValue(month=i, label=label, total=ug_by_month.get(i, 0.0)))
 
     return UrbanGreeningDashboardOverview(

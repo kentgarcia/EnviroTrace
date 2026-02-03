@@ -9,119 +9,22 @@ import { fetchUrbanGreeningDashboard } from "@/core/api/dashboard-api";
 import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
 
 // Overview data hooks
-export const useOverviewData = () => {
-  // Fetch planting statistics
+export const useOverviewData = (year: number, quarter: string) => {
+  // Fetch aggregated dashboard data from backend (all computations server-side)
   const {
-    data: plantingStats,
-    isLoading: plantingStatsLoading,
-    error: plantingStatsError,
+    data: dashboardData,
+    isLoading,
+    error,
   } = useQuery({
-    queryKey: ["urban-greening-statistics"],
-    queryFn: fetchUrbanGreeningStatistics,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch sapling statistics
-  const {
-    data: saplingStats,
-    isLoading: saplingStatsLoading,
-    error: saplingStatsError,
-  } = useQuery({
-    queryKey: ["sapling-statistics"],
-    queryFn: fetchSaplingStatistics,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch recent planting records
-  const {
-    data: recentPlantings,
-    isLoading: plantingsLoading,
-    error: plantingsError,
-  } = useQuery({
-    queryKey: ["recent-plantings"],
-    queryFn: () => fetchUrbanGreeningPlantings({ limit: 10 }),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch tree requests (ISO Schema)
-  const {
-    data: treeRequests,
-    isLoading: treeRequestsLoading,
-    error: treeRequestsError,
-  } = useQuery({
-    queryKey: ["tree-requests-iso-overview"],
-    queryFn: () => fetchTreeRequests({ limit: 1000, year: new Date().getFullYear() }), // Fetch all for stats
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch fee records for accurate fee statistics
-  const {
-    data: feeRecords,
-    isLoading: feeRecordsLoading,
-    error: feeRecordsError,
-  } = useQuery({
-    queryKey: ["fee-records-overview"],
-    queryFn: () => fetchUrbanGreeningFeeRecords(new Date().getFullYear()),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const isLoading =
-    plantingStatsLoading ||
-    saplingStatsLoading ||
-    plantingsLoading ||
-    treeRequestsLoading ||
-    feeRecordsLoading;
-  const hasError =
-    plantingStatsError ||
-    saplingStatsError ||
-    plantingsError ||
-    treeRequestsError ||
-    feeRecordsError;
-
-  // Transform data for charts
-  const treeRequestCharts = transformTreeRequestData(treeRequests || []);
-  const plantingCharts = transformPlantingData(plantingStats, recentPlantings || []);
-  const saplingCharts = transformSaplingData(saplingStats);
-  const feeData = calculateFeeDataFromRecords(feeRecords || []);
-
-  // Fetch aggregated dashboard data (minimal payload for dashboard)
-  const { data: dashboardData } = useQuery({
-    queryKey: ["ug-dashboard-aggregated"],
-    queryFn: fetchUrbanGreeningDashboard,
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["ug-dashboard-aggregated", year, quarter],
+    queryFn: () => fetchUrbanGreeningDashboard(year, quarter),
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   return {
-    // Raw data
-    urbanGreeningStatistics: plantingStats,
-    saplingStatistics: saplingStats,
-    treeRequests,
-    plantingRecords: recentPlantings,
-
-    // Loading states
-    isUrbanGreeningLoading: plantingStatsLoading,
-    isSaplingLoading: saplingStatsLoading,
-    isTreeRequestsLoading: treeRequestsLoading,
-    isPlantingLoading: plantingsLoading,
-
-    // Processed data for charts
-    requestStatusData: treeRequestCharts.statusPie,
-    requestTypeData: treeRequestCharts.typePie,
-    urgencyData: treeRequestCharts.urgencyBar,
-    plantingTypeData: plantingCharts.typeBreakdown,
-    speciesData: plantingCharts.speciesBar,
-    saplingSpeciesFallback: saplingCharts.speciesBreakdown,
-
-    // Fee data
-    feeData,
     dashboardData,
-
-    // Legacy properties for backward compatibility
-    plantingStats,
-    saplingStats,
-    recentPlantings,
     isLoading,
-    hasError,
+    hasError: !!error,
   };
 };
 

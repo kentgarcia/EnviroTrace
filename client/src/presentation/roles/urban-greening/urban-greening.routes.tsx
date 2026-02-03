@@ -5,7 +5,7 @@ import DashboardLayout from "@/presentation/components/shared/layout/DashboardLa
 import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
 import FeeRecords from "./pages/fee-records/FeeRecords";
 import TreeInventoryPage from "./pages/tree-inventory/TreeInventoryPage";
-import ISOTreeRequestsPage from "./pages/tree-requests/ISOTreeRequestsPage";
+import ISOTreeRequestsPage from "./pages/tree-requests/TreeRequestsPage";
 import ProcessingStandardsSettings from "./pages/tree-requests/components/ProcessingStandardsSettings";
 import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
 import UrbanGreeningSettings from "./pages/settings/UrbanGreeningSettings";
