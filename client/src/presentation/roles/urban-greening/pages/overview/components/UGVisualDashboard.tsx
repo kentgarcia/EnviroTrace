@@ -1,11 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { RechartsBarChart } from "@/presentation/components/shared/dashboard/RechartsBarChart";
 import { RechartsPieChart } from "@/presentation/components/shared/dashboard/RechartsPieChart";
 import { RechartsAreaChart } from "@/presentation/components/shared/dashboard/RechartsAreaChart";
 import { BarChart3 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
-import { fetchTreeManagementRequests } from "@/core/api/tree-management-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/presentation/components/shared/ui/table";
 
@@ -85,14 +83,6 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
             default: return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; // All
         }
     };
-    // Queries
-    const shouldFetchTreeReqs = !(treeRequestTypeCounts || treeRequestStatusCounts || treeTypesBarPreset);
-    const { data: treeReqs } = useQuery({
-        queryKey: ["viz-tree-requests"],
-        queryFn: fetchTreeManagementRequests,
-        staleTime: 5 * 60 * 1000,
-        enabled: shouldFetchTreeReqs,
-    });
 
     // Helper to render shorter month labels on the fees chart
     const toShortMonth = (label: string) => {
@@ -112,70 +102,13 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
         });
     }, [feeMonthly]);
 
-    // Re-implement tree pies using either provided aggregates or client-side fallback
-    const treeTypePieData = useMemo(() => {
-        if (typeof treeRequestTypeCounts !== "undefined" && treeRequestTypeCounts) return treeRequestTypeCounts;
-        const quarterMonths = getQuarterMonths(selectedQuarter);
-        const list = (treeReqs || []).filter((t: any) => {
-            if (!t.request_date) return false;
-            const d = new Date(t.request_date);
-            const year = d.getFullYear();
-            const month = d.getMonth();
-            return year === selectedYear && quarterMonths.includes(month);
-        });
-        const counts: Record<string, number> = {};
-        for (const t of list) counts[t.request_type] = (counts[t.request_type] || 0) + 1;
-        return Object.entries(counts).map(([id, value]) => ({ id, label: id.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()), value }));
-    }, [treeReqs, treeRequestTypeCounts, selectedYear, selectedQuarter]);
+    // Tree request data from backend (already filtered by year/quarter)
+    const treeTypePieData = treeRequestTypeCounts || [];
 
-    const treeStatusPieData = useMemo(() => {
-        if (typeof treeRequestStatusCounts !== "undefined" && treeRequestStatusCounts) return treeRequestStatusCounts;
-        const quarterMonths = getQuarterMonths(selectedQuarter);
-        const list = (treeReqs || []).filter((t: any) => {
-            if (!t.request_date) return false;
-            const d = new Date(t.request_date);
-            const year = d.getFullYear();
-            const month = d.getMonth();
-            return year === selectedYear && quarterMonths.includes(month);
-        });
-        const counts: Record<string, number> = {};
-        for (const t of list) counts[t.status] = (counts[t.status] || 0) + 1;
-        return Object.entries(counts).map(([id, value]) => ({ id, label: id.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()), value }));
-    }, [treeReqs, treeRequestStatusCounts, selectedYear, selectedQuarter]);
+    const treeStatusPieData = treeRequestStatusCounts || [];
 
-    // Trees to be cut down/Prune - type of trees graph (best effort parsing trees_and_quantities[])
-    const treeTypesBar = useMemo(() => {
-        if (typeof treeTypesBarPreset !== "undefined" && treeTypesBarPreset) return treeTypesBarPreset;
-        const quarterMonths = getQuarterMonths(selectedQuarter);
-        const list = (treeReqs || []).filter((t: any) => {
-            if (!t.request_date) return false;
-            const d = new Date(t.request_date);
-            const year = d.getFullYear();
-            const month = d.getMonth();
-            return year === selectedYear && quarterMonths.includes(month);
-        });
-        const counts: Record<string, number> = {};
-        for (const t of list) {
-            const arr: any[] = t.trees_and_quantities || [];
-            for (const raw of arr) {
-                const s = String(raw);
-                // Try patterns like "Narrah:3", "Acacia - 2", or "Acacia (2)"
-                const match = s.match(/([A-Za-z\s]+)[^0-9]*([0-9]+)/);
-                if (match) {
-                    const name = match[1].trim();
-                    const qty = Number(match[2] || 1);
-                    counts[name] = (counts[name] || 0) + (qty || 1);
-                } else {
-                    const name = s.trim();
-                    counts[name] = (counts[name] || 0) + 1;
-                }
-            }
-        }
-        const entries = Object.entries(counts).map(([label, value]) => ({ id: label, label, value }));
-        // Top 10
-        entries.sort((a, b) => b.value - a.value);
-        return entries.slice(0, 10);
-    }, [treeReqs, treeTypesBarPreset, selectedYear, selectedQuarter]);
+    // Trees to be cut down/Prune - type of trees graph (from backend)
+    const treeTypesBar = treeTypesBarPreset || [];
 
     // Helpers for insights (Total and Peak)
     const makeInsights = (data: Array<{ label: string; value: number }>) => {
@@ -350,10 +283,10 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                 </CardContent>
             </Card>
 
-            {/* Urban Greening Projects Plant Distribution */}
+            {/* Plant Distribution */}
             <Card className="col-span-1">
                 <CardHeader className="pb-2">
-                    <CardTitle className="text-base font-medium">UG Projects Plant Distribution</CardTitle>
+                    <CardTitle className="text-base font-medium">Plant Distribution</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                     {recentLoading ? (
@@ -364,7 +297,8 @@ const UGVisualDashboard: React.FC<UGVisualDashboardProps> = ({
                                 title=""
                                 data={plantingTypeData}
                                 height={280}
-                                showLabels
+                                showLabels={true}
+                                legendAsList={false}
                                 noCard
                             />
                         </div>

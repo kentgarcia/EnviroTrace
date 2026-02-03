@@ -278,6 +278,7 @@ class TreeRequest(Base):
     receiving_received_through = Column(String(100), nullable=True)  # Dropdown options + "Other"
     receiving_date_received_by_dept_head = Column(Date, nullable=True)
     receiving_name = Column(String(255), nullable=True)
+    receiving_organization = Column(String(255), nullable=True)
     receiving_address = Column(Text, nullable=True)
     receiving_contact = Column(String(100), nullable=True)  # Contact Number/Email
     receiving_request_status = Column(String(100), nullable=True)

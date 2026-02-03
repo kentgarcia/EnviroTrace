@@ -241,6 +241,7 @@ export interface TreeRequest {
   receiving_received_through?: string;
   receiving_date_received_by_dept_head?: string;
   receiving_name?: string;
+  receiving_organization?: string;
   receiving_address?: string;
   receiving_contact?: string;
   receiving_request_status?: string;
@@ -309,6 +310,7 @@ export interface TreeRequestCreate {
   receiving_received_through?: string;
   receiving_date_received_by_dept_head?: string;
   receiving_name?: string;
+  receiving_organization?: string;
   receiving_address?: string;
   receiving_contact?: string;
   receiving_request_status?: string;
@@ -351,6 +353,7 @@ export interface UpdateReceivingPhase {
   receiving_received_through?: string;
   receiving_date_received_by_dept_head?: string;
   receiving_name?: string;
+  receiving_organization?: string;
   receiving_address?: string;
   receiving_contact?: string;
   receiving_request_status?: string;

@@ -87,6 +87,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
         receiving_received_through: initialData.receiving_received_through,
         receiving_date_received_by_dept_head: initialData.receiving_date_received_by_dept_head,
         receiving_name: initialData.receiving_name,
+        receiving_organization: initialData.receiving_organization,
         receiving_address: initialData.receiving_address,
         receiving_contact: initialData.receiving_contact,
         receiving_request_status: initialData.receiving_request_status,
@@ -391,6 +392,16 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                       value={formData.receiving_name || ""}
                       onChange={(e) => handleInputChange('receiving_name', e.target.value)}
                       placeholder="Requester name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Organization</Label>
+                    <Input
+                      className="rounded-lg"
+                      value={formData.receiving_organization || ""}
+                      onChange={(e) => handleInputChange('receiving_organization', e.target.value)}
+                      placeholder="Organization or company"
                     />
                   </div>
 

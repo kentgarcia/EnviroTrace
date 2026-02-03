@@ -27,7 +27,7 @@ class DuplicateTreeCodeError(Exception):
     """Raised when a tree code already exists."""
 
 
-TREE_CODE_PATTERN = re.compile(r"^TAG-(?P<year>\d{4})-(\d{6})$")
+TREE_CODE_PATTERN = re.compile(r"^(?P<year>\d{4})-(?P<sequence>\d{4})$")
 
 
 def _extract_year_from_code(tree_code: Optional[str]) -> Optional[int]:
@@ -125,32 +125,42 @@ def count_trees_using_species(db: Session, common_name: str) -> int:
 # ==================== Tree Code Generation ====================
 
 def generate_tree_code(db: Session, year: Optional[int] = None) -> str:
-    """Generate unique tree code: TAG-YYYY-XXXXXX"""
+    """Generate unique tree code: YYYY-NNNN (detects and fills gaps in sequence)"""
     try:
         target_year = int(year) if year is not None else datetime.now().year
     except (TypeError, ValueError):
         target_year = datetime.now().year
 
     target_year = max(1900, min(target_year, 9999))
-    prefix = f"TAG-{target_year}-"
+    prefix = f"{target_year}-"
 
-    # Find the highest number for this year
-    result = (
-        db.query(func.max(TreeInventory.tree_code))
+    # Get all existing tree codes for this year
+    existing_codes = (
+        db.query(TreeInventory.tree_code)
         .filter(TreeInventory.tree_code.like(f"{prefix}%"))
-        .scalar()
+        .all()
     )
 
-    if result:
-        try:
-            last_num = int(result.replace(prefix, ""))
-            new_num = last_num + 1
-        except Exception:
-            new_num = 1
-    else:
-        new_num = 1
+    if not existing_codes:
+        return f"{prefix}0001"
 
-    return f"{prefix}{str(new_num).zfill(6)}"
+    # Extract sequence numbers
+    sequence_numbers = set()
+    for (code,) in existing_codes:
+        try:
+            seq = int(code.replace(prefix, ""))
+            sequence_numbers.add(seq)
+        except Exception:
+            continue
+
+    # Find first gap in sequence
+    max_seq = max(sequence_numbers) if sequence_numbers else 0
+    for i in range(1, max_seq + 1):
+        if i not in sequence_numbers:
+            return f"{prefix}{str(i).zfill(4)}"
+
+    # No gaps found, use next number
+    return f"{prefix}{str(max_seq + 1).zfill(4)}"
 
 
 def generate_project_code(db: Session) -> str:
@@ -221,8 +231,8 @@ def get_tree_by_code(db: Session, tree_code: str) -> Optional[TreeInventory]:
     return db.query(TreeInventory).filter(TreeInventory.tree_code == tree_code).first()
 
 
-def create_tree(db: Session, tree_data: TreeInventoryCreate) -> TreeInventory:
-    """Create new tree in inventory"""
+def create_tree(db: Session, tree_data: TreeInventoryCreate, current_user=None) -> TreeInventory:
+    """Create new tree in inventory with automatic initial monitoring log"""
     # Generate tree code if not provided
     planted_date = tree_data.planted_date
     target_year = planted_date.year if planted_date else datetime.now().year
@@ -270,6 +280,39 @@ def create_tree(db: Session, tree_data: TreeInventoryCreate) -> TreeInventory:
         raise
 
     db.refresh(db_tree)
+    
+    # Automatically create initial monitoring log
+    inspector_name = "System"
+    if current_user:
+        if hasattr(current_user, 'profile') and current_user.profile:
+            if current_user.profile.first_name or current_user.profile.last_name:
+                inspector_name = f"{current_user.profile.first_name or ''} {current_user.profile.last_name or ''}".strip()
+            else:
+                inspector_name = current_user.email
+        else:
+            inspector_name = current_user.email
+    
+    # Build monitoring log notes
+    log_notes = f"Initial tree registration. Status: {tree_data.status}, Health: {tree_data.health}"
+    if tree_data.notes:
+        log_notes += f"\n\nNotes: {tree_data.notes}"
+    
+    # Create monitoring log
+    monitoring_log = TreeMonitoringLog(
+        tree_id=db_tree.id,
+        inspection_date=date.today(),
+        health_status=tree_data.health,
+        height_meters=tree_data.height_meters,
+        diameter_cm=tree_data.diameter_cm,
+        notes=log_notes,
+        inspector_name=inspector_name,
+        photos=photos_json
+    )
+    
+    db.add(monitoring_log)
+    db.commit()
+    db.refresh(db_tree)
+    
     return db_tree
 
 
@@ -569,7 +612,6 @@ def get_tree_inventory_stats(db: Session) -> TreeInventoryStats:
     """Get comprehensive tree inventory statistics"""
     current_year = datetime.now().year
     active_clause = (TreeInventory.is_archived == False)
-    active_clause = (TreeInventory.is_archived == False)
     
     # Total counts by status
     total = db.query(func.count(TreeInventory.id)).filter(active_clause).scalar() or 0
@@ -663,6 +705,7 @@ def get_tree_carbon_statistics(db: Session) -> TreeCarbonStatistics:
     from datetime import datetime
     
     current_year = datetime.now().year
+    active_clause = (TreeInventory.is_archived == False)
     
     # ==================== Tree Count & Composition ====================
     

@@ -79,6 +79,7 @@ class TreeRequestCreate(BaseModel):
     receiving_received_through: Optional[str] = None
     receiving_date_received_by_dept_head: Optional[date] = None
     receiving_name: Optional[str] = None
+    receiving_organization: Optional[str] = None
     receiving_address: Optional[str] = None
     receiving_contact: Optional[str] = None
     receiving_request_status: Optional[str] = None
@@ -120,6 +121,7 @@ class UpdateReceivingPhase(BaseModel):
     receiving_received_through: Optional[str] = None
     receiving_date_received_by_dept_head: Optional[date] = None
     receiving_name: Optional[str] = None
+    receiving_organization: Optional[str] = None
     receiving_address: Optional[str] = None
     receiving_contact: Optional[str] = None
     receiving_request_status: Optional[str] = None
@@ -169,6 +171,7 @@ class TreeRequestUpdate(BaseModel):
     receiving_received_through: Optional[str] = None
     receiving_date_received_by_dept_head: Optional[date] = None
     receiving_name: Optional[str] = None
+    receiving_organization: Optional[str] = None
     receiving_address: Optional[str] = None
     receiving_contact: Optional[str] = None
     receiving_request_status: Optional[str] = None
@@ -211,6 +214,7 @@ class TreeRequestInDB(TreeRequestBase):
     receiving_received_through: Optional[str] = None
     receiving_date_received_by_dept_head: Optional[date] = None
     receiving_name: Optional[str] = None
+    receiving_organization: Optional[str] = None
     receiving_address: Optional[str] = None
     receiving_contact: Optional[str] = None
     receiving_request_status: Optional[str] = None

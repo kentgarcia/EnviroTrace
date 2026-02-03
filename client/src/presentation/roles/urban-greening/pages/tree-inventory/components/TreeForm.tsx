@@ -70,7 +70,7 @@ interface TreeFormProps {
   onCancel: () => void;
 }
 
-const TREE_CODE_PATTERN = /^TAG-\d{4}-\d{6}$/;
+const TREE_CODE_PATTERN = /^\d{4}-\d{4}$/;
 
 // Search control component for the map
 const SearchControl: React.FC<{ onLocationSelect: (lat: number, lng: number, address: string) => void }> = ({ onLocationSelect }) => {
@@ -192,7 +192,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
   }, [formData.planted_date]);
 
   const currentCodeYear = useMemo(() => {
-    const match = treeCode.match(/^TAG-(\d{4})-\d{6}$/);
+    const match = treeCode.match(/^(\d{4})-\d{4}$/);
     return match ? Number(match[1]) : null;
   }, [treeCode]);
 
@@ -261,6 +261,16 @@ const TreeForm: React.FC<TreeFormProps> = ({
 
   const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    // Auto-set health to dead when status is cut
+    const typedStatus = newStatus as "alive" | "cut" | "dead" | "replaced" | "unknown";
+    if (newStatus === "cut") {
+      setFormData((prev) => ({ ...prev, status: typedStatus, health: "dead" }));
+    } else {
+      setFormData((prev) => ({ ...prev, status: typedStatus }));
+    }
   };
 
   const handleSpeciesSelect = (species: TreeSpecies) => {
@@ -483,7 +493,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             <Input
               value={treeCode}
               onChange={(e) => handleTreeCodeChange(e.target.value)}
-              placeholder="TAG-2027-000001"
+              placeholder="2027-0001"
               className="mt-1"
             />
           </div>
@@ -509,7 +519,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
               `Automatically generated using ${suggestedYear}.`
             )
           ) : (
-            <span className="text-amber-600">Manual override active. Ensure the code follows TAG-YYYY-XXXXXX.</span>
+            <span className="text-amber-600">Manual override active. Ensure the code follows YYYY-NNNN format.</span>
           )}
         </div>
         {suggestionQuery.isError && (
@@ -680,7 +690,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             <Label className="text-sm font-medium">Status</Label>
             <select
               value={formData.status}
-              onChange={(e) => handleChange("status", e.target.value)}
+              onChange={(e) => handleStatusChange(e.target.value)}
               className="mt-1 w-full px-3 py-2 border rounded-lg text-sm"
             >
               <option value="unknown">Unknown</option>

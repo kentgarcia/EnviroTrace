@@ -24,12 +24,14 @@ import {
   XCircle,
   Archive,
   ArchiveRestore,
-  ClipboardList
+  ClipboardList,
+  Edit2,
+  Eye
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { useSearch } from "@tanstack/react-router";
 
-import { useTreeInventory, useTreeStats, useTreeMutations } from "./logic/useTreeInventory";
+import { useTreeInventory, useTreeMutations } from "./logic/useTreeInventory";
 import { TreeInventory } from "@/core/api/tree-inventory-api";
 import TreeForm from "./components/TreeForm";
 import TreeDetailPanel from "./components/TreeDetailPanel";
@@ -69,7 +71,6 @@ const TreeInventoryPage: React.FC = () => {
     search: searchTerm || undefined,
     is_archived: showArchived,
   });
-  const { data: stats } = useTreeStats();
   const { createMutation, updateMutation, archiveMutation, restoreMutation } = useTreeMutations();
 
   // Table columns
@@ -162,6 +163,64 @@ const TreeInventoryPage: React.FC = () => {
         </span>
       ),
     },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const tree = row.original;
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDetailTree(tree);
+              }}
+              className="h-8 w-8 p-0"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditTree(tree);
+              }}
+              className="h-8 w-8 p-0"
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            {!tree.is_archived ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleArchiveTree(tree);
+                }}
+                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRestoreTree(tree);
+                }}
+                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+              >
+                <ArchiveRestore className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        );
+      },
+    },
   ], []);
 
   // Handlers
@@ -208,7 +267,7 @@ const TreeInventoryPage: React.FC = () => {
             <div>
               <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Inventory</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Unified registry for all trees • {stats?.total_trees || 0} total trees
+                Unified registry for all trees
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -353,9 +412,9 @@ const TreeInventoryPage: React.FC = () => {
                 </Card>
               </div>
 
-              {/* Right Panel - Details or Stats Summary */}
-              <div className={`transition-all duration-300 ${detailTree ? 'w-[40%]' : 'w-[300px]'}`}>
-                {detailTree ? (
+              {/* Right Panel - Tree Details */}
+              {detailTree && (
+                <div className="w-[40%]">
                   <TreeDetailPanel
                     tree={detailTree}
                     onClose={() => setDetailTree(null)}
@@ -366,52 +425,8 @@ const TreeInventoryPage: React.FC = () => {
                     isArchiving={archiveMutation.isPending}
                     isRestoring={restoreMutation.isPending}
                   />
-                ) : (
-                  <Card className="h-full">
-                    <CardHeader>
-                      <CardTitle className="text-lg">Quick Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-green-50 rounded-lg">
-                          <div className="text-2xl font-bold text-green-700">{stats?.alive_trees || 0}</div>
-                          <div className="text-xs text-green-600">Alive Trees</div>
-                        </div>
-                        <div className="p-3 bg-red-50 rounded-lg">
-                          <div className="text-2xl font-bold text-red-700">{stats?.cut_trees || 0}</div>
-                          <div className="text-xs text-red-600">Cut Trees</div>
-                        </div>
-                        <div className="p-3 bg-yellow-50 rounded-lg">
-                          <div className="text-2xl font-bold text-yellow-700">{stats?.needs_attention_trees || 0}</div>
-                          <div className="text-xs text-yellow-600">Needs Attention</div>
-                        </div>
-                        <div className="p-3 bg-blue-50 rounded-lg">
-                          <div className="text-2xl font-bold text-blue-700">{stats?.trees_planted_this_year || 0}</div>
-                          <div className="text-xs text-blue-600">Planted This Year</div>
-                        </div>
-                      </div>
-
-                      {stats?.replacement_ratio !== null && stats?.replacement_ratio !== undefined && (
-                        <div className="p-3 border rounded-lg">
-                          <div className="text-sm text-gray-600">Replacement Ratio</div>
-                          <div className="text-xl font-bold text-gray-900">
-                            {stats.replacement_ratio}:1
-                            {stats.replacement_ratio >= 1 ? (
-                              <span className="text-green-600 text-sm ml-2">✓ Good</span>
-                            ) : (
-                              <span className="text-red-600 text-sm ml-2">⚠ Below target</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-gray-400 pt-2">
-                        Click on a tree row to view details
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -250,9 +250,9 @@ def create_tree(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permissions_sync(['tree.create']))
 ):
-    """Create a new tree in the inventory"""
+    """Create a new tree in the inventory with automatic initial monitoring log"""
     try:
-        tree = crud.create_tree(db, tree_data)
+        tree = crud.create_tree(db, tree_data, current_user)
     except crud.DuplicateTreeCodeError:
         raise HTTPException(status_code=409, detail="Tree code already exists")
     return TreeInventoryResponse.from_db_model(tree)
@@ -413,7 +413,7 @@ def create_trees_batch(
     """Create multiple trees in a single request (for bulk import)"""
     created_trees = []
     for tree_data in trees_data:
-        tree = crud.create_tree(db, tree_data)
+        tree = crud.create_tree(db, tree_data, current_user)
         created_trees.append(TreeInventoryResponse.from_db_model(tree))
     return created_trees
 
@@ -444,7 +444,7 @@ def add_trees_to_project(
         if not tree_data.barangay and project.barangay:
             tree_data.barangay = project.barangay
         
-        tree = crud.create_tree(db, tree_data)
+        tree = crud.create_tree(db, tree_data, current_user)
         created_trees.append(TreeInventoryResponse.from_db_model(tree))
     
     # Update project trees_planted count
