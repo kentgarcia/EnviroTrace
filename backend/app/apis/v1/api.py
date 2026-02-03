@@ -1,6 +1,5 @@
 # app/apis/v1/api.py
 from fastapi import APIRouter
-from .sapling_requests import router as sapling_requests_router
 from .tree_inventory_router import router as tree_inventory_router
 from .urban_greening_projects import router as urban_greening_projects_router
 from .upload_router import router as upload_router
@@ -20,7 +19,6 @@ api_v1_router.include_router(test_schedules.router, prefix="/test-schedules", ta
 api_v1_router.include_router(tree_management_router.router, prefix="/tree-management", tags=["Tree Management"])
 api_v1_router.include_router(planting_router.router, prefix="/planting", tags=["Planting Records"])
 api_v1_router.include_router(tree_inventory_router)  # Tree Inventory System
-api_v1_router.include_router(sapling_requests_router)
 api_v1_router.include_router(urban_greening_projects_router, prefix="/urban-greening-projects", tags=["Urban Greening Projects"])
 api_v1_router.include_router(dashboard_router)
 api_v1_router.include_router(gemini_router, prefix="/gemini", tags=["Gemini AI"])

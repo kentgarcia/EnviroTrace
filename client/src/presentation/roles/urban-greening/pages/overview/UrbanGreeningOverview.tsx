@@ -36,7 +36,7 @@ export const UrbanGreeningOverview: React.FC = () => {
         dashboardData,
     } = useOverviewData();
 
-    const isChartsLoading = isTreeRequestsLoading || isPlantingLoading || isSaplingRecordsLoading;
+    const isChartsLoading = isTreeRequestsLoading || isPlantingLoading;
 
     const handleRefresh = () => {
         queryClient.invalidateQueries({ queryKey: ["ug-dashboard-aggregated"] });
@@ -44,7 +44,6 @@ export const UrbanGreeningOverview: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ["sapling-statistics"] });
         queryClient.invalidateQueries({ queryKey: ["tree-requests-iso-overview"] });
         queryClient.invalidateQueries({ queryKey: ["recent-plantings"] });
-        queryClient.invalidateQueries({ queryKey: ["recent-sapling-requests"] });
         queryClient.invalidateQueries({ queryKey: ["fee-records-overview"] });
         queryClient.invalidateQueries({ queryKey: ["viz-tree-requests"] });
     };

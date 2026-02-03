@@ -125,17 +125,6 @@ export const getAuditDescription = (log: AuditLog): string => {
         }
     }
     
-    // ==================== SAPLING REQUESTS ====================
-    if (path.includes('/sapling-requests')) {
-        if (method === 'POST') return 'Submitted sapling request';
-        if (method === 'PUT') return 'Updated sapling request';
-        if (method === 'DELETE') return 'Cancelled sapling request';
-        if (method === 'GET') {
-            if (path.match(/\/sapling-requests\/[^\/]+$/)) return 'Viewed sapling request details';
-            return 'Viewed sapling requests';
-        }
-    }
-    
     // ==================== SESSION MANAGEMENT ====================
     if (path.includes('/session')) {
         if (path.includes('/terminate-all')) return 'Terminated all user sessions';

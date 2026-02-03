@@ -23,34 +23,6 @@ export interface PlantingStatistics {
   recent_plantings: UrbanGreeningPlanting[];
 }
 
-// Sapling Requests
-export interface SaplingRequest {
-  id: string;
-  request_number: string;
-  requester_name: string;
-  requester_contact?: string | null;
-  species_requested: string;
-  quantity_requested: number;
-  quantity_collected?: number | null;
-  purpose: string;
-  delivery_address?: string | null;
-  date_received: string;
-  collection_date?: string | null;
-  status: "pending" | "approved" | "collected" | "rejected";
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SaplingStatistics {
-  total_requests: number;
-  total_quantity_requested: number;
-  total_quantity_collected: number;
-  by_species: Record<string, number>;
-  by_status: Record<string, number>;
-  recent_requests: SaplingRequest[];
-}
-
 // Fee Records
 export interface UrbanGreeningFeeRecord {
   id: string;
@@ -78,7 +50,6 @@ export interface DashboardOverview {
   tree_request_status_counts: Array<{ label: string; value: number }>;
   tree_types_bar: Array<{ label: string; value: number }>;
   ug_monthly: Array<{ month: number; label: string; total: number }>;
-  saplings_monthly: Array<{ month: number; label: string; total: number }>;
 }
 
 class UrbanGreeningAPI {
@@ -101,28 +72,6 @@ class UrbanGreeningAPI {
 
   async createPlanting(data: Partial<UrbanGreeningPlanting>): Promise<UrbanGreeningPlanting> {
     const response = await apiClient.post("/planting/urban-greening/", data);
-    return response.data;
-  }
-
-  // Sapling Requests
-  async getSaplingRequests(params?: {
-    skip?: number;
-    limit?: number;
-    status?: string;
-  }): Promise<SaplingRequest[]> {
-    const response = await apiClient.get("/sapling-requests/", {
-      params: params || {},
-    });
-    return response.data;
-  }
-
-  async getSaplingStatistics(): Promise<SaplingStatistics> {
-    const response = await apiClient.get("/sapling-requests/statistics/");
-    return response.data;
-  }
-
-  async createSaplingRequest(data: Partial<SaplingRequest>): Promise<SaplingRequest> {
-    const response = await apiClient.post("/sapling-requests/", data);
     return response.data;
   }
 

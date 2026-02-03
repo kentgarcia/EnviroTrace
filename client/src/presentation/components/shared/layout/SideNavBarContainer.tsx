@@ -135,11 +135,6 @@ function getMenuItems(
         icon: <Sprout size={18} />,
       },
       {
-        label: "Sapling Requests",
-        path: `${basePath}/sapling-requests`,
-        icon: <Sprout size={18} />,
-      },
-      {
         label: "Species Management",
         path: `${basePath}/species`,
         icon: <Leaf size={18} />,

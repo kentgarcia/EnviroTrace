@@ -10,7 +10,6 @@ import ProcessingStandardsSettings from "./pages/tree-requests/components/Proces
 import GreeningProjectsPage from "./pages/greening-projects/GreeningProjectsPage";
 import UrbanGreeningSettings from "./pages/settings/UrbanGreeningSettings";
 import SpeciesManagementPage from "./pages/species/SpeciesManagementPage";
-import SaplingRequestsPage from "./pages/sapling-requests/SaplingRequestsPage";
 import UrbanGreeningReports from "./pages/reports/UrbanGreeningReports";
 
 const urbanGreeningLayout = createRoute({
@@ -71,12 +70,6 @@ const speciesManagementRoute = createRoute({
     component: SpeciesManagementPage,
 });
 
-const saplingRequestsRoute = createRoute({
-    getParentRoute: () => urbanGreeningLayout,
-    path: "sapling-requests",
-    component: SaplingRequestsPage,
-});
-
 const reportsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "reports",
@@ -92,7 +85,6 @@ urbanGreeningLayout.addChildren([
     feeRecordsRoute,
     settingsRoute,
     speciesManagementRoute,
-    saplingRequestsRoute,
     reportsRoute
 ]);
 

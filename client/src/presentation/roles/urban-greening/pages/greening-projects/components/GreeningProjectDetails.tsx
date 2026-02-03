@@ -223,17 +223,51 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
         {/* Details Tab */}
         <TabsContent value="details" className="space-y-4 mt-4">
           {/* Project Info Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {project.barangay && (
+              <Card className="border-0 bg-gray-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-gray-500 mb-1">
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-xs">Barangay</span>
+                  </div>
+                  <div className="font-medium text-sm">{project.barangay}</div>
+                </CardContent>
+              </Card>
+            )}
             <Card className="border-0 bg-gray-50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <MapPin className="w-4 h-4" />
-                  <span className="text-xs">Location</span>
+                  <span className="text-xs">Location/Address</span>
                 </div>
-                <div className="font-medium text-sm">{project.location}</div>
-                {project.barangay && (
-                  <div className="text-xs text-gray-500">{project.barangay}</div>
-                )}
+                <div className="font-medium text-sm">{project.location || "-"}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-gray-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-xs">Date Received</span>
+                </div>
+                <div className="font-medium text-sm">
+                  {(project as any).date_received
+                    ? new Date((project as any).date_received).toLocaleDateString()
+                    : "Not set"}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-gray-50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-xs">Date Sapling Received</span>
+                </div>
+                <div className="font-medium text-sm">
+                  {(project as any).date_sapling_received
+                    ? new Date((project as any).date_sapling_received).toLocaleDateString()
+                    : "Not set"}
+                </div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-gray-50">
@@ -258,6 +292,17 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
                 <div className="font-medium text-sm">{totalPlants} plants</div>
               </CardContent>
             </Card>
+            {project.contact_number && (
+              <Card className="border-0 bg-gray-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 text-gray-500 mb-1">
+                    <User className="w-4 h-4" />
+                    <span className="text-xs">Contact</span>
+                  </div>
+                  <div className="font-medium text-sm">{project.contact_number}</div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Plant Types Breakdown */}

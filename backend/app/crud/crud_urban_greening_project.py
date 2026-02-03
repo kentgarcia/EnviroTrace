@@ -48,8 +48,17 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
             start = datetime(year, 1, 1)
             end = datetime(year + 1, 1, 1)
             query = query.filter(
-                UrbanGreeningProject.created_at >= start,
-                UrbanGreeningProject.created_at < end,
+                or_(
+                    and_(
+                        UrbanGreeningProject.date_received_of_request >= start,
+                        UrbanGreeningProject.date_received_of_request < end,
+                    ),
+                    and_(
+                        UrbanGreeningProject.date_received_of_request.is_(None),
+                        UrbanGreeningProject.created_at >= start,
+                        UrbanGreeningProject.created_at < end,
+                    )
+                )
             )
 
         if search:
@@ -101,7 +110,7 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
         )
 
         return (
-            query.order_by(UrbanGreeningProject.created_at.desc())
+            query.order_by(UrbanGreeningProject.date_received_of_request.desc().nullslast(), UrbanGreeningProject.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -109,6 +118,26 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
     
     def create(self, db: Session, *, obj_in) -> UrbanGreeningProject:
         data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump()
+        
+        # Auto-generate project_code based on date_received_of_request
+        if not data.get("project_code"):
+            # Determine the year from date_received_of_request or current date
+            if data.get("date_received_of_request"):
+                if isinstance(data["date_received_of_request"], str):
+                    year = int(data["date_received_of_request"][:4])
+                else:
+                    year = data["date_received_of_request"].year
+            else:
+                year = datetime.now().year
+            
+            # Get the count of projects for this year
+            prefix = f"UGP-{year}-"
+            count = db.query(func.count(UrbanGreeningProject.id)).filter(
+                UrbanGreeningProject.project_code.like(f"{prefix}%")
+            ).scalar() or 0
+            
+            # Generate project_code: UGP-YYYY-####
+            data["project_code"] = f"{prefix}{str(count + 1).zfill(4)}"
         
         # Remove None/empty optional fields to avoid issues
         if "planting_date" in data and not data["planting_date"]:

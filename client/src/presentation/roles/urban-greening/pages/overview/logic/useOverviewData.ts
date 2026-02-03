@@ -4,7 +4,6 @@ import {
   fetchSaplingStatistics,
   fetchUrbanGreeningPlantings,
 } from "@/core/api/planting-api";
-import { fetchSaplingRequests } from "@/core/api/sapling-requests-api";
 import { fetchTreeRequests } from "@/core/api/tree-management-request-api";
 import { fetchUrbanGreeningDashboard } from "@/core/api/dashboard-api";
 import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
@@ -44,17 +43,6 @@ export const useOverviewData = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch recent sapling requests (New Schema)
-  const {
-    data: recentSaplings,
-    isLoading: saplingsLoading,
-    error: saplingsError,
-  } = useQuery({
-    queryKey: ["recent-sapling-requests"],
-    queryFn: () => fetchSaplingRequests(),
-    staleTime: 5 * 60 * 1000,
-  });
-
   // Fetch tree requests (ISO Schema)
   const {
     data: treeRequests,
@@ -81,14 +69,12 @@ export const useOverviewData = () => {
     plantingStatsLoading ||
     saplingStatsLoading ||
     plantingsLoading ||
-    saplingsLoading ||
     treeRequestsLoading ||
     feeRecordsLoading;
   const hasError =
     plantingStatsError ||
     saplingStatsError ||
     plantingsError ||
-    saplingsError ||
     treeRequestsError ||
     feeRecordsError;
 
@@ -111,14 +97,12 @@ export const useOverviewData = () => {
     saplingStatistics: saplingStats,
     treeRequests,
     plantingRecords: recentPlantings,
-    saplingRecords: recentSaplings,
 
     // Loading states
     isUrbanGreeningLoading: plantingStatsLoading,
     isSaplingLoading: saplingStatsLoading,
     isTreeRequestsLoading: treeRequestsLoading,
     isPlantingLoading: plantingsLoading,
-    isSaplingRecordsLoading: saplingsLoading,
 
     // Processed data for charts
     requestStatusData: treeRequestCharts.statusPie,
@@ -136,7 +120,6 @@ export const useOverviewData = () => {
     plantingStats,
     saplingStats,
     recentPlantings,
-    recentSaplings,
     isLoading,
     hasError,
   };

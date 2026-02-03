@@ -23,7 +23,6 @@ const ROUTE_ACTIONS: Record<string, { label: string; icon: any; action: string }
   '/urban-greening/tree-inventory': { label: 'Add Tree', icon: TreePine, action: 'add-tree' },
   '/urban-greening/tree-requests': { label: 'Create Request', icon: Plus, action: 'add-tree-request' },
   '/urban-greening/greening-projects': { label: 'Add Project', icon: Plus, action: 'add-project' },
-  '/urban-greening/sapling-requests': { label: 'New Request', icon: Plus, action: 'add-sapling-request' },
   '/admin/user-management': { label: 'Add User', icon: Users, action: 'add-user' },
 };
 

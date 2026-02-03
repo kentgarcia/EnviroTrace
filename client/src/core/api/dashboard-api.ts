@@ -14,8 +14,6 @@ export interface MonthValue {
 export interface StatCardData {
   fees_yearly_total: number;
   fees_monthly_total: number;
-  sapling_requests_yearly_total: number;
-  sapling_requests_monthly_total: number;
   urban_greening_yearly_total: number;
   urban_greening_monthly_total: number;
 }
@@ -30,7 +28,6 @@ export interface UrbanGreeningDashboardOverview {
   tree_request_status_counts: LabelValue[];
   tree_types_bar: LabelValue[];
   ug_monthly: MonthValue[];
-  saplings_monthly: MonthValue[];
 }
 
 export const fetchUrbanGreeningDashboard =

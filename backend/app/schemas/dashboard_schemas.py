@@ -20,10 +20,6 @@ class StatCardData(BaseModel):
     fees_yearly_total: float
     fees_monthly_total: float
     
-    # Sapling Requests
-    sapling_requests_yearly_total: int
-    sapling_requests_monthly_total: int
-    
     # Urban Greening Plantings
     urban_greening_yearly_total: int
     urban_greening_monthly_total: int
@@ -44,4 +40,3 @@ class UrbanGreeningDashboardOverview(BaseModel):
     tree_types_bar: List[LabelValue]
 
     ug_monthly: List[MonthValue]
-    saplings_monthly: List[MonthValue]

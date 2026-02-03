@@ -35,7 +35,6 @@ MODULE_MAPPINGS: Dict[str, str] = {
     "/api/v1/dashboard": "Dashboard",
     "/api/v1/upload": "File Uploads",
     "/api/v1/test-schedules": "Test Schedules",
-    "/api/v1/sapling-requests": "Sapling Requests",
     "/api/v1/gemini": "AI Services",
 }
 

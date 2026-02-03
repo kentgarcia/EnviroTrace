@@ -8,7 +8,7 @@ from sqlalchemy.types import Date
 
 from app.apis.deps import get_db
 from app.models.urban_greening_models import (
-    FeeRecord, UrbanGreeningPlanting, SaplingRequest, TreeRequest, UrbanGreeningProject
+    FeeRecord, UrbanGreeningPlanting, TreeRequest, UrbanGreeningProject
 )
 from app.schemas.dashboard_schemas import (
     UrbanGreeningDashboardOverview, LabelValue, MonthValue, StatCardData
@@ -75,21 +75,6 @@ def get_urban_greening_dashboard(
         FeeRecord.status == 'paid'
     ).scalar() or 0.0
     
-    # Sapling Requests - Yearly count (total quantity in selected year)
-    sapling_requests_yearly_total = db.query(
-        func.coalesce(func.sum(SaplingRequest.total_qty), 0)
-    ).filter(
-        extract('year', SaplingRequest.date_received) == year
-    ).scalar() or 0
-    
-    # Sapling Requests - Monthly count (total quantity in current/selected month)
-    sapling_requests_monthly_total = db.query(
-        func.coalesce(func.sum(SaplingRequest.total_qty), 0)
-    ).filter(
-        extract('year', SaplingRequest.date_received) == year,
-        extract('month', SaplingRequest.date_received) == current_month
-    ).scalar() or 0
-    
     # Urban Greening - Yearly total (quantity planted in selected year)
     planting_yearly_total = db.query(
         func.coalesce(func.sum(UrbanGreeningPlanting.quantity_planted), 0)
@@ -125,8 +110,6 @@ def get_urban_greening_dashboard(
     stat_cards = StatCardData(
         fees_yearly_total=float(fees_yearly_total),
         fees_monthly_total=float(fees_monthly_total),
-        sapling_requests_yearly_total=int(sapling_requests_yearly_total),
-        sapling_requests_monthly_total=int(sapling_requests_monthly_total),
         urban_greening_yearly_total=int(urban_greening_yearly_total),
         urban_greening_monthly_total=int(urban_greening_monthly_total),
     )
@@ -252,37 +235,8 @@ def get_urban_greening_dashboard(
     species_data.sort(key=lambda item: item.value, reverse=True)
     species_data = species_data[:12]
     
-    # Sapling species breakdown (top 12 by total quantity from sapling requests)
-    sapling_species_query = (
-        db.query(SaplingRequest.saplings)
-        .filter(extract('year', SaplingRequest.date_received) == year)
-    )
-    
-    if month is not None:
-        sapling_species_query = sapling_species_query.filter(
-            extract('month', SaplingRequest.date_received) == month
-        )
-    
-    sapling_records = sapling_species_query.all()
-    species_qty_map = {}
-    
-    # Parse saplings JSON field to extract species and quantities
-    for (saplings_json,) in sapling_records:
-        if not saplings_json:
-            continue
-        # saplings_json is a list of dicts with keys: name, qty, plant_type
-        if isinstance(saplings_json, list):
-            for item in saplings_json:
-                if isinstance(item, dict):
-                    name = item.get('name', 'Unknown')
-                    qty = item.get('qty', 0)
-                    species_qty_map[name] = species_qty_map.get(name, 0) + qty
-    
-    # Sort by quantity and take top 12
-    sorted_species = sorted(species_qty_map.items(), key=lambda x: x[1], reverse=True)[:12]
-    sapling_species_data = [
-        LabelValue(id=s, label=s, value=float(q)) for s, q in sorted_species
-    ]
+    # No sapling species data (feature removed)
+    sapling_species_data: List[LabelValue] = []
 
     # Tree request counts by type and status (current year)
     type_query = db.query(
@@ -345,21 +299,6 @@ def get_urban_greening_dashboard(
     for i, label in enumerate(month_labels(), start=1):
         ug_monthly.append(MonthValue(month=i, label=label, total=ug_by_month.get(i, 0.0)))
 
-    # Sapling Requests (Demand) instead of Collection (Supply)
-    sap_rows = (
-        db.query(
-            extract('month', SaplingRequest.date_received).label('m'),
-            func.coalesce(func.sum(SaplingRequest.total_qty), 0)
-        )
-        .filter(extract('year', SaplingRequest.date_received) == year)
-        .group_by(extract('month', SaplingRequest.date_received))
-        .all()
-    )
-    sap_by_month = {int(m): float(total) for m, total in sap_rows}
-    saplings_monthly: List[MonthValue] = []
-    for i, label in enumerate(month_labels(), start=1):
-        saplings_monthly.append(MonthValue(month=i, label=label, total=sap_by_month.get(i, 0.0)))
-
     return UrbanGreeningDashboardOverview(
         stat_cards=stat_cards,
         planting_type_data=planting_type_data,
@@ -370,5 +309,4 @@ def get_urban_greening_dashboard(
         tree_request_status_counts=tree_request_status_counts,
         tree_types_bar=tree_types_bar,
         ug_monthly=ug_monthly,
-        saplings_monthly=saplings_monthly,
     )

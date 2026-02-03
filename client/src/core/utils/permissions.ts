@@ -105,12 +105,6 @@ export const PERMISSIONS = {
     UPDATE: "sapling_collection.update",
     DELETE: "sapling_collection.delete",
   },
-  SAPLING_REQUEST: {
-    CREATE: "sapling_request.create",
-    VIEW: "sapling_request.view",
-    UPDATE: "sapling_request.update",
-    DELETE: "sapling_request.delete",
-  },
   FEE: {
     CREATE: "fee.create",
     VIEW: "fee.view",
@@ -184,7 +178,6 @@ export function getPermissionsByModule(
         ...Object.values(PERMISSIONS.URBAN_PROJECT),
         ...Object.values(PERMISSIONS.PLANTING),
         ...Object.values(PERMISSIONS.SAPLING_COLLECTION),
-        ...Object.values(PERMISSIONS.SAPLING_REQUEST),
         ...Object.values(PERMISSIONS.FEE),
         ...Object.values(PERMISSIONS.PROCESSING_STANDARD),
       ];

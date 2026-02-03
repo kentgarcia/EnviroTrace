@@ -15,7 +15,6 @@ const ROUTE_QUERY_MAP: Record<string, string[]> = {
   '/urban-greening/tree-inventory': ['tree-inventory', 'tree-stats'],
   '/urban-greening/tree-requests': ['tree-management-requests'],
   '/urban-greening/greening-projects': ['greening-projects'],
-  '/urban-greening/sapling-requests': ['sapling-requests'],
   '/urban-greening/overview': ['tree-stats', 'greening-projects', 'tree-management-requests'],
   
   // Admin routes
@@ -33,7 +32,6 @@ const ROUTE_NAMES: Record<string, string> = {
   '/urban-greening/tree-inventory': 'Tree Inventory',
   '/urban-greening/tree-requests': 'Tree Requests',
   '/urban-greening/greening-projects': 'Greening Projects',
-  '/urban-greening/sapling-requests': 'Sapling Requests',
   '/urban-greening/overview': 'Urban Greening Overview',
   '/admin/user-management': 'User Management',
   '/admin/session-management': 'Session Management',

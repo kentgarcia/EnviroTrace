@@ -77,23 +77,13 @@ const GreeningProjectsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<ProjectType | "all">("all");
-  const [yearFilter, setYearFilter] = useState<number | undefined>(new Date().getFullYear());
+  const [yearFilter, setYearFilter] = useState<number | undefined>(undefined);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [selectedProject, setSelectedProject] = useState<UrbanGreeningProject | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [projectDeleteConfirmOpen, setProjectDeleteConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<UrbanGreeningProject | null>(null);
-
-  // Generate year options (2020 to current year)
-  const yearOptions = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const years: number[] = [];
-    for (let year = currentYear; year >= 2020; year--) {
-      years.push(year);
-    }
-    return years;
-  }, []);
 
   // Check URL params for action
   React.useEffect(() => {
@@ -121,6 +111,18 @@ const GreeningProjectsPage: React.FC = () => {
 
   const { data: apiStats } = useProjectStats();
   const { deleteMutation } = useUrbanGreeningProjectMutations();
+
+  // Extract available years from projects based on date_received
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    projects.forEach(project => {
+      if ((project as any).date_received) {
+        const year = new Date((project as any).date_received).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [projects]);
 
   // Calculate stats from the filtered projects
   const filteredStats = useMemo(() => {
@@ -175,11 +177,12 @@ const GreeningProjectsPage: React.FC = () => {
   const columns: ColumnDef<UrbanGreeningProject>[] = useMemo(
     () => [
       {
-        accessorKey: "project_code",
-        header: "Reference No.",
-        cell: ({ getValue }) => (
-          <span className="font-mono text-sm font-medium">{getValue() as string}</span>
-        ),
+        accessorKey: "date_received",
+        header: "Date Received",
+        cell: ({ row }) => {
+          const date = (row.original as any).date_received;
+          return date ? new Date(date).toLocaleDateString() : "-";
+        },
       },
       {
         accessorKey: "project_type",
@@ -208,7 +211,7 @@ const GreeningProjectsPage: React.FC = () => {
         ),
       },
       {
-        accessorKey: "address",
+        accessorKey: "location",
         header: "Address",
         cell: ({ getValue }) => (
           <span className="text-sm text-gray-600 truncate max-w-[200px] block">
@@ -247,14 +250,6 @@ const GreeningProjectsPage: React.FC = () => {
           const status = getValue() as ProjectStatus;
           const config = STATUS_CONFIG[status];
           return <Badge className={config.color}>{config.label}</Badge>;
-        },
-      },
-      {
-        accessorKey: "planting_date",
-        header: "Planting Date",
-        cell: ({ row }) => {
-          const date = (row.original as any).planting_date;
-          return date ? new Date(date).toLocaleDateString() : "-";
         },
       },
       {
@@ -484,12 +479,18 @@ const GreeningProjectsPage: React.FC = () => {
                     onChange={(e) => setYearFilter(e.target.value === "all" ? undefined : parseInt(e.target.value))}
                     className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
                   >
-                    {yearOptions.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
                     <option value="all">All Years</option>
+                    {availableYears.length > 0 ? (
+                      availableYears.map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={new Date().getFullYear()}>
+                        {new Date().getFullYear()}
+                      </option>
+                    )}
                   </select>
                                   <Button
                   onClick={() => handleAddProject()}

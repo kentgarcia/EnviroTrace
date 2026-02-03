@@ -176,14 +176,12 @@ const PLANT_TYPE_OPTIONS = [
 ];
 
 const projectSchema = z.object({
-  project_code: z.string().optional(),
   project_type: z.string().min(1, "Project type is required"),
   status: z.string().min(1, "Status is required"),
   note: z.string().optional(),
   contact_number: z.string().optional(),
   location: z.string().min(1, "Location is required"),
   barangay: z.string().optional(),
-  address: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   planting_date: z.string().optional(),
@@ -483,14 +481,12 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
   const form = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
-      project_code: "",
       project_type: preselectedType || "new_greening",
       status: "planning",
       note: "",
       contact_number: "",
       location: "",
       barangay: "",
-      address: "",
       latitude: undefined,
       longitude: undefined,
       planting_date: "",
@@ -547,14 +543,12 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       }));
 
       form.reset({
-        project_code: initialData.project_code || "",
         project_type: initialData.project_type,
         status: initialData.status || "planning",
         note: initialData.description || "",
         contact_number: (initialData as any).contact_number || "",
         location: initialData.location,
         barangay: initialData.barangay || "",
-        address: initialData.address || "",
         latitude: initialData.latitude,
         longitude: initialData.longitude,
         planting_date: (initialData as any).planting_date?.split("T")[0] || "",
@@ -702,13 +696,11 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
 
       // Convert empty strings to undefined for date fields
       const payload: UrbanGreeningProjectCreate = {
-        project_code: data.project_code || undefined,
         project_type: data.project_type,
         status: data.status,
         description: data.note || undefined,
         location: data.location,
         barangay: data.barangay || undefined,
-        address: data.address || undefined,
         latitude: data.latitude,
         longitude: data.longitude,
         planting_date: data.planting_date || undefined,
@@ -831,26 +823,14 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
 
           {/* Details Tab */}
           <TabsContent value="details" className="space-y-4 mt-4">
-            {/* Reference Number */}
+            {/* Reference Number (Display Only in Edit Mode) */}
             {mode === "edit" && initialData && (
-              <FormField
-                control={form.control}
-                name="project_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reference No.</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        value={field.value || ''} 
-                        placeholder="Enter reference number" 
-                        className="font-mono"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div>
+                <Label className="text-sm text-gray-600">Reference No.</Label>
+                <div className="font-mono text-sm font-medium p-2 bg-gray-50 rounded border">
+                  {initialData.project_code || "Auto-generated"}
+                </div>
+              </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
@@ -1307,23 +1287,6 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
                   </div>
                 )}
               </div>
-
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      Address
-                    </FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Full address" className="rounded-lg" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
