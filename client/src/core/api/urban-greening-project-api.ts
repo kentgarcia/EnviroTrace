@@ -31,8 +31,12 @@ export interface UrbanGreeningProject {
   planned_end_date?: string;
   actual_start_date?: string;
   actual_end_date?: string;
-  date_received?: string;
+  date_received_of_request?: string;
+  date_sapling_received?: string;
   date_of_inspection?: string;
+  
+  // Location details
+  address?: string;
   
   // Replacement link (if project_type is 'replacement')
   linked_cutting_request_id?: string;
@@ -87,14 +91,15 @@ export interface UrbanGreeningProjectCreate {
   status?: ProjectStatus;
   location: string;
   barangay?: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   planting_date?: string;
   planned_start_date?: string;
   planned_end_date?: string;
-  actual_start_date?: string;
   actual_end_date?: string;
-  date_received?: string;
+  date_received_of_request?: string;
+  date_sapling_received?: string;
   date_of_inspection?: string;
   linked_cutting_request_id?: string;
   linked_cut_tree_ids?: string[];
@@ -106,9 +111,11 @@ export interface UrbanGreeningProjectCreate {
 }
 
 export interface UrbanGreeningProjectUpdate {
+  project_code?: string;
   status?: ProjectStatus;
   location?: string;
   barangay?: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   planting_date?: string;
@@ -116,7 +123,8 @@ export interface UrbanGreeningProjectUpdate {
   planned_end_date?: string;
   actual_start_date?: string;
   actual_end_date?: string;
-  date_received?: string;
+  date_received_of_request?: string;
+  date_sapling_received?: string;
   date_of_inspection?: string;
   plants?: ProjectPlant[];
   project_lead?: string;

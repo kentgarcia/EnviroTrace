@@ -54,6 +54,7 @@ import {
 import GreeningProjectForm from "./components/GreeningProjectForm";
 import GreeningProjectDetails from "./components/GreeningProjectDetails";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 
 const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.ReactNode; color: string }> = {
   replacement: { label: "Replacement", icon: <TreePine className="w-4 h-4" />, color: "bg-amber-100 text-amber-800" },
@@ -103,6 +104,13 @@ const GreeningProjectsPage: React.FC = () => {
       setIsFormOpen(true);
     }
   }, []);
+
+  // Listen for context menu "add-project" action
+  useContextMenuAction("add-project", () => {
+    setFormMode("add");
+    setSelectedProject(null);
+    setIsFormOpen(true);
+  });
 
   const { data: projects = [], isLoading, refetch } = useUrbanGreeningProjects({
     status: statusFilter === "all" ? undefined : statusFilter,
@@ -188,15 +196,38 @@ const GreeningProjectsPage: React.FC = () => {
         },
       },
       {
-        accessorKey: "location",
-        header: "Location",
+        accessorKey: "barangay",
+        header: "Barangay",
         cell: ({ row }) => (
           <div className="flex items-center gap-1 text-sm text-gray-600">
             <MapPin className="w-3 h-3" />
             <span className="truncate max-w-[150px]">
-              {row.original.barangay || row.original.location}
+              {row.original.barangay || "-"}
             </span>
           </div>
+        ),
+      },
+      {
+        accessorKey: "address",
+        header: "Address",
+        cell: ({ getValue }) => (
+          <span className="text-sm text-gray-600 truncate max-w-[200px] block">
+            {(getValue() as string) || "-"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "project_lead",
+        header: "Lead",
+        cell: ({ getValue }) => (
+          <span className="text-sm">{(getValue() as string) || "-"}</span>
+        ),
+      },
+      {
+        accessorKey: "organization",
+        header: "Organization",
+        cell: ({ getValue }) => (
+          <span className="text-sm">{(getValue() as string) || "-"}</span>
         ),
       },
       {

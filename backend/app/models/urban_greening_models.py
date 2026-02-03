@@ -136,8 +136,12 @@ class UrbanGreeningProject(Base):
     actual_end_date = Column(Date, nullable=True)
     
     # New fields
-    date_received = Column(Date, nullable=True)
+    date_received_of_request = Column(Date, nullable=True)
+    date_sapling_received = Column(Date, nullable=True)
     date_of_inspection = Column(Date, nullable=True)
+    
+    # Location details
+    address = Column(Text, nullable=True)
     
     # Plants - JSON array of {plant_type, species, common_name, quantity, unit_cost, source}
     plants = Column(Text, nullable=True)
