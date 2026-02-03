@@ -22,12 +22,18 @@ import { govEmissionRoute } from "./roles/emission/emission.routes";
 import { urbanGreeningRoute } from "./roles/urban-greening/urban-greening.routes";
 import Unauthorized from "./pages/public/Unauthorized";
 import TitleBar from "@/presentation/components/shared/layout/TitleBar";
+import { RefreshProvider } from "@/core/services/refresh-service";
+import { GlobalContextMenu } from "@/presentation/components/shared/global/GlobalContextMenu";
+import { useKeyboardShortcuts } from "@/core/hooks/useKeyboardShortcuts";
 
-// Create a root route
-const rootRoute = createRootRoute({
-  component: () => {
-    return (
-      <>
+// Root component with providers
+const RootComponent = () => {
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts();
+
+  return (
+    <GlobalContextMenu>
+      <div style={{ width: '100%', height: '100vh' }}>
         <TitleBar />
         <div
           style={{
@@ -38,9 +44,18 @@ const rootRoute = createRootRoute({
         >
           <Outlet />
         </div>
-      </>
-    );
-  },
+      </div>
+    </GlobalContextMenu>
+  );
+};
+
+// Create a root route
+const rootRoute = createRootRoute({
+  component: () => (
+    <RefreshProvider>
+      <RootComponent />
+    </RefreshProvider>
+  ),
 });
 
 // Reusable guard functions

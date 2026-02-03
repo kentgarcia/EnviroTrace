@@ -91,6 +91,7 @@ const ISOTreeRequestsPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<TreeRequestWithAnalytics | null>(null);
   const [statusFilter, setStatusFilter] = useState<ISOOverallStatus | "all">("all");
   const [typeFilter, setTypeFilter] = useState<ISORequestType | "all">("all");
+  const [yearFilter, setYearFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isArchiveConfirmationOpen, setIsArchiveConfirmationOpen] = useState(false);
@@ -166,14 +167,50 @@ const ISOTreeRequestsPage: React.FC = () => {
 
   const filteredRequests = useMemo(() => {
     if (!requests) return [];
-    if (!searchQuery) return requests;
-    const query = searchQuery.toLowerCase();
-    return requests.filter(request =>
-      request.request_number.toLowerCase().includes(query) ||
-      request.receiving_name?.toLowerCase().includes(query) ||
-      request.receiving_address?.toLowerCase().includes(query)
-    );
-  }, [requests, searchQuery]);
+    let filtered = requests;
+    
+    // Filter by year
+    if (yearFilter !== "all") {
+      filtered = filtered.filter(request => {
+        const dateReceived = request.receiving_date_received;
+        if (!dateReceived) return false;
+        const year = new Date(dateReceived).getFullYear().toString();
+        return year === yearFilter;
+      });
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(request =>
+        request.request_number.toLowerCase().includes(query) ||
+        request.receiving_name?.toLowerCase().includes(query) ||
+        request.receiving_address?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort by receiving_date_received (newest first)
+    filtered = [...filtered].sort((a, b) => {
+      const dateA = a.receiving_date_received ? new Date(a.receiving_date_received).getTime() : 0;
+      const dateB = b.receiving_date_received ? new Date(b.receiving_date_received).getTime() : 0;
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
+    return filtered;
+  }, [requests, searchQuery, yearFilter]);
+
+  // Get available years from requests
+  const availableYears = useMemo(() => {
+    if (!requests) return [];
+    const years = new Set<string>();
+    requests.forEach(request => {
+      if (request.receiving_date_received) {
+        const year = new Date(request.receiving_date_received).getFullYear().toString();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a)); // Sort descending
+  }, [requests]);
 
   const delayedCount = requests?.filter(r => r.is_delayed).length || 0;
 
@@ -704,6 +741,16 @@ const ISOTreeRequestsPage: React.FC = () => {
                         <option value="clearance">Clearance</option>
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
+                      </select>
+                      <select
+                        value={yearFilter}
+                        onChange={(e) => setYearFilter(e.target.value)}
+                        className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                      >
+                        <option value="all">All Years</option>
+                        {availableYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
                       </select>
                                     <Button
                 onClick={() => setShowCreateForm(true)}

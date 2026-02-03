@@ -286,6 +286,7 @@ class TreeRequest(Base):
     inspection_date_submitted_to_dept_head = Column(Date, nullable=True)  # Inspection Report
     inspection_date_released_to_inspectors = Column(Date, nullable=True)  # Inspection Report
     inspection_report_control_number = Column(String(50), nullable=True)
+    inspection_remarks = Column(Text, nullable=True)  # Inspection Remarks
     
     # ===== PHASE 3: REQUIREMENTS =====
     # JSON array of {requirement_name, is_checked, date_submitted}

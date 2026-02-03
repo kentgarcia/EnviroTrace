@@ -212,6 +212,7 @@ const REQUEST_FORM_FIELDS: (keyof TreeRequestCreate)[] = [
   "inspection_date_submitted_to_dept_head",
   "inspection_date_released_to_inspectors",
   "inspection_report_control_number",
+  "inspection_remarks",
   "requirements_checklist",
   "requirements_remarks",
   "requirements_status",
@@ -853,6 +854,7 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
                         <FieldRenderer label="Date Submitted to Dept. Head" fieldKey="inspection_date_submitted_to_dept_head" type="date" value={getValue("inspection_date_submitted_to_dept_head")} onChange={handleFieldChange} />
                         <FieldRenderer label="Date Released to Inspectors" fieldKey="inspection_date_released_to_inspectors" type="date" value={getValue("inspection_date_released_to_inspectors")} onChange={handleFieldChange} />
                         <FieldRenderer label="Report Control Number" fieldKey="inspection_report_control_number" type="text" value={getValue("inspection_report_control_number")} onChange={handleFieldChange} />
+                        <FieldRenderer label="Remarks" fieldKey="inspection_remarks" type="textarea" value={getValue("inspection_remarks")} onChange={handleFieldChange} />
                       </div>
                     </div>
                   </div>

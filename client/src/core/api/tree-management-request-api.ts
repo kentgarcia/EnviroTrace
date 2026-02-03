@@ -253,6 +253,7 @@ export interface TreeRequest {
   inspection_date_submitted_to_dept_head?: string;
   inspection_date_released_to_inspectors?: string;
   inspection_report_control_number?: string;
+  inspection_remarks?: string;
   
   // Requirements Phase
   requirements_checklist?: RequirementChecklistItem[];
@@ -320,6 +321,7 @@ export interface TreeRequestCreate {
   inspection_date_submitted_to_dept_head?: string;
   inspection_date_released_to_inspectors?: string;
   inspection_report_control_number?: string;
+  inspection_remarks?: string;
   
   // Requirements Phase
   requirements_checklist?: RequirementChecklistItem[];

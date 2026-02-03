@@ -120,7 +120,7 @@ function getMenuItems(
         icon: <LayoutDashboard size={18} />,
       },
       {
-        label: "Tree Registry",
+        label: "Tree Inventory",
         path: `${basePath}/tree-inventory`,
         icon: <Trees size={18} />,
       },

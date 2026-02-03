@@ -14,6 +14,7 @@ import {
   VehicleFormInput,
 } from "@/core/api/emission-service";
 import { useDebounce } from "@/core/hooks/useDebounce";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 import {
   VehicleTable,
   VehicleTableSkeleton,
@@ -69,6 +70,11 @@ export default function Vehicles() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+
+  // Listen for context menu "Add Vehicle" action
+  useContextMenuAction('add-vehicle', () => {
+    setAddModalOpen(true);
+  });
   // Pagination state
   const rowsPerPage = useSettingsStore((state) => state.rowsPerPage);
   const setRowsPerPage = useSettingsStore((state) => state.setRowsPerPage);
