@@ -551,9 +551,14 @@ export const addTreesToProject = async (projectId: string, trees: TreeInventoryC
 };
 // ==================== Tree Species API ====================
 
-export const fetchTreeSpecies = async (search?: string): Promise<TreeSpecies[]> => {
-  const url = search 
-    ? `/tree-inventory/species?search=${encodeURIComponent(search)}`
+export const fetchTreeSpecies = async (search?: string, species_type?: string): Promise<TreeSpecies[]> => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (species_type) params.append('species_type', species_type);
+  
+  const queryString = params.toString();
+  const url = queryString 
+    ? `/tree-inventory/species?${queryString}`
     : '/tree-inventory/species';
   const res = await apiClient.get(url);
   return res.data;

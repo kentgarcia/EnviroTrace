@@ -4,12 +4,13 @@
  * Used by both Tree Inventory and Greening Projects for managing tree species
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Textarea } from "@/presentation/components/shared/ui/textarea";
-import { TreeSpecies, TreeSpeciesCreate } from "@/core/api/tree-inventory-api";
+import { TreeSpecies, TreeSpeciesCreate, fetchTreeSpecies } from "@/core/api/tree-inventory-api";
 import { Leaf, AlertCircle, ChevronDown, ChevronUp, Ruler, Wind, Trash2 } from "lucide-react";
 
 interface SpeciesFormProps {
@@ -20,7 +21,8 @@ interface SpeciesFormProps {
 }
 
 const GROWTH_SPEED_OPTIONS = ["Slow", "Moderate", "Fast"];
-const SPECIES_TYPE_OPTIONS = ["Tree", "Ornamental", "Seed", "Other"];
+const BASE_SPECIES_TYPE_OPTIONS = ["Tree", "Ornamental", "Seed"];
+const ADD_NEW_TYPE_VALUE = "__ADD_NEW_TYPE__";
 
 // Collapsible section header component
 const SectionHeader = ({ 
@@ -115,6 +117,36 @@ const MinMaxAvgInput = ({
 );
 
 const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, onCancel }) => {
+  // Fetch all species to get unique types
+  const { data: allSpecies = [] } = useQuery({
+    queryKey: ["tree-species-all"],
+    queryFn: () => fetchTreeSpecies(),
+  });
+  
+  // Extract unique species types from database
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (allSpecies.length > 0) {
+      const uniqueTypes = new Set<string>();
+      allSpecies.forEach(species => {
+        if (species.species_type) {
+          uniqueTypes.add(species.species_type);
+        }
+      });
+      
+      // Combine base types with custom types from database
+      const baseTypes = [...BASE_SPECIES_TYPE_OPTIONS];
+      const customTypes = Array.from(uniqueTypes).filter(
+        type => !BASE_SPECIES_TYPE_OPTIONS.includes(type)
+      );
+      
+      setAvailableTypes([...baseTypes, ...customTypes.sort()]);
+    } else {
+      setAvailableTypes([...BASE_SPECIES_TYPE_OPTIONS]);
+    }
+  }, [allSpecies]);
+  
   const [formData, setFormData] = useState<TreeSpeciesCreate>({
     scientific_name: initialData?.scientific_name || "",
     common_name: initialData?.common_name || "",
@@ -156,11 +188,19 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [customType, setCustomType] = useState(
-    initialData?.species_type && !SPECIES_TYPE_OPTIONS.includes(initialData.species_type) 
-      ? initialData.species_type 
-      : ""
-  );
+  const [isAddingNewType, setIsAddingNewType] = useState(false);
+  const [customType, setCustomType] = useState("");
+  
+  // Initialize custom type logic
+  useEffect(() => {
+    if (initialData?.species_type) {
+      const isCustomType = !BASE_SPECIES_TYPE_OPTIONS.includes(initialData.species_type);
+      if (isCustomType && !availableTypes.includes(initialData.species_type)) {
+        setIsAddingNewType(true);
+        setCustomType(initialData.species_type);
+      }
+    }
+  }, [initialData, availableTypes]);
   
   // Collapsible sections state
   const [showPhysicalFields, setShowPhysicalFields] = useState(
@@ -212,6 +252,14 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
     
     if (!formData.common_name?.trim()) {
       newErrors.common_name = "Common name is required";
+    }
+    
+    if (!formData.species_type?.trim()) {
+      newErrors.species_type = "Species type is required";
+    }
+    
+    if (isAddingNewType && !customType.trim()) {
+      newErrors.species_type = "Please enter a new species type";
     }
     
     setErrors(newErrors);
@@ -316,32 +364,37 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
           <select
             id="species_type"
             name="species_type"
-            value={formData.species_type === "Other" || !SPECIES_TYPE_OPTIONS.includes(formData.species_type || "") ? "Other" : formData.species_type}
+            value={isAddingNewType ? ADD_NEW_TYPE_VALUE : formData.species_type || ""}
             onChange={(e) => {
               const value = e.target.value;
-              if (value === "Other") {
-                setFormData(prev => ({ ...prev, species_type: customType || "Other" }));
-              } else {
-                setFormData(prev => ({ ...prev, species_type: value }));
+              if (value === ADD_NEW_TYPE_VALUE) {
+                setIsAddingNewType(true);
                 setCustomType("");
+                setFormData(prev => ({ ...prev, species_type: "" }));
+              } else {
+                setIsAddingNewType(false);
+                setCustomType("");
+                setFormData(prev => ({ ...prev, species_type: value }));
               }
             }}
             className="mt-1 w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            {SPECIES_TYPE_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
+            <option value="">Select type...</option>
+            {availableTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
             ))}
+            <option value={ADD_NEW_TYPE_VALUE}>➕ Add New Type</option>
           </select>
           <p className="text-xs text-gray-500 mt-1">
             Tree: For tree inventory | Ornamental & Seed: For urban greening projects
           </p>
         </div>
 
-        {/* Custom Type Input (shown when Other is selected) */}
-        {(formData.species_type === "Other" || !SPECIES_TYPE_OPTIONS.includes(formData.species_type || "")) && (
+        {/* Custom Type Input (shown when Add New Type is selected) */}
+        {isAddingNewType && (
           <div>
             <Label htmlFor="custom_type" className="text-sm font-medium">
-              Custom Type <span className="text-red-500">*</span>
+              New Species Type <span className="text-red-500">*</span>
             </Label>
             <Input
               id="custom_type"
@@ -349,11 +402,15 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
               onChange={(e) => {
                 const value = e.target.value;
                 setCustomType(value);
-                setFormData(prev => ({ ...prev, species_type: value || "Other" }));
+                setFormData(prev => ({ ...prev, species_type: value }));
               }}
-              placeholder="Enter custom species type"
+              placeholder="Enter new species type (e.g., Shrub, Vine, Palm)"
               className="mt-1"
+              autoFocus
             />
+            <p className="text-xs text-gray-500 mt-1">
+              This will create a new species type for future use
+            </p>
           </div>
         )}
 

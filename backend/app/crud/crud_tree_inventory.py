@@ -45,12 +45,15 @@ def _is_duplicate_tree_code_error(error: IntegrityError) -> bool:
 
 # ==================== Tree Species CRUD ====================
 
-def get_all_species(db: Session, search: Optional[str] = None, include_inactive: bool = False) -> List[TreeSpecies]:
-    """Get all tree species with optional search"""
+def get_all_species(db: Session, search: Optional[str] = None, include_inactive: bool = False, species_type: Optional[str] = None) -> List[TreeSpecies]:
+    """Get all tree species with optional search and species_type filter"""
     query = db.query(TreeSpecies)
     
     if not include_inactive:
         query = query.filter(TreeSpecies.is_active == True)
+    
+    if species_type:
+        query = query.filter(TreeSpecies.species_type.ilike(species_type))
     
     if search:
         search_term = f"%{search}%"

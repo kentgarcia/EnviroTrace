@@ -433,24 +433,13 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
                         )}
                         <div className="text-xs text-gray-500 capitalize">
                           {plant.plant_type}
-                          {plant.source && ` • ${plant.source}`}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-lg">{plant.quantity}</div>
-                      {plant.unit_cost && (
-                        <div className="text-xs text-gray-500">
-                          ₱{plant.unit_cost}/unit
-                        </div>
-                      )}
                     </div>
                   </div>
-                  {plant.notes && (
-                    <div className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                      {plant.notes}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}

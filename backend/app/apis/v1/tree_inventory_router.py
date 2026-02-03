@@ -27,12 +27,13 @@ router = APIRouter(prefix="/tree-inventory", tags=["Tree Inventory"])
 @router.get("/species", response_model=List[TreeSpeciesResponse])
 def get_all_species(
     search: Optional[str] = Query(None, description="Search by scientific, common, or local name"),
+    species_type: Optional[str] = Query(None, description="Filter by species type (Tree, Ornamental, Seed, Other)"),
     include_inactive: bool = Query(False, description="Include inactive species"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permissions_sync(['tree_species.view']))
 ):
     """Get all tree species for dropdown selection"""
-    return crud.get_all_species(db, search, include_inactive)
+    return crud.get_all_species(db, search, include_inactive, species_type)
 
 
 @router.get("/species/{species_id}", response_model=TreeSpeciesResponse)

@@ -9,7 +9,6 @@ class ProjectPlant(BaseModel):
     species: Optional[str] = None
     common_name: str
     quantity: int
-    category: Optional[str] = None  # Grouping category (e.g., "Roadside", "Park")
 
 class UrbanGreeningProjectBase(BaseModel):
     project_type: str = "new_greening"  # replacement, new_greening, reforestation, beautification, other
