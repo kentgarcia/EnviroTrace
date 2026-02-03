@@ -105,6 +105,7 @@ export interface TreeSpecies {
     common_name: string;
     local_name?: string;
     family?: string;
+    species_type: string;
     is_native: boolean;
     is_endangered: boolean;
     description?: string;
@@ -116,6 +117,7 @@ export interface TreeSpeciesCreate {
     common_name: string;
     local_name?: string;
     family?: string;
+    species_type?: string;
     is_native?: boolean;
     is_endangered?: boolean;
     description?: string;

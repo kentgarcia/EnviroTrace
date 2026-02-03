@@ -8,8 +8,8 @@ import { SpeciesManagement as SharedSpeciesManagement } from "@/presentation/com
 
 const SpeciesManagement = () => (
   <SharedSpeciesManagement
-    title="Tree Species Database"
-    description="Manage tree species with environmental impact data for inventory tracking"
+    title="Species Database"
+    description="Manage species with environmental impact data for inventory tracking and urban greening"
   />
 );
 

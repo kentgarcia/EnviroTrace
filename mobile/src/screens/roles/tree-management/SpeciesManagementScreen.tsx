@@ -115,7 +115,7 @@ export default function SpeciesManagementScreen() {
         <SafeAreaView style={styles.container} edges={["top"]}>
             <StandardHeader
                 title="Species Management"
-                subtitle="Manage tree species database"
+                subtitle="Manage species database"
                 titleSize={20}
                 backgroundColor="#FFFFFF"
             />

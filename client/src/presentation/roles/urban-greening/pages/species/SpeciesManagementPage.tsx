@@ -10,7 +10,7 @@ const SpeciesManagementPage = () => {
             <div>
               <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Species Management</h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Manage tree species with environmental impact data for inventory tracking
+                Manage species with environmental impact data for inventory tracking and urban greening projects
               </p>
             </div>
           </div>

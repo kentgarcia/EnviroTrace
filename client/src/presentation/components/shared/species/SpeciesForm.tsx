@@ -20,6 +20,7 @@ interface SpeciesFormProps {
 }
 
 const GROWTH_SPEED_OPTIONS = ["Slow", "Moderate", "Fast"];
+const SPECIES_TYPE_OPTIONS = ["Tree", "Ornamental", "Seed", "Other"];
 
 // Collapsible section header component
 const SectionHeader = ({ 
@@ -119,7 +120,7 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
     common_name: initialData?.common_name || "",
     local_name: initialData?.local_name || "",
     family: initialData?.family || "",
-    is_tree: initialData?.is_tree ?? true,
+    species_type: initialData?.species_type || "Tree",
     is_native: initialData?.is_native || false,
     is_endangered: initialData?.is_endangered || false,
     description: initialData?.description || "",
@@ -155,6 +156,11 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customType, setCustomType] = useState(
+    initialData?.species_type && !SPECIES_TYPE_OPTIONS.includes(initialData.species_type) 
+      ? initialData.species_type 
+      : ""
+  );
   
   // Collapsible sections state
   const [showPhysicalFields, setShowPhysicalFields] = useState(
@@ -302,21 +308,57 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
           </div>
         </div>
 
-        {/* Checkboxes */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="is_tree"
-              name="is_tree"
-              checked={formData.is_tree}
-              onChange={handleChange}
-              className="w-4 h-4 text-emerald-600 rounded focus:ring-2 focus:ring-emerald-500"
-            />
-            <Label htmlFor="is_tree" className="text-sm font-medium cursor-pointer">
-              Is Tree
+        {/* Species Type Dropdown */}
+        <div>
+          <Label htmlFor="species_type" className="text-sm font-medium">
+            Species Type <span className="text-red-500">*</span>
+          </Label>
+          <select
+            id="species_type"
+            name="species_type"
+            value={formData.species_type === "Other" || !SPECIES_TYPE_OPTIONS.includes(formData.species_type || "") ? "Other" : formData.species_type}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "Other") {
+                setFormData(prev => ({ ...prev, species_type: customType || "Other" }));
+              } else {
+                setFormData(prev => ({ ...prev, species_type: value }));
+                setCustomType("");
+              }
+            }}
+            className="mt-1 w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {SPECIES_TYPE_OPTIONS.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Tree: For tree inventory | Ornamental & Seed: For urban greening projects
+          </p>
+        </div>
+
+        {/* Custom Type Input (shown when Other is selected) */}
+        {(formData.species_type === "Other" || !SPECIES_TYPE_OPTIONS.includes(formData.species_type || "")) && (
+          <div>
+            <Label htmlFor="custom_type" className="text-sm font-medium">
+              Custom Type <span className="text-red-500">*</span>
             </Label>
+            <Input
+              id="custom_type"
+              value={customType}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCustomType(value);
+                setFormData(prev => ({ ...prev, species_type: value || "Other" }));
+              }}
+              placeholder="Enter custom species type"
+              className="mt-1"
+            />
           </div>
+        )}
+
+        {/* Checkboxes */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"

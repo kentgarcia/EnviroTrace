@@ -15,6 +15,7 @@ class TreeSpecies(Base):
         Index("idx_tree_species_scientific", "scientific_name"),
         Index("idx_tree_species_common", "common_name"),
         Index("idx_tree_species_active", "is_active"),
+        Index("idx_tree_species_type", "species_type"),
         {"schema": "urban_greening"}
     )
 
@@ -23,7 +24,7 @@ class TreeSpecies(Base):
     common_name = Column(String(150), nullable=False)  # Required - primary identifier
     local_name = Column(String(150), nullable=True)
     family = Column(String(100), nullable=True)
-    is_tree = Column(Boolean, default=True, nullable=False, comment="True if species is a tree, False if ornamental/shrub")
+    species_type = Column(String(50), nullable=False, default='Tree', comment="Type of species: Tree, Ornamental, Seed, Other")
     is_native = Column(Boolean, default=False, nullable=False)
     is_endangered = Column(Boolean, default=False, nullable=False)
     description = Column(Text, nullable=True)

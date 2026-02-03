@@ -1,6 +1,5 @@
 from .auth_models import User, Profile, UserRoleMapping # etc.
 from .emission_models import Vehicle, Test # etc.
-from .urban_greening_models import SaplingRequest
 from .audit_models import AuditLog
 
 # Alternatively, create an app/db/base_class.py

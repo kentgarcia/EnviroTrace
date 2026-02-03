@@ -6,4 +6,3 @@ from app.db.database import Base
 from app.models.auth_models import User, Profile, UserRoleMapping, Role
 from app.models.emission_models import Vehicle, VehicleDriverHistory, TestSchedule, Test
 from app.models.urban_greening_models import FeeRecord
-from app.models.urban_greening_models import SaplingRequest

@@ -5,12 +5,11 @@ from datetime import date, datetime
 import re
 
 from app.crud.base_crud import CRUDBase
-from app.models.urban_greening_models import UrbanGreeningPlanting, SaplingCollection, SaplingRequest
+from app.models.urban_greening_models import UrbanGreeningPlanting, SaplingCollection
 from app.schemas.planting_schemas import (
     UrbanGreeningPlantingCreate, UrbanGreeningPlantingUpdate,
     SaplingCollectionCreate, SaplingCollectionUpdate,
-    PlantingStatistics, SaplingStatistics,
-    SaplingRequestCreate, SaplingRequestUpdate
+    PlantingStatistics, SaplingStatistics
 )
 
 

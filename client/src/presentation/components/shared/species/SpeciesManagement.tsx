@@ -60,8 +60,8 @@ const hasEnvData = (s: TreeSpecies) =>
   s.wood_density_avg;
 
 const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
-  title = "Tree Species Database",
-  description = "Manage tree species with environmental impact data",
+  title = "Species Database",
+  description = "Manage species with environmental impact data",
   variant = "full",
 }) => {
   const queryClient = useQueryClient();
@@ -188,22 +188,27 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       ),
     },
     {
-      accessorKey: "is_tree",
+      accessorKey: "species_type",
       header: "Type",
-      cell: ({ row }) =>
-        row.original.is_tree ? (
+      cell: ({ row }) => {
+        const type = row.original.species_type || "Tree";
+        const badgeClasses = {
+          Tree: "bg-emerald-100 text-emerald-800 border-emerald-200",
+          Ornamental: "bg-purple-100 text-purple-800 border-purple-200",
+          Seed: "bg-amber-100 text-amber-800 border-amber-200",
+          Other: "bg-gray-100 text-gray-700 border-gray-300",
+        };
+        const defaultClass = "bg-blue-100 text-blue-800 border-blue-200";
+        const badgeClass = badgeClasses[type as keyof typeof badgeClasses] || defaultClass;
+        
+        return (
           <div className="flex justify-center">
-            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
-              Tree
+            <Badge className={badgeClass}>
+              {type}
             </Badge>
           </div>
-        ) : (
-          <div className="flex justify-center">
-            <Badge variant="outline" className="text-gray-600 border-gray-300">
-              Plant
-            </Badge>
-          </div>
-        ),
+        );
+      },
     },
     {
       accessorKey: "is_native",
