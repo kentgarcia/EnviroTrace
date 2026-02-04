@@ -542,8 +542,7 @@ async def permanently_suspend_archived_user(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to permanently TP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to unsuspend user: {str(e)}"
+            detail=f"Failed to permanently suspend user: {str(e)}"
         )
 
 @router.post("/users/{user_id}/roles", response_model=UserWithRoles)
