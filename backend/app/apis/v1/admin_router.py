@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import uuid
 
-from app.apis.deps import get_current_user_async, get_db_session, require_roles, require_super_admin
+from app.apis.deps import get_current_user_async, get_db_session, require_roles, require_super_admin, require_permissions
 from app.models.auth_models import User, UserRoleMapping, Profile, Role
 from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
@@ -91,7 +91,7 @@ async def get_system_health_data(
 @router.get("/users", response_model=List[UserFullPublic])
 async def get_all_users(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"])),
+    current_user: User = Depends(require_permissions(["user_account.view"])),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None),
@@ -134,7 +134,7 @@ async def get_all_users(
 async def create_user(
     user_in: UserCreate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.create"]))
 ):
     """Create a new user (admin only)"""
     
@@ -144,7 +144,7 @@ async def create_user(
 async def get_user_by_id(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.view"]))
 ):
     """Get a specific user by ID"""
     
@@ -162,7 +162,7 @@ async def update_user(
     user_id: uuid.UUID,
     user_update: UserUpdate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """Update a user (admin only)"""
     
@@ -253,7 +253,7 @@ async def update_user(
 async def delete_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.delete"]))
 ):
     """
     Archive a user (soft delete - admin only).
@@ -286,7 +286,7 @@ async def delete_user(
 async def reactivate_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """
     Reactivate an archived user account (admin only).
@@ -317,7 +317,7 @@ async def reactivate_user(
 async def approve_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """
     Approve a user account after email verification (admin only).
@@ -365,7 +365,7 @@ async def approve_user(
 async def revoke_user_approval(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """
     Revoke approval for a user account (admin only).
@@ -407,7 +407,7 @@ async def revoke_user_approval(
 async def admin_reset_user_password(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """
     Reset user password (admin only).
@@ -442,19 +442,65 @@ async def admin_reset_user_password(
     temp_password = ''.join(secrets.choice(alphabet) for _ in range(8))
     
     try:
-        # Update password in Supabase Auth
-        await supabase_client.admin_update_user_password(
-            str(user_obj.supabase_user_id),
-            temp_password
-        )
+        # Check if user is suspended (they won't exist in Supabase Auth)
+        if user_obj.is_suspended:
+            # Recreate user in Supabase with new password and unsuspend them
+            response = await supabase_client.admin_create_user(
+                email=user_obj.email,
+                password=temp_password,
+                email_confirmed=True
+            )
+            
+            # Update local database - unsuspend and update supabase_user_id
+            user_obj.supabase_user_id = response["user"].id
+            await crud_user.unsuspend_user(db, user_id=user_id)
+            await db.commit()
+            
+            return PasswordResetResponse(
+                temporary_password=temp_password,
+                user_email=user_obj.email,
+                message=f"Password reset successful for {user_obj.email}. User has been unsuspended and can now log in with this temporary password."
+            )
+        else:
+            # User exists in Supabase - try to update password
+            try:
+                await supabase_client.admin_update_user_password(
+                    str(user_obj.supabase_user_id),
+                    temp_password
+                )
+                
+                return PasswordResetResponse(
+                    temporary_password=temp_password,
+                    user_email=user_obj.email,
+                    message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
+                )
+            except HTTPException as supabase_error:
+                # If Supabase says user doesn't exist or not allowed, recreate them
+                if supabase_error.status_code == status.HTTP_400_BAD_REQUEST:
+                    # User doesn't exist in Supabase Auth - recreate them
+                    response = await supabase_client.admin_create_user(
+                        email=user_obj.email,
+                        password=temp_password,
+                        email_confirmed=True
+                    )
+                    
+                    # Update supabase_user_id in local database
+                    user_obj.supabase_user_id = response["user"].id
+                    await db.commit()
+                    
+                    return PasswordResetResponse(
+                        temporary_password=temp_password,
+                        user_email=user_obj.email,
+                        message=f"Password reset successful for {user_obj.email}. User account was recreated in authentication system."
+                    )
+                else:
+                    raise
         
-        return PasswordResetResponse(
-            temporary_password=temp_password,
-            user_email=user_obj.email,
-            message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
-        )
-        
+    except HTTPException:
+        await db.rollback()
+        raise
     except Exception as e:
+        await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset password: {str(e)}"
@@ -464,7 +510,7 @@ async def admin_reset_user_password(
 async def permanently_suspend_archived_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.delete"]))
 ):
     """
     Permanently suspend an archived user (admin only).
@@ -551,7 +597,7 @@ async def assign_role_to_user(
     user_id: uuid.UUID,
     role_data: UserRoleMappingCreate,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """Assign a role to a user"""
 
@@ -606,7 +652,7 @@ async def remove_role_from_user(
     user_id: uuid.UUID,
     role_slug: str,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["user_account.update"]))
 ):
     """Remove a role from a user"""
 

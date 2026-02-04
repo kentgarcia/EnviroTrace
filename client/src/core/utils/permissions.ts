@@ -5,11 +5,11 @@
 
 export const PERMISSIONS = {
   // Admin Module
-  USER: {
-    CREATE: "user.create",
-    VIEW: "user.view",
-    UPDATE: "user.update",
-    DELETE: "user.delete",
+  USER_ACCOUNT: {
+    CREATE: "user_account.create",
+    VIEW: "user_account.view",
+    UPDATE: "user_account.update",
+    DELETE: "user_account.delete",
   },
   ROLE: {
     VIEW: "role.view",
@@ -154,7 +154,7 @@ export function getPermissionsByModule(
   switch (module) {
     case "admin":
       return [
-        ...Object.values(PERMISSIONS.USER),
+        ...Object.values(PERMISSIONS.USER_ACCOUNT),
         ...Object.values(PERMISSIONS.ROLE),
         ...Object.values(PERMISSIONS.PERMISSION),
         ...Object.values(PERMISSIONS.AUDIT_LOG),

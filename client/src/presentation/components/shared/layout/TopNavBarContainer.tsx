@@ -9,6 +9,7 @@ import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { toast } from "sonner";
 import TopNavBar, { NavItem } from "./TopNavBar";
 import React from "react";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 interface TopNavBarContainerProps {
   dashboardType:
@@ -22,15 +23,17 @@ interface MenuItem {
   label: string;
   path: string;
   children?: { label: string; path: string }[];
+  permission?: string;
 }
 
 function getMenuItems(
   dashboardType: TopNavBarContainerProps["dashboardType"],
-  matchRoute: ReturnType<typeof useMatchRoute>
+  matchRoute: ReturnType<typeof useMatchRoute>,
+  hasPermission: (permission: string) => boolean,
 ): MenuItem[] {
   const basePath = `/${dashboardType}`;
   if (dashboardType === "admin") {
-    return [
+    const adminMenuItems = [
       {
         label: "Overview",
         path: `${basePath}/overview`,
@@ -38,6 +41,7 @@ function getMenuItems(
       {
         label: "Users",
         path: `${basePath}/user-management`,
+        permission: PERMISSIONS.USER_ACCOUNT.VIEW,
       },
       {
         label: "Sessions",
@@ -48,6 +52,9 @@ function getMenuItems(
         path: `${basePath}/settings`,
       },
     ];
+    
+    // Filter menu items based on permissions
+    return adminMenuItems.filter(item => !item.permission || hasPermission(item.permission));
   } else if (dashboardType === "government-emission") {
     return [
       {
@@ -121,6 +128,7 @@ export default function TopNavBarContainer({
   const clearToken = useAuthStore(state => state.clearToken);
   const roles = useAuthStore(state => state.roles);
   const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
+  const hasPermission = useAuthStore(state => state.hasPermission);
 
   const handleSignOut = async () => {
     await signOut();
@@ -149,7 +157,7 @@ export default function TopNavBarContainer({
   // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
   const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
-  const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute).map(
+  const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute, hasPermission).map(
     (item) => {
       if (item.children) {
         return {

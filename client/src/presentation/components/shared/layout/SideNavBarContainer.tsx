@@ -30,6 +30,7 @@ import { useMyProfile } from "@/core/api/profile-service";
 import { toast } from "sonner";
 import SideNavBar, { NavItem } from "./SideNavBar";
 import { cn } from "@/core/utils/utils";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 interface SideNavBarContainerProps {
   dashboardType:
@@ -44,15 +45,17 @@ interface MenuItem {
   path: string;
   icon?: React.ReactNode;
   children?: { label: string; path: string }[];
+  permission?: string;
 }
 
 function getMenuItems(
   dashboardType: SideNavBarContainerProps["dashboardType"],
+  hasPermission: (permission: string) => boolean,
 ): MenuItem[] {
   const basePath = `/${dashboardType}`;
   
   if (dashboardType === "admin") {
-    return [
+    const adminMenuItems = [
       {
         label: "Overview",
         path: `${basePath}/overview`,
@@ -62,11 +65,13 @@ function getMenuItems(
         label: "Users",
         path: `${basePath}/user-management`,
         icon: <Users size={18} />,
+        permission: PERMISSIONS.USER_ACCOUNT.VIEW,
       },
       {
         label: "Permissions",
         path: `${basePath}/permission-management`,
         icon: <KeyRound size={18} />,
+        // permission: PERMISSIONS.PERMISSION_MANAGEMENT.VIEW, // Add when permission management permissions are defined
       },
       {
         label: "Sessions",
@@ -84,6 +89,9 @@ function getMenuItems(
         icon: <Settings size={18} />,
       },
     ];
+    
+    // Filter menu items based on permissions
+    return adminMenuItems.filter(item => !item.permission || hasPermission(item.permission));
   } else if (dashboardType === "government-emission") {
     return [
       {
@@ -191,6 +199,7 @@ export default function SideNavBarContainer({
   const clearToken = useAuthStore(state => state.clearToken);
   const roles = useAuthStore(state => state.roles);
   const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
+  const hasPermission = useAuthStore(state => state.hasPermission);
   const { data: profile } = useMyProfile();
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -229,7 +238,7 @@ export default function SideNavBarContainer({
   // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
   const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
-  const menuItems: NavItem[] = getMenuItems(dashboardType).map(
+  const menuItems: NavItem[] = getMenuItems(dashboardType, hasPermission).map(
     (item) => ({
       label: item.label,
       icon: item.icon,

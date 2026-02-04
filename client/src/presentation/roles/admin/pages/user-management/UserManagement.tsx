@@ -65,6 +65,7 @@ import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 interface UserFormData {
     email: string;
@@ -99,8 +100,16 @@ export function UserManagement() {
     const [showCreatePassword, setShowCreatePassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [permanentDeleteConfirmText, setPermanentDeleteConfirmText] = useState("");
+    const [userToPermanentlyDelete, setUserToPermanentlyDelete] = useState<User | null>(null);
     const { toast } = useToast();
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+    // Permission checks
+    const canViewUsers = useAuthStore((state) => state.hasPermission(PERMISSIONS.USER_ACCOUNT.VIEW));
+    const canCreateUsers = useAuthStore((state) => state.hasPermission(PERMISSIONS.USER_ACCOUNT.CREATE));
+    const canUpdateUsers = useAuthStore((state) => state.hasPermission(PERMISSIONS.USER_ACCOUNT.UPDATE));
+    const canDeleteUsers = useAuthStore((state) => state.hasPermission(PERMISSIONS.USER_ACCOUNT.DELETE));
 
     // Debounce search input
     useEffect(() => {
@@ -552,6 +561,25 @@ export function UserManagement() {
         return colors[role] || "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200";
     };
 
+    // Check if user has view permission
+    if (!canViewUsers) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Card className="w-full max-w-md mx-auto">
+                    <CardContent className="pt-6">
+                        <div className="flex flex-col items-center gap-4">
+                            <Shield className="w-16 h-16 text-red-500" />
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Access Denied</h2>
+                            <p className="text-gray-600 dark:text-gray-300 text-center">
+                                You do not have permission to view user accounts.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
     if (error) {
         return (
             <div className="p-6">
@@ -596,10 +624,12 @@ export function UserManagement() {
                             >
                                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                             </Button>
-                            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#0033a0] hover:bg-[#002a80] text-white dark:bg-[#0033a0] dark:hover:bg-[#002a80]">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add User
-                            </Button>
+                            {canCreateUsers && (
+                                <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#0033a0] hover:bg-[#002a80] text-white dark:bg-[#0033a0] dark:hover:bg-[#002a80]">
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Add User
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -878,13 +908,14 @@ export function UserManagement() {
                                                         ) : user.deleted_at ? (
                                                             // Archived user - show Reactivate and Permanent Delete buttons
                                                             <>
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="outline" size="sm" className="text-green-600">
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-                                                                            Reactivate
-                                                                        </Button>
-                                                                    </AlertDialogTrigger>
+                                                                {canUpdateUsers && (
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button variant="outline" size="sm" className="text-green-600">
+                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                                                                                Reactivate
+                                                                            </Button>
+                                                                        </AlertDialogTrigger>
                                                                     <AlertDialogContent>
                                                                         <AlertDialogHeader>
                                                                             <AlertDialogTitle>Reactivate User</AlertDialogTitle>
@@ -903,10 +934,25 @@ export function UserManagement() {
                                                                         </AlertDialogFooter>
                                                                     </AlertDialogContent>
                                                                 </AlertDialog>
+                                                                )}
 
-                                                                <AlertDialog>
+                                                                {canDeleteUsers && (
+                                                                <AlertDialog
+                                                                    open={userToPermanentlyDelete?.id === user.id}
+                                                                    onOpenChange={(open) => {
+                                                                        if (!open) {
+                                                                            setUserToPermanentlyDelete(null);
+                                                                            setPermanentDeleteConfirmText("");
+                                                                        }
+                                                                    }}
+                                                                >
                                                                     <AlertDialogTrigger asChild>
-                                                                        <Button variant="outline" size="sm" className="text-red-600 border-red-600">
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm" 
+                                                                            className="text-red-600 border-red-600"
+                                                                            onClick={() => setUserToPermanentlyDelete(user)}
+                                                                        >
                                                                             <Trash2 className="w-4 h-4 mr-1" />
                                                                             Permanent Delete
                                                                         </Button>
@@ -914,8 +960,8 @@ export function UserManagement() {
                                                                     <AlertDialogContent>
                                                                         <AlertDialogHeader>
                                                                             <AlertDialogTitle className="text-red-600">⚠️ Permanent Suspension</AlertDialogTitle>
-                                                                            <AlertDialogDescription className="space-y-2">
-                                                                                <p className="font-semibold">This action is IRREVERSIBLE!</p>
+                                                                            <AlertDialogDescription className="space-y-3">
+                                                                                <p className="font-semibold text-red-600">This action is IRREVERSIBLE!</p>
                                                                                 <p>Permanently suspending {user.email} will:</p>
                                                                                 <ul className="list-disc list-inside space-y-1 text-sm">
                                                                                     <li>Hide the account from all views</li>
@@ -924,39 +970,67 @@ export function UserManagement() {
                                                                                     <li>Keep records for compliance only</li>
                                                                                 </ul>
                                                                                 <p className="text-red-600 font-semibold mt-2">This user cannot be restored!</p>
+                                                                                
+                                                                                <div className="pt-4 border-t">
+                                                                                    <Label htmlFor="confirm-delete" className="text-sm font-semibold">
+                                                                                        Type <span className="font-mono text-red-600">PERMANENTLY DELETE</span> to confirm:
+                                                                                    </Label>
+                                                                                    <Input
+                                                                                        id="confirm-delete"
+                                                                                        type="text"
+                                                                                        value={permanentDeleteConfirmText}
+                                                                                        onChange={(e) => setPermanentDeleteConfirmText(e.target.value)}
+                                                                                        placeholder="Type here..."
+                                                                                        className="mt-2"
+                                                                                        autoComplete="off"
+                                                                                    />
+                                                                                </div>
                                                                             </AlertDialogDescription>
                                                                         </AlertDialogHeader>
                                                                         <AlertDialogFooter>
-                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogCancel onClick={() => {
+                                                                                setUserToPermanentlyDelete(null);
+                                                                                setPermanentDeleteConfirmText("");
+                                                                            }}>Cancel</AlertDialogCancel>
                                                                             <AlertDialogAction
-                                                                                onClick={() => handlePermanentlySuspendUser(user.id, user.email)}
+                                                                                onClick={() => {
+                                                                                    handlePermanentlySuspendUser(user.id, user.email);
+                                                                                    setUserToPermanentlyDelete(null);
+                                                                                    setPermanentDeleteConfirmText("");
+                                                                                }}
                                                                                 className="bg-red-600 hover:bg-red-700"
+                                                                                disabled={permanentDeleteConfirmText !== "PERMANENTLY DELETE"}
                                                                             >
                                                                                 Permanently Suspend
                                                                             </AlertDialogAction>
                                                                         </AlertDialogFooter>
                                                                     </AlertDialogContent>
                                                                 </AlertDialog>
+                                                                )}
                                                             </>
                                                         ) : (
                                                             // Active user - show Edit and Delete buttons
                                                             <>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => openEditDialog(user)}
-                                                                >
-                                                                    <Edit className="w-4 h-4" />
-                                                                </Button>
+                                                                {canUpdateUsers && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => openEditDialog(user)}
+                                                                    >
+                                                                        <Edit className="w-4 h-4" />
+                                                                    </Button>
+                                                                )}
 
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => openPasswordResetDialog(user)}
-                                                                    title="Reset Password"
-                                                                >
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                                                </Button>
+                                                                {canUpdateUsers && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() => openPasswordResetDialog(user)}
+                                                                        title="Reset Password"
+                                                                    >
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                                                    </Button>
+                                                                )}
 
                                                                 <Button
                                                                     variant="outline"
@@ -968,7 +1042,7 @@ export function UserManagement() {
                                                                 </Button>
 
                                                                 {/* Approval buttons */}
-                                                                {user.email_confirmed_at && !user.is_super_admin && (
+                                                                {canUpdateUsers && user.email_confirmed_at && !user.is_super_admin && (
                                                                     <>
                                                                         {!user.is_approved ? (
                                                                             <AlertDialog>
@@ -1024,12 +1098,13 @@ export function UserManagement() {
                                                                     </>
                                                                 )}
 
-                                                                <AlertDialog>
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <Button variant="outline" size="sm">
-                                                                            <Trash2 className="w-4 h-4 text-red-600" />
-                                                                        </Button>
-                                                                    </AlertDialogTrigger>
+                                                                {canDeleteUsers && (
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <Button variant="outline" size="sm">
+                                                                                <Trash2 className="w-4 h-4 text-red-600" />
+                                                                            </Button>
+                                                                        </AlertDialogTrigger>
                                                                     <AlertDialogContent>
                                                                         <AlertDialogHeader>
                                                                             <AlertDialogTitle>Archive User</AlertDialogTitle>
@@ -1052,6 +1127,7 @@ export function UserManagement() {
                                                                         </AlertDialogFooter>
                                                                     </AlertDialogContent>
                                                                 </AlertDialog>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>

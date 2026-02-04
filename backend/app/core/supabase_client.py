@@ -454,13 +454,23 @@ async def admin_update_user_password(supabase_user_id: str, new_password: str) -
     supabase = get_supabase_admin()
     
     try:
-        supabase.auth.admin.update_user_by_id(
+        # Update user password - Supabase Python SDK format
+        response = supabase.auth.admin.update_user_by_id(
             supabase_user_id,
-            {"password": new_password}
+            {
+                "password": new_password
+            }
         )
         return True
     except Exception as e:
+        error_msg = str(e)
+        # If user doesn't have password auth, provide more helpful error
+        if "User not allowed" in error_msg or "not found" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User does not exist in Supabase Auth or does not have password authentication enabled. The user may have been suspended or deleted."
+            )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user password: {str(e)}"
+            detail=f"Failed to update user password: {error_msg}"
         )
