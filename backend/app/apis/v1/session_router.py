@@ -226,16 +226,18 @@ async def terminate_session_revoke_access(
         
         # 3. Delete user from Supabase Auth (invalidates all Supabase tokens)
         if user_obj.supabase_user_id:
-            await supabase_client.admitemporarily suspended successfully",
+            await supabase_client.admin_delete_user(str(user_obj.supabase_user_id))
+        
+        await db.commit()
+        
+        return {
+            "message": "User temporarily suspended successfully",
             "user_id": str(user_id),
             "email": user_obj.email,
             "sessions_terminated": session_count,
             "reason": suspend_request.reason,
             "suspended_at": user_obj.suspended_at,
             "note": "This is reversible - use unsuspend endpoint to restore access"
-            "sessions_terminated": session_count,
-            "reason": suspend_request.reason,
-            "suspended_at": user_obj.suspended_at
         }
         
     except Exception as e:
