@@ -503,11 +503,11 @@ export function UserManagement() {
 
     const getRoleColor = (role: string) => {
         const colors: Record<string, string> = {
-            admin: "bg-red-100 text-red-800",
-            urban_greening: "bg-green-100 text-green-800",
-            government_emission: "bg-purple-100 text-purple-800",
+            admin: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200",
+            urban_greening: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200",
+            government_emission: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200",
         };
-        return colors[role] || "bg-gray-100 text-gray-800";
+        return colors[role] || "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200";
     };
 
     if (error) {
@@ -526,41 +526,41 @@ export function UserManagement() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="bg-white px-6 py-3 border-b border-gray-200">
+            <div className="page-header-bg px-6 py-3">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-                    <p className="text-gray-600">Manage users, roles, and permissions</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+                    <p className="text-gray-600 dark:text-gray-400">Manage users, roles, and permissions</p>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 page-bg space-y-6">
                     {/* Header with Status Filter and Add Button */}
                     <div className="flex items-center justify-between">
                         <div className="flex gap-2">
                             <Button
                                 variant={status === "active" ? "default" : "outline"}
                                 onClick={() => setStatus("active")}
-                                className={status === "active" ? "" : "bg-white"}
+                                className={status === "active" ? "" : "bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"}
                             >
                                 Active Users
                             </Button>
                             <Button
                                 variant={status === "archived" ? "default" : "outline"}
                                 onClick={() => setStatus("archived")}
-                                className={status === "archived" ? "" : "bg-white"}
+                                className={status === "archived" ? "" : "bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"}
                             >
                                 Archived Users
                             </Button>
                             <Button
                                 variant={status === "all" ? "default" : "outline"}
                                 onClick={() => setStatus("all")}
-                                className={status === "all" ? "" : "bg-white"}
+                                className={status === "all" ? "" : "bg-white dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"}
                             >
                                 All Users
                             </Button>
                         </div>
 
-                        <Button onClick={() => setIsCreateDialogOpen(true)}>
+                        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#0033a0] hover:bg-[#002a80] text-white dark:bg-[#0033a0] dark:hover:bg-[#002a80]">
                             <Plus className="w-4 h-4 mr-2" />
                             Add User
                         </Button>
@@ -674,7 +674,7 @@ export function UserManagement() {
                                         <Label>Roles</Label>
                                         <div className="mt-2">
                                             {isLoadingRoles ? (
-                                                <div className="flex items-center justify-center p-3 border rounded-md bg-muted/30">
+                                                <div className="flex items-center justify-center p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-muted/30">
                                                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                                     <span className="text-sm text-muted-foreground">Loading roles...</span>
                                                 </div>
@@ -737,14 +737,12 @@ export function UserManagement() {
                                     <span className="ml-2">Loading users...</span>
                                 </div>
                             ) : (
-                                <Table>
+                                <Table className="border dark:border-gray-700">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>User</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Email</TableHead>
-                                            <TableHead>Job Title</TableHead>
-                                            <TableHead>Department</TableHead>
                                             <TableHead>Roles</TableHead>
                                             <TableHead>Last Sign In</TableHead>
                                             <TableHead>Created</TableHead>
@@ -753,12 +751,9 @@ export function UserManagement() {
                                     </TableHeader>
                                     <TableBody>
                                         {users.map((user) => (
-                                            <TableRow key={user.id} className={user.deleted_at ? "bg-gray-50" : ""}>
+                                            <TableRow key={user.id} className={user.deleted_at ? "bg-gray-50 dark:bg-gray-800/50" : ""}>
                                                 <TableCell>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                                                            <UserIcon className="w-4 h-4" />
-                                                        </div>
                                                         <div>
                                                             <div className="font-medium flex items-center gap-2">
                                                                 {user.profile?.first_name && user.profile?.last_name
@@ -786,11 +781,11 @@ export function UserManagement() {
                                                                 Email Not Verified
                                                             </Badge>
                                                         ) : !user.is_approved && !user.is_super_admin ? (
-                                                            <Badge variant="outline" className="text-xs w-fit border-amber-500 text-amber-700">
+                                                            <Badge variant="outline" className="text-xs w-fit border-amber-500 dark:border-amber-600 text-amber-700 dark:text-amber-400">
                                                                 Pending Approval
                                                             </Badge>
                                                         ) : (
-                                                            <Badge variant="outline" className="text-xs w-fit border-green-500 text-green-700">
+                                                            <Badge variant="outline" className="text-xs w-fit border-green-500 dark:border-green-600 text-green-700 dark:text-green-400">
                                                                 Approved
                                                             </Badge>
                                                         )}
@@ -798,18 +793,8 @@ export function UserManagement() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <Mail className="w-4 h-4 text-gray-400" />
+                                                        <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                                                         {user.email}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="text-sm text-gray-600">
-                                                        {user.profile?.job_title || "-"}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="text-sm text-gray-600">
-                                                        {user.profile?.department || "-"}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -822,13 +807,13 @@ export function UserManagement() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                                                         <Calendar className="w-4 h-4" />
                                                         {user.last_sign_in_at ? formatDate(user.last_sign_in_at) : "Never"}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm text-gray-600">
+                                                    <div className="text-sm text-gray-600 dark:text-gray-300">
                                                         {formatDate(user.created_at)}
                                                     </div>
                                                 </TableCell>
@@ -1069,7 +1054,7 @@ export function UserManagement() {
                                 <Label>Roles</Label>
                                 <div className="mt-2">
                                     {isLoadingRoles ? (
-                                        <div className="flex items-center justify-center p-3 border rounded-md bg-muted/30">
+                                        <div className="flex items-center justify-center p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-muted/30">
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                             <span className="text-sm text-muted-foreground">Loading roles...</span>
                                         </div>

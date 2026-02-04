@@ -142,13 +142,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       ),
       cell: ({ row }) => (
         <div className="flex flex-col">
-          <span className="font-bold text-slate-900">
+          <span className="font-bold text-slate-900 dark:text-gray-100">
             {row.original.plate_number ||
               row.original.chassis_number ||
               row.original.registration_number ||
               "N/A"}
           </span>
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
             {row.original.plate_number ? "PLATE" : row.original.chassis_number ? "CHASSIS" : row.original.registration_number ? "REG" : "ID"}
           </span>
         </div>
@@ -168,7 +168,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-600 font-medium">
+          <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
             {row.original.office?.name || "Unknown Office"}
           </span>
         </div>
@@ -187,7 +187,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <span className="text-sm text-slate-600 font-medium">
+        <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
           {row.original.driver_name}
         </span>
       ),
@@ -205,7 +205,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px] font-bold uppercase tracking-tight px-2 py-0">
+        <Badge variant="outline" className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 text-[10px] font-bold uppercase tracking-tight px-2 py-0">
           {row.original.vehicle_type}
         </Badge>
       ),
@@ -223,7 +223,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <span className="text-xs text-slate-500 font-medium uppercase">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase">
           {row.original.engine_type}
         </span>
       ),
@@ -241,7 +241,7 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
         </Button>
       ),
       cell: ({ row }) => (
-        <span className="text-xs text-slate-500 font-medium">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
           {row.original.wheels}
         </span>
       ),
@@ -306,12 +306,12 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     return (
       <div className="flex gap-6">
         {/* List of vehicles (left) */}
-        <div className="w-1/3 border-r pr-4 overflow-y-auto max-h-[70vh]">
-          <ul className="divide-y">
+        <div className="w-1/3 border-r dark:border-gray-700 pr-4 overflow-y-auto max-h-[70vh]">
+          <ul className="divide-y dark:divide-gray-700">
             {vehicles.map((v) => (
             <li
               key={v.id}
-              className={`p-3 cursor-pointer hover:bg-blue-50 ${detailsVehicle.id === v.id ? "bg-blue-100 font-semibold" : ""
+              className={`p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 ${detailsVehicle.id === v.id ? "bg-blue-100 dark:bg-blue-900/30 font-semibold" : ""
                 }`}
               onClick={() => setDetailsVehicle(v)}
             >

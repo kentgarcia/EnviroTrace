@@ -192,12 +192,12 @@ const FeeRecords: React.FC = () => {
     const paidAmount = useMemo(() => getPaidAmount(allRecords), [allRecords]);
 
     return (
-        <div className="flex flex-col h-full bg-[#F9FBFC]">
+        <div className="flex flex-col h-full page-bg">
             {/* Header Section */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="page-header-bg sticky top-0 z-10">
                 <div className="px-6 py-4 flex items-center justify-between">
                         <div>
-                            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Fee Records</h1>
+                            <h1 className="text-xl font-semibold tracking-tight">Fee Records</h1>
                             <p className="text-xs text-muted-foreground mt-0.5">Manage and track environmental compliance fees</p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -206,7 +206,7 @@ const FeeRecords: React.FC = () => {
                                 size="icon"
                                 onClick={() => refetch()}
                                 disabled={isLoading}
-                                className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                             >
                                 <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
                             </Button>
@@ -214,7 +214,7 @@ const FeeRecords: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+                <div className="flex-1 overflow-y-auto p-6 page-bg">
 
                     {error && (
                         <div className="mt-6">
@@ -252,7 +252,7 @@ const FeeRecords: React.FC = () => {
                                         </div>
                                         
                                         {/* Tabs Design */}
-                                        <div className="flex border-b border-gray-200">
+                                        <div className="flex border-b border-gray-200 dark:border-gray-700">
                                             <button
                                                 onClick={() => setActiveTab("pending")}
                                                 className={`px-4 py-2 text-sm font-medium transition-colors relative ${
@@ -312,7 +312,7 @@ const FeeRecords: React.FC = () => {
                                         <select
                                             value={yearFilter}
                                             onChange={(e) => setYearFilter(e.target.value === "all" ? "all" : parseInt(e.target.value))}
-                                            className="px-3 py-2 border rounded-lg text-sm"
+                                            className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
                                         >
                                             {yearOptions.map(year => (
                                                 <option key={year} value={year}>{year}</option>
@@ -322,7 +322,7 @@ const FeeRecords: React.FC = () => {
                                         <select
                                             value={typeFilter}
                                             onChange={(e) => setTypeFilter(e.target.value)}
-                                            className="px-3 py-2 border rounded-lg text-sm"
+                                            className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
                                         >
                                             <option value="all">All Types</option>
                                             <option value="cutting_permit">Cutting Permit</option>
@@ -334,8 +334,8 @@ const FeeRecords: React.FC = () => {
                                     {isLoading && allRecords.length === 0 ? (
                                         <div className="flex items-center justify-center h-32">
                                             <div className="text-center">
-                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                                                <p className="mt-2 text-sm text-gray-600">Loading records...</p>
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-100 mx-auto"></div>
+                                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Loading records...</p>
                                             </div>
                                         </div>
                                     ) : (
@@ -349,7 +349,7 @@ const FeeRecords: React.FC = () => {
                             </Card>
                         </div>
                         <div className={`flex flex-col min-h-0 transition-all duration-300 lg:col-span-1`}>
-                            <Card className={`flex-1 flex flex-col min-h-0 ${selectedRowForDetails ? 'bg-gray-50' : 'bg-white'}`}>
+                            <Card className={`flex-1 flex flex-col min-h-0 ${selectedRowForDetails ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'}`}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-lg">{selectedRowForDetails ? (isEditingDetails ? 'Edit Record' : 'Record Details') : 'Statistics'}</CardTitle>
                                     {selectedRowForDetails && (
@@ -381,17 +381,17 @@ const FeeRecords: React.FC = () => {
                                             />
                                         ) : (
                                             <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between"><span className="text-gray-600">Reference #</span><Badge variant="outline">{selectedRowForDetails.reference_number}</Badge></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Type</span><Badge variant="outline">{getTypeLabel(selectedRowForDetails.type)}</Badge></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Payer</span><span className="font-medium">{selectedRowForDetails.payer_name}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Amount</span><span className="font-medium">{formatCurrency(selectedRowForDetails.amount)}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Date</span><span className="font-medium">{selectedRowForDetails.date}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Status</span><Badge className={getStatusColor(selectedRowForDetails.status)}>{selectedRowForDetails.status.toUpperCase()}</Badge></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Reference #</span><Badge variant="outline">{selectedRowForDetails.reference_number}</Badge></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Type</span><Badge variant="outline">{getTypeLabel(selectedRowForDetails.type)}</Badge></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Payer</span><span className="font-medium">{selectedRowForDetails.payer_name}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Amount</span><span className="font-medium">{formatCurrency(selectedRowForDetails.amount)}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Date</span><span className="font-medium">{selectedRowForDetails.date}</span></div>
+                                                <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Status</span><Badge className={getStatusColor(selectedRowForDetails.status)}>{selectedRowForDetails.status.toUpperCase()}</Badge></div>
                                                 {selectedRowForDetails.or_number && (
-                                                    <div className="flex justify-between"><span className="text-gray-600">OR #</span><span className="font-medium">{selectedRowForDetails.or_number}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">OR #</span><span className="font-medium">{selectedRowForDetails.or_number}</span></div>
                                                 )}
                                                 {selectedRowForDetails.payment_date && (
-                                                    <div className="flex justify-between"><span className="text-gray-600">Payment Date</span><span className="font-medium">{selectedRowForDetails.payment_date}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Payment Date</span><span className="font-medium">{selectedRowForDetails.payment_date}</span></div>
                                                 )}
                                                 <div className="pt-3 border-t flex gap-2">
                                                     <Button variant="outline" size="sm" onClick={handleStartInlineEdit} className="rounded-lg">Edit</Button>
@@ -402,27 +402,27 @@ const FeeRecords: React.FC = () => {
                                     ) : (
                                         <>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Total Records:</span>
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Total Records:</span>
                                                 <Badge variant="outline">{allRecords.length}</Badge>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Total Amount:</span>
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Total Amount:</span>
                                                 <span className="font-semibold">{formatCurrency(totalAmount)}</span>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Paid:</span>
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Paid:</span>
                                                 <div className="flex items-center gap-2">
-                                                    <Badge className="bg-green-100 text-green-800">{statusCounts.paid}</Badge>
+                                                    <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">{statusCounts.paid}</Badge>
                                                     <span className="text-sm font-medium text-green-600">{formatCurrency(paidAmount)}</span>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Pending:</span>
-                                                <Badge className="bg-yellow-100 text-yellow-800">{statusCounts.pending}</Badge>
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Pending:</span>
+                                                <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">{statusCounts.pending}</Badge>
                                             </div>
                                             <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-600">Cancelled:</span>
-                                                <Badge className="bg-gray-100 text-gray-800">{statusCounts.cancelled}</Badge>
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">Cancelled:</span>
+                                                <Badge className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200">{statusCounts.cancelled}</Badge>
                                             </div>
                                         </>
                                     )}
@@ -455,14 +455,14 @@ const FeeRecords: React.FC = () => {
             {/* Delete Confirmation Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <DialogContent className="sm:max-w-md rounded-2xl border-none p-0 overflow-hidden">
-                    <DialogHeader className="bg-red-600 p-6 m-0 border-none">
+                    <DialogHeader className="bg-red-600 dark:bg-red-900 p-6 m-0 border-none">
                         <DialogTitle className="text-xl font-bold text-white">Confirm Delete</DialogTitle>
-                        <DialogDescription className="text-red-100/80">
+                        <DialogDescription className="text-red-100/80 dark:text-red-200/80">
                             This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="p-6 bg-white space-y-4">
-                        <p className="text-sm text-gray-700">
+                    <div className="p-6 bg-white dark:bg-gray-900 space-y-4">
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
                             Are you sure you want to delete this fee record?
                         </p>
                         <div className="flex gap-3 justify-end">

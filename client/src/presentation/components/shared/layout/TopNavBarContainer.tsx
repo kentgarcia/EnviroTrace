@@ -43,6 +43,10 @@ function getMenuItems(
         label: "Sessions",
         path: `${basePath}/session-management`,
       },
+      {
+        label: "Settings",
+        path: `${basePath}/settings`,
+      },
     ];
   } else if (dashboardType === "government-emission") {
     return [

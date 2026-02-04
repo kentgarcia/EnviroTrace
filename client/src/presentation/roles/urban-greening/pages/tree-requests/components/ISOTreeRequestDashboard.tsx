@@ -96,6 +96,11 @@ const ISOTreeRequestDashboard: React.FC<ISOTreeRequestDashboardProps> = ({
       cell: ({ getValue }) => getValue() || "—",
     },
     {
+      accessorKey: "receiving_organization",
+      header: "Organization",
+      cell: ({ getValue }) => getValue() || "—",
+    },
+    {
       accessorKey: "total_days",
       header: "Total Days",
       cell: ({ getValue }) => (

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/presentation/components/shared/ui/button";
+import { FloatingAppearanceSettings } from "@/presentation/components/shared/settings/FloatingAppearanceSettings";
 import {
   Card,
   CardContent,
@@ -106,13 +107,13 @@ export default function ProfilePage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case "admin":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-200 border-red-200 dark:border-red-800";
       case "urban_greening":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800";
       case "government_emission":
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-200 border-amber-200 dark:border-amber-800";
       default:
-        return "bg-slate-50 text-slate-700 border-slate-200";
+        return "bg-slate-50 dark:bg-gray-900/30 text-slate-700 dark:text-gray-200 border-slate-200 dark:border-gray-700";
     }
   };
 
@@ -120,10 +121,10 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-muted-foreground animate-pulse">Loading profile...</p>
+          <p className="text-muted-foreground dark:text-gray-400 animate-pulse">Loading profile...</p>
         </div>
       </div>
     );
@@ -146,8 +147,8 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 flex flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md py-3 px-6">
+    <div className="min-h-screen bg-slate-50/50 dark:bg-gray-900 flex flex-col overflow-y-auto">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md py-3 px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="flex -space-x-2">
@@ -163,7 +164,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-base font-bold text-slate-900 leading-tight">
+              <h1 className="text-base font-bold text-slate-900 dark:text-gray-100 leading-tight">
                 EnviroTrace
               </h1>
             </div>
@@ -172,7 +173,7 @@ export default function ProfilePage() {
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center gap-2 text-slate-600 hover:text-primary hover:bg-primary/5"
+            className="flex items-center gap-2 text-slate-600 dark:text-gray-300 hover:text-primary hover:bg-primary/5 dark:hover:bg-gray-800"
             onClick={() => window.history.back()}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -181,9 +182,9 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <div className="relative h-32 md:h-48 bg-slate-900 overflow-hidden">
+      <div className="relative h-32 md:h-48 bg-slate-900 dark:bg-gray-950 overflow-hidden">
         <div 
-          className="absolute inset-0 opacity-40"
+          className="absolute inset-0 opacity-40 dark:opacity-30"
           style={{ 
             backgroundImage: "url('/images/bg_login.png')",
             backgroundSize: 'cover',
@@ -201,8 +202,8 @@ export default function ProfilePage() {
           className="grid grid-cols-1 lg:grid-cols-12 gap-8"
         >
           <div className="lg:col-span-4 space-y-6">
-            <Card className="border-slate-200 overflow-hidden">
-              <div className="h-24 bg-slate-100 relative">
+            <Card className="border-slate-200 dark:border-gray-700 overflow-hidden">
+              <div className="h-24 bg-slate-100 dark:bg-gray-800 relative">
                 <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                   <Avatar className="h-24 w-24 border-4 border-white shadow-sm">
                     <AvatarFallback className="text-2xl bg-primary/10 text-primary font-bold">
@@ -212,12 +213,12 @@ export default function ProfilePage() {
                 </div>
               </div>
               <CardContent className="pt-16 pb-6 text-center">
-                <h3 className="font-bold text-xl text-slate-900">
+                <h3 className="font-bold text-xl text-slate-900 dark:text-gray-100">
                   {profileData.firstName || profileData.lastName
                     ? `${profileData.firstName} ${profileData.lastName}`
                     : "User Account"}
                 </h3>
-                <p className="text-slate-500 text-sm mb-4">{user?.email}</p>
+                <p className="text-slate-500 dark:text-gray-400 text-sm mb-4">{user?.email}</p>
                 
                 <div className="flex flex-wrap justify-center gap-2 mb-6">
                   {(() => {
@@ -240,48 +241,35 @@ export default function ProfilePage() {
                 <Separator className="my-4 opacity-50" />
                 
                 <div className="space-y-3 text-left">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Briefcase className="h-4 w-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-gray-300">
+                    <Briefcase className="h-4 w-4 text-slate-400 dark:text-gray-500" />
                     <span>{profileData.jobTitle || "No job title set"}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Building2 className="h-4 w-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-gray-300">
+                    <Building2 className="h-4 w-4 text-slate-400 dark:text-gray-500" />
                     <span>{profileData.department || "No department set"}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="border-slate-200 p-6">
-              <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                Account Security
-              </h4>
-              <p className="text-xs text-slate-500 mb-4">
-                Your account is protected with standard authentication. Contact IT for password resets.
-              </p>
-              <Button variant="outline" size="sm" className="w-full text-xs" disabled>
-                Change Password
-              </Button>
-            </Card>
           </div>
 
           <div className="lg:col-span-8">
-            <Card className="border-slate-200">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-                <CardTitle className="text-xl font-bold text-slate-900">Profile Settings</CardTitle>
-                <CardDescription>Manage your personal information and how it appears to others.</CardDescription>
+            <Card className="border-slate-200 dark:border-gray-700">
+              <CardHeader className="border-b border-slate-100 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800/50">
+                <CardTitle className="text-xl font-bold text-slate-900 dark:text-gray-100">Profile Settings</CardTitle>
+                <CardDescription className="dark:text-gray-400">Manage your personal information and how it appears to others.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-8">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-slate-700 font-medium">First Name</Label>
+                      <Label htmlFor="firstName" className="text-slate-700 dark:text-gray-300 font-medium">First Name</Label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                         <Input
                           id="firstName"
-                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          className="pl-10 border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10"
                           value={profileData.firstName}
                           onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
                           placeholder="John"
@@ -290,12 +278,12 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-slate-700 font-medium">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-slate-700 dark:text-gray-300 font-medium">Last Name</Label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                         <Input
                           id="lastName"
-                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          className="pl-10 border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10"
                           value={profileData.lastName}
                           onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
                           placeholder="Doe"
@@ -305,24 +293,24 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700 font-medium">Email Address</Label>
+                    <Label htmlFor="email" className="text-slate-700 dark:text-gray-300 font-medium">Email Address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                       <Input
                         id="email"
                         value={profileData.email}
                         disabled
-                        className="pl-10 bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed"
+                        className="pl-10 bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700 text-slate-500 dark:text-gray-400 cursor-not-allowed"
                       />
                     </div>
-                    <p className="text-[11px] text-slate-400 italic">Email address is managed by the system administrator.</p>
+                    <p className="text-[11px] text-slate-400 dark:text-gray-500 italic">Email address is managed by the system administrator.</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="bio" className="text-slate-700 font-medium">Professional Bio</Label>
+                    <Label htmlFor="bio" className="text-slate-700 dark:text-gray-300 font-medium">Professional Bio</Label>
                     <Textarea
                       id="bio"
-                      className="min-h-[120px] border-slate-200 focus:border-primary focus:ring-primary/10 resize-none"
+                      className="min-h-[120px] border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10 resize-none"
                       value={profileData.bio}
                       onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
                       placeholder="Briefly describe your role and responsibilities..."
@@ -333,12 +321,12 @@ export default function ProfilePage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="jobTitle" className="text-slate-700 font-medium">Job Title</Label>
+                      <Label htmlFor="jobTitle" className="text-slate-700 dark:text-gray-300 font-medium">Job Title</Label>
                       <div className="relative">
-                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                         <Input
                           id="jobTitle"
-                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          className="pl-10 border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10"
                           value={profileData.jobTitle}
                           onChange={(e) => setProfileData({ ...profileData, jobTitle: e.target.value })}
                           placeholder="Environmental Officer"
@@ -347,12 +335,12 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="department" className="text-slate-700 font-medium">Department</Label>
+                      <Label htmlFor="department" className="text-slate-700 dark:text-gray-300 font-medium">Department</Label>
                       <div className="relative">
-                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                         <Input
                           id="department"
-                          className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                          className="pl-10 border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10"
                           value={profileData.department}
                           onChange={(e) => setProfileData({ ...profileData, department: e.target.value })}
                           placeholder="EPNRO"
@@ -362,12 +350,12 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber" className="text-slate-700 font-medium">Phone Number</Label>
+                    <Label htmlFor="phoneNumber" className="text-slate-700 dark:text-gray-300 font-medium">Phone Number</Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-gray-500" />
                       <Input
                         id="phoneNumber"
-                        className="pl-10 border-slate-200 focus:border-primary focus:ring-primary/10"
+                        className="pl-10 border-slate-200 dark:border-gray-700 focus:border-primary focus:ring-primary/10"
                         value={profileData.phoneNumber}
                         onChange={(e) => setProfileData({ ...profileData, phoneNumber: e.target.value })}
                         placeholder="+63 900 000 0000"
@@ -400,6 +388,9 @@ export default function ProfilePage() {
           </div>
         </motion.div>
       </main>
+
+      {/* Floating Appearance Settings */}
+      <FloatingAppearanceSettings />
     </div>
   );
 }

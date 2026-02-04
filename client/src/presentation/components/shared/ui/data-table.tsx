@@ -218,7 +218,7 @@ export function DataTable<TData, TValue>({
       )}
 
       {/* Main Table */}
-      <div className="border overflow-x-auto bg-white rounded-lg">
+      <div className="border dark:border-gray-700 overflow-x-auto bg-white dark:bg-gray-900 rounded-lg">
         <Table
           className={
             density === "compact"
@@ -230,8 +230,7 @@ export function DataTable<TData, TValue>({
           style={{ minWidth: '100%', width: 'max-content' }}
         >
           <TableHeader
-            className={stickyHeader ? "sticky top-0 z-10" : ""}
-            style={{ background: "var(--primary)", color: "white" }}
+            className={stickyHeader ? "sticky top-0 z-10 bg-primary dark:bg-gray-800" : "bg-primary dark:bg-gray-800"}
           >
             {table.getHeaderGroups().map((headerGroup) => {
               // Calculate column groups based on meta.group
@@ -267,12 +266,12 @@ export function DataTable<TData, TValue>({
                 <React.Fragment key={headerGroup.id}>
                   {/* Category Header Row */}
                   {groupedHeaders.length > 0 && (
-                    <TableRow className="bg-primary hover:bg-primary">
+                    <TableRow className="bg-primary dark:bg-gray-800 hover:bg-primary dark:hover:bg-gray-800">
                       {groupedHeaders.map((groupInfo, idx) => (
                         <TableHead
                           key={`group-${idx}`}
                           colSpan={groupInfo.colspan}
-                          className="px-2 py-2 text-center font-bold text-white border-r border-white/30 last:border-r-0"
+                          className="px-2 py-2 text-center font-bold text-white border-r border-white/30 dark:border-gray-600 last:border-r-0"
                         >
                           {groupInfo.group}
                         </TableHead>
@@ -298,7 +297,7 @@ export function DataTable<TData, TValue>({
                           className={`px-2 py-1 ${!disableSorting && header.column.getCanSort()
                               ? "cursor-pointer select-none"
                               : ""
-                            } bg-primary text-white ${isGroupEnd ? "border-r border-white/30" : ""}`}
+                            } bg-primary dark:bg-gray-800 text-white ${isGroupEnd ? "border-r border-white/30 dark:border-gray-600" : ""}`}
                           style={{ 
                             width: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
                             minWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto'
@@ -386,7 +385,7 @@ export function DataTable<TData, TValue>({
         {showPagination && table.getRowModel().rows.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
             <div className="flex items-center gap-2">
-              <span>Rows per page:</span>
+              <span className="text-foreground">Rows per page:</span>
               <select
                 className="border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition"
                 value={table.getState().pagination.pageSize}

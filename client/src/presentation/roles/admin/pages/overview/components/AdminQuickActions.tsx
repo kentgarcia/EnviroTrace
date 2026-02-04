@@ -1,8 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-    UserPlus,
-    RefreshCw,
     Activity,
     Users,
     Monitor,
@@ -39,8 +37,8 @@ const QuickActionCard: React.FC<QuickActionProps> = ({
                         {icon}
                     </div>
                     <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
-                        <p className="text-sm text-gray-600">{description}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{title}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
                     </div>
                 </div>
             </CardContent>
@@ -53,37 +51,30 @@ export const AdminQuickActions: React.FC = () => {
 
     const quickActions = [
         {
-            title: "Add New User",
-            description: "Create a new user account and assign roles",
-            icon: <UserPlus className="w-6 h-6 text-blue-600" />,
-            onClick: () => navigate({ to: "/admin/user-management" }),
-            color: "bg-blue-100",
-        },
-        {
             title: "Manage Users",
             description: "View and manage existing user accounts",
-            icon: <Users className="w-6 h-6 text-green-600" />,
+            icon: <Users className="w-6 h-6 text-green-600 dark:text-green-400" />,
             onClick: () => navigate({ to: "/admin/user-management" }),
-            color: "bg-green-100",
+            color: "bg-green-100 dark:bg-green-900/30",
         },
         {
             title: "Session Management",
             description: "Monitor and control user login sessions",
-            icon: <Monitor className="w-6 h-6 text-orange-600" />,
+            icon: <Monitor className="w-6 h-6 text-orange-600 dark:text-orange-400" />,
             onClick: () => navigate({ to: "/admin/session-management" }),
-            color: "bg-orange-100",
+            color: "bg-orange-100 dark:bg-orange-900/30",
         },
         {
             title: "Audit Logs",
             description: "View ISO-compliant system activity audit trail",
-            icon: <Shield className="w-6 h-6 text-red-600" />,
+            icon: <Shield className="w-6 h-6 text-red-600 dark:text-red-400" />,
             onClick: () => navigate({ to: "/admin/audit-logs" }),
-            color: "bg-red-100",
+            color: "bg-red-100 dark:bg-red-900/30",
         },
         {
             title: "View System Health",
             description: "Monitor system performance and health metrics",
-            icon: <Activity className="w-6 h-6 text-purple-600" />,
+            icon: <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />,
             onClick: () => {
                 // Scroll to system health section on the same page
                 const element = document.querySelector('[data-section="system-health"]');
@@ -91,14 +82,14 @@ export const AdminQuickActions: React.FC = () => {
                     element.scrollIntoView({ behavior: 'smooth' });
                 }
             },
-            color: "bg-purple-100",
+            color: "bg-purple-100 dark:bg-purple-900/30",
         },
     ];
 
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-xl font-semibold text-gray-900">
+                <CardTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                     Quick Actions
                 </CardTitle>
             </CardHeader>

@@ -78,6 +78,11 @@ function getMenuItems(
         path: `${basePath}/audit-logs`,
         icon: <Shield size={18} />,
       },
+      {
+        label: "Settings",
+        path: `${basePath}/settings`,
+        icon: <Settings size={18} />,
+      },
     ];
   } else if (dashboardType === "government-emission") {
     return [

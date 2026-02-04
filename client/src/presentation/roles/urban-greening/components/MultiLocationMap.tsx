@@ -206,7 +206,7 @@ export default function MultiLocationMap({
     if (validLocations.length === 0) {
         return (
             <div
-                className="flex items-center justify-center bg-gray-100 text-gray-500 rounded border"
+                className="flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded border border-gray-200 dark:border-gray-700"
                 style={{ height }}
             >
                 <div className="text-center">
@@ -277,7 +277,7 @@ export default function MultiLocationMap({
 
     return (
         <div
-            className="relative w-full rounded border"
+            className="relative w-full rounded border border-gray-200 dark:border-gray-700"
             style={{ height }}
         >
             <MapContainer

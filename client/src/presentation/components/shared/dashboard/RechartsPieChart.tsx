@@ -75,7 +75,7 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
     const oRadius = outerRadius ?? (isSquare ? 70 : 80);
     const labelsOn = typeof showLabels === "boolean" ? showLabels : !isSquare;
 
-    // Custom label renderer to ensure black labels, with threshold
+    // Custom label renderer to ensure proper color for both themes, with threshold
     const renderLabel = (props: any) => {
         const { cx, cy, midAngle, outerRadius, payload } = props;
         const RADIAN = Math.PI / 180;
@@ -87,7 +87,7 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
         const pct = Math.round((value / total) * 100);
         if (pct < minSlicePctToLabel) return null;
         return (
-            <text x={x} y={y} fill="#111827" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={12} fontWeight={600}>
+            <text x={x} y={y} fill="hsl(var(--foreground))" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={12} fontWeight={600}>
                 {`${name} (${pct}%)`}
             </text>
         );

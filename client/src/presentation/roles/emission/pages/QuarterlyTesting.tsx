@@ -58,10 +58,10 @@ export default function QuarterlyTesting() {
     <>
       <div className="flex flex-col h-full overflow-hidden">
           {/* Header Section */}
-          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="page-header-bg sticky top-0 z-10">
             <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
               <div className="shrink-0">
-                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                <h1 className="text-xl font-semibold tracking-tight">
                   Quarterly Testing
                 </h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -75,7 +75,7 @@ export default function QuarterlyTesting() {
                   size="icon"
                   onClick={handleRefresh}
                   disabled={isLoading}
-                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
                 </Button>
@@ -90,7 +90,7 @@ export default function QuarterlyTesting() {
                   className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "overview"
                       ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
                   <BarChart3 className="w-4 h-4 inline mr-2" />
@@ -103,8 +103,8 @@ export default function QuarterlyTesting() {
                     activeTab === "testing"
                       ? "border-blue-500 text-blue-600"
                       : selectedOffices.length === 0
-                      ? "border-transparent text-gray-300 cursor-not-allowed"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-transparent text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                      : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
                 >
                   <Table className="w-4 h-4 inline mr-2" />
@@ -115,7 +115,7 @@ export default function QuarterlyTesting() {
           </div>
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+          <div className="flex-1 overflow-y-auto page-bg">
             <div className={cn(
               "w-full transition-all duration-300",
               activeTab === "testing" ? "p-4" : "p-8"
@@ -148,19 +148,19 @@ export default function QuarterlyTesting() {
               {/* Vehicle Testing Tab */}
               {activeTab === "testing" && (
                   (!selectedOffices.includes("all") && selectedOffices.length === 0) ? (
-                    <Card className="border border-slate-200 shadow-none bg-white">
+                    <Card className="border border-slate-200 dark:border-gray-700 shadow-none bg-white dark:bg-gray-900">
                       <div className="p-12 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 mb-4">
-                          <Users className="h-8 w-8 text-slate-400" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 dark:bg-gray-800 mb-4">
+                          <Users className="h-8 w-8 text-slate-400 dark:text-slate-500" />
                         </div>
-                        <h3 className="text-lg font-semibold text-slate-900">No Offices Selected</h3>
-                        <p className="text-slate-500 max-w-xs mx-auto mt-2">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-gray-100">No Offices Selected</h3>
+                        <p className="text-slate-500 dark:text-slate-400 max-w-xs mx-auto mt-2">
                           Please select one or more offices from the filter above to view vehicle testing data.
                         </p>
                       </div>
                     </Card>
                   ) : (
-                    <Card className="border border-slate-200 shadow-none bg-white overflow-hidden">
+                    <Card className="border border-slate-200 dark:border-gray-700 shadow-none bg-white dark:bg-gray-900 overflow-hidden">
                       <div className="p-0">
                         <VehicleTestingSpreadsheet
                           officeGroups={officeGroups}

@@ -244,17 +244,17 @@ const TreeDetailSidePanel = ({
   });
 
   const statusColors: Record<string, string> = {
-    alive: "bg-green-100 text-green-700 border-green-200",
-    cut: "bg-red-100 text-red-700 border-red-200",
-    dead: "bg-gray-100 text-gray-700 border-gray-200",
-    replaced: "bg-blue-100 text-blue-700 border-blue-200",
+    alive: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700",
+    cut: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700",
+    dead: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+    replaced: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700",
   };
 
   const healthColors: Record<string, string> = {
-    healthy: "bg-green-100 text-green-700",
-    needs_attention: "bg-yellow-100 text-yellow-700",
-    diseased: "bg-orange-100 text-orange-700",
-    dead: "bg-gray-100 text-gray-700",
+    healthy: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300",
+    needs_attention: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300",
+    diseased: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300",
+    dead: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300",
   };
   
   return (
@@ -284,11 +284,11 @@ const TreeDetailSidePanel = ({
         ) : tree ? (
           <div className="p-4 space-y-4">
             {/* Tree Code */}
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-              <div className="font-mono text-lg text-blue-700 font-bold">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800">
+              <div className="font-mono text-lg text-blue-700 dark:text-blue-300 font-bold">
                 {tree.tree_code}
               </div>
-              <div className="text-sm text-blue-600 mt-1">
+              <div className="text-sm text-blue-600 dark:text-blue-400 mt-1">
                 {tree.species || tree.common_name}
               </div>
             </div>
@@ -798,7 +798,7 @@ const TreeInventoryMap: React.FC = () => {
             </div>
             {useClusters && (
               <>
-                <div className="border-t my-1"></div>
+                <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                 <div className="flex items-center gap-2 text-xs">
                   <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-white text-[8px]">n</span>
                   Cluster

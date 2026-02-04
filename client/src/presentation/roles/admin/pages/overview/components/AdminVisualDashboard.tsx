@@ -41,10 +41,10 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
             <div className="grid grid-cols-1 gap-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="animate-pulse bg-gray-200 h-4 w-32 rounded"></CardTitle>
+                        <CardTitle className="animate-pulse bg-gray-200 dark:bg-gray-700 h-4 w-32 rounded"></CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[300px] animate-pulse bg-gray-100 rounded-lg"></div>
+                        <div className="h-[300px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
                     </CardContent>
                 </Card>
             </div>
@@ -56,7 +56,7 @@ export const AdminVisualDashboard: React.FC<AdminVisualDashboardProps> = ({
             {/* User Activity Trends */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base font-medium">User Activity Trends</CardTitle>
+                    <CardTitle className="text-base font-medium text-gray-900 dark:text-gray-100">User Activity Trends</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="h-[300px]">

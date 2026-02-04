@@ -83,18 +83,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
             {fullVehicle?.id.startsWith("pending-") && (
               <Badge
                 variant="outline"
-                className="text-[10px] uppercase font-bold tracking-wider text-amber-600 bg-amber-50 border-amber-200"
+                className="text-[10px] uppercase font-bold tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800"
               >
                 Pending Sync
               </Badge>
             )}
           </div>
-          <div className="text-slate-500 text-sm font-medium mt-1 flex items-center gap-2">
+          <div className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1 flex items-center gap-2">
             {!fullVehicle?.plate_number && fullVehicle?.chassis_number && (
-              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] uppercase font-bold">Chassis</span>
+              <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] uppercase font-bold">Chassis</span>
             )}
             {!fullVehicle?.plate_number && !fullVehicle?.chassis_number && fullVehicle?.registration_number && (
-              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] uppercase font-bold">Registration</span>
+              <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] uppercase font-bold">Registration</span>
             )}
             <span>Vehicle Fleet Management</span>
           </div>
@@ -139,11 +139,11 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         <TabsContent value="info" className="space-y-6 mt-0 outline-none">
           {!fullVehicle ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200 text-slate-500">
+            <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 text-slate-500 dark:text-slate-400">
               Vehicle data not available.
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 p-8">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-slate-200 dark:border-gray-700 p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <InfoRow label="Plate Number" value={fullVehicle?.plate_number} />
@@ -160,10 +160,10 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                 </div>
               </div>
               {fullVehicle?.description && (
-                <div className="mt-8 pt-8 border-t border-slate-200">
+                <div className="mt-8 pt-8 border-t border-slate-200 dark:border-gray-700">
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Description</div>
-                    <div className="text-sm text-slate-700 whitespace-pre-wrap">{fullVehicle.description}</div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Description</div>
+                    <div className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{fullVehicle.description}</div>
                   </div>
                 </div>
               )}
@@ -173,8 +173,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
 
         <TabsContent value="history" className="mt-0 outline-none">
           {isPendingVehicle ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="text-slate-500 font-medium">
+            <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700">
+              <div className="text-slate-500 dark:text-slate-400 font-medium">
                 Test history will be available after syncing this vehicle.
               </div>
             </div>
@@ -185,59 +185,59 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <Skeleton className="h-12 w-full rounded-lg" />
             </div>
           ) : testHistory.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="text-slate-500 font-medium">
+            <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700">
+              <div className="text-slate-500 dark:text-slate-400 font-medium">
                 No test history available for this vehicle.
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-slate-100 overflow-hidden">
+            <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden">
               <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow className="hover:bg-transparent border-slate-100">
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Test Date</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Period</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Result</TableHead>
+                <TableHeader className="bg-slate-50 dark:bg-gray-800">
+                  <TableRow className="hover:bg-transparent border-slate-100 dark:border-gray-700">
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Test Date</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Period</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Result</TableHead>
                     {vehicle.engine_type?.toLowerCase().includes('gasoline') && (
                       <>
-                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">CO (%)</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">HC (ppm)</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">CO (%)</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">HC (ppm)</TableHead>
                       </>
                     )}
                     {vehicle.engine_type?.toLowerCase().includes('diesel') && (
-                      <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Opacimeter (%)</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Opacimeter (%)</TableHead>
                     )}
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Remarks</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Remarks</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {testHistory.map((test) => (
-                    <TableRow key={test.id} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="py-3 font-medium text-slate-700">
+                    <TableRow key={test.id} className="border-slate-100 dark:border-gray-700 hover:bg-slate-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                      <TableCell className="py-3 font-medium text-slate-700 dark:text-slate-300">
                         {test.test_date ? formatTestDate(test.test_date) : "—"}
                       </TableCell>
-                      <TableCell className="py-3 text-slate-600">
+                      <TableCell className="py-3 text-slate-600 dark:text-slate-400">
                         Q{test.quarter}, {test.year}
                       </TableCell>
                       <TableCell className="py-3">
                         {test.result === true ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 bg-emerald-50 border-emerald-100"
+                            className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800"
                           >
                             Passed
                           </Badge>
                         ) : test.result === false ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] uppercase font-bold tracking-wider text-rose-600 bg-rose-50 border-rose-100"
+                            className="text-[10px] uppercase font-bold tracking-wider text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border-rose-100 dark:border-rose-800"
                           >
                             Failed
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-[10px] uppercase font-bold tracking-wider text-slate-500 bg-slate-50 border-slate-200"
+                            className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-600"
                           >
                             Pending
                           </Badge>
@@ -245,20 +245,20 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
                       </TableCell>
                       {vehicle.engine_type?.toLowerCase().includes('gasoline') && (
                         <>
-                          <TableCell className="py-3 text-slate-600">
+                          <TableCell className="py-3 text-slate-600 dark:text-slate-400">
                             {test.co_level !== null && test.co_level !== undefined ? test.co_level.toFixed(2) : "—"}
                           </TableCell>
-                          <TableCell className="py-3 text-slate-600">
+                          <TableCell className="py-3 text-slate-600 dark:text-slate-400">
                             {test.hc_level !== null && test.hc_level !== undefined ? test.hc_level.toFixed(2) : "—"}
                           </TableCell>
                         </>
                       )}
                       {vehicle.engine_type?.toLowerCase().includes('diesel') && (
-                        <TableCell className="py-3 text-slate-600">
+                        <TableCell className="py-3 text-slate-600 dark:text-slate-400">
                           {test.opacimeter_result !== null && test.opacimeter_result !== undefined ? test.opacimeter_result.toFixed(2) : "—"}
                         </TableCell>
                       )}
-                      <TableCell className="py-3 text-slate-600 text-xs">
+                      <TableCell className="py-3 text-slate-600 dark:text-slate-400 text-xs">
                         {test.remarks || "—"}
                       </TableCell>
                     </TableRow>
@@ -277,29 +277,29 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
               <Skeleton className="h-12 w-full rounded-lg" />
             </div>
           ) : driverHistory.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="text-slate-500 font-medium">
+            <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700">
+              <div className="text-slate-500 dark:text-slate-400 font-medium">
                 No driver history available for this vehicle.
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-slate-100 overflow-hidden">
+            <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden">
               <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow className="hover:bg-transparent border-slate-100">
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Driver Name</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Changed At</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 h-10">Changed By</TableHead>
+                <TableHeader className="bg-slate-50 dark:bg-gray-800">
+                  <TableRow className="hover:bg-transparent border-slate-100 dark:border-gray-700">
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Driver Name</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Changed At</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 h-10">Changed By</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {driverHistory.map((entry, idx) => (
-                    <TableRow key={idx} className="border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="py-3 font-medium text-slate-700">{entry.driverName}</TableCell>
-                      <TableCell className="py-3 text-slate-600">
+                    <TableRow key={idx} className="border-slate-100 dark:border-gray-700 hover:bg-slate-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                      <TableCell className="py-3 font-medium text-slate-700 dark:text-slate-300">{entry.driverName}</TableCell>
+                      <TableCell className="py-3 text-slate-600 dark:text-slate-400">
                         {formatTestDateTime(entry.changedAt)}
                       </TableCell>
-                      <TableCell className="py-3 text-slate-500">{entry.changedBy || "—"}</TableCell>
+                      <TableCell className="py-3 text-slate-500 dark:text-slate-400">{entry.changedBy || "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -316,11 +316,11 @@ const InfoRow: React.FC<{ label: string; value?: string | null }> = ({
   label,
   value,
 }) => (
-  <div className="flex flex-col gap-2 pb-4 border-b border-slate-100 last:border-0">
-    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+  <div className="flex flex-col gap-2 pb-4 border-b border-slate-100 dark:border-gray-700 last:border-0">
+    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
       {label}
     </span>
-    <span className="text-base font-semibold text-slate-900">
+    <span className="text-base font-semibold text-slate-900 dark:text-gray-100">
       {value || "—"}
     </span>
   </div>

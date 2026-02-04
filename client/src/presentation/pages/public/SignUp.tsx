@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/core/api/auth";
 import { SignUpForm } from "@/presentation/components/shared/auth/SignUpForm";
+import { FloatingAppearanceSettings } from "@/presentation/components/shared/settings/FloatingAppearanceSettings";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -25,13 +26,13 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-ems-green-50 via-white to-ems-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Background with overlay */}
       <div 
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover bg-center opacity-30 dark:opacity-10"
         style={{ backgroundImage: "url('/images/bg_login.png')" }}
       />
-      <div className="absolute inset-0 bg-gradient-to-br from-ems-green-900/40 via-ems-blue-900/30 to-black/50" />
+      <div className="absolute inset-0 bg-gradient-to-br from-ems-green-900/40 via-ems-blue-900/30 to-black/50 dark:from-ems-green-950/60 dark:via-ems-blue-950/50 dark:to-black/70" />
       
       {/* Content */}
       <div className="relative min-h-screen flex items-center justify-center p-4">
@@ -53,6 +54,9 @@ export default function SignUp() {
           </div>
         </div>
       </div>
+
+      {/* Floating Appearance Settings */}
+      <FloatingAppearanceSettings />
     </div>
   );
 }

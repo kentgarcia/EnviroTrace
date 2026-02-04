@@ -428,9 +428,9 @@ export function PermissionManagementNew() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="flex flex-col h-full bg-[#F9FBFC]">
-        <div className="bg-white px-6 py-3 border-b border-gray-200">
-             <h1 className="text-xl font-semibold text-gray-900">Permission Management</h1>
+      <div className="flex flex-col h-full page-bg">
+        <div className="page-header-bg px-6 py-3">
+             <h1 className="text-xl font-semibold">Permission Management</h1>
         </div>
         <div className="p-6">
           <Alert variant="destructive">
@@ -446,9 +446,9 @@ export function PermissionManagementNew() {
 
   if (loadingPermissions) {
     return (
-      <div className="flex flex-col h-full bg-[#F9FBFC]">
-        <div className="bg-white px-6 py-3 border-b border-gray-200">
-             <h1 className="text-xl font-semibold text-gray-900">Permission Management</h1>
+      <div className="flex flex-col h-full page-bg">
+        <div className="page-header-bg px-6 py-3">
+             <h1 className="text-xl font-semibold">Permission Management</h1>
         </div>
         <div className="p-6">
           <div className="animate-pulse space-y-4">
@@ -461,11 +461,11 @@ export function PermissionManagementNew() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#F9FBFC]">
-      <div className="bg-white px-6 py-3 border-b border-gray-200 sticky top-0 z-10">
+    <div className="flex flex-col h-full page-bg">
+      <div className="page-header-bg px-6 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Permission Management</h1>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Permission Management</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Manage role-based permissions and access control
             </p>
@@ -475,10 +475,10 @@ export function PermissionManagementNew() {
 
       <div className="flex-1 overflow-hidden p-4">
             <Card className="flex flex-col h-full border-none shadow-sm">
-              <CardHeader className="flex-shrink-0 pb-4 border-b">
+              <CardHeader className="flex-shrink-0 pb-4 border-b dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Role Permission Matrix</CardTitle>
+                    <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Role Permission Matrix</CardTitle>
                     <CardDescription>
                       Select a role and toggle permissions on/off using the switches
                     </CardDescription>
@@ -516,7 +516,7 @@ export function PermissionManagementNew() {
                             </Button>
                           </div>
                           {roleUsers.map((user) => (
-                            <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
                               <div className="flex-1">
                                 <p className="font-medium">
                                   {user.profile?.first_name} {user.profile?.last_name}
@@ -601,10 +601,10 @@ export function PermissionManagementNew() {
                 {loadingRoles || loadingRolePerms ? (
                   <div className="h-20 w-full animate-pulse rounded-lg bg-muted/60" />
                 ) : currentRole && rolePermissions ? (
-                  <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/50 rounded-lg flex-shrink-0 border">
+                  <div className="flex flex-wrap items-center gap-4 p-4 bg-muted/50 rounded-lg flex-shrink-0 border dark:border-gray-700">
                     <div className="flex items-center gap-2">
                       {getRoleIcon(currentRole.slug)}
-                      <span className="font-medium">
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
                         {currentRole.display_name}
                       </span>
                       {currentRole.is_system && (
@@ -632,7 +632,7 @@ export function PermissionManagementNew() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                  <div className="rounded-lg border dark:border-gray-700 border-dashed p-4 text-sm text-muted-foreground">
                     Select or create a role to configure its permissions.
                   </div>
                 )}
@@ -652,9 +652,9 @@ export function PermissionManagementNew() {
                             </h3>
                           </div>
 
-                          <div className="rounded-md border bg-white overflow-hidden">
+                          <div className="rounded-md border dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
                             <Table>
-                              <TableHeader className="bg-gray-50/50">
+                              <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50">
                                 <TableRow>
                                   <TableHead className="w-[220px] pl-4">Permission Category</TableHead>
                                   <TableHead className="w-[280px]">Description</TableHead>
@@ -666,7 +666,7 @@ export function PermissionManagementNew() {
                                             <TooltipTrigger asChild>
                                               <div className="flex flex-col items-center justify-center gap-1 py-2 cursor-help group">
                                                 <Icon className={`h-4 w-4 ${config.color} group-hover:scale-110 transition-transform`} />
-                                                <span className="text-xs font-medium text-gray-600">{config.label}</span>
+                                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{config.label}</span>
                                               </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
@@ -693,9 +693,9 @@ export function PermissionManagementNew() {
                                   );
 
                                   return (
-                                    <TableRow key={entityType} className={`hover:bg-slate-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                                      <TableCell className="font-medium text-gray-700 pl-4">
-                                        <span className="text-sm font-semibold text-gray-900">{getEntityLabel(entityType)}</span>
+                                    <TableRow key={entityType} className={`hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/30 dark:bg-gray-800/30'}`}>
+                                      <TableCell className="font-medium text-gray-700 dark:text-gray-200 pl-4">
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getEntityLabel(entityType)}</span>
                                       </TableCell>
                                       <TableCell className="text-sm text-muted-foreground align-top">
                                         {summaryDescription}
@@ -726,7 +726,7 @@ export function PermissionManagementNew() {
                                                         handlePermissionToggle(permission.id, isAssigned)
                                                       }
                                                       disabled={isPending || loadingRolePerms}
-                                                      className={`${isAssigned ? 'data-[state=checked]:bg-primary' : ''}`}
+                                                      className={`${isAssigned ? 'data-[state=checked]:bg-primary' : 'dark:bg-gray-700'}`}
                                                     />
                                                   </div>
                                                 </TooltipTrigger>

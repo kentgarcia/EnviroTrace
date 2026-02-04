@@ -42,10 +42,10 @@ export const UrbanGreeningOverview: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#F9FBFC]">
-            <div className="bg-white px-6 py-3 border-b border-gray-200 sticky top-0 z-10">
+        <div className="flex flex-col h-full page-bg">
+            <div className="page-header-bg px-6 py-3 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
-                        <h1 className="text-xl font-semibold text-gray-900">Urban Greening Dashboard</h1>
+                        <h1 className="text-xl font-semibold">Urban Greening Dashboard</h1>
                         <div className="flex items-center gap-3">
                             <Select value={selectedYear} onValueChange={setSelectedYear}>
                                 <SelectTrigger className="w-[120px] h-9">
@@ -76,7 +76,7 @@ export const UrbanGreeningOverview: React.FC = () => {
                                 size="icon"
                                 onClick={handleRefresh}
                                 disabled={isLoading}
-                                className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                             >
                                 <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
                             </Button>
@@ -85,7 +85,7 @@ export const UrbanGreeningOverview: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
+                <div className="flex-1 overflow-y-auto p-4 page-bg space-y-6">
                     {hasError ? (
                         <div className="text-center py-12 text-red-600">
                             <p>Error loading dashboard data. Please try again.</p>

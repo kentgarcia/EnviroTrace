@@ -283,7 +283,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl p-0 rounded-2xl border-none max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="bg-[#0033a0] px-6 py-5 m-0 border-none shrink-0">
+        <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 px-6 py-5 m-0 border-none shrink-0">
           <DialogTitle className="text-xl font-bold text-white">
             {mode === "add" ? "Create New Tree Request" : "Edit Tree Request"}
           </DialogTitle>
@@ -539,7 +539,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium mb-3 block">Requirements Checklist</Label>
-                    <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                    <div className="space-y-3 border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
                       {(formData.requirements_checklist || []).map((item, index) => (
                         <div key={index} className="flex items-start space-x-3 p-2 hover:bg-white rounded transition-colors">
                           <Checkbox
@@ -732,7 +732,7 @@ const ISOTreeRequestForm: React.FC<ISOTreeRequestFormProps> = ({
           </Tabs>
         </form>
 
-        <DialogFooter className="px-6 py-4 bg-gray-50 border-t shrink-0">
+        <DialogFooter className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shrink-0">
           <Button type="button" variant="outline" className="rounded-lg" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>

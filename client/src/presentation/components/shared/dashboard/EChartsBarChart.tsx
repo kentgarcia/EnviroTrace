@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef } from "react";
 import * as echarts from "echarts";
+import { useTheme } from "next-themes";
 import {
   Card,
   CardContent,
@@ -35,6 +36,8 @@ export function EChartsBarChart({
   categoryFormatter = (category) => category,
 }: EChartsBarChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     // Initialize chart
@@ -80,6 +83,7 @@ export function EChartsBarChart({
           axisLabel: {
             interval: 0,
             rotate: isHorizontal ? 0 : 30,
+            color: isDark ? "#d1d5db" : "#374151",
             formatter: (value: string) => {
               // Truncate long labels
               return value.length > 15 ? value.substring(0, 12) + "..." : value;
@@ -91,6 +95,9 @@ export function EChartsBarChart({
         },
         [isHorizontal ? "xAxis" : "yAxis"]: {
           type: "value",
+          axisLabel: {
+            color: isDark ? "#d1d5db" : "#374151",
+          },
         },
         series: [
           {
@@ -112,7 +119,7 @@ export function EChartsBarChart({
               position: isHorizontal ? "right" : "top",
               fontSize: 12,
               fontWeight: 600,
-              color: "#374151",
+              color: isDark ? "#d1d5db" : "#374151",
               formatter: (params: any) => {
                 return valueFormatter(params.value);
               },
@@ -138,7 +145,7 @@ export function EChartsBarChart({
       chart?.dispose();
       window.removeEventListener("resize", handleResize);
     };
-  }, [data, title, layout, color, valueFormatter, categoryFormatter]);
+  }, [data, title, layout, color, valueFormatter, categoryFormatter, isDark]);
 
   return (
     <Card className="overflow-hidden">

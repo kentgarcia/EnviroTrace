@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import * as echarts from "echarts";
+import { useTheme } from "next-themes";
 import {
   Card,
   CardContent,
@@ -27,6 +28,8 @@ export function EChartsPieChart({
   colors = ["#4f46e5", "#6366f1", "#818cf8", "#93c5fd", "#bfdbfe"],
 }: EChartsPieChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const { theme, resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     // Initialize chart
@@ -66,7 +69,7 @@ export function EChartsPieChart({
             avoidLabelOverlap: true,
             itemStyle: {
               borderRadius: 4,
-              borderColor: "#fff",
+              borderColor: isDark ? "#1f2937" : "#fff",
               borderWidth: 2,
             },
             label: {
@@ -77,7 +80,7 @@ export function EChartsPieChart({
               formatter: function (params: any) {
                 return `${params.name}\n${params.value} (${params.percent}%)`;
               },
-              color: "#374151",
+              color: isDark ? "#d1d5db" : "#374151",
             },
             emphasis: {
               label: {
@@ -91,7 +94,7 @@ export function EChartsPieChart({
               length: 15,
               length2: 5,
               lineStyle: {
-                color: "#9ca3af",
+                color: isDark ? "#6b7280" : "#9ca3af",
                 width: 1,
               },
             },
@@ -117,7 +120,7 @@ export function EChartsPieChart({
       chart?.dispose();
       window.removeEventListener("resize", handleResize);
     };
-  }, [data, title, colors]);
+  }, [data, title, colors, isDark]);
 
   return (
     <Card className="overflow-hidden">

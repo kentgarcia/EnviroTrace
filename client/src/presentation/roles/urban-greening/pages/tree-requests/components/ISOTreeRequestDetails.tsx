@@ -202,6 +202,7 @@ const REQUEST_FORM_FIELDS: (keyof TreeRequestCreate)[] = [
   "receiving_received_through",
   "receiving_date_received_by_dept_head",
   "receiving_name",
+  "receiving_organization",
   "receiving_address",
   "receiving_contact",
   "receiving_request_status",
@@ -603,6 +604,7 @@ Month: ${draftData.receiving_month || "—"}
 Received Through: ${draftData.receiving_received_through || "—"}
 Date Received by Dept. Head: ${formatDate(draftData.receiving_date_received_by_dept_head)}
 Name: ${draftData.receiving_name || "—"}
+Organization: ${draftData.receiving_organization || "—"}
 Address: ${draftData.receiving_address || "—"}
 Contact: ${draftData.receiving_contact || "—"}
 Status: ${draftData.receiving_request_status || "—"}
@@ -679,7 +681,7 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
     <>
       <Dialog open onOpenChange={handleDialogChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] rounded-2xl flex flex-col">
-        <DialogHeader className="pb-4 border-b px-6 pt-6 shrink-0">
+        <DialogHeader className="pb-4 border-b border-gray-200 dark:border-gray-700 px-6 pt-6 shrink-0">
           <div className="flex items-center justify-between gap-4">
             <div>
               <DialogTitle className="text-2xl">
@@ -765,7 +767,7 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">Current Phase</Label>
-                  <div className="flex items-center h-10 px-3 border rounded-md bg-gray-50">
+                  <div className="flex items-center h-10 px-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800">
                     <Badge className={cn("capitalize", getStatusColor((getValue('overall_status')?.toString() || displayData.overall_status) ?? 'receiving'))}>
                       {getValue('overall_status') || displayData.overall_status}
                     </Badge>
@@ -814,6 +816,7 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
                         <FieldRenderer label="Received Through" fieldKey="receiving_received_through" type="creatable-select" options={receivedThroughItems} value={getValue("receiving_received_through")} onChange={handleFieldChange} />
                         <FieldRenderer label="Date Received by Dept. Head" fieldKey="receiving_date_received_by_dept_head" type="date" value={getValue("receiving_date_received_by_dept_head")} onChange={handleFieldChange} />
                         <FieldRenderer label="Name" fieldKey="receiving_name" type="text" value={getValue("receiving_name")} onChange={handleFieldChange} />
+                        <FieldRenderer label="Organization" fieldKey="receiving_organization" type="text" value={getValue("receiving_organization")} onChange={handleFieldChange} />
                         <FieldRenderer label="Address" fieldKey="receiving_address" type="text" value={getValue("receiving_address")} onChange={handleFieldChange} />
                         <FieldRenderer label="Contact" fieldKey="receiving_contact" type="text" value={getValue("receiving_contact")} onChange={handleFieldChange} />
                         <FieldRenderer label="Status" fieldKey="receiving_request_status" type="creatable-select" options={statusReceivingItems} value={getValue("receiving_request_status")} onChange={handleFieldChange} />
@@ -892,7 +895,7 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
                       
                       {/* Requirements Checklist */}
                       {hasChecklist && (
-                        <div className="border-t pt-3">
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                           <div className="text-sm font-medium mb-2">Requirements Checklist:</div>
                           <div className="space-y-2">
                             {(draftData.requirements_checklist || []).map((item, idx) => (

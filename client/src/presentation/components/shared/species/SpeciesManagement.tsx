@@ -177,14 +177,14 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       accessorKey: "scientific_name",
       header: "Scientific Name",
       cell: ({ row }) => (
-        <span className="italic text-gray-600">{row.original.scientific_name || "—"}</span>
+        <span className="italic text-gray-600 dark:text-gray-400">{row.original.scientific_name || "—"}</span>
       ),
     },
     {
       accessorKey: "family",
       header: "Family",
       cell: ({ row }) => (
-        <span className="text-sm text-gray-600">{row.original.family || "—"}</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">{row.original.family || "—"}</span>
       ),
     },
     {
@@ -193,12 +193,12 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       cell: ({ row }) => {
         const type = row.original.species_type || "Tree";
         const badgeClasses = {
-          Tree: "bg-emerald-100 text-emerald-800 border-emerald-200",
-          Ornamental: "bg-purple-100 text-purple-800 border-purple-200",
-          Seed: "bg-amber-100 text-amber-800 border-amber-200",
-          Other: "bg-gray-100 text-gray-700 border-gray-300",
+          Tree: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800",
+          Ornamental: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-800",
+          Seed: "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800",
+          Other: "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600",
         };
-        const defaultClass = "bg-blue-100 text-blue-800 border-blue-200";
+        const defaultClass = "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800";
         const badgeClass = badgeClasses[type as keyof typeof badgeClasses] || defaultClass;
         
         return (
@@ -244,12 +244,12 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       cell: ({ row }) =>
         row.original.co2_absorbed_kg_per_year ? (
           <div className="text-center text-sm">
-            <span className="text-green-700 font-medium">
+            <span className="text-green-700 dark:text-green-400 font-medium">
               {formatNum(row.original.co2_absorbed_kg_per_year, 1)} kg
             </span>
           </div>
         ) : (
-          <div className="text-center text-gray-400">—</div>
+          <div className="text-center text-gray-400 dark:text-gray-500">—</div>
         ),
     },
     {
@@ -322,15 +322,15 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
     if (!hasEnvData(s)) return null;
 
     return (
-      <div className="bg-blue-50/30 py-3 px-6">
+      <div className="bg-blue-50/30 dark:bg-blue-900/10 py-3 px-6">
         <div className="grid grid-cols-4 gap-6 text-sm">
           {/* Physical Data */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1 font-medium text-gray-700">
+            <div className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
               <Ruler className="w-4 h-4" />
               Physical Data
             </div>
-            <div className="space-y-1 text-gray-600">
+            <div className="space-y-1 text-gray-600 dark:text-gray-400">
               <p>
                 Height: {formatNum(s.avg_mature_height_min_m, 0)}–
                 {formatNum(s.avg_mature_height_max_m, 0)} m (avg{" "}
@@ -350,11 +350,11 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
 
           {/* Carbon Data */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1 font-medium text-green-700">
+            <div className="flex items-center gap-1 font-medium text-green-700 dark:text-green-400">
               <Wind className="w-4 h-4" />
               Carbon / CO₂
             </div>
-            <div className="space-y-1 text-gray-600">
+            <div className="space-y-1 text-gray-600 dark:text-gray-400">
               <p>
                 CO₂ Absorbed: {formatNum(s.co2_absorbed_kg_per_year, 1)} kg/year
               </p>
@@ -368,11 +368,11 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
 
           {/* Removal Impact */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1 font-medium text-red-700">
+            <div className="flex items-center gap-1 font-medium text-red-700 dark:text-red-400">
               <Trash2 className="w-4 h-4" />
               Removal Impact
             </div>
-            <div className="space-y-1 text-gray-600">
+            <div className="space-y-1 text-gray-600 dark:text-gray-400">
               <p>
                 Decay Years: {s.decay_years_min ?? "—"}–{s.decay_years_max ?? "—"} yrs
               </p>
@@ -393,11 +393,11 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
 
           {/* Notes */}
           <div className="space-y-2">
-            <div className="flex items-center gap-1 font-medium text-gray-700">
+            <div className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
               <Info className="w-4 h-4" />
               Notes
             </div>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               {s.notes || s.description || "No additional notes"}
             </p>
           </div>
@@ -460,7 +460,7 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       {/* Add/Edit Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="max-w-2xl p-0 rounded-2xl border-none overflow-hidden max-h-[90vh] flex flex-col">
-          <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
+          <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 p-6 m-0 border-none">
             <DialogTitle>
               {formMode === "add"
                 ? "Add Tree Species"

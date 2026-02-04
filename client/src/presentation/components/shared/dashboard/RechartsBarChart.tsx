@@ -118,7 +118,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                                 dataKey="value"
                                 position={isHorizontal ? "right" : "top"}
                                 formatter={(v: any) => valueFormatter(Number(v))}
-                                style={{ fill: "#374151", fontSize: 12, fontWeight: 600 }}
+                                style={{ fill: "hsl(var(--foreground))", fontSize: 12, fontWeight: 600 }}
                             />
                         </Bar>
                     </RBarChart>

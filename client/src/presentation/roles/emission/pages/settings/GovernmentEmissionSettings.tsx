@@ -2,11 +2,13 @@ import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
-import { LayoutDashboard, CalendarDays } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Palette } from "lucide-react";
 import { useSettingsStore } from "@/core/hooks/useSettingsStore";
 import { QuarterInfoEditor } from "@/presentation/roles/emission/components/quarterly/QuarterInfoEditor";
+import { ThemeSelector } from "@/presentation/components/shared/settings/ThemeSelector";
+import { FontSizeSelector } from "@/presentation/components/shared/settings/FontSizeSelector";
 
-type SettingCategory = "general" | "quarterly-testing";
+type SettingCategory = "general" | "quarterly-testing" | "appearance";
 
 const GovernmentEmissionSettings: React.FC = () => {
     const [activeCategory, setActiveCategory] = useState<SettingCategory>("general");
@@ -36,15 +38,21 @@ const GovernmentEmissionSettings: React.FC = () => {
             label: "Quarterly Testing",
             icon: <CalendarDays className="w-4 h-4" />,
             description: "Schedule quarterly emission activities"
+        },
+        {
+            id: "appearance" as const,
+            label: "Appearance",
+            icon: <Palette className="w-4 h-4" />,
+            description: "Customize theme and display"
         }
     ];
 
     return (
-        <div className="flex flex-col h-full bg-[#F9FBFC]">
-            <div className="bg-white px-6 py-4 border-b border-gray-200 sticky top-0 z-10">
+        <div className="flex flex-col h-full page-bg">
+            <div className="page-header-bg px-6 py-4 sticky top-0 z-10">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Settings</h1>
+                        <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Manage preferences for the Government Emission dashboard
                         </p>
@@ -53,7 +61,7 @@ const GovernmentEmissionSettings: React.FC = () => {
             </div>
 
             <div className="flex-1 flex overflow-hidden">
-                <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+                <div className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto">
                     <div className="p-4 space-y-1">
                         {categories.map((category) => (
                             <button
@@ -61,8 +69,8 @@ const GovernmentEmissionSettings: React.FC = () => {
                                 onClick={() => setActiveCategory(category.id)}
                                 className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                                     activeCategory === category.id
-                                        ? "bg-blue-50 text-blue-700"
-                                        : "text-gray-700 hover:bg-gray-100"
+                                        ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                                 }`}
                             >
                                 {category.icon}
@@ -75,7 +83,7 @@ const GovernmentEmissionSettings: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto bg-[#F9FBFC]">
+                <div className="flex-1 overflow-y-auto page-bg">
                     {activeCategory === "general" && (
                         <div className="p-6 max-w-4xl space-y-6">
                             <Card>
@@ -145,6 +153,25 @@ const GovernmentEmissionSettings: React.FC = () => {
                             <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
                                 <QuarterInfoEditor selectedYear={quarterlyConfigYear} />
                             </div>
+                        </div>
+                    )}
+
+                    {activeCategory === "appearance" && (
+                        <div className="p-6 max-w-4xl space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Appearance</CardTitle>
+                                    <CardDescription>
+                                        Customize the look and feel of the application
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-8">
+                                    <ThemeSelector />
+                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                                        <FontSizeSelector />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     )}
                 </div>

@@ -185,6 +185,45 @@
     --sidebar-ring: 142 72% 29%;
   }
 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 7%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 7%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 195 70% 42%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224 71% 60%;
+
+    --sidebar-background: 222.2 84% 7%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 224 71% 60%;
+  }
+
   * {
     @reference border-border;
   }
@@ -194,6 +233,23 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     overscroll-behavior: none;
     scrollbar-gutter: stable;
+  }
+
+  /* Font size presets */
+  :root {
+    font-size: 16px;
+  }
+
+  [data-font-size="small"] {
+    font-size: 14px;
+  }
+
+  [data-font-size="medium"] {
+    font-size: 16px;
+  }
+
+  [data-font-size="large"] {
+    font-size: 18px;
   }
 
   h1,
@@ -211,5 +267,41 @@
 
   .ems-card {
     @reference rounded-xl border bg-card p-6 shadow-sm;
+  }
+
+  /* Page layout utilities for dark mode */
+  .page-bg {
+    background-color: #F9FBFC;
+  }
+
+  .dark .page-bg {
+    background-color: rgb(3 7 18); /* gray-950 */
+  }
+
+  .page-header-bg {
+    background-color: white;
+    border-bottom-width: 1px;
+    border-color: rgb(229 231 235); /* gray-200 */
+  }
+
+  .dark .page-header-bg {
+    background-color: rgb(17 24 39); /* gray-900 */
+    border-color: rgb(31 41 55); /* gray-800 */
+  }
+
+  .card-subtle-bg {
+    background-color: rgb(249 250 251); /* gray-50 */
+  }
+
+  .dark .card-subtle-bg {
+    background-color: rgb(31 41 55); /* gray-800 */
+  }
+
+  .hover-card-bg:hover {
+    background-color: white;
+  }
+
+  .dark .hover-card-bg:hover {
+    background-color: rgb(55 65 81); /* gray-700 */
   }
 }

@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/core/api/auth";
 import { SignInForm } from "@/presentation/components/shared/auth/SignInForm";
 import { Shield } from "lucide-react";
+import { FloatingAppearanceSettings } from "@/presentation/components/shared/settings/FloatingAppearanceSettings";
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -54,6 +55,9 @@ export default function SignIn() {
           </div>
         </div>
       </div>
+
+      {/* Floating Appearance Settings */}
+      <FloatingAppearanceSettings />
     </div>
   );
 }

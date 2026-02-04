@@ -404,7 +404,7 @@ const SpeciesForm: React.FC<SpeciesFormProps> = ({ mode, initialData, onSave, on
                   name="growth_speed_label"
                   value={formData.growth_speed_label || ""}
                   onChange={handleChange}
-                  className="mt-1 w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-1 w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select...</option>
                   {GROWTH_SPEED_OPTIONS.map(opt => (

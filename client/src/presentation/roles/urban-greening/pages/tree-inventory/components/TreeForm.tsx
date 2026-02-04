@@ -557,7 +557,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
 
             {/* Species Options */}
             {(speciesSearch || !formData.species) && (
-              <div className="max-h-40 overflow-y-auto border rounded-lg">
+              <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
                 {speciesLoading ? (
                   <div className="p-4 text-center text-gray-500">
                     <Loader2 className="w-4 h-4 animate-spin mx-auto mb-1" />
@@ -691,7 +691,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             <select
               value={formData.status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-lg text-sm"
+              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
             >
               <option value="unknown">Unknown</option>
               <option value="alive">Alive</option>
@@ -705,7 +705,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             <select
               value={formData.health}
               onChange={(e) => handleChange("health", e.target.value)}
-              className="mt-1 w-full px-3 py-2 border rounded-lg text-sm"
+              className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
             >
               <option value="unknown">Unknown</option>
               <option value="healthy">Healthy</option>
@@ -795,7 +795,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             </div>
             {/* Barangay Dropdown */}
             {(barangaySearch && !formData.barangay) && (
-              <div className="absolute z-10 w-full mt-1 max-h-40 overflow-y-auto border rounded-lg bg-white">
+              <div className="absolute z-10 w-full mt-1 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
                 <button
                   type="button"
                   onClick={() => {
@@ -826,7 +826,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             )}
             {/* Selected Barangay */}
             {formData.barangay && !barangaySearch && (
-              <div className="mt-1 p-2 bg-green-50 rounded-lg border border-green-200 text-sm text-green-800 flex justify-between items-center">
+              <div className="mt-1 p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-sm text-green-800 dark:text-green-300 flex justify-between items-center">
                 <span>{formData.barangay}</span>
                 <button
                   type="button"

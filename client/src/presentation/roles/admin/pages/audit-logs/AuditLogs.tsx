@@ -177,7 +177,7 @@ export function AuditLogs() {
     const getStatusBadge = (statusCode: number) => {
         if (statusCode >= 200 && statusCode < 300) {
             return (
-                <Badge variant="default" className="bg-green-500 text-white px-1.5 py-0 text-xs h-5">
+                <Badge variant="default" className="bg-green-500 dark:bg-green-600 text-white px-1.5 py-0 text-xs h-5">
                     {statusCode}
                 </Badge>
             );
@@ -189,25 +189,25 @@ export function AuditLogs() {
             );
         } else if (statusCode >= 500) {
             return (
-                <Badge variant="destructive" className="bg-red-700 px-1.5 py-0 text-xs h-5">
+                <Badge variant="destructive" className="bg-red-700 dark:bg-red-800 px-1.5 py-0 text-xs h-5">
                     {statusCode}
                 </Badge>
             );
         }
-        return <Badge variant="outline" className="px-1.5 py-0 text-xs h-5">{statusCode}</Badge>;
+        return <Badge variant="outline" className="px-1.5 py-0 text-xs h-5 dark:border-gray-600 dark:text-gray-300">{statusCode}</Badge>;
     };
 
     const getMethodBadge = (method: string) => {
         const colors: Record<string, string> = {
-            GET: "bg-blue-100 text-blue-800",
-            POST: "bg-green-100 text-green-800",
-            PUT: "bg-yellow-100 text-yellow-800",
-            PATCH: "bg-orange-100 text-orange-800",
-            DELETE: "bg-red-100 text-red-800",
+            GET: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200",
+            POST: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200",
+            PUT: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+            PATCH: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+            DELETE: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200",
         };
 
         return (
-            <Badge className={`${colors[method] || "bg-gray-100 text-gray-800"} px-1.5 py-0 text-xs h-5 font-mono min-w-[48px] justify-center`}>
+            <Badge className={`${colors[method] || "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200"} px-1.5 py-0 text-xs h-5 font-mono min-w-[48px] justify-center`}>
                 {method}
             </Badge>
         );
@@ -243,10 +243,10 @@ export function AuditLogs() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="bg-white px-6 py-3 border-b border-gray-200">
+            <div className="page-header-bg px-6 py-3">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
+                        <h1 className="text-2xl font-bold">Audit Logs</h1>
                         <p className="text-gray-600">ISO-compliant system activity audit trail</p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -277,7 +277,7 @@ export function AuditLogs() {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 page-bg space-y-6 flex flex-col">
                 {/* Filters */}
                 <Card>
                     <CardHeader>
@@ -340,7 +340,7 @@ export function AuditLogs() {
                                                 </Button>
                                             </div>
                                         </div>
-                                        <div className="border-t pt-3">
+                                        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="text-xs text-gray-600 mb-1 block">From</label>
@@ -436,9 +436,9 @@ export function AuditLogs() {
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <Table>
+                                <Table className="border dark:border-gray-700">
                                     <TableHeader>
-                                        <TableRow className="border-b bg-gray-50">
+                                        <TableRow className="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Time</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Status</TableHead>
                                             <TableHead className="h-9 px-3 text-xs font-semibold">Method</TableHead>
@@ -452,10 +452,10 @@ export function AuditLogs() {
                                         {logs.map((log) => (
                                             <TableRow
                                                 key={log.id}
-                                                className="cursor-pointer hover:bg-gray-50 border-b last:border-b-0"
+                                                className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 border-b dark:border-gray-700 last:border-b-0"
                                                 onClick={() => setSelectedLogId(log.id)}
                                             >
-                                                <TableCell className="py-2 px-3 text-xs text-gray-500 font-mono whitespace-nowrap">
+                                                <TableCell className="py-2 px-3 text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">
                                                     {format(new Date(log.occurred_at), "MM/dd HH:mm:ss")}
                                                 </TableCell>
                                                 
@@ -473,15 +473,15 @@ export function AuditLogs() {
                                                     </Badge>
                                                 </TableCell>
 
-                                                <TableCell className="py-2 px-3 text-xs text-gray-700 truncate max-w-xs" title={getAuditDescription(log)}>
+                                                <TableCell className="py-2 px-3 text-xs text-gray-700 dark:text-gray-300 truncate max-w-xs" title={getAuditDescription(log)}>
                                                     {getAuditDescription(log)}
                                                 </TableCell>
 
-                                                <TableCell className="py-2 px-3 text-xs text-gray-500 truncate max-w-[140px]" title={log.user_email || 'Anonymous'}>
-                                                    {log.user_email || <span className="text-gray-400">Anonymous</span>}
+                                                <TableCell className="py-2 px-3 text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]" title={log.user_email || 'Anonymous'}>
+                                                    {log.user_email || <span className="text-gray-400 dark:text-gray-500">Anonymous</span>}
                                                 </TableCell>
 
-                                                <TableCell className="py-2 px-3 text-xs text-gray-400 font-mono text-right whitespace-nowrap">
+                                                <TableCell className="py-2 px-3 text-xs text-gray-400 dark:text-gray-500 font-mono text-right whitespace-nowrap">
                                                     {log.latency_ms !== undefined && log.latency_ms !== null ? `${log.latency_ms}ms` : '-'}
                                                 </TableCell>
                                             </TableRow>
@@ -543,33 +543,33 @@ export function AuditLogs() {
                                     <Shield className="w-4 h-4" />
                                     Event Information
                                 </h3>
-                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Event ID</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Event ID</label>
                                         <div className="font-mono text-sm break-all">{selectedLog.event_id}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Description</label>
-                                        <div className="text-sm font-medium text-gray-800">{getAuditDescription(selectedLog)}</div>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Description</label>
+                                        <div className="text-sm font-medium text-gray-800 dark:text-gray-200">{getAuditDescription(selectedLog)}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Event Name</label>
-                                        <div className="text-sm text-gray-600 font-mono text-xs">{selectedLog.event_name}</div>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Event Name</label>
+                                        <div className="text-sm text-gray-600 dark:text-gray-300 font-mono text-xs">{selectedLog.event_name}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Module</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Module</label>
                                         <div className="text-sm">{selectedLog.module_name}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Timestamp (Local)</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Timestamp (Local)</label>
                                         <div className="text-sm">{formatDate(selectedLog.occurred_at)}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Timestamp (ISO)</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Timestamp (ISO)</label>
                                         <div className="text-sm font-mono break-all">{selectedLog.occurred_at_iso}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Timestamp (GMT)</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Timestamp (GMT)</label>
                                         <div className="text-sm font-mono break-all">{selectedLog.occurred_at_gmt}</div>
                                     </div>
                                 </div>
@@ -578,29 +578,29 @@ export function AuditLogs() {
                             {/* Request Information */}
                             <div>
                                 <h3 className="text-sm font-semibold mb-2">Request Information</h3>
-                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Method</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Method</label>
                                         <Badge className="font-mono">{selectedLog.http_method}</Badge>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Status Code</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Status Code</label>
                                         <Badge variant={selectedLog.status_code >= 200 && selectedLog.status_code < 300 ? "default" : "destructive"} className={selectedLog.status_code >= 200 && selectedLog.status_code < 300 ? "bg-green-500" : ""}>
                                             {selectedLog.status_code}
                                         </Badge>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Path</label>
-                                        <div className="font-mono text-sm bg-white p-2 rounded break-all">
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Path</label>
+                                        <div className="font-mono text-sm bg-white dark:bg-gray-900 p-2 rounded break-all">
                                             {selectedLog.route_path}
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">IP Address</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">IP Address</label>
                                         <div className="text-sm">{selectedLog.ip_address || "N/A"}</div>
                                     </div>
                                     <div>
-                                        <label className="text-xs text-gray-500 block mb-1">Latency</label>
+                                        <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Latency</label>
                                         <div className="text-sm">
                                             {selectedLog.latency_ms !== undefined && selectedLog.latency_ms !== null
                                                 ? `${selectedLog.latency_ms}ms`
@@ -614,17 +614,17 @@ export function AuditLogs() {
                             {selectedLog.user_email && (
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">User Information</h3>
-                                    <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Email</label>
+                                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Email</label>
                                             <div className="text-sm break-all">{selectedLog.user_email}</div>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 block mb-1">User ID</label>
+                                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">User ID</label>
                                             <div className="font-mono text-sm break-all">{selectedLog.user_id || "N/A"}</div>
                                         </div>
                                         <div>
-                                            <label className="text-xs text-gray-500 block mb-1">Session ID</label>
+                                            <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1">Session ID</label>
                                             <div className="font-mono text-sm break-all">{selectedLog.session_id || "N/A"}</div>
                                         </div>
                                     </div>
@@ -635,7 +635,7 @@ export function AuditLogs() {
                             {selectedLog.user_agent && (
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">User Agent</h3>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <div className="font-mono text-xs break-all">{selectedLog.user_agent}</div>
                                     </div>
                                 </div>
@@ -645,7 +645,7 @@ export function AuditLogs() {
                             {selectedLog.request_payload && Object.keys(selectedLog.request_payload).length > 0 && (
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">Request Payload (Masked)</h3>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <pre className="font-mono text-xs overflow-x-auto">
                                             {JSON.stringify(selectedLog.request_payload, null, 2)}
                                         </pre>
@@ -657,7 +657,7 @@ export function AuditLogs() {
                             {selectedLog.response_payload && Object.keys(selectedLog.response_payload).length > 0 && (
                                 <div>
                                     <h3 className="text-sm font-semibold mb-2">Response Payload (Masked)</h3>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                                         <pre className="font-mono text-xs overflow-x-auto">
                                             {JSON.stringify(selectedLog.response_payload, null, 2)}
                                         </pre>

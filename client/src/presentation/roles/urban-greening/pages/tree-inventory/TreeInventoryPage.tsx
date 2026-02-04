@@ -100,10 +100,10 @@ const TreeInventoryPage: React.FC = () => {
       cell: ({ row }) => {
         const status = row.original.status;
         const colors: Record<string, string> = {
-          alive: "bg-green-100 text-green-800",
-          cut: "bg-red-100 text-red-800",
-          dead: "bg-gray-100 text-gray-800",
-          replaced: "bg-blue-100 text-blue-800",
+          alive: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200",
+          cut: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200",
+          dead: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
+          replaced: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200",
         };
         return (
           <Badge className={colors[status] || "bg-gray-100"}>
@@ -118,10 +118,10 @@ const TreeInventoryPage: React.FC = () => {
       cell: ({ row }) => {
         const health = row.original.health;
         const colors: Record<string, string> = {
-          healthy: "bg-green-100 text-green-800",
-          needs_attention: "bg-yellow-100 text-yellow-800",
-          diseased: "bg-orange-100 text-orange-800",
-          dead: "bg-gray-100 text-gray-800",
+          healthy: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200",
+          needs_attention: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200",
+          diseased: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200",
+          dead: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200",
         };
         const icons: Record<string, React.ReactNode> = {
           healthy: <Leaf className="w-3 h-3 mr-1" />,
@@ -158,7 +158,7 @@ const TreeInventoryPage: React.FC = () => {
       accessorKey: "planted_date",
       header: "Planted",
       cell: ({ row }) => (
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-gray-600 dark:text-gray-300">
           {row.original.planted_date || "—"}
         </span>
       ),
@@ -260,12 +260,12 @@ const TreeInventoryPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F9FBFC]">
+    <div className="flex flex-col h-full page-bg">
         {/* Header Section */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="page-header-bg sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Inventory</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Tree Inventory</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Unified registry for all trees
               </p>
@@ -276,7 +276,7 @@ const TreeInventoryPage: React.FC = () => {
                 size="icon"
                 onClick={() => refetch()}
                 disabled={isLoading}
-                className="border border-gray-200 bg-white rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
@@ -292,7 +292,7 @@ const TreeInventoryPage: React.FC = () => {
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                   activeTab === "registry"
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <ClipboardList className="w-4 h-4 inline mr-2" />
@@ -303,7 +303,7 @@ const TreeInventoryPage: React.FC = () => {
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                   activeTab === "map"
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <Map className="w-4 h-4 inline mr-2" />
@@ -314,7 +314,7 @@ const TreeInventoryPage: React.FC = () => {
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                   activeTab === "stats"
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <BarChart3 className="w-4 h-4 inline mr-2" />
@@ -325,7 +325,7 @@ const TreeInventoryPage: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+        <div className="flex-1 overflow-y-auto p-6 page-bg">
           {/* Registry Tab */}
           {activeTab === "registry" && (
             <div className="flex gap-6 h-full">
@@ -355,7 +355,7 @@ const TreeInventoryPage: React.FC = () => {
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-3 py-2 border rounded-lg text-sm"
+                        className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
                       >
                         <option value="all">All Status</option>
                         <option value="alive">Alive</option>
@@ -366,7 +366,7 @@ const TreeInventoryPage: React.FC = () => {
                       <select
                         value={healthFilter}
                         onChange={(e) => setHealthFilter(e.target.value)}
-                        className="px-3 py-2 border rounded-lg text-sm"
+                        className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
                       >
                         <option value="all">All Health</option>
                         <option value="healthy">Healthy</option>
@@ -377,7 +377,7 @@ const TreeInventoryPage: React.FC = () => {
                         type="button"
                         variant={showArchived ? "default" : "outline"}
                         onClick={() => setShowArchived((prev) => !prev)}
-                        className={`rounded-lg text-sm flex items-center gap-2 ${showArchived ? "bg-slate-900 text-white" : "bg-white"}`}
+                        className={`rounded-lg text-sm flex items-center gap-2 ${showArchived ? "bg-slate-900 text-white" : "bg-white dark:bg-gray-800"}`}
                       >
                         {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                         {showArchived ? "Show Active" : "View Archived"}
@@ -395,12 +395,12 @@ const TreeInventoryPage: React.FC = () => {
                     {isLoading ? (
                       <div className="flex items-center justify-center h-32 flex-1">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                          <div className="animate-spin rounded-full h-8 w-8 mx-auto"></div>
                           <p className="mt-2 text-sm text-gray-600">Loading inventory...</p>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex-1 overflow-auto rounded border border-gray-100">
+                      <div className="flex-1 overflow-auto rounded">
                         <DataTable
                           data={trees}
                           columns={columns}

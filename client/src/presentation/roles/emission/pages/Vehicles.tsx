@@ -538,10 +538,10 @@ export default function Vehicles() {
     <>
       <div className="flex flex-col h-full overflow-hidden">
           {/* Header Section */}
-          <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="page-header-bg sticky top-0 z-10">
             <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
               <div className="shrink-0">
-                <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                <h1 className="text-xl font-semibold tracking-tight">
                   Vehicles
                 </h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -556,7 +556,7 @@ export default function Vehicles() {
                   size="icon"
                   onClick={handleRefresh}
                   disabled={isLoading}
-                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
                 </Button>
@@ -565,7 +565,7 @@ export default function Vehicles() {
                   variant="outline"
                   size="icon"
                   disabled={vehicles.length === 0 || isLoading}
-                  className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                  className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <FileDown className="h-4 w-4 text-slate-600" />
                 </Button>
@@ -574,13 +574,13 @@ export default function Vehicles() {
           </div>
 
           {/* Body Section */}
-          <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+          <div className="flex-1 overflow-y-auto page-bg">
             <div className="p-8">
             {/* Error Notice */}
             {error != null && (
               <Alert
                 variant="destructive"
-                className="mb-4 border border-red-200 bg-white shadow-none rounded-none"
+                className="mb-4 border border-red-200 dark:border-red-800/30 bg-white dark:bg-gray-900 shadow-none rounded-none"
               >
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
@@ -594,7 +594,7 @@ export default function Vehicles() {
 
             {/* Selection Controls */}
             {Object.keys(rowSelection).length > 0 && (
-              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-none flex items-center justify-between shadow-none">
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none flex items-center justify-between shadow-none">
                 <p className="text-sm">
                   <span className="font-medium">
                     {Object.keys(rowSelection).length}
@@ -606,7 +606,7 @@ export default function Vehicles() {
                     size="sm"
                     variant="outline"
                     onClick={() => setRowSelection({})}
-                    className="border border-gray-200 bg-white shadow-none rounded-none"
+                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-none rounded-none"
                   >
                     Deselect All
                   </Button>
@@ -623,7 +623,7 @@ export default function Vehicles() {
             )}
 
             {/* Vehicles Table */}
-            <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
+            <Card className="border border-slate-200 dark:border-gray-700 shadow-none rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
               <div className="p-6">
                 {/* Controls Row: Search left, Filters right */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
@@ -633,7 +633,7 @@ export default function Vehicles() {
                       placeholder="Search by plate, driver, or office..."
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                      className="pl-9 bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
                     />
                     <span className="absolute left-3 text-slate-400">
                       {search && search !== debouncedSearch ? (
@@ -670,7 +670,7 @@ export default function Vehicles() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
-                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[140px]"
+                          className="h-10 px-4 justify-between bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors min-w-[140px]"
                         >
                           <span className="truncate">{office ? office : "All Offices"}</span>
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
@@ -693,7 +693,7 @@ export default function Vehicles() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
-                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                          className="h-10 px-4 justify-between bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors min-w-[130px]"
                         >
                           <span className="truncate">{vehicleType ? vehicleType : "All Types"}</span>
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
@@ -716,7 +716,7 @@ export default function Vehicles() {
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
-                          className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+                          className="h-10 px-4 justify-between bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors min-w-[130px]"
                         >
                           <span className="truncate">{engineType ? engineType : "All Engines"}</span>
                           <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />

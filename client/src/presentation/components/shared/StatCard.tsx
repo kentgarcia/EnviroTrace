@@ -44,7 +44,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     const c = { ...DEFAULTS, ...(colors || {}) };
 
     return (
-        <Card className={className}>
+        <Card className={`${className} dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-850 dark:border-gray-700`}>
             <CardContent className="p-4">
                 <div className={`flex items-center gap-4 ${loading ? "animate-pulse" : ""}`}>
                     <div
@@ -66,13 +66,17 @@ export const StatCard: React.FC<StatCardProps> = ({
                         ) : (
                             <>
                                 <span
-                                    className="inline-block text-xs font-medium px-2 py-0.5 rounded"
-                                    style={{ backgroundColor: c.labelBg, color: c.labelText }}
+                                    className="inline-block text-xs font-medium px-2 py-0.5 rounded transition-colors"
+                                    style={{ 
+                                        backgroundColor: c.labelBg, 
+                                        color: c.labelText,
+                                        opacity: 'var(--tw-bg-opacity, 1)'
+                                    }}
                                 >
                                     {label}
                                 </span>
                                 <div
-                                    className="text-2xl font-bold leading-7 mt-1"
+                                    className="text-2xl font-bold leading-7 mt-1 transition-colors dark:opacity-90"
                                     style={{ color: c.valueText }}
                                 >
                                     {typeof value === "number" ? value.toLocaleString() : value}

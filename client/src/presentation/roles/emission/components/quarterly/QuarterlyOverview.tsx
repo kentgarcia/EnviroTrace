@@ -306,9 +306,9 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                     />
                 </div>
                 <div className="lg:col-span-2">
-                    <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+                    <Card className="border-none shadow-sm bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
                         <CardHeader className="pb-0">
-                            <CardTitle className="text-lg font-bold text-slate-900">Office Completion Rates (%)</CardTitle>
+                            <CardTitle className="text-lg font-bold text-slate-900 dark:text-gray-100">Office Completion Rates (%)</CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className={cn(
@@ -331,35 +331,35 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
 
             {/* Quarterly Progress Section */}
             <div className="grid grid-cols-1 gap-8">
-                <Card className="border-none shadow-sm bg-white rounded-xl overflow-hidden">
+                <Card className="border-none shadow-sm bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
                     <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-bold text-slate-900">Quarterly Performance</CardTitle>
-                        <p className="text-sm text-slate-500">Breakdown of testing progress by quarter</p>
+                        <CardTitle className="text-lg font-bold text-slate-900 dark:text-gray-100">Quarterly Performance</CardTitle>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Breakdown of testing progress by quarter</p>
                     </CardHeader>
                     <CardContent className="pt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
                             {overview.quarterList.map((q) => (
-                                <div key={q.key} className="space-y-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100">
+                                <div key={q.key} className="space-y-4 p-4 rounded-xl bg-slate-50/50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-700">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm">
-                                                <span className="text-sm font-bold text-slate-600">{q.key}</span>
+                                            <div className="w-10 h-10 rounded-lg bg-white dark:bg-gray-900 flex items-center justify-center border border-slate-200 dark:border-gray-700 shadow-sm">
+                                                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{q.key}</span>
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold text-slate-800">{q.label}</div>
-                                                <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                                                <div className="text-sm font-bold text-slate-800 dark:text-gray-200">{q.label}</div>
+                                                <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">
                                                     {formatNumber(q.tested)} tested
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-sm font-bold text-slate-900">{formatPercent(q.completionRate)}</div>
-                                            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Done</div>
+                                            <div className="text-sm font-bold text-slate-900 dark:text-gray-100">{formatPercent(q.completionRate)}</div>
+                                            <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">Done</div>
                                         </div>
                                     </div>
                                     
                                     <div className="space-y-2">
-                                        <div className="relative h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
+                                        <div className="relative h-2 w-full bg-slate-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
                                             <div 
                                                 className="h-full bg-[#10b981] transition-all duration-500" 
                                                 style={{ width: `${(q.passed / overview.totalVehicles) * 100}%` }}
@@ -378,7 +378,7 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                                                 <div className="w-1.5 h-1.5 rounded-full bg-[#ee1c25]" />
                                                 <span>{q.failed} Fail</span>
                                             </div>
-                                            <div className="text-slate-400">
+                                            <div className="text-slate-400 dark:text-slate-500">
                                                 {q.pending} Left
                                             </div>
                                         </div>

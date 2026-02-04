@@ -310,7 +310,7 @@ const TreeImageUpload: React.FC<TreeImageUploadProps> = ({
         onClick={() => !disabled && fileInputRef.current?.click()}
         className={`
           border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-          ${isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-gray-400"}
+          ${isDragging ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"}
           ${disabled ? "opacity-50 cursor-not-allowed bg-gray-50" : ""}
         `}
       >

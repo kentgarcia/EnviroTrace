@@ -168,13 +168,13 @@ export function SessionManagement() {
     const getDeviceColor = (deviceType: string) => {
         switch (deviceType) {
             case "mobile":
-                return "bg-blue-100 text-blue-800";
+                return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200";
             case "desktop":
-                return "bg-purple-100 text-purple-800";
+                return "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200";
             case "tablet":
-                return "bg-green-100 text-green-800";
+                return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200";
             default:
-                return "bg-gray-100 text-gray-800";
+                return "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-200";
         }
     };
 
@@ -197,14 +197,14 @@ export function SessionManagement() {
 
         if (expiresAt < now) {
             return (
-                <Badge variant="outline" className="text-gray-600">
+                <Badge variant="outline" className="text-gray-600 dark:text-gray-300 dark:border-gray-600">
                     Expired
                 </Badge>
             );
         }
 
         return (
-            <Badge variant="default" className="bg-green-500 flex items-center gap-1">
+            <Badge variant="default" className="bg-green-500 dark:bg-green-600 text-white flex items-center gap-1">
                 <Power className="w-3 h-3" />
                 Active
             </Badge>
@@ -216,7 +216,7 @@ export function SessionManagement() {
             <div className="p-6">
                 <Card>
                     <CardContent className="p-6">
-                        <div className="text-center text-red-600">
+                        <div className="text-center text-red-600 dark:text-red-400">
                             <p>Error loading sessions: {(error as any).message}</p>
                         </div>
                     </CardContent>
@@ -227,32 +227,32 @@ export function SessionManagement() {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="bg-white px-6 py-3 border-b border-gray-200">
+            <div className="page-header-bg px-6 py-3">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-900">Session Management</h1>
-                    <p className="text-gray-600">Monitor and manage user login sessions</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Session Management</h1>
+                    <p className="text-gray-600 dark:text-gray-400">Monitor and manage user login sessions</p>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-[#F9FBFC] space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 page-bg space-y-6">
                     {/* Similarity Filter Badge */}
                     {similarityFilter && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-2">
-                                    <Filter className="w-5 h-5 text-blue-600" />
+                                    <Filter className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                     <div>
-                                        <h3 className="font-semibold text-blue-900">Similarity Filter Active</h3>
-                                        <p className="text-sm text-blue-700 mt-1">
+                                        <h3 className="font-semibold text-blue-900 dark:text-blue-100">Similarity Filter Active</h3>
+                                        <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">
                                             Showing sessions matching:
                                             {similarityFilter.userEmail && (
-                                                <Badge className="ml-2 bg-blue-100 text-blue-800">User: {similarityFilter.userEmail}</Badge>
+                                                <Badge className="ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">User: {similarityFilter.userEmail}</Badge>
                                             )}
                                             {similarityFilter.deviceType && (
-                                                <Badge className="ml-2 bg-blue-100 text-blue-800">Device: {similarityFilter.deviceType}</Badge>
+                                                <Badge className="ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">Device: {similarityFilter.deviceType}</Badge>
                                             )}
                                             {similarityFilter.ipAddress && (
-                                                <Badge className="ml-2 bg-blue-100 text-blue-800">IP: {similarityFilter.ipAddress}</Badge>
+                                                <Badge className="ml-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">IP: {similarityFilter.ipAddress}</Badge>
                                             )}
                                         </p>
                                     </div>
@@ -261,7 +261,7 @@ export function SessionManagement() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={clearSimilarityFilter}
-                                    className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                                    className="text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                                 >
                                     <X className="w-4 h-4 mr-1" />
                                     Clear
@@ -273,12 +273,12 @@ export function SessionManagement() {
                     {/* Filters */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Filters</CardTitle>
+                            <CardTitle className="text-gray-900 dark:text-gray-100">Filters</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="flex gap-4">
                                 <div className="w-64">
-                                    <label className="block text-sm font-medium mb-1">Device Type</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Device Type</label>
                                     <Select value={deviceFilter} onValueChange={setDeviceFilter}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="All devices" />
@@ -293,7 +293,7 @@ export function SessionManagement() {
                                 </div>
 
                                 <div className="w-64">
-                                    <label className="block text-sm font-medium mb-1">Status</label>
+                                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Status</label>
                                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="All statuses" />
@@ -312,7 +312,7 @@ export function SessionManagement() {
                     {/* Sessions Table */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>
+                            <CardTitle className="text-gray-900 dark:text-gray-100">
                                 {statusFilter === "active" && "Active Sessions"}
                                 {statusFilter === "inactive" && "Inactive Sessions"}
                                 {statusFilter === "all" && "All Sessions"}
@@ -323,10 +323,10 @@ export function SessionManagement() {
                             {isLoading ? (
                                 <div className="flex items-center justify-center p-8">
                                     <Loader2 className="w-8 h-8 animate-spin" />
-                                    <span className="ml-2">Loading sessions...</span>
+                                    <span className="ml-2 text-gray-700 dark:text-gray-300">Loading sessions...</span>
                                 </div>
                             ) : (
-                                <Table>
+                                <Table className="border dark:border-gray-700">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>User</TableHead>
@@ -343,9 +343,9 @@ export function SessionManagement() {
                                             <TableRow key={session.id}>
                                                 <TableCell>
                                                     <div>
-                                                        <div className="font-medium">{session.user_email}</div>
+                                                        <div className="font-medium text-gray-900 dark:text-gray-100">{session.user_email}</div>
                                                         {session.user_profile?.first_name && (
-                                                            <div className="text-sm text-gray-500">
+                                                            <div className="text-sm text-gray-500 dark:text-gray-400">
                                                                 {session.user_profile.first_name}{" "}
                                                                 {session.user_profile.last_name}
                                                             </div>
@@ -361,27 +361,27 @@ export function SessionManagement() {
                                                             </span>
                                                         </Badge>
                                                         {session.device_name && (
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="text-xs text-gray-500 dark:text-gray-400">
                                                                 {session.device_name}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-1 text-sm text-gray-600">
+                                                    <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
                                                         <MapPin className="w-3 h-3" />
                                                         {session.ip_address || "Unknown"}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{getStatusBadge(session)}</TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-1 text-sm">
+                                                    <div className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
                                                         <Calendar className="w-3 h-3" />
                                                         {formatDate(session.created_at)}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="text-sm text-gray-600">
+                                                    <div className="text-sm text-gray-600 dark:text-gray-300">
                                                         {session.last_activity_at
                                                             ? formatDate(session.last_activity_at)
                                                             : "N/A"}
@@ -394,7 +394,7 @@ export function SessionManagement() {
                                                             size="sm"
                                                             onClick={() => handleShowSimilar(session)}
                                                             title="Show similar sessions"
-                                                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                         >
                                                             <Filter className="w-4 h-4" />
                                                         </Button>

@@ -35,7 +35,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-ems-green-50 via-white to-ems-blue-50">
       {/* Header */}
-      <div className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <Link to="/">
             <Button variant="ghost" size="sm" className="gap-2">

@@ -5,6 +5,8 @@ import { ChevronDown, Loader2, LogOut, User, LayoutDashboard, ShieldCheck, TreeP
 import { toast } from "sonner";
 import { useAuth } from "@/core/api/auth";
 import { motion } from "framer-motion";
+import { FloatingAppearanceSettings } from "@/presentation/components/shared/settings/FloatingAppearanceSettings";
+import { useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -76,6 +78,20 @@ export default function DashboardSelection() {
     return user?.email?.charAt(0).toUpperCase() || "U";
   };
 
+  // Auto-navigate if user has only one role
+  useEffect(() => {
+    if (loading || profileLoading || !user) return;
+
+    const availableRoles = [];
+    if (hasRole("admin")) availableRoles.push("admin");
+    if (hasRole("urban_greening")) availableRoles.push("urban-greening");
+    if (hasRole("government_emission")) availableRoles.push("government-emission");
+
+    if (availableRoles.length === 1) {
+      navigate({ to: `/${availableRoles[0]}/overview` });
+    }
+  }, [user, loading, profileLoading]);
+
   if (loading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -107,8 +123,8 @@ export default function DashboardSelection() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50/50">
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md py-3 px-6">
+    <div className="min-h-screen flex flex-col bg-slate-50/50 dark:bg-gray-900 overflow-y-auto">
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md py-3 px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="flex -space-x-2">
@@ -124,10 +140,10 @@ export default function DashboardSelection() {
               />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-slate-900 leading-tight">
+              <h1 className="text-lg font-bold text-slate-900 dark:text-gray-100 leading-tight">
                 EnviroTrace
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">
                 Environmental Management System
               </p>
             </div>
@@ -137,7 +153,7 @@ export default function DashboardSelection() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="flex items-center gap-3 px-2 hover:bg-slate-100 rounded-full transition-colors"
+                className="flex items-center gap-3 px-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               >
                 <Avatar className="h-9 w-9 border-2 border-primary/10">
                   <AvatarFallback className="bg-primary/10 text-primary font-semibold">
@@ -145,10 +161,10 @@ export default function DashboardSelection() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-sm text-left hidden md:block">
-                  <div className="font-semibold text-slate-900">{getDisplayName()}</div>
-                  <div className="text-xs text-slate-500">Account Settings</div>
+                  <div className="font-semibold text-slate-900 dark:text-gray-100">{getDisplayName()}</div>
+                  <div className="text-xs text-slate-500 dark:text-gray-400">Account Settings</div>
                 </div>
-                <ChevronDown className="h-4 w-4 text-slate-400" />
+                <ChevronDown className="h-4 w-4 text-slate-400 dark:text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-2">
@@ -186,7 +202,7 @@ export default function DashboardSelection() {
             backgroundPosition: 'center',
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-transparent dark:from-gray-950/95 dark:via-gray-950/80" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-12 md:py-16">
@@ -196,14 +212,14 @@ export default function DashboardSelection() {
             transition={{ duration: 0.6 }}
             className="max-w-2xl"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary-foreground text-xs font-bold uppercase tracking-widest mb-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 dark:bg-primary/30 border border-primary/30 dark:border-primary/40 text-white dark:text-gray-100 text-xs font-bold uppercase tracking-widest mb-4">
               <LayoutDashboard className="h-3 w-3" />
               Workspace Selection
             </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
-              Welcome back, <span className="text-primary-foreground">{getDisplayName().split(' ')[0]}</span>!
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white dark:text-gray-50 mb-4 tracking-tight">
+              Welcome back, <span className="text-yellow-300 dark:text-yellow-200">{getDisplayName().split(' ')[0]}</span>!
             </h2>
-            <p className="text-base md:text-lg text-slate-200 leading-relaxed">
+            <p className="text-base md:text-lg text-slate-200 dark:text-gray-300 leading-relaxed">
               Access your specialized environmental management tools and real-time data monitoring dashboards.
             </p>
           </motion.div>
@@ -212,7 +228,7 @@ export default function DashboardSelection() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
         <div className="flex flex-col items-center mb-8">
-          <h3 className="text-xl font-bold text-slate-900 mb-2">Available Dashboards</h3>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-gray-100 mb-2">Available Dashboards</h3>
           <div className="h-1 w-16 bg-primary rounded-full" />
         </div>
 
@@ -229,7 +245,7 @@ export default function DashboardSelection() {
                 description="Full access to system configurations, user management, and audit logs."
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("admin")}
-                className="h-full border-slate-200 hover:border-primary transition-all duration-300"
+                className="h-full border-slate-200 dark:border-gray-700 hover:border-primary transition-all duration-300"
               />
             </motion.div>
           )}
@@ -241,7 +257,7 @@ export default function DashboardSelection() {
                 description="Monitor tree health, track afforestation projects, and manage green spaces."
                 icon="/images/bg_envicompliance.jpg"
                 onClick={() => handleDashboardSelect("urban-greening")}
-                className="h-full border-slate-200 hover:border-ems-green-500 transition-all duration-300"
+                className="h-full border-slate-200 dark:border-gray-700 hover:border-ems-green-500 transition-all duration-300"
               />
             </motion.div>
           )}
@@ -253,40 +269,25 @@ export default function DashboardSelection() {
                 description="Manage government vehicle emission testing and environmental compliance."
                 icon="/images/bg_govemissions.jpg"
                 onClick={() => handleDashboardSelect("government-emission")}
-                className="h-full border-slate-200 hover:border-ems-blue-500 transition-all duration-300"
+                className="h-full border-slate-200 dark:border-gray-700 hover:border-ems-blue-500 transition-all duration-300"
               />
             </motion.div>
           )}
         </motion.div>
 
         {!user?.is_super_admin && !hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
-          <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-            <ShieldCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <h4 className="text-lg font-semibold text-slate-900">No Dashboards Available</h4>
-            <p className="text-slate-500 max-w-xs mx-auto mt-2">
+          <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700">
+            <ShieldCheck className="h-12 w-12 text-slate-300 dark:text-gray-600 mx-auto mb-4" />
+            <h4 className="text-lg font-semibold text-slate-900 dark:text-gray-100">No Dashboards Available</h4>
+            <p className="text-slate-500 dark:text-gray-400 max-w-xs mx-auto mt-2">
               Your account doesn't have any assigned dashboard roles. Please contact your administrator.
             </p>
           </div>
         )}
       </main>
 
-      <footer className="border-t bg-white py-8 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-primary/10 rounded flex items-center justify-center">
-              <div className="h-4 w-4 bg-primary rounded-sm" />
-            </div>
-            <span className="font-bold text-slate-900">EnviroTrace</span>
-          </div>
-          <div className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} Environmental Management System. All rights reserved.
-          </div>
-          <div className="flex gap-6 text-sm font-medium text-slate-400">
-            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
+      {/* Floating Appearance Settings */}
+      <FloatingAppearanceSettings />
     </div>
   );
 }

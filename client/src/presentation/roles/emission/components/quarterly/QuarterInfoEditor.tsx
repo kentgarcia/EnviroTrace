@@ -232,15 +232,15 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
                 }}
             >
                 <DialogContent className="sm:max-w-lg rounded-2xl border-none shadow-2xl p-0 overflow-hidden">
-                    <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none">
+                    <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 p-6 m-0 border-none">
                         <DialogTitle className="text-xl font-bold text-white">
                             {editingQuarter && getScheduleForQuarter(editingQuarter) ? "Edit" : "Set Up"} {editingQuarter && getQuarterName(editingQuarter)} Quarter {selectedYear}
                         </DialogTitle>
-                        <DialogDescription className="text-blue-100/80">
+                        <DialogDescription className="text-blue-100/80 dark:text-gray-300">
                             Configure the testing schedule and personnel for this quarter.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="p-6 bg-white space-y-4">
+                    <div className="p-6 bg-white dark:bg-gray-900 space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="personnel" className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Personnel</Label>
                             <Input

@@ -147,17 +147,17 @@ const CarbonStatistics: React.FC = () => {
               showLabels
             />
             <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{composition.native_ratio}%</div>
-                <div className="text-xs text-gray-600">Native Ratio</div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{composition.native_ratio}%</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Native Ratio</div>
               </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{exoticCount}</div>
-                <div className="text-xs text-gray-600">Exotic Trees</div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{exoticCount}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Exotic Trees</div>
               </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{composition.endangered_count}</div>
-                <div className="text-xs text-gray-600">Endangered</div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{composition.endangered_count}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Endangered</div>
               </div>
             </div>
           </CardContent>
@@ -278,25 +278,25 @@ const CarbonStatistics: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total Trees</span>
-                <span className="text-lg font-bold text-gray-900">{formatNumber(composition.total_trees)}</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Trees</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatNumber(composition.total_trees)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-gray-600">Living Trees</span>
-                <span className="text-lg font-bold text-blue-600">{formatNumber(composition.alive_trees)}</span>
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Living Trees</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatNumber(composition.alive_trees)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Native Trees</span>
-                <span className="text-lg font-bold text-gray-900">{formatNumber(composition.native_count)}</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Native Trees</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatNumber(composition.native_count)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Endangered Trees</span>
-                <span className="text-lg font-bold text-gray-900">{formatNumber(composition.endangered_count)}</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Endangered Trees</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatNumber(composition.endangered_count)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                <span className="text-sm text-gray-600">Removed (2026)</span>
-                <span className="text-lg font-bold text-red-600">{formatNumber(composition.cut_trees)}</span>
+              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Removed (2026)</span>
+                <span className="text-lg font-bold text-red-600 dark:text-red-400">{formatNumber(composition.cut_trees)}</span>
               </div>
             </div>
           </CardContent>
@@ -312,25 +312,25 @@ const CarbonStatistics: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total CO₂ Stored</span>
-                <span className="text-lg font-bold text-blue-600">{formatNumber(carbon_stock.total_co2_stored_tonnes, 1)} t</span>
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total CO₂ Stored</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatNumber(carbon_stock.total_co2_stored_tonnes, 1)} t</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Avg per Tree</span>
-                <span className="text-lg font-bold text-gray-900">{composition.alive_trees > 0 ? formatNumber(carbon_stock.total_co2_stored_kg / composition.alive_trees, 1) : '0'} kg</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Avg per Tree</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{composition.alive_trees > 0 ? formatNumber(carbon_stock.total_co2_stored_kg / composition.alive_trees, 1) : '0'} kg</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-gray-600">Annual Absorption</span>
-                <span className="text-lg font-bold text-blue-600">{formatNumber(annual_sequestration.total_co2_absorbed_per_year_tonnes, 1)} t/yr</span>
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Annual Absorption</span>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{formatNumber(annual_sequestration.total_co2_absorbed_per_year_tonnes, 1)} t/yr</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Trees Planted (2026)</span>
-                <span className="text-lg font-bold text-gray-900">{formatNumber(annual_sequestration.trees_planted_this_year)}</span>
+              <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Trees Planted (2026)</span>
+                <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatNumber(annual_sequestration.trees_planted_this_year)}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
-                <span className="text-sm text-gray-600">CO₂ Released (Removals)</span>
-                <span className="text-lg font-bold text-red-600">{formatNumber(carbon_loss.co2_released_from_removals_tonnes, 1)} t</span>
+              <div className="flex justify-between items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">CO₂ Released (Removals)</span>
+                <span className="text-lg font-bold text-red-600 dark:text-red-400">{formatNumber(carbon_loss.co2_released_from_removals_tonnes, 1)} t</span>
               </div>
             </div>
           </CardContent>

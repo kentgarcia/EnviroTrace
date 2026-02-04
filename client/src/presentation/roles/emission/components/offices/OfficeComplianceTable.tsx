@@ -60,7 +60,7 @@ const ComplianceCell = memo(
         </div>
         <Progress
           value={value}
-          className={`h-2 ${isCompliant ? "bg-green-100" : "bg-red-100"}`}
+          className={`h-2 ${isCompliant ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}
         />
       </div>
     );
@@ -95,20 +95,20 @@ const OfficeDetailsView = memo(
             variant="outline"
             size="sm"
             onClick={onBack}
-            className="flex items-center gap-2 rounded-lg border-slate-200 hover:bg-slate-50"
+            className="flex items-center gap-2 rounded-lg border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to List
           </Button>
           <div className="flex items-center gap-3">
-             <div className="text-sm font-medium text-slate-500">
+             <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
               Office Detail View {year ? `(${year})` : ""}
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => onEdit(office)}
-              className="flex items-center gap-2 rounded-lg border-slate-200 hover:bg-slate-50 text-blue-600"
+              className="flex items-center gap-2 rounded-lg border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400"
             >
               <Edit className="h-4 w-4" />
               Edit Office
@@ -117,11 +117,11 @@ const OfficeDetailsView = memo(
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-1 border border-slate-200 rounded-xl p-6 bg-white shadow-none">
+          <div className="md:col-span-1 border border-slate-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900 shadow-none">
             <div className="space-y-6">
               <div className="flex flex-col">
-                <h3 className="text-xl font-bold text-slate-900">{office.name}</h3>
-                <p className="text-sm text-slate-500 mt-1">Office Information</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-gray-100">{office.name}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Office Information</p>
               </div>
               <span className="text-sm text-muted-foreground">
                 {office.address && office.address}
@@ -135,32 +135,32 @@ const OfficeDetailsView = memo(
             </div>
 
             <div className="pt-2">
-              <h4 className="text-sm font-bold text-slate-900 mb-3">Compliance Summary</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-gray-100 mb-3">Compliance Summary</h4>
               <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col p-3 border border-slate-100 rounded-xl bg-slate-50/50">
-                  <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">
+                <div className="flex flex-col p-3 border border-slate-100 dark:border-gray-700 rounded-xl bg-slate-50/50 dark:bg-gray-800/50">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-wider">
                     Vehicles
                   </span>
-                  <span className="font-bold text-slate-900 text-lg">{office.total_vehicles}</span>
+                  <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">{office.total_vehicles}</span>
                 </div>
-                <div className="flex flex-col p-3 border border-slate-100 rounded-xl bg-slate-50/50">
-                  <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">
+                <div className="flex flex-col p-3 border border-slate-100 dark:border-gray-700 rounded-xl bg-slate-50/50 dark:bg-gray-800/50">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-wider">
                     Tested
                   </span>
-                  <span className="font-bold text-slate-900 text-lg">{office.tested_vehicles}</span>
+                  <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">{office.tested_vehicles}</span>
                 </div>
-                <div className="flex flex-col p-3 border border-slate-100 rounded-xl bg-slate-50/50">
-                  <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">
+                <div className="flex flex-col p-3 border border-slate-100 dark:border-gray-700 rounded-xl bg-slate-50/50 dark:bg-gray-800/50">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-wider">
                     Passed
                   </span>
-                  <span className="font-bold text-green-600 text-lg">{office.compliant_vehicles}</span>
+                  <span className="font-bold text-green-600 dark:text-green-400 text-lg">{office.compliant_vehicles}</span>
                 </div>
-                <div className="flex flex-col p-3 border border-slate-100 rounded-xl bg-slate-50/50">
-                  <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Rate</span>
+                <div className="flex flex-col p-3 border border-slate-100 dark:border-gray-700 rounded-xl bg-slate-50/50 dark:bg-gray-800/50">
+                  <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-wider">Rate</span>
                   <span
                     className={`font-bold text-lg ${office.compliance_rate >= 80
-                      ? "text-green-600"
-                      : "text-red-600"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
                       }`}
                   >
                     {office.compliance_rate}%
@@ -170,85 +170,85 @@ const OfficeDetailsView = memo(
             </div>
           </div>
 
-          <div className="md:col-span-2 border border-slate-200 rounded-xl p-6 bg-white shadow-none">
+          <div className="md:col-span-2 border border-slate-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900 shadow-none">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <FileBarChart className="h-5 w-5 text-[#0033a0]" />
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                  <FileBarChart className="h-5 w-5 text-[#0033a0] dark:text-blue-400" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Detailed Information</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-gray-100">Detailed Information</h3>
               </div>
               <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                office.compliance_rate >= 80 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                office.compliance_rate >= 80 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
               }`}>
                 {office.compliance_rate >= 80 ? 'COMPLIANT' : 'NON-COMPLIANT'}
               </div>
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-xl border border-slate-100 overflow-hidden bg-slate-50/30">
-                <div className="bg-slate-50 px-4 py-3 font-bold text-slate-700 text-sm border-b border-slate-100">
+              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700">
                   Compliance Status
                 </div>
                 <div className="p-4 flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-slate-900">
+                    <p className="font-bold text-slate-900 dark:text-gray-100">
                       {office.compliance_rate >= 80
                         ? "Meets Threshold"
                         : "Below Threshold"}
                     </p>
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                       {office.compliance_rate >= 80
                         ? "This office meets the minimum 80% compliance threshold."
                         : "This office does not meet the minimum 80% compliance threshold."}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-full ${office.compliance_rate >= 80 ? 'bg-green-100' : 'bg-red-100'}`}>
+                  <div className={`p-3 rounded-full ${office.compliance_rate >= 80 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
                     {office.compliance_rate >= 80 ? (
-                      <CheckCircle2 className="h-6 w-6 text-green-600" />
+                      <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                     ) : (
-                      <XCircle className="h-6 w-6 text-red-600" />
+                      <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-100 overflow-hidden bg-slate-50/30">
-                <div className="bg-slate-50 px-4 py-3 font-bold text-slate-700 text-sm border-b border-slate-100 flex items-center">
-                  <Car className="h-4 w-4 mr-2 text-slate-400" />
+              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
+                  <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
                   Vehicle Compliance
                 </div>
                 <div className="p-6">
                   <div className="flex flex-col space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-slate-600">Compliance Rate</span>
-                      <span className="text-lg font-bold text-slate-900">
+                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Compliance Rate</span>
+                      <span className="text-lg font-bold text-slate-900 dark:text-gray-100">
                         {office.compliance_rate}%
                       </span>
                     </div>
                     <Progress
                       value={office.compliance_rate}
                       className={`h-3 rounded-full ${office.compliance_rate >= 80
-                        ? "bg-green-100"
-                        : "bg-red-100"
+                        ? "bg-green-100 dark:bg-green-900/30"
+                        : "bg-red-100 dark:bg-red-900/30"
                         }`}
                     />
                     <div className="grid grid-cols-3 gap-4 pt-2">
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                        <span className="text-slate-400 text-xs font-medium uppercase">Total</span>
-                        <span className="font-bold text-slate-900 text-lg">
+                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Total</span>
+                        <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
                           {office.total_vehicles}
                         </span>
                       </div>
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                        <span className="text-slate-400 text-xs font-medium uppercase">Tested</span>
-                        <span className="font-bold text-slate-900 text-lg">
+                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Tested</span>
+                        <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
                           {office.tested_vehicles}
                         </span>
                       </div>
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white border border-slate-100 shadow-sm">
-                        <span className="text-slate-400 text-xs font-medium uppercase">Passed</span>
-                        <span className="font-bold text-green-600 text-lg">
+                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Passed</span>
+                        <span className="font-bold text-green-600 dark:text-green-400 text-lg">
                           {office.compliant_vehicles}
                         </span>
                       </div>
@@ -257,9 +257,9 @@ const OfficeDetailsView = memo(
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-100 overflow-hidden bg-slate-50/30">
-                <div className="bg-slate-50 px-4 py-3 font-bold text-slate-700 text-sm border-b border-slate-100 flex items-center">
-                  <Car className="h-4 w-4 mr-2 text-slate-400" />
+              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
+                  <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
                   Emission Tests
                 </div>
                 <div className="p-0">
@@ -448,7 +448,7 @@ const OfficeEmissionTests = memo(({ officeName, year }: { officeName: string; ye
     return (
       <div className="flex justify-center items-center py-8">
         <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
-        <span>Loading emission tests...</span>
+        <span className="dark:text-gray-300">Loading emission tests...</span>
       </div>
     );
   }
@@ -511,13 +511,13 @@ const OfficeEmissionTests = memo(({ officeName, year }: { officeName: string; ye
                     <div className="flex items-center">
                     {test.result ? (
                         <>
-                        <CheckCircle2 className="h-4 w-4 text-green-600 mr-1" />
-                        <span className="text-green-600">Passed</span>
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 mr-1" />
+                        <span className="text-green-600 dark:text-green-400">Passed</span>
                         </>
                     ) : (
                         <>
-                        <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                        <span className="text-red-600">Failed</span>
+                        <XCircle className="h-4 w-4 text-red-600 dark:text-red-400 mr-1" />
+                        <span className="text-red-600 dark:text-red-400">Failed</span>
                         </>
                     )}
                     </div>

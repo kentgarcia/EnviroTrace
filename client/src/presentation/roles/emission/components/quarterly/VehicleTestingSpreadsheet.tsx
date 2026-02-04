@@ -82,10 +82,10 @@ const StatusCell = React.memo(({
   const status = getStatus(test);
 
   const bgClass = status === "pass"
-    ? "bg-emerald-100 text-emerald-800"
+    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300"
     : status === "fail"
-    ? "bg-rose-100 text-rose-800"
-    : "bg-slate-100 text-slate-500";
+    ? "bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-300"
+    : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
 
   return (
     <div 
@@ -218,7 +218,7 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
 
   if (isLoading) {
     return (
-      <Card className="border border-slate-200">
+      <Card className="border border-slate-200 dark:border-gray-700">
         <CardContent className="flex items-center justify-center py-12 text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Loading vehicle tests…
@@ -229,9 +229,9 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
 
   if (totalVehicles === 0) {
     return (
-      <Card className="border border-dashed border-slate-300 bg-white">
+      <Card className="border border-dashed border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-900">
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-          <div className="text-base font-semibold text-slate-600">No vehicles found</div>
+          <div className="text-base font-semibold text-slate-600 dark:text-slate-400">No vehicles found</div>
           <div className="text-sm text-muted-foreground">Try adjusting the filters</div>
         </CardContent>
       </Card>
@@ -242,17 +242,17 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <div>
-          <h2 className="text-base font-bold text-slate-900">Vehicle Testing Grid</h2>
-          <p className="text-xs text-slate-500">{totalVehicles} vehicles • {selectedYear}</p>
+          <h2 className="text-base font-bold text-slate-900 dark:text-gray-100">Vehicle Testing Grid</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{totalVehicles} vehicles • {selectedYear}</p>
         </div>
-        <span className="text-[10px] font-semibold text-[#0033a0] bg-blue-50 px-2 py-1 rounded">
+        <span className="text-[10px] font-semibold text-[#0033a0] dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
           AUTO-SAVE ON
         </span>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_1fr_80px_60px_60px_60px_60px_1fr] gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200 text-[10px] font-bold uppercase text-slate-500">
+        <div className="grid grid-cols-[1fr_1fr_80px_60px_60px_60px_60px_1fr] gap-2 px-3 py-2 bg-slate-50 dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
           <div>Vehicle</div>
           <div>Driver</div>
           <div>Type</div>
@@ -274,12 +274,12 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
                 return (
                   <div
                     key={`h-${item.officeId}`}
-                    className="absolute left-0 right-0 flex items-center gap-2 px-3 bg-slate-100 text-xs font-bold text-slate-700"
+                    className="absolute left-0 right-0 flex items-center gap-2 px-3 bg-slate-100 dark:bg-gray-800 text-xs font-bold text-slate-700 dark:text-slate-300"
                     style={{ top: vRow.start, height: HEADER_HEIGHT }}
                   >
                     <span className="w-1 h-4 bg-[#0033a0] rounded-full" />
                     {item.officeName}
-                    <span className="ml-auto text-[10px] font-normal text-slate-500">
+                    <span className="ml-auto text-[10px] font-normal text-slate-500 dark:text-slate-400">
                       {item.vehicleCount} vehicle{item.vehicleCount !== 1 && "s"}
                     </span>
                   </div>
@@ -293,15 +293,15 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
               return (
                 <div
                   key={`v-${r.vehicleId}`}
-                  className="absolute left-0 right-0 grid grid-cols-[1fr_1fr_80px_60px_60px_60px_60px_1fr] gap-2 px-3 items-center border-b border-slate-100 hover:bg-slate-50/50"
+                  className="absolute left-0 right-0 grid grid-cols-[1fr_1fr_80px_60px_60px_60px_60px_1fr] gap-2 px-3 items-center border-b border-slate-100 dark:border-gray-700 hover:bg-slate-50/50 dark:hover:bg-gray-800/50"
                   style={{ top: vRow.start, height: ROW_HEIGHT }}
                 >
                   <div className="truncate">
-                    <span className="text-sm font-semibold text-slate-800">{vehicleDisplay}</span>
-                    {idType && <span className="ml-1 text-[9px] text-slate-400 uppercase">{idType}</span>}
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{vehicleDisplay}</span>
+                    {idType && <span className="ml-1 text-[9px] text-slate-400 dark:text-slate-500 uppercase">{idType}</span>}
                   </div>
-                  <div className="text-sm text-slate-600 truncate">{r.driverName || "—"}</div>
-                  <div className="text-[10px] text-slate-500 uppercase truncate">{r.vehicleType || "—"}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-400 truncate">{r.driverName || "—"}</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase truncate">{r.vehicleType || "—"}</div>
 
                   {r.tests.map((test, i) => (
                     <StatusCell
@@ -323,10 +323,10 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
                       onChange={(e) => setRemarkDrafts((p) => ({ ...p, [r.vehicleId]: e.target.value }))}
                       onBlur={() => handleRemarksBlur(r.vehicleId)}
                       disabled={!onAddRemarks}
-                      className="w-full h-7 px-2 text-xs bg-transparent border border-slate-200 rounded focus:outline-none focus:border-blue-300"
+                      className="w-full h-7 px-2 text-xs bg-transparent dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded focus:outline-none focus:border-blue-300 dark:focus:border-blue-600 dark:text-gray-200"
                     />
                     {savingRemarks.has(r.vehicleId) && (
-                      <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-slate-400" />
+                      <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-slate-400 dark:text-slate-500" />
                     )}
                   </div>
                 </div>
@@ -336,7 +336,7 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
         </div>
       </div>
 
-      <p className="text-[10px] text-slate-400 px-1">
+      <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
         Click any quarter cell to enter detailed test results with CO/HC measurements
       </p>
     </div>

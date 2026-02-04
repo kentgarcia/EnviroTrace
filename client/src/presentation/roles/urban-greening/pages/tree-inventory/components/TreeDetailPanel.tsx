@@ -81,10 +81,10 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   const archiveActionPending = isArchived ? isRestoring : isArchiving;
 
   const statusColors: Record<string, string> = {
-    alive: "bg-green-100 text-green-800 border-green-200",
-    cut: "bg-red-100 text-red-800 border-red-200",
-    dead: "bg-gray-100 text-gray-800 border-gray-200",
-    replaced: "bg-blue-100 text-blue-800 border-blue-200",
+    alive: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700",
+    cut: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700",
+    dead: "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+    replaced: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-700",
   };
 
   const healthColors: Record<string, string> = {
@@ -339,13 +339,13 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
           {logsLoading ? (
             <div className="text-sm text-gray-500 text-center py-4">Loading logs...</div>
           ) : monitoringLogs.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-4 border rounded-lg bg-gray-50">
+            <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
               No monitoring logs yet
             </div>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {monitoringLogs.map((log) => (
-                <div key={log.id} className="p-3 border rounded-lg text-sm">
+                <div key={log.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
                   <div className="flex items-center justify-between mb-1">
                     <Badge className={healthColors[log.health_status]} variant="outline">
                       {log.health_status.replace("_", " ")}
@@ -435,7 +435,7 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
       {/* Add Monitoring Log Dialog */}
       <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
         <DialogContent className="max-w-md p-0 rounded-2xl border-none overflow-hidden">
-          <DialogHeader className="bg-[#0033a0] p-4 m-0 border-none">
+          <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 p-4 m-0 border-none">
             <DialogTitle className="text-lg font-bold text-white">
               Add Monitoring Log
             </DialogTitle>
@@ -449,7 +449,7 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
                   ...prev, 
                   health_status: e.target.value as "healthy" | "needs_attention" | "diseased" | "dead"
                 }))}
-                className="mt-1 w-full px-3 py-2 border rounded-lg text-sm"
+                className="mt-1 w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
               >
                 <option value="healthy">Healthy</option>
                 <option value="needs_attention">Needs Attention</option>

@@ -94,7 +94,7 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                                 dataKey="value"
                                 position="top"
                                 formatter={(v: any) => valueFormatter(Number(v))}
-                                style={{ fill: "#374151", fontSize: 12, fontWeight: 600 }}
+                                style={{ fill: "hsl(var(--foreground))", fontSize: 12, fontWeight: 600 }}
                             />
                         </Line>
                     </RLineChart>

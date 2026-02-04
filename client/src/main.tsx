@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { ThemeProvider } from "next-themes";
 
 // Import Leaflet CSS
 import "leaflet/dist/leaflet.css";
@@ -19,6 +20,8 @@ import "@fontsource/inter/700.css";
 const root = ReactDOM.createRoot(document.getElementById("root")!);
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );

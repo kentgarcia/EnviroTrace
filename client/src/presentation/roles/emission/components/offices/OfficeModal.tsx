@@ -62,7 +62,7 @@ export function OfficeModal({
                     <DialogTitle>
                         {isEditMode ? "Edit Office" : "Add New Office"}
                     </DialogTitle>
-                    <DialogDescription className="text-blue-100/80 mt-1">
+                    <DialogDescription className="text-blue-100/80 dark:text-gray-300 mt-1">
                         {isEditMode
                             ? "Update the office information below."
                             : "Fill in the details to create a new office."

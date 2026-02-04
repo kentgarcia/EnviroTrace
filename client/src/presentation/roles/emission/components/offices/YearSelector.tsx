@@ -35,10 +35,10 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[110px]"
+            className="h-10 px-4 justify-between bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors min-w-[110px]"
           >
             <span className="truncate">{selectedYear}</span>
-            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32 p-1">
@@ -59,10 +59,10 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[130px]"
+            className="h-10 px-4 justify-between bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors min-w-[130px]"
           >
             <span className="truncate">{getQuarterLabel()}</span>
-            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-40 p-1">

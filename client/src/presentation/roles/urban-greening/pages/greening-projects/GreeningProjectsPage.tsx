@@ -57,20 +57,20 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 
 const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.ReactNode; color: string }> = {
-  replacement: { label: "Replacement", icon: <TreePine className="w-4 h-4" />, color: "bg-amber-100 text-amber-800" },
-  new_greening: { label: "New Greening", icon: <Leaf className="w-4 h-4" />, color: "bg-green-100 text-green-800" },
-  reforestation: { label: "Reforestation", icon: <TreePine className="w-4 h-4" />, color: "bg-emerald-100 text-emerald-800" },
-  beautification: { label: "Beautification", icon: <Flower2 className="w-4 h-4" />, color: "bg-pink-100 text-pink-800" },
-  other: { label: "Other", icon: <Leaf className="w-4 h-4" />, color: "bg-gray-100 text-gray-800" },
+  replacement: { label: "Replacement", icon: <TreePine className="w-4 h-4" />, color: "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200" },
+  new_greening: { label: "New Greening", icon: <Leaf className="w-4 h-4" />, color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" },
+  reforestation: { label: "Reforestation", icon: <TreePine className="w-4 h-4" />, color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200" },
+  beautification: { label: "Beautification", icon: <Flower2 className="w-4 h-4" />, color: "bg-pink-100 dark:bg-pink-900/30 text-pink-800 dark:text-pink-200" },
+  other: { label: "Other", icon: <Leaf className="w-4 h-4" />, color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" },
 };
 
 const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string }> = {
-  planning: { label: "Planning", color: "bg-gray-100 text-gray-800" },
-  procurement: { label: "Procurement", color: "bg-blue-100 text-blue-800" },
-  ready: { label: "Ready", color: "bg-indigo-100 text-indigo-800" },
-  in_progress: { label: "In Progress", color: "bg-yellow-100 text-yellow-800" },
-  completed: { label: "Completed", color: "bg-green-100 text-green-800" },
-  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-500" },
+  planning: { label: "Planning", color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200" },
+  procurement: { label: "Procurement", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200" },
+  ready: { label: "Ready", color: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200" },
+  in_progress: { label: "In Progress", color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200" },
+  completed: { label: "Completed", color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" },
+  cancelled: { label: "Cancelled", color: "bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-300" },
 };
 
 const GreeningProjectsPage: React.FC = () => {
@@ -202,7 +202,7 @@ const GreeningProjectsPage: React.FC = () => {
         accessorKey: "barangay",
         header: "Barangay",
         cell: ({ row }) => (
-          <div className="flex items-center gap-1 text-sm text-gray-600">
+          <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
             <MapPin className="w-3 h-3" />
             <span className="truncate max-w-[150px]">
               {row.original.barangay || "-"}
@@ -214,7 +214,7 @@ const GreeningProjectsPage: React.FC = () => {
         accessorKey: "location",
         header: "Address",
         cell: ({ getValue }) => (
-          <span className="text-sm text-gray-600 truncate max-w-[200px] block">
+          <span className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px] block">
             {(getValue() as string) || "-"}
           </span>
         ),
@@ -238,7 +238,7 @@ const GreeningProjectsPage: React.FC = () => {
         header: "Plants",
         cell: ({ row }) => (
           <div className="flex items-center gap-1">
-            <Sprout className="w-4 h-4 text-green-600" />
+            <Sprout className="w-4 h-4 text-green-600 dark:text-green-400" />
             <span>{row.original.total_plants}</span>
           </div>
         ),
@@ -272,7 +272,7 @@ const GreeningProjectsPage: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteProject(row.original);
@@ -306,12 +306,12 @@ const GreeningProjectsPage: React.FC = () => {
 
   return (
     <>
-    <div className="flex flex-col h-full bg-[#F9FBFC]">
+    <div className="flex flex-col h-full page-bg">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="page-header-bg sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Urban Greening Projects</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Urban Greening Projects</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Manage planting projects, saplings, and urban greening initiatives
               </p>
@@ -322,7 +322,7 @@ const GreeningProjectsPage: React.FC = () => {
                 size="icon"
                 onClick={() => refetch()}
                 disabled={isLoading}
-                className="border border-gray-200 bg-white rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
@@ -332,14 +332,14 @@ const GreeningProjectsPage: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC]">
+        <div className="flex-1 overflow-y-auto p-6 page-bg">
             <div className="flex flex-col h-full space-y-6">
           {/* Stats Cards and Charts */}
           <Card className="mb-6 shrink-0 overflow-hidden">
              <div className="flex flex-col lg:flex-row">
                 {/* Compact Pie Chart Visual Code */}
-                <div className="w-full lg:w-[200px] border-b lg:border-b-0 lg:border-r border-gray-100 bg-gray-50/30 p-4 flex flex-col justify-center items-center">
-                    <h3 className="text-xs font-semibold text-gray-600 mb-2 text-center">Plant Distribution</h3>
+                <div className="w-full lg:w-[200px] border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/30 p-4 flex flex-col justify-center items-center">
+                    <h3 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 text-center">Plant Distribution</h3>
                     <div className="h-[120px] w-full relative">
                       {filteredStats.pieData.length > 0 ? (
                          <ResponsiveContainer width="100%" height="100%">
@@ -364,7 +364,7 @@ const GreeningProjectsPage: React.FC = () => {
                             </PieChart>
                          </ResponsiveContainer>
                       ) : (
-                         <div className="flex h-full items-center justify-center text-gray-400 text-xs">
+                         <div className="flex h-full items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
                             No data
                          </div>
                       )}
@@ -376,56 +376,56 @@ const GreeningProjectsPage: React.FC = () => {
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-blue-100 rounded-lg shrink-0">
-                            <Leaf className="w-5 h-5 text-blue-600" />
+                          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+                            <Leaf className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="min-w-0">
                             <div className="text-2xl font-bold truncate">{filteredStats.total}</div>
-                            <div className="text-xs text-gray-500 truncate">Total Projects</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">Total Projects</div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-yellow-100 rounded-lg shrink-0">
-                            <Play className="w-5 h-5 text-yellow-600" />
+                          <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg shrink-0">
+                            <Play className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                           </div>
                           <div className="min-w-0">
                             <div className="text-2xl font-bold truncate">{filteredStats.active}</div>
-                            <div className="text-xs text-gray-500 truncate">Active</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">Active</div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-100 rounded-lg shrink-0">
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
                           </div>
                           <div className="min-w-0">
                             <div className="text-2xl font-bold truncate">{filteredStats.completed}</div>
-                            <div className="text-xs text-gray-500 truncate">Completed</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">Completed</div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-emerald-100 rounded-lg shrink-0">
-                            <Sprout className="w-5 h-5 text-emerald-600" />
+                          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg shrink-0">
+                            <Sprout className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="min-w-0">
                             <div className="text-2xl font-bold truncate">{filteredStats.totalPlants.toLocaleString()}</div>
-                            <div className="text-xs text-gray-500 truncate">Total Plants</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">Total Plants</div>
                           </div>
                         </div>
                     </div>
 
                     {/* Integrated Legend */}
                     {filteredStats.pieData.length > 0 && (
-                      <div className="border-t border-gray-100 pt-4">
-                          <div className="text-[11px] font-medium text-gray-500 mb-2 uppercase tracking-wider">Plant Distribution</div>
+                      <div className="border-t border-gray-100 dark:border-gray-700 pt-4">
+                          <div className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wider">Plant Distribution</div>
                           <div className="flex flex-wrap gap-x-6 gap-y-2">
                               {filteredStats.pieData.map((entry, index) => (
                                   <div key={index} className="flex items-center gap-2 text-xs">
                                       <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                      <span className="text-gray-600 font-medium truncate max-w-[150px]" title={entry.name}>{entry.name}</span>
-                                      <span className="text-gray-400">({entry.value.toLocaleString()})</span>
+                                      <span className="text-gray-600 dark:text-gray-400 font-medium truncate max-w-[150px]" title={entry.name}>{entry.name}</span>
+                                      <span className="text-gray-400 dark:text-gray-500">({entry.value.toLocaleString()})</span>
                                   </div>
                               ))}
                           </div>
@@ -436,7 +436,7 @@ const GreeningProjectsPage: React.FC = () => {
           </Card>
 
           {/* Filters and Table */}
-          <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white rounded-lg border border-gray-200">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="pb-4 p-4 shrink-0">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
@@ -454,7 +454,7 @@ const GreeningProjectsPage: React.FC = () => {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value as ProjectType | "all")}
-                    className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                    className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                   >
                     <option value="all">All Types</option>
                     <option value="replacement">Replacement</option>
@@ -465,7 +465,7 @@ const GreeningProjectsPage: React.FC = () => {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | "all")}
-                    className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                    className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                   >
                     <option value="all">All Status</option>
                     <option value="planning">Planning</option>
@@ -477,7 +477,7 @@ const GreeningProjectsPage: React.FC = () => {
                   <select
                     value={yearFilter ?? "all"}
                     onChange={(e) => setYearFilter(e.target.value === "all" ? undefined : parseInt(e.target.value))}
-                    className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                    className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                   >
                     <option value="all">All Years</option>
                     {availableYears.length > 0 ? (
@@ -539,7 +539,7 @@ const GreeningProjectsPage: React.FC = () => {
       {/* Project Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
         <DialogContent className="max-w-4xl rounded-2xl border-none p-0 overflow-hidden max-h-[90vh] flex flex-col">
-          <DialogHeader className="bg-[#0033a0] p-6 m-0 border-none shrink-0">
+          <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 p-6 m-0 border-none shrink-0">
             <DialogTitle className="text-xl font-bold text-white">Project Details</DialogTitle>
           </DialogHeader>
           <div className="p-6 overflow-y-auto">

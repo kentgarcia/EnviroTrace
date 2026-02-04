@@ -388,15 +388,15 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
 
           {/* Linked Trees (for replacement projects) */}
           {project.project_type === "replacement" && project.linked_cut_tree_ids && project.linked_cut_tree_ids.length > 0 && (
-            <Card className="border border-amber-200 bg-amber-50">
+            <Card className="border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <LinkIcon className="w-4 h-4 text-amber-600" />
-                  <span className="font-medium text-amber-800">Replacement for Cut Trees</span>
+                  <LinkIcon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="font-medium text-amber-800 dark:text-amber-300">Replacement for Cut Trees</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {project.linked_cut_tree_ids.map((treeId) => (
-                    <Badge key={treeId} variant="outline" className="border-amber-300">
+                    <Badge key={treeId} variant="outline" className="border-amber-300 dark:border-amber-700">
                       <TreePine className="w-3 h-3 mr-1" />
                       {treeId}
                     </Badge>

@@ -64,18 +64,18 @@ declare module '@tanstack/react-table' {
 }
 
 const REQUEST_TYPE_CONFIG: Record<ISORequestType, { label: string; icon: React.ReactNode; color: string }> = {
-  cutting: { label: "Tree Cutting", icon: <Axe className="w-4 h-4" />, color: "bg-red-100 text-red-800" },
-  pruning: { label: "Pruning", icon: <Scissors className="w-4 h-4" />, color: "bg-yellow-100 text-yellow-800" },
-  ball_out: { label: "Ball-out", icon: <TreePine className="w-4 h-4" />, color: "bg-green-100 text-green-800" },
+  cutting: { label: "Tree Cutting", icon: <Axe className="w-4 h-4" />, color: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200" },
+  pruning: { label: "Pruning", icon: <Scissors className="w-4 h-4" />, color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200" },
+  ball_out: { label: "Ball-out", icon: <TreePine className="w-4 h-4" />, color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" },
 };
 
 const STATUS_CONFIG: Record<ISOOverallStatus, { label: string; color: string }> = {
-  receiving: { label: "Receiving", color: "bg-blue-100 text-blue-800" },
-  inspection: { label: "Inspection", color: "bg-purple-100 text-purple-800" },
-  requirements: { label: "Requirements", color: "bg-yellow-100 text-yellow-800" },
-  clearance: { label: "Clearance", color: "bg-orange-100 text-orange-800" },
-  completed: { label: "Completed", color: "bg-green-100 text-green-800" },
-  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-800" },
+  receiving: { label: "Receiving", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200" },
+  inspection: { label: "Inspection", color: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200" },
+  requirements: { label: "Requirements", color: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200" },
+  clearance: { label: "Clearance", color: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200" },
+  completed: { label: "Completed", color: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" },
+  cancelled: { label: "Cancelled", color: "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200" },
 };
 
 const RECEIVING_STATUS_OPTIONS = ["Pending", "Received", "Forwarded", "Returned"];
@@ -185,6 +185,7 @@ const ISOTreeRequestsPage: React.FC = () => {
       filtered = filtered.filter(request =>
         request.request_number.toLowerCase().includes(query) ||
         request.receiving_name?.toLowerCase().includes(query) ||
+        request.receiving_organization?.toLowerCase().includes(query) ||
         request.receiving_address?.toLowerCase().includes(query)
       );
     }
@@ -267,11 +268,18 @@ const ISOTreeRequestsPage: React.FC = () => {
         meta: { group: "Receiving" },
       },
       {
+        accessorKey: "receiving_organization",
+        header: "Organization",
+        size: 180,
+        cell: ({ getValue }) => <span className="text-sm">{String(getValue() || "") || "—"}</span>,
+        meta: { group: "Receiving" },
+      },
+      {
         accessorKey: "receiving_address",
         header: "Address",
         size: 200,
         cell: ({ getValue }) => (
-          <span className="text-sm text-gray-600">{getValue() as string || "—"}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300">{getValue() as string || "—"}</span>
         ),
         meta: { group: "Receiving" },
       },
@@ -290,7 +298,7 @@ const ISOTreeRequestsPage: React.FC = () => {
           const type = getValue() as ISORequestType;
           const config = REQUEST_TYPE_CONFIG[type];
           return (
-            <div className={`flex items-center gap-2 px-2 py-1 rounded-md ${config?.color || "text-gray-600"}`}>
+            <div className={`flex items-center gap-2 px-2 py-1 rounded-md ${config?.color || "text-gray-600 dark:text-gray-300"}`}>
                 {config?.icon}
                 <span className="text-sm font-medium">{config?.label || type}</span>
             </div>
@@ -463,7 +471,7 @@ const ISOTreeRequestsPage: React.FC = () => {
         header: "Remarks and Recommendations",
         size: 200,
         cell: ({ getValue }) => (
-          <span className="text-sm text-gray-600">{String(getValue() || "") || "—"}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300">{String(getValue() || "") || "—"}</span>
         ),
         meta: { group: "Requirements" },
       },
@@ -617,12 +625,12 @@ const ISOTreeRequestsPage: React.FC = () => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#F9FBFC]">
+    <div className="flex flex-col h-full page-bg">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="page-header-bg sticky top-0 z-10">
           <div className="px-6 py-4 flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Tree Request Tracking</h1>
+              <h1 className="text-xl font-semibold tracking-tight">Tree Request Tracking</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 4-phase tracking: Receiving → Inspection → Requirements → Clearance
               </p>
@@ -633,7 +641,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                 size="icon"
                 onClick={handleRefresh}
                 disabled={isLoading}
-                className="border border-gray-200 bg-white rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </Button>
@@ -648,7 +656,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                   view === "list"
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <List className="w-4 h-4 inline mr-2" />
@@ -659,7 +667,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm ${
                   view === "dashboard"
                     ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
                 <BarChart3 className="w-4 h-4 inline mr-2" />
@@ -670,7 +678,7 @@ const ISOTreeRequestsPage: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#F9FBFC] space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 page-bg space-y-6">
           
           {view === "dashboard" ? (
             <EnhancedISODashboard onViewRequest={(request) => {
@@ -716,7 +724,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                       <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value as ISORequestType | "all")}
-                        className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                        className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                       >
                         <option value="all">All Types</option>
                         <option value="cutting">Tree Cutting</option>
@@ -732,7 +740,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value as ISOOverallStatus | "all")}
-                        className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                        className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                       >
                         <option value="all">All Status</option>
                         <option value="receiving">Receiving</option>
@@ -745,7 +753,7 @@ const ISOTreeRequestsPage: React.FC = () => {
                       <select
                         value={yearFilter}
                         onChange={(e) => setYearFilter(e.target.value)}
-                        className="h-9 px-3 rounded-lg border border-gray-200 text-sm"
+                        className="h-9 px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-sm"
                       >
                         <option value="all">All Years</option>
                         {availableYears.map(year => (

@@ -248,10 +248,10 @@ export const UrbanGreeningReports: React.FC = () => {
 
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Header Section */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="page-header-bg sticky top-0 z-10">
                     <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
                         <div className="shrink-0">
-                            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                            <h1 className="text-xl font-semibold tracking-tight">
                                 Urban Greening Reports
                             </h1>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -262,12 +262,12 @@ export const UrbanGreeningReports: React.FC = () => {
                 </div>
 
                 {/* Body Section */}
-                <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+                <div className="flex-1 overflow-y-auto page-bg">
                     <div className="p-8">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Configuration Panel */}
                             <div className="lg:col-span-1">
-                                <Card className="border border-slate-200 shadow-none bg-white">
+                                <Card className="border border-slate-200 dark:border-slate-700 shadow-none bg-white dark:bg-gray-900">
                                     <CardHeader>
                                         <CardTitle>Report Configuration</CardTitle>
                                         <CardDescription>
@@ -390,7 +390,7 @@ export const UrbanGreeningReports: React.FC = () => {
                             {/* Report Information Panel */}
                             <div className="lg:col-span-2">
                                 {/* Data Summary Card */}
-                                <Card className="mb-6 border border-slate-200 shadow-none bg-white">
+                                <Card className="mb-6 border border-slate-200 dark:border-slate-700 shadow-none bg-white dark:bg-gray-900">
                                     <CardHeader>
                                         <CardTitle className="text-base">Data Summary</CardTitle>
                                     </CardHeader>
@@ -450,7 +450,7 @@ export const UrbanGreeningReports: React.FC = () => {
                                     </CardContent>
                                 </Card>
 
-                                <Card className="border border-slate-200 shadow-none bg-white">
+                                <Card className="border border-slate-200 dark:border-slate-700 shadow-none bg-white dark:bg-gray-900">
                                     <CardHeader>
                                         <CardTitle>Report Information</CardTitle>
                                         <CardDescription>
@@ -470,9 +470,9 @@ export const UrbanGreeningReports: React.FC = () => {
 
                                                 {/* Specific Info per Report Type */}
                                                 {reportType === "tree-inventory" && (
-                                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-green-900 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-green-800 space-y-1">
+                                                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-green-900 dark:text-green-300 mb-2">Report Contents:</h4>
+                                                        <ul className="list-disc list-inside text-green-800 dark:text-green-400 space-y-1">
                                                             <li>Tree ID and Location</li>
                                                             <li>Species Information</li>
                                                             <li>Health Status</li>
@@ -484,9 +484,9 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 )}
 
                                                 {reportType === "tree-requests" && (
-                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-blue-900 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-blue-800 space-y-1">
+                                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">Report Contents:</h4>
+                                                        <ul className="list-disc list-inside text-blue-800 dark:text-blue-400 space-y-1">
                                                             <li>Request ID and Date Received</li>
                                                             <li>Applicant Information</li>
                                                             <li>Request Type (Cutting/Planting)</li>
@@ -498,9 +498,9 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 )}
 
                                                 {reportType === "planting-projects" && (
-                                                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-emerald-900 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-emerald-800 space-y-1">
+                                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 mb-2">Report Contents:</h4>
+                                                        <ul className="list-disc list-inside text-emerald-800 dark:text-emerald-400 space-y-1">
                                                             <li>Project Name and Type</li>
                                                             <li>Planting Date and Location</li>
                                                             <li>Number of Trees Planted</li>
@@ -512,9 +512,9 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 )}
 
                                                 {reportType === "sapling-collections" && (
-                                                    <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-teal-900 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-teal-800 space-y-1">
+                                                    <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-teal-900 dark:text-teal-300 mb-2">Report Contents:</h4>
+                                                        <ul className="list-disc list-inside text-teal-800 dark:text-teal-400 space-y-1">
                                                             <li>Collection Date and Location</li>
                                                             <li>Sapling Species</li>
                                                             <li>Quantity Collected/Distributed</li>
@@ -526,9 +526,9 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 )}
 
                                                 {reportType === "fee-records" && (
-                                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-amber-900 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-amber-800 space-y-1">
+                                                    <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                                                        <h4 className="font-semibold text-amber-900 dark:text-amber-300 mb-2">Report Contents:</h4>
+                                                        <ul className="list-disc list-inside text-amber-800 dark:text-amber-400 space-y-1">
                                                             <li>Fee Type and Amount</li>
                                                             <li>Payment Date</li>
                                                             <li>Payer Information</li>
@@ -541,11 +541,11 @@ export const UrbanGreeningReports: React.FC = () => {
                                             </div>
 
                                             {/* Preview Info */}
-                                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                                <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                                            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                                                     Selected Parameters
                                                 </h4>
-                                                <div className="text-sm text-gray-700 space-y-1">
+                                                <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                                                     <p><span className="font-medium">Report Type:</span> {reportTypes.find(t => t.id === reportType)?.label}</p>
                                                     <p><span className="font-medium">Year:</span> {selectedYear === "all" ? "All Years" : selectedYear}</p>
                                                     <p><span className="font-medium">Month:</span> {selectedMonth === "all" ? "All Months" : months.find(m => m.value === selectedMonth)?.label}</p>

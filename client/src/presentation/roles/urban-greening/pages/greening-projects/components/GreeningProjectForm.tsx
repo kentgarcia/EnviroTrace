@@ -913,7 +913,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
                       {selectedReplacementTrees.map((tree) => (
                         <div
                           key={tree.id}
-                          className="flex items-center justify-between p-2 bg-white rounded-lg border"
+                          className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
                         >
                           <div className="flex items-center gap-2">
                             <TreePine className="w-4 h-4 text-gray-500" />
@@ -1177,7 +1177,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
                 </div>
                 {/* Barangay Dropdown */}
                 {(barangaySearch && !form.watch("barangay")) && (
-                  <div className="absolute z-10 w-full mt-1 max-h-40 overflow-y-auto border rounded-lg bg-white shadow-lg">
+                  <div className="absolute z-10 w-full mt-1 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-lg">
                     {filteredBarangays.map((brgy, idx) => (
                       <button
                         key={`${brgy}-${idx}`}

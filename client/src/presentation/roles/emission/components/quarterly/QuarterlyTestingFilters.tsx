@@ -87,13 +87,13 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                     placeholder="Search by plate, driver, or office..."
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
-                    className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                    className="pl-9 bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
                 />
-                <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
                 {search && (
                     <button
                         onClick={() => onSearchChange("")}
-                        className="absolute right-3 text-slate-400 hover:text-slate-600 transition-colors"
+                        className="absolute right-3 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -107,7 +107,7 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                         variant="ghost" 
                         size="sm" 
                         onClick={clearFilters}
-                        className="text-slate-500 hover:text-slate-900 text-xs font-medium h-8 px-2"
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-gray-100 text-xs font-medium h-8 px-2"
                     >
                         Clear all
                     </Button>
@@ -118,10 +118,10 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="outline"
-                            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[110px]"
+                            className="h-10 px-4 justify-between bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors min-w-[110px]"
                         >
                             <span className="truncate">{selectedYear}</span>
-                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-32 p-1">
@@ -142,10 +142,10 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="outline"
-                            className="h-10 px-4 justify-between bg-white border-slate-200 shadow-none rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors min-w-[180px]"
+                            className="h-10 px-4 justify-between bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors min-w-[180px]"
                         >
                             <span className="truncate">{getOfficeLabel()}</span>
-                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400" />
+                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-64 p-1 max-h-[300px] overflow-y-auto">
@@ -164,7 +164,7 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                                 onClick={() => handleOfficeSelect(office.id)} 
                                 className={cn(
                                     "rounded-md cursor-pointer flex items-center justify-between",
-                                    isOfficeSelected(office.id) && "bg-blue-50"
+                                    isOfficeSelected(office.id) && "bg-blue-50 dark:bg-blue-900/30"
                                 )}
                             >
                                 <span className="truncate">{office.name}</span>

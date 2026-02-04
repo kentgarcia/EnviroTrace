@@ -48,7 +48,7 @@ const SectionHeader = ({
   <button
     type="button"
     onClick={onToggle}
-    className={`w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors ${isOpen ? 'bg-gray-50' : ''}`}
+    className={`w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${isOpen ? 'bg-gray-50 dark:bg-gray-800' : ''}`}
   >
     <div className="flex items-center gap-2">
       <Icon className={`w-4 h-4 ${colorClass}`} />

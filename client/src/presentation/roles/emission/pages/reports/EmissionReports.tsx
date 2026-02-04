@@ -483,10 +483,10 @@ export const EmissionReports: React.FC = () => {
 
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Header Section */}
-                <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+                <div className="page-header-bg sticky top-0 z-10">
                     <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
                         <div className="shrink-0">
-                            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                            <h1 className="text-xl font-semibold tracking-tight">
                                 Emission Reports
                             </h1>
                             <p className="text-xs text-muted-foreground mt-0.5">
@@ -497,12 +497,12 @@ export const EmissionReports: React.FC = () => {
                 </div>
 
                 {/* Body Section */}
-                <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+                <div className="flex-1 overflow-y-auto page-bg">
                     <div className="p-8">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Configuration Panel */}
                             <div className="lg:col-span-1">
-                                <Card className="border border-slate-200 shadow-none bg-white">
+                                <Card className="border border-slate-200 dark:border-gray-700 shadow-none bg-white dark:bg-gray-900">
                                     <CardHeader>
                                         <CardTitle>Report Configuration</CardTitle>
                                         <CardDescription>
@@ -644,7 +644,7 @@ export const EmissionReports: React.FC = () => {
                                                         : "Select All"}
                                                 </Button>
                                             </div>
-                                            <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                                            <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
                                                 {officesData?.offices.map(office => (
                                                     <div key={office.id} className="flex items-center space-x-2">
                                                         <Checkbox
@@ -691,7 +691,7 @@ export const EmissionReports: React.FC = () => {
                                         {/* Export to Excel Button - Only for Quarterly Testing */}
                                         {showComprehensiveFilters && (
                                             <Button
-                                                className="w-full border border-gray-200 bg-white shadow-none rounded-lg hover:bg-slate-50"
+                                                className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg hover:bg-slate-50 dark:hover:bg-gray-700"
                                                 size="lg"
                                                 variant="outline"
                                                 onClick={handleExportToExcel}
@@ -709,14 +709,14 @@ export const EmissionReports: React.FC = () => {
                         {/* Report Information Panel */}
                         <div className="lg:col-span-2">
                             {/* Data Summary Card */}
-                            <Card className="mb-6 border border-slate-200 shadow-none bg-white">
+                            <Card className="mb-6 border border-slate-200 dark:border-gray-700 shadow-none bg-white dark:bg-gray-900">
                                 <CardHeader>
                                     <CardTitle className="text-base">Data Summary</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div>
-                                            <p className="text-sm text-gray-600">Total Vehicles</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Total Vehicles</p>
                                             <p className="text-2xl font-bold text-blue-600">
                                                 {isVehiclesLoading ? (
                                                     <Loader2 className="w-6 h-6 animate-spin inline" />
@@ -724,7 +724,7 @@ export const EmissionReports: React.FC = () => {
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600">Loaded</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Loaded</p>
                                             <p className="text-2xl font-bold text-green-600">
                                                 {isVehiclesLoading ? (
                                                     <Loader2 className="w-6 h-6 animate-spin inline" />
@@ -732,7 +732,7 @@ export const EmissionReports: React.FC = () => {
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600">Test Records</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Test Records</p>
                                             <p className="text-2xl font-bold text-cyan-600">
                                                 {isLoadingTests ? (
                                                     <Loader2 className="w-6 h-6 animate-spin inline" />
@@ -742,22 +742,22 @@ export const EmissionReports: React.FC = () => {
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600">Government Offices</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Government Offices</p>
                                             <p className="text-2xl font-bold text-purple-600">
                                                 {officesData?.offices.length || 0}
                                             </p>
                                         </div>
                                     </div>
                                     {vehiclesTotal > 0 && vehicles.length < vehiclesTotal && (
-                                        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                                            <p className="text-sm text-yellow-800">
+                                        <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
                                                 ⚠️ Showing {vehicles.length} of {vehiclesTotal} vehicles. Use the load button to fetch remaining records.
                                             </p>
                                         </div>
                                     )}
                                     {vehiclesTotal === 0 && vehicles.length === 0 && !isVehiclesLoading && (
-                                        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between">
-                                            <p className="text-sm text-slate-700">Vehicle data has not been loaded yet.</p>
+                                        <div className="mt-4 p-3 bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-md flex items-center justify-between">
+                                            <p className="text-sm text-slate-700 dark:text-slate-300">Vehicle data has not been loaded yet.</p>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -775,7 +775,7 @@ export const EmissionReports: React.FC = () => {
                                 </CardContent>
                             </Card>
 
-                            <Card className="border border-slate-200 shadow-none bg-white">
+                            <Card className="border border-slate-200 dark:border-gray-700 shadow-none bg-white dark:bg-gray-900">
                                 <CardHeader>
                                     <CardTitle>Report Information</CardTitle>
                                     <CardDescription>
@@ -789,15 +789,15 @@ export const EmissionReports: React.FC = () => {
                                             <h3 className="text-lg font-semibold mb-3">
                                                 {reportTypes.find(t => t.id === reportType)?.label}
                                             </h3>
-                                            <p className="text-gray-600 mb-4">
+                                            <p className="text-gray-600 mb-4 dark:text-gray-400">
                                                 {reportTypes.find(t => t.id === reportType)?.description}
                                             </p>
 
                                             {/* Specific Info per Report Type */}
                                             {reportType === "vehicle-registry" && (
-                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                    <h4 className="font-semibold text-blue-900 mb-2">Report Contents:</h4>
-                                                    <ul className="list-disc list-inside text-blue-800 space-y-1">
+                                                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                                    <h4 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Report Contents:</h4>
+                                                    <ul className="list-disc list-inside text-blue-800 dark:text-blue-300 space-y-1">
                                                         <li>Plate Number</li>
                                                         <li>Driver Name</li>
                                                         <li>Contact Number</li>
@@ -810,30 +810,30 @@ export const EmissionReports: React.FC = () => {
                                             )}
 
                                             {reportType === "testing-result" && (
-                                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                                    <h4 className="font-semibold text-green-900 mb-2">Report Contents:</h4>
-                                                    <ul className="list-disc list-inside text-green-800 space-y-1">
+                                                <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                                                    <h4 className="font-semibold text-green-900 dark:text-green-200 mb-2">Report Contents:</h4>
+                                                    <ul className="list-disc list-inside text-green-800 dark:text-green-300 space-y-1">
                                                         <li>Tables categorized by each selected office</li>
                                                         <li>Each vehicle listed with quarterly test results (Q1-Q4)</li>
                                                         <li>Green cells indicate passed tests</li>
                                                         <li>Shows testing compliance throughout the year</li>
                                                     </ul>
-                                                    <div className="mt-3 p-2 bg-yellow-100 rounded text-sm text-yellow-800">
+                                                    <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-sm text-yellow-800 dark:text-yellow-200">
                                                         ⚠️ Please select at least one office
                                                     </div>
                                                 </div>
                                             )}
 
                                             {reportType === "office-compliance" && (
-                                                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                                    <h4 className="font-semibold text-purple-900 mb-2">Report Contents:</h4>
-                                                    <ul className="list-disc list-inside text-purple-800 space-y-1">
+                                                <div className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                                                    <h4 className="font-semibold text-purple-900 dark:text-purple-200 mb-2">Report Contents:</h4>
+                                                    <ul className="list-disc list-inside text-purple-800 dark:text-purple-300 space-y-1">
                                                         <li>Total vehicles per office</li>
                                                         <li>Number of tested vehicles in the selected quarter</li>
                                                         <li>Number of passed tests</li>
                                                         <li>Compliance rate percentage</li>
                                                     </ul>
-                                                    <div className="mt-3 p-2 bg-yellow-100 rounded text-sm text-yellow-800">
+                                                    <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded text-sm text-yellow-800 dark:text-yellow-200">
                                                         ⚠️ Please select quarter and at least one office
                                                     </div>
                                                 </div>
@@ -841,11 +841,11 @@ export const EmissionReports: React.FC = () => {
                                         </div>
 
                                         {/* Preview Info */}
-                                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                            <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                                        <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                                                 Selected Parameters
                                             </h4>
-                                            <div className="text-sm text-gray-700 space-y-1">
+                                            <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                                                 <p><span className="font-medium">Report Type:</span> {reportTypes.find(t => t.id === reportType)?.label}</p>
                                                 <p><span className="font-medium">Year:</span> {selectedYear}</p>
                                                 {showQuarterSelection && (

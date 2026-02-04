@@ -11,15 +11,15 @@ import { useOffices, OfficeWithCompliance } from "@/core/hooks/offices/useOffice
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
   ({ title, value, icon: Icon }: { title: string; value: string | number; icon?: any }) => (
-    <Card className="p-6 border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden relative">
+    <Card className="p-6 border border-slate-200 dark:border-gray-700 shadow-none rounded-xl bg-white dark:bg-gray-900 overflow-hidden relative">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{title}</span>
-          <span className="text-2xl font-bold text-slate-900">{value}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{title}</span>
+          <span className="text-2xl font-bold text-slate-900 dark:text-gray-100">{value}</span>
         </div>
         {Icon && (
-          <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100">
-            <Icon className="h-5 w-5 text-slate-400" />
+          <div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-gray-800 flex items-center justify-center border border-slate-100 dark:border-gray-700">
+            <Icon className="h-5 w-5 text-slate-400 dark:text-slate-500" />
           </div>
         )}
       </div>
@@ -98,10 +98,10 @@ export default function OfficesPage() {
           
           {/* Header Section */}
           <div className="w-full flex flex-col flex-1 overflow-hidden">
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div className="page-header-bg sticky top-0 z-10">
               <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
                 <div className="shrink-0">
-                  <h1 className="text-xl font-semibold text-gray-900 tracking-tight">
+                  <h1 className="text-xl font-semibold tracking-tight">
                     Government Offices
                   </h1>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -116,14 +116,14 @@ export default function OfficesPage() {
                     size="icon"
                     onClick={handleRefresh}
                     disabled={isLoading}
-                    className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <RefreshCw className={`h-4 w-4 text-slate-600 ${isLoading ? "animate-spin" : ""}`} />
                   </Button>
                   <Button 
                     variant="outline" 
                     size="icon"
-                    className="border border-gray-200 bg-white shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                    className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg h-9 w-9 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <FileSpreadsheet className="h-4 w-4 text-slate-600" />
                   </Button>
@@ -132,7 +132,7 @@ export default function OfficesPage() {
             </div>
 
             {/* Body Section */}
-            <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+            <div className="flex-1 overflow-y-auto page-bg">
               <div className="p-8">
 
 
@@ -160,16 +160,16 @@ export default function OfficesPage() {
                     />
                   </div>
 
-                  <Card className="border border-slate-200 shadow-none rounded-xl bg-white overflow-hidden">
+                  <Card className="border border-slate-200 dark:border-gray-700 shadow-none rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
                     {/* Controls Row: Search left, Filters right */}
-                    <div className="px-6 pt-6 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100">
+                    <div className="px-6 pt-6 pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-gray-700">
                       {/* Search (left) */}
                       <div className="relative flex items-center w-full lg:w-96">
                         <Input
                           placeholder="Search offices by name or location..."
                           value={filters.searchTerm || ""}
                           onChange={handleSearchChange}
-                          className="pl-9 bg-white border-slate-200 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
+                          className="pl-9 bg-white dark:bg-gray-800 border-slate-200 dark:border-gray-700 focus:border-blue-400 focus:ring-blue-400/20 rounded-lg h-10 text-sm transition-all"
                         />
                         <Search className="absolute left-3 h-4 w-4 text-slate-400" />
                       </div>
