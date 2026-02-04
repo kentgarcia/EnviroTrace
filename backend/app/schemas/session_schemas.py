@@ -80,4 +80,5 @@ class UserUnsuspendRequest(BaseModel):
 
 class PasswordResetResponse(BaseModel):
     temporary_password: str
+    user_email: str
     message: str = "Password reset successful. Provide this temporary password to the user."

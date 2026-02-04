@@ -450,6 +450,7 @@ async def admin_reset_user_password(
         
         return PasswordResetResponse(
             temporary_password=temp_password,
+            user_email=user_obj.email,
             message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
         )
         

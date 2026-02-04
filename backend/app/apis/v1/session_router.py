@@ -173,7 +173,8 @@ async def terminate_session_revoke_access(
         )
 
 
-@router.potemporarily_suspend_user_account(
+@router.post("/users/{user_id}/suspend")
+async def temporarily_suspend_user_account(
     user_id: uuid.UUID,
     suspend_request: UserSuspendRequest,
     db: AsyncSession = Depends(get_db_session),
