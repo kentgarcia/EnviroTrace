@@ -46,11 +46,13 @@ interface MenuItem {
   icon?: React.ReactNode;
   children?: { label: string; path: string }[];
   permission?: string;
+  hidden?: boolean;
 }
 
 function getMenuItems(
   dashboardType: SideNavBarContainerProps["dashboardType"],
   hasPermission: (permission: string) => boolean,
+  isSuperAdmin: boolean = false
 ): MenuItem[] {
   const basePath = `/${dashboardType}`;
   
@@ -71,17 +73,19 @@ function getMenuItems(
         label: "Permissions",
         path: `${basePath}/permission-management`,
         icon: <KeyRound size={18} />,
-        // permission: PERMISSIONS.PERMISSION_MANAGEMENT.VIEW, // Add when permission management permissions are defined
+        hidden: !isSuperAdmin,
       },
       {
         label: "Sessions",
         path: `${basePath}/session-management`,
         icon: <History size={18} />,
+        permission: PERMISSIONS.SESSION.VIEW,
       },
       {
         label: "Audit Logs",
         path: `${basePath}/audit-logs`,
         icon: <Shield size={18} />,
+        permission: PERMISSIONS.AUDIT_LOG.VIEW,
       },
       {
         label: "Settings",
@@ -90,8 +94,11 @@ function getMenuItems(
       },
     ];
     
-    // Filter menu items based on permissions
-    return adminMenuItems.filter(item => !item.permission || hasPermission(item.permission));
+    // Filter menu items based on permissions and hidden flag
+    return adminMenuItems.filter(item => 
+      (!item.permission || hasPermission(item.permission)) && 
+      !item.hidden
+    );
   } else if (dashboardType === "government-emission") {
     return [
       {
@@ -238,7 +245,7 @@ export default function SideNavBarContainer({
   // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
   const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
-  const menuItems: NavItem[] = getMenuItems(dashboardType, hasPermission).map(
+  const menuItems: NavItem[] = getMenuItems(dashboardType, hasPermission, isSuperAdmin).map(
     (item) => ({
       label: item.label,
       icon: item.icon,

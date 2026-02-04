@@ -138,7 +138,40 @@ async def create_user(
 ):
     """Create a new user (admin only)"""
     
-    return await auth_service.register_user(db=db, user_in=user_in)
+    # Create user in Supabase Auth first
+    result = await auth_service.register_user_with_supabase(db=db, user_in=user_in)
+    supabase_user_id = uuid.UUID(result["supabase_user_id"])
+    
+    # Create internal user and profile
+    try:
+        user = await crud_user.create_with_profile(
+            db=db, 
+            obj_in=user_in,
+            supabase_user_id=supabase_user_id,
+            # Admin-created users are auto-confirmed and approved
+            is_approved=True
+        )
+        
+        # Manually set email_confirmed_at since register_user_with_supabase doesn't do it for admin creation
+        user.email_confirmed_at = datetime.utcnow()
+        await db.commit()
+    except Exception as e:
+        # If internal creation fails, we should probably clean up Supabase user
+        # But for now let's just raise the error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create internal user record: {str(e)}"
+        )
+    
+    # Add roles if any
+    if user_in.roles:
+        for role_slug in user_in.roles:
+            await crud_user.add_role_to_user(db=db, user_id=user.id, role_slug=role_slug)
+            
+    await db.refresh(user)
+    
+    # Return full user details
+    return await auth_service.get_user_details(db=db, user_id=user.id)
 
 @router.get("/users/{user_id}", response_model=UserFullPublic)
 async def get_user_by_id(

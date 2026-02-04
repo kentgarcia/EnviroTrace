@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
@@ -414,17 +414,24 @@ export function PermissionManagementNew() {
     }
   };
 
-  // Group permissions by module and entity
-  const groupedPermissions = allPermissions?.reduce((acc, permission) => {
-    if (!acc[permission.module_name]) {
-      acc[permission.module_name] = {};
-    }
-    if (!acc[permission.module_name][permission.entity_type]) {
-      acc[permission.module_name][permission.entity_type] = [];
-    }
-    acc[permission.module_name][permission.entity_type].push(permission);
-    return acc;
-  }, {} as Record<string, Record<string, Permission[]>>);
+  // Group permissions by module and entity - optimize with useMemo
+  const groupedPermissions = useMemo(() => {
+    return allPermissions?.reduce((acc, permission) => {
+      // Hide System Roles and Access Controls (Permission entity)
+      if (permission.entity_type === 'role' || permission.entity_type === 'permission') {
+        return acc;
+      }
+
+      if (!acc[permission.module_name]) {
+        acc[permission.module_name] = {};
+      }
+      if (!acc[permission.module_name][permission.entity_type]) {
+        acc[permission.module_name][permission.entity_type] = [];
+      }
+      acc[permission.module_name][permission.entity_type].push(permission);
+      return acc;
+    }, {} as Record<string, Record<string, Permission[]>>);
+  }, [allPermissions]);
 
   if (!isSuperAdmin) {
     return (
@@ -701,6 +708,17 @@ export function PermissionManagementNew() {
                                         {summaryDescription}
                                       </TableCell>
                                       {["view", "create", "update", "delete"].map((action) => {
+                                        // Hide "view" action for role and permission entities as requested
+                                        if (action === 'view' && (entityType === 'role' || entityType === 'permission')) {
+                                          return (
+                                            <TableCell key={action} className="text-center p-2">
+                                              <div className="flex justify-center">
+                                                <span className="text-xs text-muted-foreground italic">Restricted</span>
+                                              </div>
+                                            </TableCell>
+                                          );
+                                        }
+
                                         const permission = permissionsByAction[action];
                                         
                                         if (!permission) {

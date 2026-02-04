@@ -87,6 +87,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button
+                        type="button"
                         variant="outline"
                         role="combobox"
                         aria-expanded={open}
@@ -108,6 +109,7 @@ export const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>
                                         >
                                             {item.label}
                                             <button
+                                                type="button"
                                                 className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                                 onKeyDown={(e) => {
                                                     if (e.key === "Enter") {

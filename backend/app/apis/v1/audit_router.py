@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.apis.deps import get_db_session, require_roles
+from app.apis.deps import get_db_session, require_permissions
 from app.crud.crud_audit_log import audit_log_crud
 from app.models.auth_models import User
 from app.schemas.audit_schemas import AuditLogFilter, AuditLogListResponse, AuditLogResponse
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/audit", tags=["Audit"])
 @router.get("/logs", response_model=AuditLogListResponse)
 async def list_audit_logs(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"])),
+    current_user: User = Depends(require_permissions(["audit_log.view"])),
     module_name: Optional[str] = Query(None, description="Filter by module name"),
     user_email: Optional[str] = Query(None, description="Filter by acting user email"),
     event_id: Optional[str] = Query(None, description="Filter by event identifier"),
@@ -49,7 +49,7 @@ async def list_audit_logs(
 async def get_audit_log(
     log_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"])),
+    current_user: User = Depends(require_permissions(["audit_log.view"])),
 ):
     log = await audit_log_crud.get(db, id=log_id)
     if not log:

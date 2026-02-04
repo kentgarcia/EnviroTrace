@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import uuid
 
-from app.apis.deps import get_db_session, require_roles
+from app.apis.deps import get_db_session, require_roles, require_permissions
 from app.crud.crud_session import session_crud
 from app.crud.crud_user import user as crud_user
 from app.core import supabase_client
@@ -25,7 +25,7 @@ router = APIRouter()
 @router.get("/sessions", response_model=List[SessionWithUser])
 async def get_all_sessions(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"])),
+    current_user: User = Depends(require_permissions(["session.view"])),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     device_type: Optional[DeviceTypeEnum] = Query(None),
@@ -72,7 +72,7 @@ async def get_all_sessions(
 async def get_user_sessions(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"])),
+    current_user: User = Depends(require_permissions(["session.view"])),
     active_only: bool = Query(False),
     device_type: Optional[DeviceTypeEnum] = Query(None)
 ):
@@ -90,7 +90,7 @@ async def get_user_sessions(
 async def terminate_session_revoke_access(
     terminate_request: SessionTerminateRequest,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["session.delete"]))
 ):
     """
     Terminate a specific session and temporarily revoke user access (admin only).
@@ -178,7 +178,7 @@ async def temporarily_suspend_user_account(
     user_id: uuid.UUID,
     suspend_request: UserSuspendRequest,
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(["session.delete"]))
 ):
     """
     Temporarily suspend user account and terminate all sessions (admin only).

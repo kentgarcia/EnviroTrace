@@ -45,6 +45,9 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/presentation/components/shared/ui/pagination";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
+import { Shield } from "lucide-react";
 
 export function SessionManagement() {
     const [deviceFilter, setDeviceFilter] = useState<string>("");
@@ -57,6 +60,8 @@ export function SessionManagement() {
     const [page, setPage] = useState(1);
     const pageSize = 10;
     const { toast } = useToast();
+    const canViewSessions = useAuthStore((state) => state.hasPermission(PERMISSIONS.SESSION.VIEW));
+    const canTerminateSessions = useAuthStore((state) => state.hasPermission(PERMISSIONS.SESSION.DELETE));
 
     // Parse filters for API
     const deviceType = deviceFilter === "all" || !deviceFilter ? undefined : deviceFilter;
@@ -210,6 +215,24 @@ export function SessionManagement() {
             </Badge>
         );
     };
+
+    if (!canViewSessions) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Card className="w-full max-w-md mx-auto">
+                    <CardContent className="pt-6">
+                        <div className="flex flex-col items-center gap-4">
+                            <Shield className="w-16 h-16 text-red-500" />
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Access Denied</h2>
+                            <p className="text-gray-600 dark:text-gray-300 text-center">
+                                You do not have permission to view session information.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (error) {
         return (
@@ -398,7 +421,7 @@ export function SessionManagement() {
                                                         >
                                                             <Filter className="w-4 h-4" />
                                                         </Button>
-                                                        {session.is_active && (
+                                                        {session.is_active && canTerminateSessions && (
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
                                                                     <Button variant="outline" size="sm">

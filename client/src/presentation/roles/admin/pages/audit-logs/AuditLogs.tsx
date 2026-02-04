@@ -42,6 +42,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/presentation/components/shared/ui/table";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Available modules based on backend MODULE_MAPPINGS
 const AUDIT_MODULES = [
@@ -82,6 +84,8 @@ export function AuditLogs() {
     const [page, setPage] = useState(1);
     const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
     const pageSize = 50;
+
+    const canViewAuditLogs = useAuthStore((state) => state.hasPermission(PERMISSIONS.AUDIT_LOG.VIEW));
 
     const handleQuickRange = (minutes: number) => {
         const now = new Date();
@@ -226,6 +230,24 @@ export function AuditLogs() {
         setDateTo(undefined);
         setPage(1);
     };
+
+    if (!canViewAuditLogs) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Card className="w-full max-w-md mx-auto">
+                    <CardContent className="pt-6">
+                        <div className="flex flex-col items-center gap-4">
+                            <Shield className="w-16 h-16 text-red-500" />
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Access Denied</h2>
+                            <p className="text-gray-600 dark:text-gray-300 text-center">
+                                You do not have permission to view audit logs.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     if (error) {
         return (

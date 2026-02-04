@@ -170,10 +170,36 @@ export function UserManagement() {
     const resetPasswordMutation = useResetUserPassword();
 
     // Form for create/edit
-    const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<UserFormData>({
+    const { 
+        register: registerCreate, 
+        handleSubmit: handleSubmitCreate, 
+        reset: resetCreate, 
+        setValue: setValueCreate, 
+        watch: watchCreate, 
+        formState: { errors: errorsCreate } 
+    } = useForm<UserFormData>({
         defaultValues: {
             email: "",
             password: "",
+            roles: [],
+            first_name: "",
+            last_name: "",
+            job_title: "",
+            department: "",
+            phone_number: ""
+        }
+    });
+
+    const { 
+        register: registerUpdate, 
+        handleSubmit: handleSubmitUpdate, 
+        reset: resetUpdate, 
+        setValue: setValueUpdate, 
+        watch: watchUpdate, 
+        formState: { errors: errorsUpdate } 
+    } = useForm<UserFormData>({
+        defaultValues: {
+            email: "",
             roles: [],
             first_name: "",
             last_name: "",
@@ -191,7 +217,14 @@ export function UserManagement() {
         }
     });
 
-    const watchedRoles = watch("roles") || [];
+    // Register roles field specifically for both forms
+    useEffect(() => {
+        registerCreate("roles");
+        registerUpdate("roles");
+    }, [registerCreate, registerUpdate]);
+
+    const watchedCreateRoles = watchCreate("roles") || [];
+    const watchedUpdateRoles = watchUpdate("roles") || [];
 
     const handleCreateUser = async (data: UserFormData) => {
         try {
@@ -209,7 +242,7 @@ export function UserManagement() {
 
             await createUserMutation.mutateAsync(createData);
             setIsCreateDialogOpen(false);
-            reset();
+            resetCreate();
             toast({
                 title: "Success",
                 description: "User created successfully!",
@@ -265,7 +298,7 @@ export function UserManagement() {
 
             await updateUserMutation.mutateAsync({ userId: editingUser.id, userData: updateData });
             setEditingUser(null);
-            reset();
+            resetUpdate();
             toast({
                 title: "Success",
                 description: "User updated successfully!",
@@ -497,18 +530,18 @@ export function UserManagement() {
     const openEditDialog = (user: User) => {
         setEditingUser(user);
         // Set form values with validation
-        setValue("email", user.email, { shouldValidate: true, shouldDirty: false });
-        setValue("roles", user.assigned_roles, { shouldValidate: true, shouldDirty: false });
-        setValue("first_name", user.profile?.first_name || "", { shouldValidate: true, shouldDirty: false });
-        setValue("last_name", user.profile?.last_name || "", { shouldValidate: true, shouldDirty: false });
-        setValue("job_title", user.profile?.job_title || "", { shouldValidate: true, shouldDirty: false });
-        setValue("department", user.profile?.department || "", { shouldValidate: true, shouldDirty: false });
-        setValue("phone_number", user.profile?.phone_number || "", { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("email", user.email, { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("roles", user.assigned_roles, { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("first_name", user.profile?.first_name || "", { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("last_name", user.profile?.last_name || "", { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("job_title", user.profile?.job_title || "", { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("department", user.profile?.department || "", { shouldValidate: true, shouldDirty: false });
+        setValueUpdate("phone_number", user.profile?.phone_number || "", { shouldValidate: true, shouldDirty: false });
     };
 
     const closeEditDialog = () => {
         setEditingUser(null);
-        reset();
+        resetUpdate();
     };
 
     const openPasswordResetDialog = (user: User) => {
@@ -519,6 +552,7 @@ export function UserManagement() {
     const closePasswordResetDialog = () => {
         setPasswordResetUser(null);
         setTempPasswordDisplay(null);
+        resetPassword();
     };
 
     const handlePasswordReset = async () => {
@@ -545,8 +579,12 @@ export function UserManagement() {
         }
     };
 
-    const handleRolesChange = (values: string[]) => {
-        setValue("roles", values, { shouldDirty: true, shouldTouch: true });
+    const handleCreateRolesChange = (values: string[]) => {
+        setValueCreate("roles", values, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+    };
+
+    const handleUpdateRolesChange = (values: string[]) => {
+        setValueUpdate("roles", values, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
     };
 
     const formatDate = (dateString: string) => {
@@ -637,7 +675,7 @@ export function UserManagement() {
                     {/* Create User Dialog */}
                     <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                         <DialogContent className="sm:max-w-md">
-                            <form onSubmit={handleSubmit(handleCreateUser)}>
+                            <form onSubmit={handleSubmitCreate(handleCreateUser)}>
                                 <DialogHeader>
                                     <DialogTitle>Create New User</DialogTitle>
                                     <DialogDescription>
@@ -651,7 +689,7 @@ export function UserManagement() {
                                         <Input
                                             id="email"
                                             type="email"
-                                            {...register("email", { 
+                                            {...registerCreate("email", { 
                                                 required: "Email is required",
                                                 pattern: {
                                                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -660,8 +698,8 @@ export function UserManagement() {
                                             })}
                                             placeholder="user@example.com"
                                         />
-                                        {errors.email && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+                                        {errorsCreate.email && (
+                                            <p className="text-sm text-red-600 mt-1">{errorsCreate.email.message}</p>
                                         )}
                                     </div>
 
@@ -672,7 +710,7 @@ export function UserManagement() {
                                                 id="password"
                                                 type={showCreatePassword ? "text" : "password"}
                                                 className="pr-10"
-                                                {...register("password", { required: "Password is required", minLength: { value: 8, message: "Password must be at least 8 characters" } })}
+                                                {...registerCreate("password", { required: "Password is required", minLength: { value: 8, message: "Password must be at least 8 characters" } })}
                                                 placeholder="••••••••"
                                             />
                                             <button
@@ -684,8 +722,8 @@ export function UserManagement() {
                                                 {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                             </button>
                                         </div>
-                                        {errors.password && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
+                                        {errorsCreate.password && (
+                                            <p className="text-sm text-red-600 mt-1">{errorsCreate.password.message}</p>
                                         )}
                                     </div>
 
@@ -694,7 +732,7 @@ export function UserManagement() {
                                             <Label htmlFor="first_name">First Name</Label>
                                             <Input
                                                 id="first_name"
-                                                {...register("first_name")}
+                                                {...registerCreate("first_name")}
                                                 placeholder="John"
                                             />
                                         </div>
@@ -703,7 +741,7 @@ export function UserManagement() {
                                             <Label htmlFor="last_name">Last Name</Label>
                                             <Input
                                                 id="last_name"
-                                                {...register("last_name")}
+                                                {...registerCreate("last_name")}
                                                 placeholder="Doe"
                                             />
                                         </div>
@@ -713,7 +751,7 @@ export function UserManagement() {
                                         <Label htmlFor="job_title">Job Title</Label>
                                         <Input
                                             id="job_title"
-                                            {...register("job_title")}
+                                            {...registerCreate("job_title")}
                                             placeholder="Environmental Officer"
                                         />
                                     </div>
@@ -723,7 +761,7 @@ export function UserManagement() {
                                             <Label htmlFor="department">Department</Label>
                                             <Input
                                                 id="department"
-                                                {...register("department")}
+                                                {...registerCreate("department")}
                                                 placeholder="Urban Planning"
                                             />
                                         </div>
@@ -732,7 +770,7 @@ export function UserManagement() {
                                             <Label htmlFor="phone_number">Phone Number</Label>
                                             <Input
                                                 id="phone_number"
-                                                {...register("phone_number")}
+                                                {...registerCreate("phone_number")}
                                                 placeholder="+1234567890"
                                             />
                                         </div>
@@ -749,8 +787,8 @@ export function UserManagement() {
                                             ) : (
                                                 <MultiSelect
                                                     items={availableRoles}
-                                                    selectedValues={watchedRoles}
-                                                    onChange={handleRolesChange}
+                                                    selectedValues={watchedCreateRoles}
+                                                    onChange={handleCreateRolesChange}
                                                     placeholder="Select roles..."
                                                     emptyMessage="No roles available."
                                                     maxDisplayItems={2}
@@ -1147,7 +1185,7 @@ export function UserManagement() {
             {/* Edit User Dialog */}
             <Dialog open={!!editingUser} onOpenChange={(open) => !open && closeEditDialog()}>
                 <DialogContent className="sm:max-w-md">
-                    <form onSubmit={handleSubmit(handleUpdateUser)}>
+                    <form onSubmit={handleSubmitUpdate(handleUpdateUser)}>
                         <DialogHeader>
                             <DialogTitle>Edit User</DialogTitle>
                             <DialogDescription>
@@ -1161,7 +1199,7 @@ export function UserManagement() {
                                 <Input
                                     id="edit-email"
                                     type="email"
-                                    {...register("email", { 
+                                    {...registerUpdate("email", { 
                                         required: "Email is required",
                                         pattern: {
                                             value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -1169,8 +1207,8 @@ export function UserManagement() {
                                         }
                                     })}
                                 />
-                                {errors.email && (
-                                    <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+                                {errorsUpdate.email && (
+                                    <p className="text-sm text-red-600 mt-1">{errorsUpdate.email.message}</p>
                                 )}
                             </div>
 
@@ -1179,7 +1217,7 @@ export function UserManagement() {
                                     <Label htmlFor="edit-first_name">First Name</Label>
                                     <Input
                                         id="edit-first_name"
-                                        {...register("first_name")}
+                                        {...registerUpdate("first_name")}
                                         placeholder="John"
                                     />
                                 </div>
@@ -1188,7 +1226,7 @@ export function UserManagement() {
                                     <Label htmlFor="edit-last_name">Last Name</Label>
                                     <Input
                                         id="edit-last_name"
-                                        {...register("last_name")}
+                                        {...registerUpdate("last_name")}
                                         placeholder="Doe"
                                     />
                                 </div>
@@ -1198,7 +1236,7 @@ export function UserManagement() {
                                 <Label htmlFor="edit-job_title">Job Title</Label>
                                 <Input
                                     id="edit-job_title"
-                                    {...register("job_title")}
+                                    {...registerUpdate("job_title")}
                                     placeholder="Environmental Officer"
                                 />
                             </div>
@@ -1208,7 +1246,7 @@ export function UserManagement() {
                                     <Label htmlFor="edit-department">Department</Label>
                                     <Input
                                         id="edit-department"
-                                        {...register("department")}
+                                        {...registerUpdate("department")}
                                         placeholder="Urban Planning"
                                     />
                                 </div>
@@ -1217,7 +1255,7 @@ export function UserManagement() {
                                     <Label htmlFor="edit-phone_number">Phone Number</Label>
                                     <Input
                                         id="edit-phone_number"
-                                        {...register("phone_number")}
+                                        {...registerUpdate("phone_number")}
                                         placeholder="+1234567890"
                                     />
                                 </div>
@@ -1234,8 +1272,8 @@ export function UserManagement() {
                                     ) : (
                                         <MultiSelect
                                             items={availableRoles}
-                                            selectedValues={watchedRoles}
-                                            onChange={handleRolesChange}
+                                            selectedValues={watchedUpdateRoles}
+                                            onChange={handleUpdateRolesChange}
                                             placeholder="Select roles..."
                                             emptyMessage="No roles available."
                                             maxDisplayItems={2}
