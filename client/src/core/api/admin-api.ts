@@ -313,7 +313,10 @@ export const useAvailableRoles = () => {
   return useQuery({
     queryKey: ["admin", "roles"],
     queryFn: () => adminApiService.getAvailableRoles(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always consider roles stale to ensure fresh data
+    gcTime: 5 * 60 * 1000, // Keep in garbage collection for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true // Refetch when window regains focus
   });
 };
 

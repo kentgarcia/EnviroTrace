@@ -496,13 +496,14 @@ export function UserManagement() {
 
     const openEditDialog = (user: User) => {
         setEditingUser(user);
-        setValue("email", user.email);
-        setValue("roles", user.assigned_roles);
-        setValue("first_name", user.profile?.first_name || "");
-        setValue("last_name", user.profile?.last_name || "");
-        setValue("job_title", user.profile?.job_title || "");
-        setValue("department", user.profile?.department || "");
-        setValue("phone_number", user.profile?.phone_number || "");
+        // Set form values with validation
+        setValue("email", user.email, { shouldValidate: true, shouldDirty: false });
+        setValue("roles", user.assigned_roles, { shouldValidate: true, shouldDirty: false });
+        setValue("first_name", user.profile?.first_name || "", { shouldValidate: true, shouldDirty: false });
+        setValue("last_name", user.profile?.last_name || "", { shouldValidate: true, shouldDirty: false });
+        setValue("job_title", user.profile?.job_title || "", { shouldValidate: true, shouldDirty: false });
+        setValue("department", user.profile?.department || "", { shouldValidate: true, shouldDirty: false });
+        setValue("phone_number", user.profile?.phone_number || "", { shouldValidate: true, shouldDirty: false });
     };
 
     const closeEditDialog = () => {

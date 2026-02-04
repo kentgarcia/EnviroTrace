@@ -413,6 +413,9 @@ async def admin_reset_user_password(
     Reset user password (admin only).
     Generates a random temporary password and updates it in Supabase Auth.
     Returns the temporary password to the admin (shown only once).
+    
+    Note: Archived users must be reactivated before resetting their password.
+    Suspended users cannot have their passwords reset.
     """
     
     # Get the user
@@ -430,6 +433,20 @@ async def admin_reset_user_password(
             detail="Cannot reset your own password through admin interface"
         )
     
+    # Check if user is archived
+    if user_obj.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reset password for archived users. Please reactivate the user first."
+        )
+    
+    # Check if user is permanently suspended
+    if user_obj.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reset password for permanently suspended users. This action is irreversible."
+        )
+    
     # Check if user has Supabase account
     if not user_obj.supabase_user_id:
         raise HTTPException(
@@ -442,59 +459,43 @@ async def admin_reset_user_password(
     temp_password = ''.join(secrets.choice(alphabet) for _ in range(8))
     
     try:
-        # Check if user is suspended (they won't exist in Supabase Auth)
-        if user_obj.is_suspended:
-            # Recreate user in Supabase with new password and unsuspend them
-            response = await supabase_client.admin_create_user(
-                email=user_obj.email,
-                password=temp_password,
-                email_confirmed=True
+        # Try to update password in Supabase Auth
+        try:
+            await supabase_client.admin_update_user_password(
+                str(user_obj.supabase_user_id),
+                temp_password
             )
-            
-            # Update local database - unsuspend and update supabase_user_id
-            user_obj.supabase_user_id = response["user"].id
-            await crud_user.unsuspend_user(db, user_id=user_id)
-            await db.commit()
             
             return PasswordResetResponse(
                 temporary_password=temp_password,
                 user_email=user_obj.email,
-                message=f"Password reset successful for {user_obj.email}. User has been unsuspended and can now log in with this temporary password."
+                message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
             )
-        else:
-            # User exists in Supabase - try to update password
-            try:
-                await supabase_client.admin_update_user_password(
-                    str(user_obj.supabase_user_id),
-                    temp_password
+        except HTTPException as supabase_error:
+            # If user doesn't exist in Supabase Auth, recreate them
+            if supabase_error.status_code == status.HTTP_400_BAD_REQUEST and (
+                "not found" in str(supabase_error.detail).lower() or 
+                "does not exist" in str(supabase_error.detail).lower()
+            ):
+                # Recreate user in Supabase Auth
+                response = await supabase_client.admin_create_user(
+                    email=user_obj.email,
+                    password=temp_password,
+                    email_confirmed=True
                 )
+                
+                # Update supabase_user_id in local database
+                user_obj.supabase_user_id = response["user"].id
+                await db.commit()
                 
                 return PasswordResetResponse(
                     temporary_password=temp_password,
                     user_email=user_obj.email,
-                    message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
+                    message=f"Password reset successful for {user_obj.email}. User authentication account was recreated."
                 )
-            except HTTPException as supabase_error:
-                # If Supabase says user doesn't exist or not allowed, recreate them
-                if supabase_error.status_code == status.HTTP_400_BAD_REQUEST:
-                    # User doesn't exist in Supabase Auth - recreate them
-                    response = await supabase_client.admin_create_user(
-                        email=user_obj.email,
-                        password=temp_password,
-                        email_confirmed=True
-                    )
-                    
-                    # Update supabase_user_id in local database
-                    user_obj.supabase_user_id = response["user"].id
-                    await db.commit()
-                    
-                    return PasswordResetResponse(
-                        temporary_password=temp_password,
-                        user_email=user_obj.email,
-                        message=f"Password reset successful for {user_obj.email}. User account was recreated in authentication system."
-                    )
-                else:
-                    raise
+            else:
+                # Re-raise other Supabase errors
+                raise
         
     except HTTPException:
         await db.rollback()
