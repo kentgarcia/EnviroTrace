@@ -82,7 +82,7 @@ export default function DashboardSelection() {
   useEffect(() => {
     if (loading || profileLoading || !user) return;
 
-    const availableRoles = [];
+    const availableRoles: string[] = [];
     if (hasRole("admin")) availableRoles.push("admin");
     if (hasRole("urban_greening")) availableRoles.push("urban-greening");
     if (hasRole("government_emission")) availableRoles.push("government-emission");

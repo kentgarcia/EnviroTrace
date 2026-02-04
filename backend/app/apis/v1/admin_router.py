@@ -11,6 +11,10 @@ from app.schemas.user_schemas import (
     UserCreate, UserUpdate, UserPublic, UserWithProfile, UserWithRoles, 
     UserRoleMappingCreate, UserFullPublic
 )
+from app.schemas.session_schemas import (
+    UserUnsuspendRequest,
+    PasswordResetResponse
+)
 from app.schemas.permission_schemas import (
     PermissionPublic,
     RoleWithPermissions,
@@ -24,6 +28,11 @@ from app.services.auth_service import auth_service
 from app.services.system_health_service import SystemHealthService
 from app.services.permission_service import permission_service
 from app.crud.crud_role import role_crud
+from app.crud.crud_user import user as crud_user
+from app.crud.crud_session import session_crud
+from app.core import supabase_client
+import secrets
+import string
 
 router = APIRouter()
 
@@ -95,12 +104,13 @@ async def get_all_users(
     """
     
     # Build base query based on status filter
+    # Always exclude suspended users (they're permanently hidden)
     if status == "active":
-        query = select(User).where(User.deleted_at.is_(None))
+        query = select(User).where(and_(User.deleted_at.is_(None), User.is_suspended == False))
     elif status == "archived":
-        query = select(User).where(User.deleted_at.is_not(None))
+        query = select(User).where(and_(User.deleted_at.is_not(None), User.is_suspended == False))
     else:  # all
-        query = select(User)
+        query = select(User).where(User.is_suspended == False)
     
     if search:
         query = query.join(Profile, User.id == Profile.user_id, isouter=True).where(
@@ -245,7 +255,10 @@ async def delete_user(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles(["admin"]))
 ):
-    """Soft delete a user (admin only)"""
+    """
+    Archive a user (soft delete - admin only).
+    User can be reactivated later. For permanent deletion, use suspend endpoint.
+    """
     
     # Prevent admin from deleting themselves
     if current_user.id == user_id:
@@ -265,7 +278,7 @@ async def delete_user(
             detail="User not found"
         )
     
-    # Soft delete
+    # Soft delete (archive)
     user.deleted_at = datetime.utcnow()
     await db.commit()
 
@@ -275,7 +288,28 @@ async def reactivate_user(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(require_roles(["admin"]))
 ):
-    """Reactivate an archived user account (admin only)"""
+    """
+    Reactivate an archived user account (admin only).
+    Only works for archived users - suspended users cannot be reactivated.
+    """
+    
+    # Check if user is suspended (cannot reactivate)
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user_obj = result.scalar_one_or_none()
+    
+    if not user_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    if user_obj.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reactivate permanently suspended users. This action is irreversible."
+        )
     
     return await auth_service.reactivate_user(db=db, user_id=user_id)
 
@@ -368,6 +402,148 @@ async def revoke_user_approval(
     await db.refresh(user)
     
     return await auth_service.get_user_details(db=db, user_id=user_id)
+
+@router.post("/users/{user_id}/reset-password", response_model=PasswordResetResponse)
+async def admin_reset_user_password(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    """
+    Reset user password (admin only).
+    Generates a random temporary password and updates it in Supabase Auth.
+    Returns the temporary password to the admin (shown only once).
+    """
+    
+    # Get the user
+    user_obj = await crud_user.get(db, id=user_id)
+    if not user_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent admin from resetting their own password this way
+    if user_obj.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reset your own password through admin interface"
+        )
+    
+    # Check if user has Supabase account
+    if not user_obj.supabase_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User does not have a Supabase Auth account"
+        )
+    
+    # Generate temporary password (8 characters, mix of letters, numbers, symbols)
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
+    temp_password = ''.join(secrets.choice(alphabet) for _ in range(8))
+    
+    try:
+        # Update password in Supabase Auth
+        await supabase_client.admin_update_user_password(
+            str(user_obj.supabase_user_id),
+            temp_password
+        )
+        
+        return PasswordResetResponse(
+            temporary_password=temp_password,
+            message=f"Password reset successful for {user_obj.email}. Provide this temporary password to the user."
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset password: {str(e)}"
+        )
+suspend-permanently")
+async def permanently_suspend_archived_user(
+    user_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(require_roles(["admin"]))
+):
+    """
+    Permanently suspend an archived user (admin only).
+    This operation is IRREVERSIBLE - the account cannot be reactivated.
+    The user will be completely hidden from all views but retained in database for compliance.
+    
+    Requirements:
+    - User must already be archived (soft deleted)
+    - This permanently hides the account
+    - Deletes user from Supabase Auth
+    - Terminates all sessions
+    """
+    
+    # Get the user (including deleted ones)
+    result = await db.execute(
+        select(User).where(User.id == user_id)
+    )
+    user_obj = result.scalar_one_or_none()
+    
+    if not user_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Check if user is already suspended
+    if user_obj.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already permanently suspended"
+        )
+    
+    # Require user to be archived first
+    if not user_obj.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User must be archived before permanent suspension. Archive the user first."
+        )
+    
+    # Prevent admin from suspending themselves
+    if user_obj.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot suspend your own account"
+        )
+    
+    try:
+        # 1. Terminate all sessions
+        await session_crud.terminate_all_user_sessions(
+            db,
+            user_id=user_id,
+            reason="Account permanently suspended (archived user deletion)"
+        )
+        
+        # 2. Mark as permanently suspended in database
+        await crud_user.suspend_user(
+            db,
+            user_id=user_id,
+            suspended_by_user_id=current_user.id,
+            reason="Permanently suspended - irreversible deletion of archived account"
+        )
+        
+        # 3. Delete from Supabase Auth (if exists)
+        if user_obj.supabase_user_id:
+            await supabase_client.admin_delete_user(str(user_obj.supabase_user_id))
+        
+        return {
+            "message": "User permanently suspended successfully",
+            "user_id": str(user_id),
+            "email": user_obj.email,
+            "warning": "This action is IRREVERSIBLE. The account cannot be reactivated.",
+            "suspended_at": user_obj.suspended_at
+        }
+        
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to permanently TP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to unsuspend user: {str(e)}"
+        )
 
 @router.post("/users/{user_id}/roles", response_model=UserWithRoles)
 async def assign_role_to_user(

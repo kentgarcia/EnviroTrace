@@ -68,3 +68,16 @@ class SessionListFilter(BaseModel):
     is_active: Optional[bool] = None
     skip: int = 0
     limit: int = 100
+
+
+class UserSuspendRequest(BaseModel):
+    reason: str = Field(..., min_length=5, max_length=500, description="Reason for suspension")
+
+
+class UserUnsuspendRequest(BaseModel):
+    temporary_password: str = Field(..., min_length=8, description="Temporary password for user to login")
+
+
+class PasswordResetResponse(BaseModel):
+    temporary_password: str
+    message: str = "Password reset successful. Provide this temporary password to the user."

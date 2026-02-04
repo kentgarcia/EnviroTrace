@@ -36,6 +36,13 @@ class User(Base):
     is_approved = Column(Boolean, default=False, server_default='false', nullable=False)  # Admin approval required
     is_super_admin = Column(Boolean, default=False, server_default='false')
     last_sign_in_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Account suspension fields
+    is_suspended = Column(Boolean, default=False, server_default='false', nullable=False)
+    suspended_at = Column(DateTime(timezone=True), nullable=True)
+    suspended_by_user_id = Column(UUID(as_uuid=True), ForeignKey("app_auth.users.id", ondelete="SET NULL"), nullable=True)
+    suspension_reason = Column(Text, nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime(timezone=True), nullable=True) # For soft deletes

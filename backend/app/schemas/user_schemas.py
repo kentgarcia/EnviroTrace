@@ -41,6 +41,13 @@ class UserInDBBase(UserBase):
     email_confirmed_at: Optional[datetime] = None  # Email verification timestamp
     is_approved: bool = False  # Admin approval status
     last_sign_in_at: Optional[datetime] = None
+    
+    # Account suspension fields
+    is_suspended: bool = False
+    suspended_at: Optional[datetime] = None
+    suspended_by_user_id: Optional[uuid.UUID] = None
+    suspension_reason: Optional[str] = None
+    
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None

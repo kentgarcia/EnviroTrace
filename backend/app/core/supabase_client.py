@@ -362,3 +362,105 @@ async def sign_out(access_token: str) -> bool:
     except Exception:
         # Even if Supabase sign-out fails, we'll invalidate locally
         return True
+
+
+async def admin_delete_user(supabase_user_id: str) -> bool:
+    """
+    Permanently delete a user from Supabase Auth.
+    This invalidates all their sessions and tokens immediately.
+    
+    Args:
+        supabase_user_id: The Supabase Auth user ID (UUID as string)
+        
+    Returns:
+        True if deletion was successful
+        
+    Raises:
+        HTTPException: If deletion fails
+    """
+    supabase = get_supabase_admin()
+    
+    try:
+        supabase.auth.admin.delete_user(supabase_user_id)
+        return True
+    except Exception as e:
+        # If user doesn't exist in Supabase, consider it successful
+        if "not found" in str(e).lower() or "user_not_found" in str(e).lower():
+            return True
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete user from Supabase: {str(e)}"
+        )
+
+
+async def admin_create_user(email: str, password: str, email_confirmed: bool = True) -> Dict[str, Any]:
+    """
+    Create a new user in Supabase Auth (admin operation).
+    Used when unsuspending a user who was deleted from Supabase.
+    
+    Args:
+        email: User's email address
+        password: User's password (can be temporary)
+        email_confirmed: Whether to mark email as confirmed (default True)
+        
+    Returns:
+        Dictionary with user data
+        
+    Raises:
+        HTTPException: If creation fails
+    """
+    supabase = get_supabase_admin()
+    
+    try:
+        response = supabase.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": email_confirmed
+        })
+        
+        if not response.user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create user in Supabase"
+            )
+        
+        return {
+            "user": response.user
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user in Supabase: {str(e)}"
+        )
+
+
+async def admin_update_user_password(supabase_user_id: str, new_password: str) -> bool:
+    """
+    Update a user's password in Supabase Auth (admin operation).
+    Does not require the old password.
+    
+    Args:
+        supabase_user_id: The Supabase Auth user ID (UUID as string)
+        new_password: The new password to set
+        
+    Returns:
+        True if update was successful
+        
+    Raises:
+        HTTPException: If update fails
+    """
+    supabase = get_supabase_admin()
+    
+    try:
+        supabase.auth.admin.update_user_by_id(
+            supabase_user_id,
+            {"password": new_password}
+        )
+        return True
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update user password: {str(e)}"
+        )

@@ -39,6 +39,10 @@ export interface User {
   created_at: string;
   updated_at: string;
   deleted_at?: string;
+  is_suspended: boolean;
+  suspended_at?: string;
+  suspended_by_user_id?: string;
+  suspension_reason?: string;
   profile?: {
     id: string;
     user_id: string;
@@ -80,6 +84,12 @@ export interface UpdateUserRequest {
 
 export interface AssignRoleRequest {
   role: string;
+}
+
+export interface PasswordResetResponse {
+  message: string;
+  temporary_password: string;
+  user_email: string;
 }
 
 export interface AuditLog {
@@ -181,6 +191,17 @@ class AdminApiService extends ApiService {
 
   async revokeUserApproval(userId: string): Promise<User> {
     return this.post<User>(`/admin/users/${userId}/revoke-approval`, {});
+  }
+
+  async permanentlySuspendUser(userId: string): Promise<{ message: string; user_id: string; email: string; warning: string; suspended_at: string }> {
+    return this.post<{ message: string; user_id: string; email: string; warning: string; suspended_at: string }>(
+      `/admin/users/${userId}/suspend-permanently`,
+      {}
+    );
+  }
+
+  async resetUserPassword(userId: string): Promise<PasswordResetResponse> {
+    return this.post<PasswordResetResponse>(`/admin/users/${userId}/reset-password`, {});
   }
 
   async assignRole(userId: string, roleData: AssignRoleRequest): Promise<User> {
@@ -445,6 +466,37 @@ export const useRevokeUserApproval = () => {
       });
       queryClient.invalidateQueries({
         queryKey: ["admin", "dashboard", "stats"],
+      });
+    },
+  });
+};
+
+export const usePermanentlySuspendUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApiService.permanentlySuspendUser(userId),
+    onSuccess: (data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "dashboard", "stats"],
+      });
+    },
+  });
+};
+
+export const useResetUserPassword = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => adminApiService.resetUserPassword(userId),
+    onSuccess: (data, userId) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "users", userId],
       });
     },
   });

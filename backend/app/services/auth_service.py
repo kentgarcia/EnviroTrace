@@ -516,6 +516,10 @@ class AuthService:
             "created_at": user_model.created_at,
             "updated_at": user_model.updated_at,
             "deleted_at": user_model.deleted_at,
+            "is_suspended": user_model.is_suspended,
+            "suspended_at": user_model.suspended_at,
+            "suspended_by_user_id": user_model.suspended_by_user_id,
+            "suspension_reason": user_model.suspension_reason,
             "assigned_roles": roles,
             "permissions": permissions,
             "profile": profile_data
@@ -601,6 +605,10 @@ class AuthService:
                 "created_at": user_model.created_at,
                 "updated_at": user_model.updated_at,
                 "deleted_at": user_model.deleted_at,
+                "is_suspended": user_model.is_suspended,
+                "suspended_at": user_model.suspended_at,
+                "suspended_by_user_id": user_model.suspended_by_user_id,
+                "suspension_reason": user_model.suspension_reason,
                 "assigned_roles": user_roles_map.get(user_model.id, []),
                 "permissions": permissions,
                 "profile": profile_data

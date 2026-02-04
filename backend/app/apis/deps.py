@@ -62,6 +62,13 @@ def get_current_user(
     if not user_obj:
         raise credentials_exception
     
+    # Check if account is suspended
+    if user_obj.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account suspended by administrator. Contact support for assistance."
+        )
+    
     return user_obj
 
 # Async version of get_current_user for use with async database sessions
@@ -100,6 +107,13 @@ async def get_current_user_async(
     user_obj = await crud_user.get_by_supabase_id(db, supabase_user_id=supabase_uuid)
     if not user_obj:
         raise credentials_exception
+    
+    # Check if account is suspended
+    if user_obj.is_suspended:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account suspended by administrator. Contact support for assistance."
+        )
     
     return user_obj
 

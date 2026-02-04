@@ -13,7 +13,7 @@ from starlette.datastructures import Headers
 from starlette.types import Scope
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import security
+from app.core.supabase_client import verify_supabase_jwt
 from app.db.database import AsyncSessionLocal
 from app.crud.crud_audit_log import audit_log_crud
 from app.crud.crud_session import session_crud
@@ -129,8 +129,12 @@ class AuditService:
         if not token:
             return None, None, None, default_session_payload
 
-        payload = security.decode_token(token)
-        if not payload:
+        # Decode Supabase JWT token
+        try:
+            payload = verify_supabase_jwt(token)
+        except Exception:
+            # Token verification failed - treat as anonymous user
+            # Don't let auth issues break audit logging
             return None, None, None, default_session_payload
 
         user_id_str = payload.get("sub")

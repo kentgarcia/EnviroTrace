@@ -18,23 +18,28 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return db.query(self.model).filter(self.model.id == id).first()
 
     async def get_by_email(self, db: AsyncSession, *, email: str, include_deleted: bool = False) -> Optional[User]:
-        """Get user by email, excluding soft-deleted users by default"""
+        """Get user by email, excluding soft-deleted and suspended users by default"""
         query = select(self.model).filter(User.email == email)
         if not include_deleted:
-            query = query.filter(User.deleted_at.is_(None))
+            query = query.filter(User.deleted_at.is_(None), User.is_suspended == False)
         result = await db.execute(query)
         return result.scalars().first()
 
     def get_by_supabase_id_sync(self, db: Session, *, supabase_user_id: uuid.UUID) -> Optional[User]:
-        """Get user by Supabase user ID (synchronous version)"""
+        """Get user by Supabase user ID (synchronous version) - excludes suspended users"""
         return db.query(self.model).filter(
             User.supabase_user_id == supabase_user_id,
-            User.deleted_at.is_(None)
+            User.deleted_at.is_(None),
+            User.is_suspended == False
         ).first()
 
     async def get_by_supabase_id(self, db: AsyncSession, *, supabase_user_id: uuid.UUID) -> Optional[User]:
-        """Get user by Supabase user ID"""
-        query = select(self.model).filter(User.supabase_user_id == supabase_user_id, User.deleted_at.is_(None))
+        """Get user by Supabase user ID - excludes suspended users"""
+        query = select(self.model).filter(
+            User.supabase_user_id == supabase_user_id,
+            User.deleted_at.is_(None),
+            User.is_suspended == False
+        )
         result = await db.execute(query)
         return result.scalars().first()
 
@@ -178,6 +183,48 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
             .filter(UserRoleMapping.user_id == user_id)
         )
         return result.scalars().all()
+    
+    async def suspend_user(
+        self, 
+        db: AsyncSession, 
+        *, 
+        user_id: uuid.UUID,
+        suspended_by_user_id: uuid.UUID,
+        reason: str
+    ) -> Optional[User]:
+        """Suspend a user account"""
+        user_obj = await self.get(db, id=user_id)
+        if not user_obj:
+            return None
+        
+        user_obj.is_suspended = True
+        user_obj.suspended_at = datetime.utcnow()
+        user_obj.suspended_by_user_id = suspended_by_user_id
+        user_obj.suspension_reason = reason
+        
+        await db.commit()
+        await db.refresh(user_obj)
+        return user_obj
+    
+    async def unsuspend_user(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: uuid.UUID
+    ) -> Optional[User]:
+        """Unsuspend a user account"""
+        user_obj = await self.get(db, id=user_id)
+        if not user_obj:
+            return None
+        
+        user_obj.is_suspended = False
+        user_obj.suspended_at = None
+        user_obj.suspended_by_user_id = None
+        user_obj.suspension_reason = None
+        
+        await db.commit()
+        await db.refresh(user_obj)
+        return user_obj
 
 
 user = CRUDUser(User)
