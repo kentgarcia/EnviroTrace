@@ -458,7 +458,8 @@ async def admin_reset_user_password(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset password: {str(e)}"
         )
-suspend-permanently")
+
+@router.post("/users/{user_id}/suspend-permanently")
 async def permanently_suspend_archived_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db_session),
