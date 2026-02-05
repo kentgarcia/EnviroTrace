@@ -43,6 +43,74 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(query)
         return result.scalars().first()
 
+    async def create_with_profile(
+        self, 
+        db: AsyncSession, 
+        *, 
+        obj_in: UserCreate, 
+        supabase_user_id: uuid.UUID,
+        is_approved: bool = False
+    ) -> User:
+        """
+        Create user with profile and Supabase ID.
+        Does not handle roles (handled by caller).
+        """
+        # Extract profile fields
+        profile_fields = {
+            "first_name": obj_in.first_name,
+            "last_name": obj_in.last_name,
+            "job_title": obj_in.job_title,
+            "department": obj_in.department,
+            "phone_number": obj_in.phone_number,
+        }
+        
+        # Create data for User model
+        create_data = obj_in.model_dump(exclude={
+            "password", "roles", "first_name", "last_name", 
+            "job_title", "department", "phone_number"
+        })
+        
+        # Add internal fields
+        create_data["supabase_user_id"] = supabase_user_id
+        create_data["is_approved"] = is_approved
+        
+        # Create user
+        db_obj = User(**create_data)
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+
+        # Create profile
+        if any(value is not None for value in profile_fields.values()):
+            profile = Profile(user_id=db_obj.id, **profile_fields)
+            db.add(profile)
+            await db.commit()
+            
+        return db_obj
+
+    async def add_role_to_user(self, db: AsyncSession, *, user_id: uuid.UUID, role_slug: str) -> None:
+        """Add a role to a user"""
+        # Get role by slug
+        result = await db.execute(select(Role).where(Role.slug == role_slug))
+        role = result.scalars().first()
+        if not role:
+            raise ValueError(f"Role '{role_slug}' not found")
+            
+        # Check if mapping exists
+        existing = await db.execute(
+            select(UserRoleMapping).where(
+                UserRoleMapping.user_id == user_id,
+                UserRoleMapping.role_id == role.id
+            )
+        )
+        if existing.scalar_one_or_none():
+            return
+            
+        # Create mapping
+        mapping = UserRoleMapping(user_id=user_id, role_id=role.id)
+        db.add(mapping)
+        await db.commit()
+
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         """
         Create user with Supabase integration.

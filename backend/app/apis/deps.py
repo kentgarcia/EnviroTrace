@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine, select
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core import supabase_client
 from app.core.config import settings
@@ -99,8 +99,18 @@ async def get_current_user_async(
     # Check if the session exists and is active (optional - can be removed if session tracking not needed)
     session = await session_crud.get_active_session_by_supabase_id(db, supabase_session_id=token)
     if session:
-        # Update last activity timestamp
-        await session_crud.update_activity(db, session_id=session.id)
+        last_activity = session.last_activity_at
+        if last_activity is None:
+            await session_crud.update_activity(db, session_id=session.id)
+        else:
+            try:
+                last_activity_naive = last_activity.replace(tzinfo=None)
+            except Exception:
+                last_activity_naive = None
+
+            now = datetime.utcnow()
+            if last_activity_naive is None or (now - last_activity_naive) > timedelta(minutes=5):
+                await session_crud.update_activity(db, session_id=session.id)
     # Note: Not raising error if session not found, as Supabase handles session validity
     
     # Query user by supabase_user_id

@@ -1,7 +1,7 @@
 # app/apis/v1/tree_inventory_router.py
 """API endpoints for Tree Inventory System"""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
@@ -34,11 +34,33 @@ def get_all_species(
 ):
     """Get all tree species for dropdown selection"""
     return crud.get_all_species(db, search, include_inactive, species_type)
+    cursor: Optional[str] = Query(None, description="Keyset pagination cursor"),
 
+    response: Response = None,
 
 @router.get("/species/{species_id}", response_model=TreeSpeciesResponse)
-def get_species_by_id(
-    species_id: UUID,
+    """Get all trees with optional filters.
+
+    If `cursor` is provided, keyset pagination is used and the next cursor
+    is returned via the `X-Next-Cursor` response header.
+    """
+    if cursor:
+        items, next_cursor = crud.get_all_trees_keyset(
+            db,
+            limit=limit,
+            cursor=cursor,
+            status=status,
+            health=health,
+            species=species,
+            barangay=barangay,
+            search=search,
+            is_archived=is_archived,
+        )
+        if response is not None and next_cursor:
+            response.headers["X-Next-Cursor"] = next_cursor
+        return items
+
+    return crud.get_all_trees(db, skip, limit, status, health, species, barangay, search, is_archived)
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permissions_sync(['tree_species.view']))
 ):

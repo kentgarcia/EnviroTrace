@@ -2,11 +2,12 @@
 """CRUD operations for Tree Inventory System"""
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract, desc, or_
+from sqlalchemy import func, extract, desc, or_, and_
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime, timezone
+import base64
 import json
 import re
 
@@ -219,6 +220,77 @@ def get_all_trees(
         )
     
     return query.order_by(desc(TreeInventory.created_at)).offset(skip).limit(limit).all()
+
+
+def _encode_tree_cursor(tree: TreeInventory) -> str:
+    created_at = tree.created_at or datetime.now(timezone.utc)
+    payload = f"{created_at.isoformat()}|{tree.id}"
+    return base64.urlsafe_b64encode(payload.encode("ascii")).decode("ascii")
+
+
+def _decode_tree_cursor(cursor: str) -> tuple[datetime, UUID]:
+    try:
+        raw = base64.urlsafe_b64decode(cursor.encode("ascii")).decode("ascii")
+        created_str, tree_id_str = raw.split("|", 1)
+        created_at = datetime.fromisoformat(created_str)
+        tree_id = UUID(tree_id_str)
+        return created_at, tree_id
+    except Exception as exc:
+        raise ValueError("Invalid pagination cursor") from exc
+
+
+def get_all_trees_keyset(
+    db: Session,
+    *,
+    limit: int = 100,
+    cursor: Optional[str] = None,
+    status: Optional[str] = None,
+    health: Optional[str] = None,
+    species: Optional[str] = None,
+    barangay: Optional[str] = None,
+    search: Optional[str] = None,
+    is_archived: Optional[bool] = False,
+) -> tuple[List[TreeInventory], Optional[str]]:
+    """Keyset-pagination for tree inventory (ordered by created_at desc, id desc)."""
+    query = db.query(TreeInventory)
+
+    if is_archived is not None:
+        query = query.filter(TreeInventory.is_archived == is_archived)
+    if status:
+        query = query.filter(TreeInventory.status == status)
+    if health:
+        query = query.filter(TreeInventory.health == health)
+    if species:
+        query = query.filter(TreeInventory.species.ilike(f"%{species}%"))
+    if barangay:
+        query = query.filter(TreeInventory.barangay.ilike(f"%{barangay}%"))
+    if search:
+        query = query.filter(
+            (TreeInventory.tree_code.ilike(f"%{search}%")) |
+            (TreeInventory.species.ilike(f"%{search}%")) |
+            (TreeInventory.common_name.ilike(f"%{search}%")) |
+            (TreeInventory.address.ilike(f"%{search}%"))
+        )
+
+    if cursor:
+        created_at_val, tree_id_val = _decode_tree_cursor(cursor)
+        query = query.filter(
+            or_(
+                TreeInventory.created_at < created_at_val,
+                and_(TreeInventory.created_at == created_at_val, TreeInventory.id < tree_id_val),
+            )
+        )
+
+    rows = (
+        query.order_by(desc(TreeInventory.created_at), desc(TreeInventory.id))
+        .limit(limit + 1)
+        .all()
+    )
+
+    has_more = len(rows) > limit
+    items = rows[:limit] if has_more else rows
+    next_cursor = _encode_tree_cursor(items[-1]) if items and has_more else None
+    return items, next_cursor
 
 
 def get_tree_by_id(db: Session, tree_id: UUID) -> Optional[TreeInventory]:

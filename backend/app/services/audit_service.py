@@ -19,6 +19,7 @@ from app.crud.crud_audit_log import audit_log_crud
 from app.crud.crud_session import session_crud
 from app.crud.crud_user import user as crud_user
 from app.schemas.audit_schemas import AuditLogCreate
+from app.core.config import settings
 
 SENSITIVE_FIELD_PATTERN = re.compile("password|token|secret|authorization|api_key", re.IGNORECASE)
 MAX_PAYLOAD_CHARS = 65536
@@ -65,9 +66,14 @@ class AuditService:
 
         async with AsyncSessionLocal() as db:
             token = self._extract_bearer_token(request.headers)
-            user_id, user_email, session_id, user_session_json = await self._resolve_user_context(
-                db, token, ip_address, user_agent_header
-            )
+            if settings.AUDIT_RESOLVE_USER_DETAILS:
+                user_id, user_email, session_id, user_session_json = await self._resolve_user_context_detailed(
+                    db, token, ip_address, user_agent_header
+                )
+            else:
+                user_id, user_email, session_id, user_session_json = self._resolve_user_context_fast(
+                    token, ip_address, user_agent_header
+                )
 
             request_payload = self._build_request_payload(request_body)
             event_name, event_id = self._build_event_metadata(request.scope, request.method)
@@ -113,7 +119,39 @@ class AuditService:
             return None
         return auth_header.split(" ", 1)[1].strip() or None
 
-    async def _resolve_user_context(
+    def _resolve_user_context_fast(
+        self,
+        token: Optional[str],
+        ip_address: Optional[str],
+        user_agent: Optional[str],
+    ) -> Tuple[Optional[uuid.UUID], Optional[str], Optional[uuid.UUID], Dict[str, Any]]:
+        default_session_payload: Dict[str, Any] = {
+            "id": None,
+            "ip": ip_address,
+            "user_agent": user_agent,
+        }
+
+        if not token:
+            return None, None, None, default_session_payload
+
+        try:
+            payload = verify_supabase_jwt(token)
+        except Exception:
+            return None, None, None, default_session_payload
+
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None, None, None, default_session_payload
+
+        try:
+            user_uuid = uuid.UUID(user_id_str)
+        except ValueError:
+            return None, None, None, default_session_payload
+
+        user_email = payload.get("email")
+        return user_uuid, user_email, None, default_session_payload
+
+    async def _resolve_user_context_detailed(
         self,
         db: AsyncSession,
         token: Optional[str],

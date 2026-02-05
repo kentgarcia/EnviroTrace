@@ -34,6 +34,14 @@ class Settings(BaseSettings):
                                        "http://127.0.0.1:3000", "http://127.0.0.1:5173",
                                        "http://localhost:8080", "https://localhost:8080"]
 
+    # Audit logging
+    # If enabled, every request is recorded (see AuditLoggingMiddleware).
+    # Disable for local dev/perf triage by setting AUDIT_LOGGING_ENABLED=false.
+    AUDIT_LOGGING_ENABLED: bool = True
+    # If true, audit logging will query the DB to resolve session + user email.
+    # This adds 2+ extra DB round-trips per request; keep false for performance.
+    AUDIT_RESOLVE_USER_DETAILS: bool = False
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
