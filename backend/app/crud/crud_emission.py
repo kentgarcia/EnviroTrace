@@ -316,13 +316,14 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         after: Optional[str] = None,
         before: Optional[str] = None,
         skip: int = 0,
+        include_total: bool = True,
     ):
         """Get vehicles with their latest test information using keyset pagination"""
         filters = filters or {}
         limit_value = self._sanitize_limit(limit)
         base_query_factory: Callable[[], Any] = lambda: self._apply_filters(self._base_query(db), filters)
 
-        total = base_query_factory().count()
+        total = base_query_factory().count() if include_total else None
 
         if skip and skip > 0 and not after and not before:
             after = self._cursor_from_skip(base_query_factory, skip)
@@ -354,13 +355,14 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         after: Optional[str] = None,
         before: Optional[str] = None,
         skip: int = 0,
+        include_total: bool = True,
     ):
         """Get vehicles without test information for faster loading using keyset pagination"""
         filters = filters or {}
         limit_value = self._sanitize_limit(limit)
         base_query_factory: Callable[[], Any] = lambda: self._apply_filters(self._base_query(db), filters)
 
-        total = base_query_factory().count()
+        total = base_query_factory().count() if include_total else None
 
         if skip and skip > 0 and not after and not before:
             after = self._cursor_from_skip(base_query_factory, skip)
@@ -419,6 +421,7 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
         after: Optional[str] = None,
         before: Optional[str] = None,
         skip: int = 0,
+        include_total: bool = True,
     ):
         """Search vehicles by plate number, chassis number, registration number, driver name, or office using keyset pagination"""
         normalized_term = _normalize_identifier(search_term)
@@ -446,7 +449,7 @@ class CRUDVehicle(CRUDBase[Vehicle, VehicleCreate, VehicleUpdate]):
             return self._base_query(db).filter(or_(*conditions))
 
         limit_value = self._sanitize_limit(limit)
-        total = base_query_factory().count()
+        total = base_query_factory().count() if include_total else None
 
         if skip and skip > 0 and not after and not before:
             after = self._cursor_from_skip(base_query_factory, skip)

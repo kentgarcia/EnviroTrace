@@ -9,7 +9,15 @@ from app.db.database import Base
 
 class Office(Base):
     __tablename__ = "offices"
-    __table_args__ = {"schema": "emission"}
+    __table_args__ = (
+        Index(
+            "idx_offices_name_search",
+            "name",
+            postgresql_using="gin",
+            postgresql_ops={"name": "gin_trgm_ops"},
+        ),
+        {"schema": "emission"},
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     name = Column(String(255), unique=True, nullable=False)
@@ -29,6 +37,12 @@ class Vehicle(Base):
         Index("idx_vehicles_vehicle_type", "vehicle_type"),
         Index("idx_vehicles_engine_type", "engine_type"),
         Index("idx_vehicles_wheels", "wheels"),
+        Index(
+            "idx_vehicles_driver_name_search",
+            "driver_name",
+            postgresql_using="gin",
+            postgresql_ops={"driver_name": "gin_trgm_ops"},
+        ),
         Index(
             "idx_vehicles_plate_number_search",
             "plate_number_search",

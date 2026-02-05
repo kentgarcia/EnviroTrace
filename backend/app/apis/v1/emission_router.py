@@ -199,6 +199,7 @@ def get_vehicles(
     wheels: Optional[int] = None,
     search: Optional[str] = None,
     include_test_data: bool = False,  # New parameter to optionally include test data
+    include_total: bool = Query(True, description="Include total count (can be slow on large datasets)"),
     current_user: User = Depends(require_permissions_sync(['vehicle.view']))
 ):
     """
@@ -213,6 +214,12 @@ def get_vehicles(
                 detail="Specify only one of 'after' or 'before' cursors",
             )
 
+        resolved_include_total = include_total
+        if (after or before) and include_total:
+            resolved_include_total = False
+        if skip and skip > 0 and not after and not before:
+            resolved_include_total = False
+
         if search:
             return crud_emission.vehicle.search(
                 db,
@@ -221,6 +228,7 @@ def get_vehicles(
                 after=after,
                 before=before,
                 skip=skip,
+                include_total=resolved_include_total,
             )
         
         filters = {}
@@ -252,6 +260,7 @@ def get_vehicles(
                 after=after,
                 before=before,
                 skip=skip,
+                include_total=resolved_include_total,
             )
         else:
             return crud_emission.vehicle.get_multi_optimized(
@@ -261,6 +270,7 @@ def get_vehicles(
                 after=after,
                 before=before,
                 skip=skip,
+                include_total=resolved_include_total,
             )
     except ValueError as e:
         raise HTTPException(

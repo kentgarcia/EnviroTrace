@@ -287,12 +287,9 @@ class AuthService:
         super_admin_emails = settings.get_super_admin_emails()
         if internal_user.email.lower() in super_admin_emails and not internal_user.is_super_admin:
             internal_user.is_super_admin = True
-            await db.commit()
-            await db.refresh(internal_user)
         
         # Update last sign in
         internal_user.last_sign_in_at = datetime.now(timezone.utc)
-        await db.commit()
         
         # Create session tracking
         await self._create_session_tracking(

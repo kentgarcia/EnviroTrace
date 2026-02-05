@@ -217,7 +217,7 @@ class OfficeListResponse(BaseModel):
 
 class VehicleListResponse(BaseModel):
     vehicles: List[Vehicle]
-    total: int
+    total: Optional[int] = None
     next_cursor: Optional[str] = None
     prev_cursor: Optional[str] = None
     limit: int

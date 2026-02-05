@@ -3,6 +3,7 @@ Supabase client initialization and helper functions for authentication.
 """
 from typing import Optional, Dict, Any
 from functools import lru_cache
+import asyncio
 import jwt
 from supabase import create_client, Client
 from fastapi import HTTPException, status
@@ -282,10 +283,13 @@ async def sign_in_with_password(email: str, password: str) -> Dict[str, Any]:
     supabase = get_supabase_admin()
     
     try:
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        response = await asyncio.to_thread(
+            supabase.auth.sign_in_with_password,
+            {
+                "email": email,
+                "password": password
+            }
+        )
         
         if not response.user or not response.session:
             raise HTTPException(

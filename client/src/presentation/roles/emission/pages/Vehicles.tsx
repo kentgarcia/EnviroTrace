@@ -88,6 +88,7 @@ export default function Vehicles() {
   const [paginationDirection, setPaginationDirection] = useState<
     "forward" | "backward" | null
   >(null);
+  const [lastKnownTotal, setLastKnownTotal] = useState<number | null>(null);
 
   useEffect(() => {
     setPagination((prev) => {
@@ -148,6 +149,8 @@ export default function Vehicles() {
       ? 0
       : pagination.pageIndex * pagination.pageSize;
 
+  const includeTotal = pagination.pageIndex === 0 && !afterCursorToUse && !beforeCursorToUse;
+
   const {
     data: vehiclesData,
     isLoading,
@@ -159,6 +162,7 @@ export default function Vehicles() {
     pagination.pageSize,
     {
       includeTestData: false,
+      includeTotal,
       afterCursor: afterCursorToUse,
       beforeCursor: beforeCursorToUse,
     }
@@ -255,8 +259,13 @@ export default function Vehicles() {
   const vehicles = useMemo(() => {
     return vehiclesData?.vehicles || [];
   }, [vehiclesData]);
+  useEffect(() => {
+    if (vehiclesData?.total !== undefined && vehiclesData?.total !== null) {
+      setLastKnownTotal(vehiclesData.total);
+    }
+  }, [vehiclesData?.total]);
 
-  const totalVehicles = vehiclesData?.total ?? 0;
+  const totalVehicles = vehiclesData?.total ?? lastKnownTotal ?? 0;
 
   const pageCount = useMemo(() => {
     if (!pagination.pageSize) {
@@ -324,6 +333,7 @@ export default function Vehicles() {
     });
     setPageCursors({ 0: {} });
     setPaginationDirection(null);
+    setLastKnownTotal(null);
   }, [debouncedSearch, office, vehicleType, engineType]);
 
   // Get unique values for filters

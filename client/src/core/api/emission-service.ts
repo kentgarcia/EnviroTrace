@@ -80,7 +80,7 @@ export interface VehicleFilters {
 
 export interface VehiclesResponse {
   vehicles: Vehicle[];
-  total: number;
+  total?: number | null;
   next_cursor?: string | null;
   prev_cursor?: string | null;
   limit?: number;
@@ -190,6 +190,7 @@ type VehiclesQueryKey = [
   number,
   number,
   boolean,
+  boolean,
   string | null,
   string | null
 ];
@@ -200,6 +201,7 @@ export interface UseVehiclesOptions
     "queryKey" | "queryFn"
   > {
   includeTestData?: boolean;
+  includeTotal?: boolean;
   afterCursor?: string | null;
   beforeCursor?: string | null;
 }
@@ -209,6 +211,7 @@ export async function fetchVehicles(
   skip = 0,
   limit = 100,
   includeTestData = false,
+  includeTotal = true,
   afterCursor?: string | null,
   beforeCursor?: string | null
 ) {
@@ -232,6 +235,10 @@ export async function fetchVehicles(
 
   if (includeTestData) {
     params.append("include_test_data", "true");
+  }
+
+  if (!includeTotal) {
+    params.append("include_total", "false");
   }
 
   if (filters) {
@@ -258,6 +265,7 @@ export function useVehicles(
 ) {
   const {
     includeTestData = false,
+    includeTotal = true,
     afterCursor = null,
     beforeCursor = null,
     ...queryOptions
@@ -270,6 +278,7 @@ export function useVehicles(
       skip,
       limit,
       includeTestData,
+      includeTotal,
       afterCursor,
       beforeCursor,
     ],
@@ -279,6 +288,7 @@ export function useVehicles(
         skip,
         limit,
         includeTestData,
+        includeTotal,
         afterCursor ?? undefined,
         beforeCursor ?? undefined
       ),
@@ -340,6 +350,7 @@ export function useAddVehicle() {
 
         const skip = Array.isArray(queryKey) ? (queryKey[2] as number | undefined) : undefined;
         const limit = Array.isArray(queryKey) ? (queryKey[3] as number | undefined) : undefined;
+        const baseTotal = cached.total ?? cached.vehicles.length;
 
         const alreadyExists = cached.vehicles.some((vehicle) => vehicle.id === createdVehicle.id);
 
@@ -347,7 +358,7 @@ export function useAddVehicle() {
           // For non-first pages, keep existing page data but update total count.
           queryClient.setQueryData(queryKey, {
             ...cached,
-            total: alreadyExists ? cached.total : cached.total + 1,
+            total: alreadyExists ? baseTotal : baseTotal + 1,
           });
           return;
         }
@@ -362,7 +373,7 @@ export function useAddVehicle() {
         queryClient.setQueryData(queryKey, {
           ...cached,
           vehicles: updatedVehicles.slice(0, pageSize),
-          total: alreadyExists ? cached.total : cached.total + 1,
+          total: alreadyExists ? baseTotal : baseTotal + 1,
         });
       });
 
@@ -426,10 +437,11 @@ export function useDeleteVehicle() {
         { queryKey: ["vehicles"] },
         (old: VehiclesResponse | undefined) => {
           if (!old) return old;
+          const baseTotal = old.total ?? old.vehicles.length;
           return {
             ...old,
             vehicles: old.vehicles.filter((vehicle) => vehicle.id !== deletedId),
-            total: Math.max(0, old.total - 1),
+            total: Math.max(0, baseTotal - 1),
           };
         }
       );
