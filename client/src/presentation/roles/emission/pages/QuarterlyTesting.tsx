@@ -29,7 +29,6 @@ export default function QuarterlyTesting() {
     canCreateTest,
     canUpdateTest,
     canDeleteTest,
-    canUpdateRemarks,
 
     // Data
     officeGroups,
@@ -46,7 +45,6 @@ export default function QuarterlyTesting() {
     setSearch,
     handleAddTest,
     handleEditTest,
-    handleAddRemarks,
     handleSubmitTest,
     handleUpdateTest,
     handleBatchAddTests,
@@ -176,7 +174,6 @@ export default function QuarterlyTesting() {
                           selectedYear={selectedYear}
                           isLoading={isLoading}
                             onUpdateTest={canQuickUpdateTests ? handleUpdateTest : undefined}
-                            onAddRemarks={canUpdateRemarks ? handleAddRemarks : undefined}
                             onLaunchQuickTest={
                               canManageTests
                                 ? (vehicleId, quarter, existingTest) => {

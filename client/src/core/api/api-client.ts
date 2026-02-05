@@ -20,6 +20,7 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token to requests
 apiClient.interceptors.request.use(
   (config) => {
+    (config as any).metadata = { startTime: Date.now() };
     const { token } = useAuthStore.getState();
 
     if (token && config.headers) {
@@ -35,9 +36,25 @@ apiClient.interceptors.request.use(
 
 // Response interceptor for handling common errors
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const meta = (response.config as any)?.metadata;
+    if (meta?.startTime) {
+      const durationMs = Date.now() - meta.startTime;
+      console.log(
+        `API ${response.config.method?.toUpperCase()} ${response.config.url} - ${durationMs}ms`
+      );
+    }
+    return response;
+  },
   (error: AxiosError) => {
     // Log the error for debugging
+    const meta = (error.config as any)?.metadata;
+    if (meta?.startTime) {
+      const durationMs = Date.now() - meta.startTime;
+      console.error(
+        `API ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${durationMs}ms (error)`
+      );
+    }
     console.error("API Error:", error.message, error.code, error.config?.url);
 
     // Handle unauthorized errors (401) - could trigger logout

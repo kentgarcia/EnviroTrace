@@ -13,10 +13,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function TreeManagementOverviewScreen() {
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [selectedMonth, setSelectedMonth] = useState<number | undefined>(undefined);
-    const [showYearPicker, setShowYearPicker] = useState(false);
-    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const selectedYear = new Date().getFullYear();
+    const selectedMonth = undefined;
     const [recentActivityTab, setRecentActivityTab] = useState<"ug" | "saplings">("ug");
     const [treeRequestsTab, setTreeRequestsTab] = useState<"type" | "status">("type");
     
@@ -28,30 +26,6 @@ export default function TreeManagementOverviewScreen() {
         month: selectedMonth,
     });
     
-    // Generate year options (last 5 years)
-    const currentYear = new Date().getFullYear();
-    const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
-    
-    // Month options
-    const monthOptions = [
-        { label: "All Year", value: undefined },
-        { label: "January", value: 1 },
-        { label: "February", value: 2 },
-        { label: "March", value: 3 },
-        { label: "April", value: 4 },
-        { label: "May", value: 5 },
-        { label: "June", value: 6 },
-        { label: "July", value: 7 },
-        { label: "August", value: 8 },
-        { label: "September", value: 9 },
-        { label: "October", value: 10 },
-        { label: "November", value: 11 },
-        { label: "December", value: 12 },
-    ];
-    
-    const getSelectedMonthLabel = () => {
-        return monthOptions.find(m => m.value === selectedMonth)?.label || "All Year";
-    };
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -213,105 +187,6 @@ export default function TreeManagementOverviewScreen() {
                     />
                 }
             >
-                {/* Filters */}
-                <View style={styles.filterContainer}>
-                    <View style={styles.filterRow}>
-                        <TouchableOpacity
-                            onPress={() => {
-                                setShowMonthPicker(!showMonthPicker);
-                                setShowYearPicker(false);
-                            }}
-                            style={[styles.filterButton, styles.filterButtonMonth]}
-                        >
-                            <Icon name="Calendar" size={16} color="#1E40AF" />
-                            <Text style={styles.filterButtonText}>
-                                {getSelectedMonthLabel()}
-                            </Text>
-                            <Icon 
-                                name={showMonthPicker ? "ChevronDown" : "ChevronRight"} 
-                                size={14} 
-                                color="#1E40AF" 
-                            />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => {
-                                setShowYearPicker(!showYearPicker);
-                                setShowMonthPicker(false);
-                            }}
-                            style={[styles.filterButton, styles.filterButtonYear]}
-                        >
-                            <Icon name="CalendarDays" size={16} color="#FFFFFF" />
-                            <Text style={[styles.filterButtonText, styles.filterButtonTextWhite]}>
-                                {selectedYear}
-                            </Text>
-                            <Icon 
-                                name={showYearPicker ? "ChevronDown" : "ChevronRight"} 
-                                size={14} 
-                                color="#FFFFFF" 
-                            />
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Month Picker Dropdown */}
-                {showMonthPicker && (
-                    <View style={styles.pickerContainer}>
-                        <Text style={styles.pickerTitle}>Select Period</Text>
-                        <View style={styles.pickerOptionsGrid}>
-                            {monthOptions.map(option => (
-                                <TouchableOpacity
-                                    key={option.label}
-                                    onPress={() => {
-                                        setSelectedMonth(option.value);
-                                        setShowMonthPicker(false);
-                                    }}
-                                    style={[
-                                        styles.pickerOption,
-                                        selectedMonth === option.value && styles.pickerOptionActive
-                                    ]}
-                                >
-                                    <Text style={[
-                                        styles.pickerOptionText,
-                                        selectedMonth === option.value && styles.pickerOptionTextActive
-                                    ]}>
-                                        {option.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-                )}
-
-                {/* Year Picker Dropdown */}
-                {showYearPicker && (
-                    <View style={styles.pickerContainer}>
-                        <Text style={styles.pickerTitle}>Select Year</Text>
-                        <View style={styles.pickerOptionsGrid}>
-                            {yearOptions.map(year => (
-                                <TouchableOpacity
-                                    key={year}
-                                    onPress={() => {
-                                        setSelectedYear(year);
-                                        setShowYearPicker(false);
-                                    }}
-                                    style={[
-                                        styles.pickerOption,
-                                        selectedYear === year && styles.pickerOptionActive
-                                    ]}
-                                >
-                                    <Text style={[
-                                        styles.pickerOptionText,
-                                        selectedYear === year && styles.pickerOptionTextActive
-                                    ]}>
-                                        {year}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-                )}
-
                 {/* Hero KPI Card */}
                 <TouchableOpacity
                     activeOpacity={0.9}

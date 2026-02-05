@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "./api-client";
+import { queueableRequest } from "../queue/offlineQueue";
 
 // Types
 export interface Office {
@@ -226,11 +227,20 @@ export function useAddVehicle() {
 
   return useMutation({
     mutationFn: async (vehicleData: VehicleInput) => {
-      const { data } = await apiClient.post<Vehicle>(
-        API_ENDPOINTS.VEHICLES,
-        vehicleData
-      );
-      return data;
+      return queueableRequest<Vehicle>({
+        role: "government_emission",
+        action: "emission.vehicle.create",
+        method: "POST",
+        endpoint: API_ENDPOINTS.VEHICLES,
+        payload: vehicleData,
+        send: async () => {
+          const { data } = await apiClient.post<Vehicle>(
+            API_ENDPOINTS.VEHICLES,
+            vehicleData
+          );
+          return data;
+        },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -249,11 +259,20 @@ export function useUpdateVehicle() {
       id: string;
       vehicleData: Partial<VehicleInput>;
     }) => {
-      const { data } = await apiClient.put<Vehicle>(
-        `${API_ENDPOINTS.VEHICLES}/${id}`,
-        vehicleData
-      );
-      return data;
+      return queueableRequest<Vehicle>({
+        role: "government_emission",
+        action: "emission.vehicle.update",
+        method: "PUT",
+        endpoint: `${API_ENDPOINTS.VEHICLES}/${id}`,
+        payload: vehicleData,
+        send: async () => {
+          const { data } = await apiClient.put<Vehicle>(
+            `${API_ENDPOINTS.VEHICLES}/${id}`,
+            vehicleData
+          );
+          return data;
+        },
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -338,11 +357,20 @@ export function useAddEmissionTest() {
 
   return useMutation({
     mutationFn: async (testData: EmissionTestInput) => {
-      const { data } = await apiClient.post<EmissionTest>(
-        API_ENDPOINTS.TESTS,
-        testData
-      );
-      return data;
+      return queueableRequest<EmissionTest>({
+        role: "government_emission",
+        action: "emission.test.create",
+        method: "POST",
+        endpoint: API_ENDPOINTS.TESTS,
+        payload: testData,
+        send: async () => {
+          const { data } = await apiClient.post<EmissionTest>(
+            API_ENDPOINTS.TESTS,
+            testData
+          );
+          return data;
+        },
+      });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["emission-tests"] });
@@ -362,11 +390,20 @@ export function useUpdateEmissionTest() {
       id: string;
       testData: Partial<EmissionTestInput>;
     }) => {
-      const { data } = await apiClient.put<EmissionTest>(
-        `${API_ENDPOINTS.TESTS}/${id}`,
-        testData
-      );
-      return data;
+      return queueableRequest<EmissionTest>({
+        role: "government_emission",
+        action: "emission.test.update",
+        method: "PUT",
+        endpoint: `${API_ENDPOINTS.TESTS}/${id}`,
+        payload: testData,
+        send: async () => {
+          const { data } = await apiClient.put<EmissionTest>(
+            `${API_ENDPOINTS.TESTS}/${id}`,
+            testData
+          );
+          return data;
+        },
+      });
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["emission-tests"] });

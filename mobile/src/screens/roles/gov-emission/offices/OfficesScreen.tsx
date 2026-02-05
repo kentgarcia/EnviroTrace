@@ -33,7 +33,7 @@ export default function OfficesScreen() {
   } = useVehicles(
     selectedOffice ? { office_name: selectedOffice.name } : {},
     0,
-    1000
+    200
   );
 
   const offices = useMemo(() => officesData?.offices || [], [officesData]);

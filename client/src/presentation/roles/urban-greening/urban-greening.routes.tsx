@@ -1,5 +1,5 @@
 import { createRoute } from "@tanstack/react-router";
-import { rootRoute, requireAuth, requireRole, requirePermission, requirePermissions } from "@/presentation/routeTree";
+import { rootRoute, requireAuth, requireRoleOrPermissions, requirePermission, requirePermissions } from "@/presentation/routeTree";
 import DashboardLayout from "@/presentation/components/shared/layout/DashboardLayout";
 import { PERMISSIONS } from "@/core/utils/permissions";
 
@@ -13,13 +13,29 @@ import UrbanGreeningSettings from "./pages/settings/UrbanGreeningSettings";
 import SpeciesManagementPage from "./pages/species/SpeciesManagementPage";
 import UrbanGreeningReports from "./pages/reports/UrbanGreeningReports";
 
+const urbanGreeningViewPermissions = [
+    PERMISSIONS.DASHBOARD.VIEW,
+    PERMISSIONS.TREE.VIEW,
+    PERMISSIONS.TREE_REQUEST.VIEW,
+    PERMISSIONS.URBAN_PROJECT.VIEW,
+    PERMISSIONS.TREE_SPECIES.VIEW,
+    PERMISSIONS.FEE.VIEW,
+    PERMISSIONS.PROCESSING_STANDARD.VIEW,
+    PERMISSIONS.PLANTING.VIEW,
+    PERMISSIONS.SAPLING_COLLECTION.VIEW,
+    PERMISSIONS.MONITORING_LOG.VIEW,
+];
+
 const urbanGreeningLayout = createRoute({
     getParentRoute: () => rootRoute,
     path: "/urban-greening",
     component: () => <DashboardLayout dashboardType="urban-greening" />,
     beforeLoad: () => {
         requireAuth();
-        requireRole(["admin", "urban_greening"]);
+        requireRoleOrPermissions(
+            ["admin", "urban_greening"],
+            urbanGreeningViewPermissions
+        );
     },
 });
 

@@ -21,6 +21,7 @@ import MapViewScreen from "../screens/roles/tree-management/MapViewScreen";
 import CameraScreen from "../screens/roles/tree-management/CameraScreen";
 import SpeciesManagementScreen from "../screens/roles/tree-management/SpeciesManagementScreen";
 import SpeciesFormScreen from "../screens/roles/tree-management/SpeciesFormScreen";
+import QueueScreen from "../screens/common/QueueScreen";
 
 // Import shared screens (profile, etc.)
 import ProfileScreen from "../screens/roles/gov-emission/profile/ProfileScreen";
@@ -129,6 +130,9 @@ function MainTabs() {
                         case "FeeRecords":
                             iconName = "Banknote";
                             break;
+                        case "Queue":
+                            iconName = "Inbox";
+                            break;
                         default:
                             iconName = "HelpCircle";
                     }
@@ -183,6 +187,16 @@ function MainTabs() {
                 options={{
                     title: "Species",
                     tabBarLabel: "Species",
+                    headerShown: false,
+                }}
+            />
+            <Tab.Screen
+                name="Queue"
+                component={QueueScreen}
+                initialParams={{ role: "urban_greening" }}
+                options={{
+                    title: "Queue",
+                    tabBarLabel: "Queue",
                     headerShown: false,
                 }}
             />

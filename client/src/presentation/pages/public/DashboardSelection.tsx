@@ -21,6 +21,7 @@ import {
 import { UserRole } from "@/integrations/types/userData";
 import { useMyProfile } from "@/core/api/profile-service";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 export default function DashboardSelection() {
   const navigate = useNavigate();
@@ -65,6 +66,61 @@ export default function DashboardSelection() {
     return roles.includes(role) || roles.includes("admin");
   };
 
+  const hasAnyPermission = useAuthStore((state) => state.hasAnyPermission);
+
+  const adminViewPermissions = [
+    PERMISSIONS.USER_ACCOUNT.VIEW,
+    PERMISSIONS.ROLE.VIEW,
+    PERMISSIONS.PERMISSION.VIEW,
+    PERMISSIONS.AUDIT_LOG.VIEW,
+    PERMISSIONS.SESSION.VIEW,
+    PERMISSIONS.DASHBOARD.VIEW,
+  ];
+
+  const emissionViewPermissions = [
+    PERMISSIONS.OFFICE.VIEW,
+    PERMISSIONS.VEHICLE.VIEW,
+    PERMISSIONS.TEST.VIEW,
+    PERMISSIONS.SCHEDULE.VIEW,
+  ];
+
+  const urbanGreeningViewPermissions = [
+    PERMISSIONS.DASHBOARD.VIEW,
+    PERMISSIONS.TREE.VIEW,
+    PERMISSIONS.TREE_REQUEST.VIEW,
+    PERMISSIONS.URBAN_PROJECT.VIEW,
+    PERMISSIONS.TREE_SPECIES.VIEW,
+    PERMISSIONS.FEE.VIEW,
+    PERMISSIONS.PROCESSING_STANDARD.VIEW,
+    PERMISSIONS.PLANTING.VIEW,
+    PERMISSIONS.SAPLING_COLLECTION.VIEW,
+    PERMISSIONS.MONITORING_LOG.VIEW,
+  ];
+
+  const hasDashboardAccess = (role: UserRole) => {
+    if (user?.is_super_admin) {
+      return true;
+    }
+
+    if (hasRole(role)) {
+      return true;
+    }
+
+    if (role === "admin") {
+      return hasAnyPermission(adminViewPermissions);
+    }
+
+    if (role === "government_emission") {
+      return hasAnyPermission(emissionViewPermissions);
+    }
+
+    if (role === "urban_greening") {
+      return hasAnyPermission(urbanGreeningViewPermissions);
+    }
+
+    return false;
+  };
+
   const getDisplayName = () => {
     if (profile?.fullName) return profile.fullName;
     if (profile?.firstName && profile?.lastName) return `${profile.firstName} ${profile.lastName}`;
@@ -83,9 +139,9 @@ export default function DashboardSelection() {
     if (loading || profileLoading || !user) return;
 
     const availableRoles: string[] = [];
-    if (hasRole("admin")) availableRoles.push("admin");
-    if (hasRole("urban_greening")) availableRoles.push("urban-greening");
-    if (hasRole("government_emission")) availableRoles.push("government-emission");
+    if (hasDashboardAccess("admin")) availableRoles.push("admin");
+    if (hasDashboardAccess("urban_greening")) availableRoles.push("urban-greening");
+    if (hasDashboardAccess("government_emission")) availableRoles.push("government-emission");
 
     if (availableRoles.length === 1) {
       navigate({ to: `/${availableRoles[0]}/overview` });
@@ -238,7 +294,7 @@ export default function DashboardSelection() {
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center"
         >
-          {hasRole("admin") && (
+          {hasDashboardAccess("admin") && (
             <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="System Administration"
@@ -250,7 +306,7 @@ export default function DashboardSelection() {
             </motion.div>
           )}
 
-          {hasRole("urban_greening") && (
+          {hasDashboardAccess("urban_greening") && (
             <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="Urban Greening"
@@ -262,7 +318,7 @@ export default function DashboardSelection() {
             </motion.div>
           )}
 
-          {hasRole("government_emission") && (
+          {hasDashboardAccess("government_emission") && (
             <motion.div variants={itemVariants} className="w-full max-w-sm">
               <DashboardCard
                 title="Fleet Emissions"
@@ -275,7 +331,10 @@ export default function DashboardSelection() {
           )}
         </motion.div>
 
-        {!user?.is_super_admin && !hasRole("admin") && !hasRole("urban_greening") && !hasRole("government_emission") && (
+        {!user?.is_super_admin &&
+          !hasDashboardAccess("admin") &&
+          !hasDashboardAccess("urban_greening") &&
+          !hasDashboardAccess("government_emission") && (
           <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700">
             <ShieldCheck className="h-12 w-12 text-slate-300 dark:text-gray-600 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-slate-900 dark:text-gray-100">No Dashboards Available</h4>

@@ -5,6 +5,8 @@ import {
   type Vehicle,
 } from "@/core/api/emission-service";
 import { useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Dashboard data structure for the overview page
 export interface DashboardData {
@@ -81,12 +83,17 @@ export function useDashboardData(
   selectedYear: number,
   selectedQuarter?: number
 ): UseDashboardDataReturn {
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canViewVehicles = hasPermission(PERMISSIONS.VEHICLE.VIEW);
+  const canViewOffices = hasPermission(PERMISSIONS.OFFICE.VIEW);
+  const canViewTests = hasPermission(PERMISSIONS.TEST.VIEW);
+
   // Fetch vehicles data
   const {
     data: vehiclesData,
     isLoading: vehiclesLoading,
     error: vehiclesError,
-  } = useVehicles();
+  } = useVehicles(undefined, 0, 100, { enabled: canViewVehicles });
 
   // Fetch office compliance data with filters
   const {
@@ -96,45 +103,33 @@ export function useDashboardData(
   } = useOfficeCompliance({
     year: selectedYear,
     quarter: selectedQuarter,
-  });
+  }, 0, 100, { enabled: canViewOffices });
 
   // Fetch emission tests data for the selected period
   const {
     data: testsData,
     isLoading: testsLoading,
     error: testsError,
-  } = useEmissionTests();
+  } = useEmissionTests({}, { enabled: canViewTests });
 
   // Calculate loading state
   const loading = vehiclesLoading || officeLoading || testsLoading;
 
+  const isPermissionError = (err: unknown) => {
+    const status = (err as any)?.response?.status;
+    return status === 403;
+  };
+
   // Calculate error state
-  const error = vehiclesError || officeError || testsError;
+  const error = [vehiclesError, officeError, testsError].find(
+    (err) => err && !isPermissionError(err)
+  );
 
   // Process and transform the data
   const data = useMemo(() => {
-    if (!vehiclesData || !officeData) {
-      return {
-        totalVehicles: 0,
-        totalOffices: 0,
-        testedVehicles: 0,
-        passedTests: 0,
-        failedTests: 0,
-        pendingTests: 0,
-        complianceRate: 0,
-        officeDepartments: 0,
-        engineTypeData: [],
-        wheelCountData: [],
-        vehicleTypeData: [],
-        officeComplianceData: [],
-        vehicleTypeBreakdown: [],
-        vehicleSummaries: [],
-      };
-    }
-
-    const vehicles = vehiclesData.vehicles || [];
-    const offices = officeData.offices || [];
-    const summary = officeData.summary;
+    const vehicles = vehiclesData?.vehicles || [];
+    const offices = officeData?.offices || [];
+    const summary = officeData?.summary;
     const tests = testsData || [];
 
     // Filter tests by selected quarter if specified

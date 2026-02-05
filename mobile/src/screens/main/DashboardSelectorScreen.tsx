@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Portal, Dialog, Button, Text } from "react-native-paper";
@@ -15,16 +15,46 @@ const roleLabels: Record<string, string> = {
 
 export default function DashboardSelectorScreen() {
     const navigation = useNavigation();
-    const { user, getUserRoles, setSelectedDashboard, logout } = useAuthStore();
+    const { getUserRoles, setSelectedDashboard, logout, permissions, isSuperAdmin } = useAuthStore();
     const allRoles = useMemo(() => getUserRoles(), [getUserRoles]);
-    // If admin, show all dashboards; otherwise filter out admin
+
+    const hasAnyPermission = useCallback(
+        (prefixes: string[]) => permissions.some((perm) => prefixes.some((p) => perm.startsWith(p))),
+        [permissions]
+    );
+
     const roles = useMemo(() => {
-        const isAdmin = allRoles.includes('admin');
-        if (isAdmin) {
-            return ['government_emission', 'urban_greening'];
+        if (isSuperAdmin) {
+            return ["government_emission", "urban_greening"];
         }
-        return allRoles.filter(role => role !== 'admin');
-    }, [allRoles]);
+
+        const roleSet = new Set(
+            allRoles.filter((role) => role !== "admin" && role !== "super_admin")
+        );
+
+        const emissionPrefixes = ["office.", "vehicle.", "test.", "schedule."];
+        const greeningPrefixes = [
+            "tree_species.",
+            "tree.",
+            "tree_project.",
+            "tree_request.",
+            "monitoring_log.",
+            "urban_project.",
+            "planting.",
+            "sapling_collection.",
+            "fee.",
+            "processing_standard.",
+        ];
+
+        if (hasAnyPermission(emissionPrefixes)) {
+            roleSet.add("government_emission");
+        }
+        if (hasAnyPermission(greeningPrefixes)) {
+            roleSet.add("urban_greening");
+        }
+
+        return Array.from(roleSet);
+    }, [allRoles, hasAnyPermission, isSuperAdmin]);
     const [logoutVisible, setLogoutVisible] = useState(false);
     const insets = useSafeAreaInsets();
 

@@ -28,18 +28,11 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function OverviewScreen() {
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedQuarter, setSelectedQuarter] = useState<number | undefined>(
-    undefined
-  );
-  const [showYearPicker, setShowYearPicker] = useState(false);
+  const selectedYear = new Date().getFullYear();
+  const selectedQuarter = undefined;
   
   const navigation = useNavigation();
   const { data, loading, error, refetch } = useDashboardData(selectedYear, selectedQuarter);
-
-  // Generate year options (last 5 years)
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   const complianceRate = Math.max(0, Math.min(100, Math.round(data?.complianceRate ?? 0)));
   const periodLabel = selectedQuarter ? `Q${selectedQuarter} ${selectedYear}` : `${selectedYear}`;
@@ -59,31 +52,6 @@ export default function OverviewScreen() {
       setRefreshing(false);
     }
   };
-
-  const FilterChip = ({ 
-    label, 
-    active, 
-    onPress 
-  }: { 
-    label: string; 
-    active: boolean; 
-    onPress: () => void; 
-  }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[
-        styles.filterChip,
-        active && styles.filterChipActive
-      ]}
-    >
-      <Text style={[
-        styles.filterChipText,
-        active && styles.filterChipTextActive
-      ]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
 
   // Circular Progress Component for Hero Card
   const ComplianceCircle = ({ percentage }: { percentage: number }) => {
@@ -191,72 +159,10 @@ export default function OverviewScreen() {
           />
         }
       >
-        {/* Filters */}
-        <View style={styles.filterContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-            <FilterChip 
-              label="All Year" 
-              active={selectedQuarter === undefined} 
-              onPress={() => setSelectedQuarter(undefined)} 
-            />
-            {[1, 2, 3, 4].map(q => (
-              <FilterChip 
-                key={q}
-                label={`Q${q}`} 
-                active={selectedQuarter === q} 
-                onPress={() => setSelectedQuarter(q)} 
-              />
-            ))}
-            <View style={styles.verticalDivider} />
-            <TouchableOpacity
-              onPress={() => setShowYearPicker(!showYearPicker)}
-              style={[styles.filterChip, styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, styles.filterChipTextActive]}>
-                {selectedYear}
-              </Text>
-              <Icon 
-                name={showYearPicker ? "ChevronDown" : "ChevronRight"} 
-                size={14} 
-                color="#FFFFFF" 
-              />
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-
         {error && (
           <View style={styles.errorBanner}>
             <Icon name="AlertTriangle" size={16} color="#DC2626" />
             <Text style={styles.errorBannerText}>Unable to load dashboard data. Pull to refresh.</Text>
-          </View>
-        )}
-
-        {/* Year Picker Dropdown */}
-        {showYearPicker && (
-          <View style={styles.yearPickerContainer}>
-            <Text style={styles.yearPickerTitle}>Select Year</Text>
-            <View style={styles.yearOptionsGrid}>
-              {yearOptions.map(year => (
-                <TouchableOpacity
-                  key={year}
-                  onPress={() => {
-                    setSelectedYear(year);
-                    setShowYearPicker(false);
-                  }}
-                  style={[
-                    styles.yearOption,
-                    selectedYear === year && styles.yearOptionActive
-                  ]}
-                >
-                  <Text style={[
-                    styles.yearOptionText,
-                    selectedYear === year && styles.yearOptionTextActive
-                  ]}>
-                    {year}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
         )}
 

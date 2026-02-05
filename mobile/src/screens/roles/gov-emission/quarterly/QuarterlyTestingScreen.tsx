@@ -5,15 +5,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
 import { useNavigation } from "@react-navigation/native";
+import { usePermissions } from "../../../../hooks/usePermissions";
 
 type QuarterType = "Q1" | "Q2" | "Q3" | "Q4";
 
 export default function QuarterlyTestingScreen() {
   const navigation = useNavigation();
+  const { can } = usePermissions();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedQuarter, setSelectedQuarter] = useState<QuarterType>("Q4");
   const [searchQuery, setSearchQuery] = useState("");
+  const canCreateTest = can("test", "create");
 
   const quarters: QuarterType[] = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -76,8 +79,12 @@ export default function QuarterlyTestingScreen() {
         borderColor="transparent"
         titleSize={22}
         subtitleSize={12}
-        rightActionIcon="Plus"
-        onRightActionPress={() => (navigation as any).navigate("Testing", { screen: "AddTest", params: {} })}
+        rightActionIcon={canCreateTest ? "Plus" : undefined}
+        onRightActionPress={
+          canCreateTest
+            ? () => (navigation as any).navigate("Testing", { screen: "AddTest", params: {} })
+            : undefined
+        }
       />
 
       <SafeAreaView style={styles.safeArea} edges={["bottom"]}>

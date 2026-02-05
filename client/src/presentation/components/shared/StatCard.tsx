@@ -20,6 +20,7 @@ export interface StatCardProps {
     // Icon component (e.g., from lucide-react). Optional if loading.
     Icon?: React.ComponentType<{ className?: string; color?: string }>;
     colors?: StatCardColors;
+    onClick?: () => void;
 }
 
 const DEFAULTS: Required<StatCardColors> = {
@@ -40,11 +41,30 @@ export const StatCard: React.FC<StatCardProps> = ({
     className,
     Icon,
     colors,
+    onClick,
 }) => {
     const c = { ...DEFAULTS, ...(colors || {}) };
+    const isClickable = Boolean(onClick) && !loading;
+
+    const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (event) => {
+        if (!isClickable) {
+            return;
+        }
+
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClick?.();
+        }
+    };
 
     return (
-        <Card className={`${className} dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-850 dark:border-gray-700`}>
+        <Card
+            className={`${className} ${isClickable ? "cursor-pointer transition-shadow hover:shadow-md" : ""} dark:bg-gradient-to-br dark:from-gray-800 dark:to-gray-850 dark:border-gray-700`}
+            onClick={isClickable ? onClick : undefined}
+            onKeyDown={handleKeyDown}
+            role={isClickable ? "button" : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+        >
             <CardContent className="p-4">
                 <div className={`flex items-center gap-4 ${loading ? "animate-pulse" : ""}`}>
                     <div

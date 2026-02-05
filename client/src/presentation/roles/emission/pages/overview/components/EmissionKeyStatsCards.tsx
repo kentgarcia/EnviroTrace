@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "@tanstack/react-router";
 import StatCard from "@/presentation/components/shared/StatCard";
 import { Car, Building2, CheckCircle, XCircle, Clock, BarChart3 } from "lucide-react";
 
@@ -18,6 +19,7 @@ const EmissionKeyStatsCards: React.FC<EmissionKeyStatsCardsProps> = ({
     data,
     isLoading = false
 }) => {
+    const navigate = useNavigate();
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
 
@@ -28,36 +30,42 @@ const EmissionKeyStatsCards: React.FC<EmissionKeyStatsCardsProps> = ({
                 value={data.totalVehicles}
                 Icon={Car}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/vehicles" })}
             />
             <StatCard
                 label="Government Offices"
                 value={data.totalOffices}
                 Icon={Building2}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/offices" })}
             />
             <StatCard
                 label="Passed Tests"
                 value={data.passedTests}
                 Icon={CheckCircle}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/tested-vehicles" })}
             />
             <StatCard
                 label="Failed Tests"
                 value={data.failedTests}
                 Icon={XCircle}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/tested-vehicles" })}
             />
             <StatCard
                 label="Pending Tests"
                 value={data.pendingTests}
                 Icon={Clock}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/quarterly-testing" })}
             />
             <StatCard
                 label={`Compliance Rate (${currentYear})`}
                 value={`${data.complianceRate}%`}
                 Icon={BarChart3}
                 loading={isLoading}
+                onClick={() => navigate({ to: "/government-emission/compliance" })}
             />
         </div>
     );

@@ -36,11 +36,20 @@ import string
 
 router = APIRouter()
 
+ADMIN_DASHBOARD_PERMISSIONS = [
+    "user_account.view",
+    "role.view",
+    "permission.view",
+    "audit_log.view",
+    "session.view",
+    "dashboard.view",
+]
+
 # Admin Dashboard Stats
 @router.get("/dashboard/stats")
 async def get_admin_dashboard_stats(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(ADMIN_DASHBOARD_PERMISSIONS))
 ):
     """Get admin dashboard statistics"""
     
@@ -68,7 +77,7 @@ async def get_admin_dashboard_stats(
 @router.get("/dashboard/user-activity")
 async def get_user_activity_data(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(ADMIN_DASHBOARD_PERMISSIONS))
 ):
     """Get user activity data for charts"""
     
@@ -78,7 +87,7 @@ async def get_user_activity_data(
 @router.get("/dashboard/system-health")
 async def get_system_health_data(
     db: AsyncSession = Depends(get_db_session),
-    current_user: User = Depends(require_roles(["admin"]))
+    current_user: User = Depends(require_permissions(ADMIN_DASHBOARD_PERMISSIONS))
 ):
     """Get system health metrics"""
     

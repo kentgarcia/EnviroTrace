@@ -151,6 +151,35 @@ const requirePermissions = (
   }
 };
 
+const requireRoleOrPermissions = (
+  allowedRoles: UserRole[],
+  requiredPermissions: string[],
+  errorMessage: string = "Access denied. You need appropriate role to access this page"
+) => {
+  const { isSuperAdmin, roles, hasAnyPermission } = useAuthStore.getState();
+
+  if (isSuperAdmin) {
+    return;
+  }
+
+  if (roles.some((role) => allowedRoles.includes(role))) {
+    return;
+  }
+
+  if (hasAnyPermission(requiredPermissions)) {
+    return;
+  }
+
+  toast.error(errorMessage, {
+    duration: 5000,
+    id: "access-denied",
+  });
+  throw redirect({
+    to: "/dashboard-selection",
+    replace: true,
+  });
+};
+
 // Define routes
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -264,4 +293,11 @@ declare module "@tanstack/react-router" {
 // Router instance is ready to be used by RouterProvider
 
 // Export rootRoute, requireAuth, and requireRole for reuse
-export { rootRoute, requireAuth, requireRole, requirePermission, requirePermissions };
+export {
+  rootRoute,
+  requireAuth,
+  requireRole,
+  requirePermission,
+  requirePermissions,
+  requireRoleOrPermissions,
+};

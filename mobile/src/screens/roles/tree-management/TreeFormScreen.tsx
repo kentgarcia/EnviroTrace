@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
     View,
     StyleSheet,
@@ -104,6 +104,8 @@ export default function TreeFormScreen() {
     const queryClient = useQueryClient();
 
     const isEditMode = !!treeId;
+    const hasHydratedRef = useRef(false);
+    const hydratedTreeIdRef = useRef<string | undefined>(undefined);
 
     // Form state
     const [commonName, setCommonName] = useState("");
@@ -139,33 +141,47 @@ export default function TreeFormScreen() {
 
     // Populate form when editing
     useEffect(() => {
-        if (treeData?.data) {
-            const tree = treeData.data;
-            setCommonName(tree.common_name || "");
-            setSpecies(tree.species || "");
-            setStatus(tree.status);
-            setHealth(tree.health);
-            setLatitude(tree.latitude);
-            setLongitude(tree.longitude);
-            setAddress(tree.address || "");
-            setBarangay(tree.barangay || "");
-            setHeightMeters(tree.height_meters?.toString() || "");
-            setDiameterCm(tree.diameter_cm?.toString() || "");
-            setPlantedDate(tree.planted_date ? new Date(tree.planted_date) : undefined);
-            setManagedBy(tree.managed_by || "");
-            setContactPerson(tree.contact_person || "");
-            setContactNumber(tree.contact_number || "");
-            setNotes(tree.notes || "");
-            setPhotos(tree.photos || []);
-        }
-    }, [treeData]);
+        if (!isEditMode || !treeData?.data) return;
+
+        const tree = treeData.data;
+        const shouldHydrate =
+            !hasHydratedRef.current || hydratedTreeIdRef.current !== treeId;
+
+        if (!shouldHydrate) return;
+
+        setCommonName(tree.common_name || "");
+        setSpecies(tree.species || "");
+        setStatus(tree.status);
+        setHealth(tree.health);
+        setLatitude(tree.latitude);
+        setLongitude(tree.longitude);
+        setAddress(tree.address || "");
+        setBarangay(tree.barangay || "");
+        setHeightMeters(tree.height_meters?.toString() || "");
+        setDiameterCm(tree.diameter_cm?.toString() || "");
+        setPlantedDate(tree.planted_date ? new Date(tree.planted_date) : undefined);
+        setManagedBy(tree.managed_by || "");
+        setContactPerson(tree.contact_person || "");
+        setContactNumber(tree.contact_number || "");
+        setNotes(tree.notes || "");
+        setPhotos(tree.photos || []);
+
+        hasHydratedRef.current = true;
+        hydratedTreeIdRef.current = treeId;
+    }, [treeData, treeId, isEditMode]);
 
     // Create/Update mutations
     const createMutation = useMutation({
         mutationFn: (data: TreeInventoryCreate) => treeInventoryApi.createTree(data),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ["trees"] });
-            Alert.alert("Success", "Tree added successfully!");
+            const isQueued = response?.data && (response.data as any).queued === true;
+            Alert.alert(
+                isQueued ? "Queued" : "Success",
+                isQueued
+                    ? "Tree saved to queue and will send when you have a connection."
+                    : "Tree added successfully!"
+            );
             navigation.goBack();
         },
         onError: (error: any) => {
@@ -176,10 +192,16 @@ export default function TreeFormScreen() {
     const updateMutation = useMutation({
         mutationFn: (data: TreeInventoryUpdate) =>
             treeInventoryApi.updateTree(treeId!, data),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ["trees"] });
             queryClient.invalidateQueries({ queryKey: ["tree", treeId] });
-            Alert.alert("Success", "Tree updated successfully!");
+            const isQueued = response?.data && (response.data as any).queued === true;
+            Alert.alert(
+                isQueued ? "Queued" : "Success",
+                isQueued
+                    ? "Tree update saved to queue and will send when you have a connection."
+                    : "Tree updated successfully!"
+            );
             navigation.goBack();
         },
         onError: (error: any) => {

@@ -19,7 +19,7 @@ import { treeInventoryApi } from "../../core/api/tree-inventory-api";
 
 interface TreeImagePickerProps {
     images: string[];
-    onImagesChange: (images: string[]) => void;
+    onImagesChange: (images: string[] | ((prev: string[]) => string[])) => void;
     maxImages?: number;
     disabled?: boolean;
 }
@@ -156,6 +156,7 @@ export default function TreeImagePicker({
 
                 // Compress and upload all images
                 const uploadedUrls: string[] = [];
+                let errorCount = 0;
                 for (let i = 0; i < result.assets.length; i++) {
                     const asset = result.assets[i];
                     
@@ -188,6 +189,7 @@ export default function TreeImagePicker({
                         );
                     } catch (error) {
                         console.error("Error processing image:", error);
+                        errorCount += 1;
                         setUploadStates((prev) =>
                             prev.map((state, idx) =>
                                 idx === i
@@ -204,11 +206,10 @@ export default function TreeImagePicker({
 
                 // Add only successfully uploaded URLs to the list
                 if (uploadedUrls.length > 0) {
-                    onImagesChange([...images, ...uploadedUrls]);
+                    onImagesChange((prev) => [...prev, ...uploadedUrls]);
                 }
                 
                 // Show summary if there were errors
-                const errorCount = uploadStates.filter(s => s.status === "error").length;
                 if (errorCount > 0) {
                     Alert.alert(
                         "Upload Complete", 
@@ -262,7 +263,7 @@ export default function TreeImagePicker({
             }]);
 
             // Add uploaded URL to images array
-            onImagesChange([...images, uploadedUrl]);
+            onImagesChange((prev) => [...prev, uploadedUrl]);
             
             setUploading(false);
             setUploadStates([]);

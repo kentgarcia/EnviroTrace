@@ -5,12 +5,11 @@ import {
     FlatList,
     TouchableOpacity,
     RefreshControl,
-    Alert,
 } from "react-native";
 import { Text, Searchbar, FAB, Card, Badge, IconButton } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Icon from "../../../components/icons/Icon";
 import StandardHeader from "../../../components/layout/StandardHeader";
 import { treeInventoryApi, TreeSpecies } from "../../../core/api/tree-inventory-api";
@@ -18,7 +17,6 @@ import { TreeManagementStackParamList } from "../../../navigation/TreeManagement
 
 export default function SpeciesManagementScreen() {
     const navigation = useNavigation<NavigationProp<TreeManagementStackParamList>>();
-    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
 
     // Fetch species
@@ -26,36 +24,6 @@ export default function SpeciesManagementScreen() {
         queryKey: ["tree-species", searchQuery],
         queryFn: () => treeInventoryApi.getSpecies(searchQuery),
     });
-
-    // Delete mutation
-    const deleteMutation = useMutation({
-        mutationFn: treeInventoryApi.deleteSpecies,
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ["tree-species"] });
-            Alert.alert(
-                "Success",
-                `Species deactivated. ${data.data.trees_using_species} tree(s) are using this species.`
-            );
-        },
-        onError: (error: any) => {
-            Alert.alert("Error", error.message || "Failed to delete species");
-        },
-    });
-
-    const handleDelete = (species: TreeSpecies) => {
-        Alert.alert(
-            "Deactivate Species",
-            `Are you sure you want to deactivate ${species.common_name}?`,
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Deactivate",
-                    style: "destructive",
-                    onPress: () => deleteMutation.mutate(species.id),
-                },
-            ]
-        );
-    };
 
     const renderItem = ({ item }: { item: TreeSpecies }) => (
         <Card style={styles.card} mode="outlined">
@@ -75,24 +43,25 @@ export default function SpeciesManagementScreen() {
                             size={20}
                             onPress={() => navigation.navigate("SpeciesForm", { speciesId: item.id })}
                         />
-                        <IconButton
-                            icon={() => <Icon name="Trash2" size={18} color="#EF4444" />}
-                            size={20}
-                            onPress={() => handleDelete(item)}
-                        />
                     </View>
                 </View>
 
                 <View style={styles.badges}>
+                    <Badge style={[styles.badge, styles.typeBadge]}>
+                        {item.species_type || "Tree"}
+                    </Badge>
                     {(item as any).is_native && (
                         <Badge style={[styles.badge, styles.nativeBadge]}>Native</Badge>
                     )}
                     {(item as any).is_endangered && (
                         <Badge style={[styles.badge, styles.endangeredBadge]}>Endangered</Badge>
                     )}
-                    {(item as any).growth_speed_label && (
+                    {item.is_active === false && (
+                        <Badge style={[styles.badge, styles.inactiveBadge]}>Inactive</Badge>
+                    )}
+                    {item.growth_speed_label && (
                         <Badge style={[styles.badge, styles.growthBadge]}>
-                            {`${(item as any).growth_speed_label} Growth`}
+                            {`${item.growth_speed_label} Growth`}
                         </Badge>
                     )}
                 </View>
@@ -101,8 +70,8 @@ export default function SpeciesManagementScreen() {
                     <View style={styles.detailItem}>
                         <Icon name="Wind" size={14} color="#059669" />
                         <Text style={styles.detailText}>
-                            {(item as any).co2_absorbed_kg_per_year
-                                ? `${(item as any).co2_absorbed_kg_per_year.toFixed(1)} kg/yr CO₂`
+                            {item.co2_absorbed_kg_per_year
+                                ? `${item.co2_absorbed_kg_per_year.toFixed(1)} kg/yr CO₂`
                                 : "No CO₂ data"}
                         </Text>
                     </View>
@@ -244,6 +213,14 @@ const styles = StyleSheet.create({
     growthBadge: {
         backgroundColor: "#FEF3C7",
         color: "#92400E",
+    },
+    typeBadge: {
+        backgroundColor: "#EFF6FF",
+        color: "#1E40AF",
+    },
+    inactiveBadge: {
+        backgroundColor: "#F3F4F6",
+        color: "#6B7280",
     },
     details: {
         marginTop: 12,

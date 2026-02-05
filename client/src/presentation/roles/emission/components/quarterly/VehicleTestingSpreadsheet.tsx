@@ -1,7 +1,14 @@
-import React, { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import React, { useMemo, useState, useRef, useCallback } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/presentation/components/shared/ui/card";
+import { Button } from "@/presentation/components/shared/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/presentation/components/shared/ui/dialog";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { EmissionTest } from "@/core/api/emission-service";
 
@@ -18,7 +25,6 @@ interface SpreadsheetVehicle {
     Q3: EmissionTest | null;
     Q4: EmissionTest | null;
   };
-  remarks?: string | null;
   [key: string]: any; // Allow extra properties from Vehicle
 }
 
@@ -33,7 +39,6 @@ interface VehicleTestingSpreadsheetProps {
   selectedYear: number;
   isLoading: boolean;
   onUpdateTest?: (vehicleId: string, quarter: number, result: boolean | null) => Promise<void>;
-  onAddRemarks?: (vehicleId: string, remarks: string) => void | Promise<void>;
   onLaunchQuickTest?: (vehicleId: string, quarter: number, existingTest?: EmissionTest | null) => void;
 }
 
@@ -48,7 +53,6 @@ type SpreadsheetRow = {
   registrationNumber: string;
   driverName: string;
   vehicleType: string;
-  remarks: string;
   tests: (EmissionTest | null)[];
 };
 
@@ -111,7 +115,6 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
   selectedYear,
   isLoading,
   onUpdateTest,
-  onAddRemarks,
   onLaunchQuickTest,
 }) => {
   const { vehicleRows, virtualRows, totalVehicles } = useMemo(() => {
@@ -138,7 +141,6 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
           registrationNumber: vehicle.registration_number ?? "",
           driverName: vehicle.driver_name,
           vehicleType: vehicle.vehicle_type,
-          remarks: vehicle.remarks ?? "",
           tests: [vehicle.tests.Q1, vehicle.tests.Q2, vehicle.tests.Q3, vehicle.tests.Q4],
         };
         vehicles.push(row);
@@ -151,22 +153,10 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [pendingCells, setPendingCells] = useState<Set<string>>(new Set());
-  const [savingRemarks, setSavingRemarks] = useState<Set<string>>(new Set());
-  const [remarkDrafts, setRemarkDrafts] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    setRemarkDrafts((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      vehicleRows.forEach((row) => {
-        if (!savingRemarks.has(row.vehicleId) && next[row.vehicleId] !== row.remarks) {
-          next[row.vehicleId] = row.remarks;
-          changed = true;
-        }
-      });
-      return changed ? next : prev;
-    });
-  }, [vehicleRows, savingRemarks]);
+  const [remarksDialog, setRemarksDialog] = useState<{
+    vehicleLabel: string;
+    remarks: { quarter: number; text: string }[];
+  } | null>(null);
 
   const rowVirtualizer = useVirtualizer({
     count: virtualRows.length,
@@ -196,25 +186,18 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
     [onUpdateTest]
   );
 
-  const handleRemarksBlur = useCallback(
-    async (vehicleId: string) => {
-      if (!onAddRemarks) return;
-      const draft = remarkDrafts[vehicleId] ?? "";
-      setSavingRemarks((p) => new Set(p).add(vehicleId));
-      try {
-        await onAddRemarks(vehicleId, draft);
-      } catch {
-        toast.error("Failed to save remarks");
-      } finally {
-        setSavingRemarks((p) => {
-          const n = new Set(p);
-          n.delete(vehicleId);
-          return n;
-        });
-      }
-    },
-    [onAddRemarks, remarkDrafts]
-  );
+  const handleOpenRemarks = useCallback((vehicleLabel: string, tests: (EmissionTest | null)[]) => {
+    const remarks = tests
+      .map((test, index) => ({
+        quarter: index + 1,
+        text: test?.remarks?.trim() || "No remarks",
+      }));
+
+    setRemarksDialog({
+      vehicleLabel,
+      remarks,
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -245,9 +228,6 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
           <h2 className="text-base font-bold text-slate-900 dark:text-gray-100">Vehicle Testing Grid</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">{totalVehicles} vehicles • {selectedYear}</p>
         </div>
-        <span className="text-[10px] font-semibold text-[#0033a0] dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded">
-          AUTO-SAVE ON
-        </span>
       </div>
 
       <div className="rounded-lg border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
@@ -315,19 +295,16 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
                     />
                   ))}
 
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Remarks..."
-                      value={remarkDrafts[r.vehicleId] ?? ""}
-                      onChange={(e) => setRemarkDrafts((p) => ({ ...p, [r.vehicleId]: e.target.value }))}
-                      onBlur={() => handleRemarksBlur(r.vehicleId)}
-                      disabled={!onAddRemarks}
-                      className="w-full h-7 px-2 text-xs bg-transparent dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded focus:outline-none focus:border-blue-300 dark:focus:border-blue-600 dark:text-gray-200"
-                    />
-                    {savingRemarks.has(r.vehicleId) && (
-                      <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-slate-400 dark:text-slate-500" />
-                    )}
+                  <div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenRemarks(vehicleDisplay, r.tests)}
+                      className="h-7 px-2 text-[11px]"
+                    >
+                      View
+                    </Button>
                   </div>
                 </div>
               );
@@ -335,6 +312,27 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
           </div>
         </div>
       </div>
+
+      <Dialog open={Boolean(remarksDialog)} onOpenChange={() => setRemarksDialog(null)}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Remarks Summary</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              Vehicle: <span className="font-semibold text-slate-800 dark:text-slate-200">{remarksDialog?.vehicleLabel || "—"}</span>
+            </div>
+            <div className="space-y-2">
+              {remarksDialog?.remarks?.map((item) => (
+                <div key={`q-${item.quarter}`} className="rounded border border-slate-200 dark:border-gray-700 p-2">
+                  <div className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">Q{item.quarter}</div>
+                  <div className="text-sm text-slate-700 dark:text-slate-200">{item.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {onLaunchQuickTest && (
         <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">

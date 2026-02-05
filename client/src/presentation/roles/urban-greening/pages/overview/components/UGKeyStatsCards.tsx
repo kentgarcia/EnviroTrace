@@ -1,6 +1,7 @@
 import React from "react";
+import { useNavigate } from "@tanstack/react-router";
 import StatCard from "@/presentation/components/shared/StatCard";
-import { Banknote, CreditCard, ClipboardList, Leaf } from "lucide-react";
+import { Banknote, CreditCard, Leaf } from "lucide-react";
 import type { StatCardData } from "@/core/api/dashboard-api";
 
 interface UGKeyStatsCardsProps {
@@ -16,6 +17,7 @@ const formatCurrency = (amount: number): string => {
 };
 
 export const UGKeyStatsCards: React.FC<UGKeyStatsCardsProps> = ({ statCards, loading = false }) => {
+    const navigate = useNavigate();
     const now = new Date();
     const currentMonthIdx = now.getMonth();
     const currentMonthName = monthNames[currentMonthIdx];
@@ -27,9 +29,27 @@ export const UGKeyStatsCards: React.FC<UGKeyStatsCardsProps> = ({ statCards, loa
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
-            <StatCard label={`Fees Collected (${currentYear})`} value={formatCurrency(feesThisYear)} Icon={Banknote} loading={loading} />
-            <StatCard label={`Fees Collected (${currentMonthName})`} value={formatCurrency(feesThisMonth)} Icon={CreditCard} loading={loading} />
-            <StatCard label={`Urban Greening (${currentMonthName})`} value={ugThisMonth} Icon={Leaf} loading={loading} />
+            <StatCard
+                label={`Fees Collected (${currentYear})`}
+                value={formatCurrency(feesThisYear)}
+                Icon={Banknote}
+                loading={loading}
+                onClick={() => navigate({ to: "/urban-greening/fee-records" })}
+            />
+            <StatCard
+                label={`Fees Collected (${currentMonthName})`}
+                value={formatCurrency(feesThisMonth)}
+                Icon={CreditCard}
+                loading={loading}
+                onClick={() => navigate({ to: "/urban-greening/fee-records" })}
+            />
+            <StatCard
+                label={`Urban Greening (${currentMonthName})`}
+                value={ugThisMonth}
+                Icon={Leaf}
+                loading={loading}
+                onClick={() => navigate({ to: "/urban-greening/greening-projects" })}
+            />
         </div>
     );
 };

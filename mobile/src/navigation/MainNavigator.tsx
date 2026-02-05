@@ -14,6 +14,7 @@ import HelpScreen from "../screens/roles/gov-emission/profile/HelpScreen";
 import VehicleDetailScreen from "../screens/roles/gov-emission/vehicles/VehicleDetailScreen";
 import AddVehicleScreen from "../screens/roles/gov-emission/vehicles/AddVehicleScreen";
 import AddTestScreen from "../screens/roles/gov-emission/test/AddTestScreen";
+import QueueScreen from "../screens/common/QueueScreen";
 import CustomBottomTabBar from "../components/layout/BottomTabBar";
 
 export type MainStackParamList = {
@@ -129,6 +130,9 @@ function MainTabs() {
             case "Offices":
               iconName = "Building2";
               break;
+            case "Queue":
+              iconName = "Inbox";
+              break;
             default:
               iconName = "HelpCircle";
           }
@@ -214,6 +218,16 @@ function MainTabs() {
               ? { display: "none" }
               : undefined,
           };
+        }}
+      />
+      <Tab.Screen
+        name="Queue"
+        component={QueueScreen}
+        initialParams={{ role: "government_emission" }}
+        options={{
+          title: "Queue",
+          tabBarLabel: "Queue",
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

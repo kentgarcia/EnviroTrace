@@ -1,6 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
-import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
+import { rootRoute, requireAuth, requireRoleOrPermissions } from "@/presentation/routeTree";
 import DashboardLayout from "@/presentation/components/shared/layout/DashboardLayout";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 import { AdminOverview } from "./pages/overview/AdminOverview";
 import { UserManagement } from "./pages/user-management/UserManagement";
@@ -15,7 +16,14 @@ const adminLayoutRoute = createRoute({
     component: () => <DashboardLayout dashboardType="admin" />,
     beforeLoad: () => {
         requireAuth();
-        requireRole(["admin"]);
+        requireRoleOrPermissions(["admin"], [
+            PERMISSIONS.USER_ACCOUNT.VIEW,
+            PERMISSIONS.ROLE.VIEW,
+            PERMISSIONS.PERMISSION.VIEW,
+            PERMISSIONS.AUDIT_LOG.VIEW,
+            PERMISSIONS.SESSION.VIEW,
+            PERMISSIONS.DASHBOARD.VIEW,
+        ]);
     },
 });
 

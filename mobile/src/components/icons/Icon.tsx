@@ -81,6 +81,7 @@ import {
     AlertTriangle,
     Download,
     Upload,
+    Inbox,
 } from "lucide-react-native";
 
 const ICONS = {
@@ -162,6 +163,7 @@ const ICONS = {
     AlertTriangle,
     Download,
     Upload,
+    Inbox,
     CheckCircle: CheckCircle2, // Alias
 } as const;
 

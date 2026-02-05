@@ -112,14 +112,21 @@ export default function AddVehicleScreen() {
         description: description.trim() || undefined,
       };
 
-      await addVehicleMutation.mutateAsync(vehicleData);
+      const result: any = await addVehicleMutation.mutateAsync(vehicleData);
+      const isQueued = result?.queued === true;
 
-      Alert.alert("Success", "Vehicle added successfully", [
+      Alert.alert(
+        isQueued ? "Queued" : "Success",
+        isQueued
+          ? "Vehicle saved to queue and will send when you have a connection."
+          : "Vehicle added successfully",
+        [
         {
           text: "OK",
           onPress: () => (navigation as any).goBack(),
         },
-      ]);
+      ]
+      );
     } catch (e: any) {
       Alert.alert("Save failed", e?.response?.data?.detail || e?.message || "Could not save vehicle.");
     }

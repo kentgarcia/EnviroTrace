@@ -7,6 +7,7 @@ import Icon from "../../../../components/icons/Icon";
 import StandardHeader from "../../../../components/layout/StandardHeader";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuthStore } from "../../../../core/stores/authStore";
+import { usePermissions } from "../../../../hooks/usePermissions";
 import PlateCaptureCameraComponent from "../../../../components/camera/PlateCaptureCameraComponent";
 import { PlateRecognitionService, VehicleSearchResponse, PlateRecognitionResponse } from "../../../../core/api/plate-recognition-service";
 import {
@@ -21,6 +22,8 @@ export default function AddTestScreen() {
   const navigation = useNavigation();
   const route = useRoute<any>();
   const { user } = useAuthStore();
+  const { can } = usePermissions();
+  const canCreateTest = can("test", "create");
   const vehicleId: string | undefined = route?.params?.vehicleId;
 
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
@@ -82,6 +85,10 @@ export default function AddTestScreen() {
   }, [effectiveVehicleId, date, quarter, year]);
 
   const onSave = async () => {
+    if (!canCreateTest) {
+      Alert.alert("Not authorized", "You do not have permission to record tests.");
+      return;
+    }
     if (!isValid) return;
 
     try {
@@ -97,14 +104,21 @@ export default function AddTestScreen() {
         remarks: remarks || undefined,
       };
 
-      await addTestMutation.mutateAsync(testData);
+      const result: any = await addTestMutation.mutateAsync(testData);
+      const isQueued = result?.queued === true;
 
-      Alert.alert("Success", "Test record saved successfully", [
+      Alert.alert(
+        isQueued ? "Queued" : "Success",
+        isQueued
+          ? "Test record saved to queue and will send when you have a connection."
+          : "Test record saved successfully",
+        [
         {
           text: "OK",
           onPress: () => (navigation as any).goBack(),
         },
-      ]);
+      ]
+      );
     } catch (e: any) {
       Alert.alert("Save failed", e?.response?.data?.detail || e?.message || "Could not save test.");
     }
@@ -661,7 +675,7 @@ export default function AddTestScreen() {
             <Button
               mode="contained"
               onPress={onSave}
-              disabled={!isValid || addTestMutation.isPending}
+              disabled={!isValid || !canCreateTest || addTestMutation.isPending}
               loading={addTestMutation.isPending}
               style={styles.saveBtn}
               buttonColor="#1E40AF"

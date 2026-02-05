@@ -1,4 +1,5 @@
 import apiClient from "./api-client";
+import { queueableRequest } from "../queue/offlineQueue";
 
 // Types for Tree Management module
 export interface TreeManagementRequest {
@@ -130,16 +131,34 @@ class TreeManagementService {
   async createRequest(
     requestData: TreeManagementRequestCreate
   ): Promise<TreeManagementRequest> {
-    const response = await apiClient.post(this.baseUrl, requestData);
-    return response.data;
+    return queueableRequest<TreeManagementRequest>({
+      role: "urban_greening",
+      action: "urban_greening.request.create",
+      method: "POST",
+      endpoint: this.baseUrl,
+      payload: requestData,
+      send: async () => {
+        const response = await apiClient.post(this.baseUrl, requestData);
+        return response.data;
+      },
+    });
   }
 
   async updateRequest(
     id: string,
     requestData: TreeManagementRequestUpdate
   ): Promise<TreeManagementRequest> {
-    const response = await apiClient.put(`${this.baseUrl}/${id}`, requestData);
-    return response.data;
+    return queueableRequest<TreeManagementRequest>({
+      role: "urban_greening",
+      action: "urban_greening.request.update",
+      method: "PUT",
+      endpoint: `${this.baseUrl}/${id}`,
+      payload: requestData,
+      send: async () => {
+        const response = await apiClient.put(`${this.baseUrl}/${id}`, requestData);
+        return response.data;
+      },
+    });
   }
 
   async deleteRequest(id: string): Promise<void> {

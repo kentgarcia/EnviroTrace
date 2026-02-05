@@ -59,18 +59,24 @@ export function useTreeManagementData(filters?: TreeManagementDataFilters) {
       // Fetch tree management stats
       const treeStats = await treeManagementService.getTreeStats();
       
+      const feeMonthly = dashboardData.fee_monthly ?? [];
+      const saplingsMonthly = dashboardData.saplings_monthly ?? [];
+      const ugMonthly = dashboardData.ug_monthly ?? [];
+      const treeRequestTypeCounts = dashboardData.tree_request_type_counts ?? [];
+      const treeRequestStatusCounts = dashboardData.tree_request_status_counts ?? [];
+
       // Calculate fees for current year and month
-      const feesCollectedYear = dashboardData.fee_monthly.reduce((sum, m) => sum + m.amount, 0);
-      const feesCollectedMonth = dashboardData.fee_monthly.find(
+      const feesCollectedYear = feeMonthly.reduce((sum, m) => sum + m.amount, 0);
+      const feesCollectedMonth = feeMonthly.find(
         (m) => m.month === monthNames[currentMonth]
       )?.amount || 0;
       
       // Get counts for current month
-      const saplingRequestsMonth = dashboardData.saplings_monthly.find(
+      const saplingRequestsMonth = saplingsMonthly.find(
         (m) => m.month === currentMonth + 1
       )?.total || 0;
       
-      const urbanGreeningMonth = dashboardData.ug_monthly.find(
+      const urbanGreeningMonth = ugMonthly.find(
         (m) => m.month === currentMonth + 1
       )?.total || 0;
       
@@ -87,11 +93,11 @@ export function useTreeManagementData(filters?: TreeManagementDataFilters) {
         completedThisMonth: treeStats.for_signature + treeStats.payment_pending,
         
         // Charts Data
-        feeMonthly: dashboardData.fee_monthly,
-        treeRequestTypeCounts: dashboardData.tree_request_type_counts,
-        treeRequestStatusCounts: dashboardData.tree_request_status_counts,
-        ugMonthly: dashboardData.ug_monthly,
-        saplingsMonthly: dashboardData.saplings_monthly,
+        feeMonthly,
+        treeRequestTypeCounts,
+        treeRequestStatusCounts,
+        ugMonthly,
+        saplingsMonthly,
         
         // Metadata
         currentYear,

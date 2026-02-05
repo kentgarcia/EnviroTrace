@@ -1,5 +1,5 @@
 import { createRoute } from "@tanstack/react-router";
-import { rootRoute, requireAuth, requireRole, requirePermission, requirePermissions } from "@/presentation/routeTree";
+import { rootRoute, requireAuth, requireRoleOrPermissions, requirePermission, requirePermissions } from "@/presentation/routeTree";
 import DashboardLayout from "@/presentation/components/shared/layout/DashboardLayout";
 import { PERMISSIONS } from "@/core/utils/permissions";
 
@@ -19,7 +19,10 @@ const emissionLayout = createRoute({
     component: () => <DashboardLayout dashboardType="government-emission" />,
     beforeLoad: () => {
         requireAuth();
-        requireRole(["admin", "government_emission"]);
+        requireRoleOrPermissions(
+            ["admin", "government_emission"],
+            emissionViewPermissions
+        );
     },
 });
 

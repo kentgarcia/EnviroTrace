@@ -4,6 +4,7 @@
  */
 
 import apiClient from "./api-client";
+import { queueableRequest } from "../queue/offlineQueue";
 
 // ==================== Types ====================
 
@@ -108,7 +109,29 @@ export interface TreeSpecies {
     species_type: string;
     is_native: boolean;
     is_endangered: boolean;
+    is_active?: boolean;
     description?: string;
+    growth_speed_label?: string;
+    growth_rate_m_per_year?: number;
+    wood_density_min?: number;
+    wood_density_max?: number;
+    wood_density_avg?: number;
+    avg_mature_height_min_m?: number;
+    avg_mature_height_max_m?: number;
+    avg_mature_height_avg_m?: number;
+    avg_trunk_diameter_min_cm?: number;
+    avg_trunk_diameter_max_cm?: number;
+    avg_trunk_diameter_avg_cm?: number;
+    co2_absorbed_kg_per_year?: number;
+    co2_stored_mature_min_kg?: number;
+    co2_stored_mature_max_kg?: number;
+    co2_stored_mature_avg_kg?: number;
+    carbon_fraction?: number;
+    decay_years_min?: number;
+    decay_years_max?: number;
+    lumber_carbon_retention_pct?: number;
+    burned_carbon_release_pct?: number;
+    notes?: string;
     created_at: string;
 }
 
@@ -126,6 +149,7 @@ export interface TreeSpeciesCreate {
     avg_mature_height_avg_m?: number;
     avg_trunk_diameter_min_cm?: number;
     avg_trunk_diameter_max_cm?: number;
+    avg_trunk_diameter_avg_cm?: number;
     wood_density_min?: number;
     wood_density_max?: number;
     wood_density_avg?: number;
@@ -217,16 +241,36 @@ export const getTreeById = async (id: string) => {
  * Create a new tree
  */
 export const createTree = async (data: TreeInventoryCreate) => {
-    const response = await apiClient.post<TreeInventory>("/tree-inventory/trees", data);
-    return { data: response.data };
+    const response = await queueableRequest<TreeInventory>({
+        role: "urban_greening",
+        action: "urban_greening.tree.create",
+        method: "POST",
+        endpoint: "/tree-inventory/trees",
+        payload: data,
+        send: async () => {
+            const result = await apiClient.post<TreeInventory>("/tree-inventory/trees", data);
+            return result.data;
+        },
+    });
+    return { data: response };
 };
 
 /**
  * Update an existing tree
  */
 export const updateTree = async (id: string, data: TreeInventoryUpdate) => {
-    const response = await apiClient.put<TreeInventory>(`/tree-inventory/trees/${id}`, data);
-    return { data: response.data };
+    const response = await queueableRequest<TreeInventory>({
+        role: "urban_greening",
+        action: "urban_greening.tree.update",
+        method: "PUT",
+        endpoint: `/tree-inventory/trees/${id}`,
+        payload: data,
+        send: async () => {
+            const result = await apiClient.put<TreeInventory>(`/tree-inventory/trees/${id}`, data);
+            return result.data;
+        },
+    });
+    return { data: response };
 };
 
 /**
@@ -258,16 +302,36 @@ export const getSpeciesById = async (id: string) => {
  * Create a new tree species
  */
 export const createSpecies = async (data: TreeSpeciesCreate) => {
-    const response = await apiClient.post<TreeSpecies>("/tree-inventory/species", data);
-    return { data: response.data };
+    const response = await queueableRequest<TreeSpecies>({
+        role: "urban_greening",
+        action: "urban_greening.species.create",
+        method: "POST",
+        endpoint: "/tree-inventory/species",
+        payload: data,
+        send: async () => {
+            const result = await apiClient.post<TreeSpecies>("/tree-inventory/species", data);
+            return result.data;
+        },
+    });
+    return { data: response };
 };
 
 /**
  * Update a tree species
  */
 export const updateSpecies = async (id: string, data: TreeSpeciesUpdate) => {
-    const response = await apiClient.put<TreeSpecies>(`/tree-inventory/species/${id}`, data);
-    return { data: response.data };
+    const response = await queueableRequest<TreeSpecies>({
+        role: "urban_greening",
+        action: "urban_greening.species.update",
+        method: "PUT",
+        endpoint: `/tree-inventory/species/${id}`,
+        payload: data,
+        send: async () => {
+            const result = await apiClient.put<TreeSpecies>(`/tree-inventory/species/${id}`, data);
+            return result.data;
+        },
+    });
+    return { data: response };
 };
 
 /**

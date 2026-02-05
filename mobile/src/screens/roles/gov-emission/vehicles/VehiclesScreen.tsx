@@ -65,6 +65,7 @@ type FilterDialogProps = {
 export default function VehiclesScreen() {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const PAGE_SIZE = 200;
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,13 +117,18 @@ export default function VehiclesScreen() {
     return result;
   }, [searchQuery, filterOffice, filterVehicleType, filterEngineType]);
 
+  const [offset, setOffset] = useState(0);
+  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+
   // Fetch data from API
   const {
     data: vehiclesData,
     isLoading,
+    isFetching,
     error,
     refetch,
-  } = useVehicles(filters, 0, 1000);
+  } = useVehicles(filters, offset, PAGE_SIZE);
 
   const {
     data: filterOptions,
@@ -131,10 +137,33 @@ export default function VehiclesScreen() {
 
   const { data: officesData } = useOffices();
 
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setOffset(0);
+    setAllVehicles([]);
+    setHasMore(true);
+  }, [filters]);
+
+  // Accumulate vehicles across pages
+  React.useEffect(() => {
+    if (!vehiclesData) return;
+    setAllVehicles((prev) => {
+      if (offset === 0) return vehiclesData.vehicles || [];
+      const merged = new Map<string, Vehicle>();
+      for (const v of prev) merged.set(v.id, v);
+      for (const v of vehiclesData.vehicles || []) merged.set(v.id, v);
+      return Array.from(merged.values());
+    });
+
+    const received = vehiclesData.vehicles?.length || 0;
+    const total = vehiclesData.total || 0;
+    setHasMore(offset + received < total);
+  }, [vehiclesData, offset]);
+
   // Get vehicles array
   const vehicles = useMemo(() => {
-    return vehiclesData?.vehicles || [];
-  }, [vehiclesData]);
+    return allVehicles;
+  }, [allVehicles]);
 
   // Get offices list
   const officesList = useMemo(() => {
@@ -229,9 +258,11 @@ export default function VehiclesScreen() {
     }, [refetch])
   );
 
-  const onRefresh = useCallback(async () => {
-    await refetch();
-  }, [refetch]);
+  const onRefresh = useCallback(() => {
+    setOffset(0);
+    setAllVehicles([]);
+    setHasMore(true);
+  }, []);
 
   const handleVehiclePress = useCallback(
     (vehicle: Vehicle) => {
@@ -252,6 +283,11 @@ export default function VehiclesScreen() {
     ),
     [handleVehiclePress]
   );
+
+  const handleLoadMore = useCallback(() => {
+    if (!hasMore || isFetching) return;
+    setOffset((prev) => prev + PAGE_SIZE);
+  }, [hasMore, isFetching, PAGE_SIZE]);
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -394,13 +430,22 @@ export default function VehiclesScreen() {
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl
-              refreshing={isLoading}
+              refreshing={isLoading && offset === 0}
               onRefresh={onRefresh}
               colors={["#1E40AF"]}
               tintColor="#1E40AF"
             />
           }
           ListEmptyComponent={renderEmptyState}
+          ListFooterComponent={
+            isFetching && offset > 0 ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator size="small" color="#1E40AF" />
+              </View>
+            ) : null
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.6}
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={true}
           maxToRenderPerBatch={10}
@@ -816,6 +861,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     height: 48,
     justifyContent: "center",
+  },
+  footerLoading: {
+    paddingVertical: 16,
+    alignItems: "center",
   },
   dialog: {
     backgroundColor: "#FFFFFF",

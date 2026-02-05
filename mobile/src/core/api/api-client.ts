@@ -25,6 +25,43 @@ const apiClient: AxiosInstance = axios.create({
   validateStatus: (status) => status >= 200 && status < 500,
 });
 
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  try {
+    const refreshToken = await AsyncStorage.getItem("refresh_token");
+    if (!refreshToken) return null;
+
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/refresh`,
+      { refresh_token: refreshToken },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { access_token, refresh_token, expires_in } = response.data || {};
+    if (!access_token) return null;
+
+    await AsyncStorage.setItem("access_token", access_token);
+    if (refresh_token) {
+      await AsyncStorage.setItem("refresh_token", refresh_token);
+    }
+    if (expires_in) {
+      const expiresAt = Date.now() + expires_in * 1000;
+      await AsyncStorage.setItem("access_token_expires_at", `${expiresAt}`);
+    }
+
+    return access_token as string;
+  } catch (error) {
+    console.warn("Token refresh failed:", error);
+    return null;
+  }
+};
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   async (config) => {
@@ -119,10 +156,37 @@ apiClient.interceptors.response.use(
     });
 
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      const originalRequest = error.config;
+      const requestUrl = originalRequest?.url || "";
+      const isAuthRequest =
+        requestUrl.includes("/auth/login") ||
+        requestUrl.includes("/auth/refresh") ||
+        requestUrl.includes("/auth/logout");
+
+      if (!originalRequest || isAuthRequest || (originalRequest as any)._retry) {
+        return Promise.reject(error);
+      }
+
+      if (!isRefreshing) {
+        isRefreshing = true;
+        refreshPromise = refreshAccessToken();
+      }
+
+      const newToken = await refreshPromise;
+      isRefreshing = false;
+
+      if (newToken) {
+        (originalRequest as any)._retry = true;
+        originalRequest.headers = {
+          ...(originalRequest.headers || {}),
+          Authorization: `Bearer ${newToken}`,
+        };
+        return apiClient.request(originalRequest);
+      }
+
       console.log("🔒 Unauthorized - clearing tokens and logging out");
       try {
-        await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+        await AsyncStorage.multiRemove(["access_token", "refresh_token", "access_token_expires_at"]);
         useAuthStore.getState().logout();
       } catch (storageError) {
         console.error("Error clearing storage:", storageError);

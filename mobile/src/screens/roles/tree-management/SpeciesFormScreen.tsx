@@ -26,6 +26,7 @@ const speciesSchema = z.object({
     scientific_name: z.string().optional(),
     local_name: z.string().optional(),
     family: z.string().optional(),
+    species_type: z.string().min(1, "Species type is required"),
     description: z.string().optional(),
     notes: z.string().optional(),
     
@@ -78,6 +79,13 @@ const GROWTH_SPEED_OPTIONS = [
     { label: 'Fast', value: 'Fast' },
 ];
 
+const SPECIES_TYPE_OPTIONS = [
+    { label: 'Tree', value: 'Tree' },
+    { label: 'Ornamental', value: 'Ornamental' },
+    { label: 'Seed', value: 'Seed' },
+    { label: 'Other', value: 'Other' },
+];
+
 export default function SpeciesFormScreen() {
     const navigation = useNavigation();
     const route = useRoute<ScreenRouteProp>();
@@ -91,6 +99,7 @@ export default function SpeciesFormScreen() {
             is_native: false,
             is_endangered: false,
             is_active: true,
+            species_type: "Tree",
         } as any,
     });
 
@@ -110,6 +119,7 @@ export default function SpeciesFormScreen() {
                  setValue("scientific_name", species.scientific_name || "");
                  setValue("local_name", species.local_name || "");
                  setValue("family", species.family || "");
+                 setValue("species_type", species.species_type || "Tree");
                  setValue("description", species.description || "");
                  setValue("notes", species.notes || "");
                  
@@ -155,11 +165,16 @@ export default function SpeciesFormScreen() {
 
     const createMutation = useMutation({
         mutationFn: (data: SpeciesFormData) => treeInventoryApi.createSpecies(data as any),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ["tree-species"] });
-            Alert.alert("Success", "Species created successfully", [
-                { text: "OK", onPress: () => navigation.goBack() }
-            ]);
+            const isQueued = response?.data && (response.data as any).queued === true;
+            Alert.alert(
+                isQueued ? "Queued" : "Success",
+                isQueued
+                    ? "Species saved to queue and will send when you have a connection."
+                    : "Species created successfully",
+                [{ text: "OK", onPress: () => navigation.goBack() }]
+            );
         },
         onError: (error: any) => {
             Alert.alert("Error", error.message || "Failed to create species");
@@ -168,11 +183,16 @@ export default function SpeciesFormScreen() {
 
     const updateMutation = useMutation({
         mutationFn: (data: SpeciesFormData) => treeInventoryApi.updateSpecies(speciesId!, data as any),
-        onSuccess: () => {
+        onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ["tree-species"] });
-            Alert.alert("Success", "Species updated successfully", [
-                { text: "OK", onPress: () => navigation.goBack() }
-            ]);
+            const isQueued = response?.data && (response.data as any).queued === true;
+            Alert.alert(
+                isQueued ? "Queued" : "Success",
+                isQueued
+                    ? "Species update saved to queue and will send when you have a connection."
+                    : "Species updated successfully",
+                [{ text: "OK", onPress: () => navigation.goBack() }]
+            );
         },
         onError: (error: any) => {
             Alert.alert("Error", error.message || "Failed to update species");
@@ -356,6 +376,30 @@ export default function SpeciesFormScreen() {
                                         )}
                                     />
                                 </View>
+                            </View>
+
+                            <View style={styles.field}>
+                                <Text style={styles.label}>Species Type</Text>
+                                <Controller
+                                    control={control}
+                                    name="species_type"
+                                    render={({ field: { onChange, value } }) => (
+                                        <Dropdown
+                                            data={SPECIES_TYPE_OPTIONS}
+                                            labelField="label"
+                                            valueField="value"
+                                            value={value}
+                                            onChange={(item) => onChange(item.value)}
+                                            style={styles.dropdown}
+                                            placeholderStyle={styles.dropdownPlaceholder}
+                                            selectedTextStyle={styles.dropdownSelected}
+                                            placeholder="Select type..."
+                                        />
+                                    )}
+                                />
+                                {errors.species_type && (
+                                    <HelperText type="error">{errors.species_type.message}</HelperText>
+                                )}
                             </View>
 
                             <View style={styles.field}>

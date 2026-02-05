@@ -7,6 +7,7 @@ import ScreenLayout from "../../../../components/layout/ScreenLayout";
 import FloatingActionButton from "../../../../components/FloatingActionButton";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { cardStyles } from "../../../../styles/cardStyles";
+import { usePermissions } from "../../../../hooks/usePermissions";
 import {
   useEmissionTests,
   useVehicles,
@@ -18,6 +19,8 @@ type TestWithVehicle = { test: EmissionTest; vehicle: Vehicle | null };
 
 export default function TestingScreen() {
   const navigation = useNavigation();
+  const { can } = usePermissions();
+  const canCreateTest = can("test", "create");
 
   const now = new Date();
   const defaultQuarter = useMemo(() => Math.floor(now.getMonth() / 3) + 1, [now]);
@@ -44,7 +47,7 @@ export default function TestingScreen() {
   const {
     data: vehiclesData,
     isLoading: loadingVehicles,
-  } = useVehicles({}, 0, 1000);
+  } = useVehicles({}, 0, 200);
 
   const vehicles = useMemo(() => vehiclesData?.vehicles || [], [vehiclesData]);
 
@@ -172,16 +175,18 @@ export default function TestingScreen() {
             <Text style={styles.emptyText}>
               No emission tests recorded for Q{quarter} {year}
             </Text>
-            <Button
-              mode="contained"
-              onPress={() => (navigation as any).navigate("Vehicles")}
-              style={styles.emptyButton}
-              labelStyle={styles.emptyButtonLabel}
-              buttonColor="#1E40AF"
-              icon={() => <Icon name="Plus" size={20} color="#FFFFFF" />}
-            >
-              Record New Test
-            </Button>
+            {canCreateTest && (
+              <Button
+                mode="contained"
+                onPress={() => (navigation as any).navigate("Vehicles")}
+                style={styles.emptyButton}
+                labelStyle={styles.emptyButtonLabel}
+                buttonColor="#1E40AF"
+                icon={() => <Icon name="Plus" size={20} color="#FFFFFF" />}
+              >
+                Record New Test
+              </Button>
+            )}
           </View>
         ) : (
           <ScrollView
@@ -286,9 +291,11 @@ export default function TestingScreen() {
           </ScrollView>
         )}
 
-        <FloatingActionButton
-          onPress={() => (navigation as any).navigate("AddTest")}
-        />
+        {canCreateTest && (
+          <FloatingActionButton
+            onPress={() => (navigation as any).navigate("AddTest")}
+          />
+        )}
     </ScreenLayout>
   );
 }

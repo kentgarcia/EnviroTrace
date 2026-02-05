@@ -677,7 +677,8 @@ const OFFICE_API_ENDPOINTS = {
 export function useOfficeCompliance(
   filters?: OfficeFilters,
   skip = 0,
-  limit = 100
+  limit = 100,
+  options?: UseQueryOptions<OfficeComplianceResponse>
 ) {
   return useQuery<OfficeComplianceResponse>({
     queryKey: ["officeCompliance", filters, skip, limit],
@@ -701,6 +702,7 @@ export function useOfficeCompliance(
       );
       return data;
     },
+    ...options,
   });
 }
 

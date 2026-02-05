@@ -63,8 +63,8 @@ export default function TreeFieldCaptureScreen() {
     } = useReverseGeocode();
 
     // Form state
-    const [photo, setPhoto] = useState<GeotaggedPhoto | null>(null);
-    const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string | null>(null);
+    const [photos, setPhotos] = useState<GeotaggedPhoto[]>([]);
+    const [uploadedPhotoUrls, setUploadedPhotoUrls] = useState<string[]>([]);
     const [commonName, setCommonName] = useState("");
     const [species, setSpecies] = useState("");
     const [status, setStatus] = useState("alive");
@@ -132,7 +132,10 @@ export default function TreeFieldCaptureScreen() {
         mutationFn: (data: TreeInventoryCreate) => treeInventoryApi.createTree(data),
         onSuccess: (response) => {
             queryClient.invalidateQueries({ queryKey: ["trees"] });
-            Alert.alert("Success", "Tree registered successfully!", [
+            const isQueued = response?.data && (response.data as any).queued === true;
+            Alert.alert(isQueued ? "Queued" : "Success", isQueued
+                ? "Tree saved to queue and will send when you have a connection."
+                : "Tree registered successfully!", [
                 {
                     text: "View on Map",
                     onPress: () => {
@@ -146,8 +149,8 @@ export default function TreeFieldCaptureScreen() {
                     onPress: () => {
                         // Reset form
                         setCurrentStep(1);
-                        setPhoto(null);
-                        setUploadedPhotoUrl(null);
+                        setPhotos([]);
+                        setUploadedPhotoUrls([]);
                         setCommonName("");
                         setSpecies("");
                         setStatus("alive");
@@ -173,9 +176,9 @@ export default function TreeFieldCaptureScreen() {
     });
 
     const handleCameraCapture = async (capturedPhoto: GeotaggedPhoto) => {
-        setPhoto(capturedPhoto);
         setShowCamera(false);
-        
+        setPhotos((prev) => [...prev, capturedPhoto]);
+
         // Upload photo
         try {
             const formData = new FormData();
@@ -187,7 +190,16 @@ export default function TreeFieldCaptureScreen() {
 
             const response = await treeInventoryApi.uploadTreeImages(formData);
             if (response.data.uploaded && response.data.uploaded.length > 0) {
-                setUploadedPhotoUrl(response.data.uploaded[0].url);
+                const url = response.data.uploaded[0].url;
+                setUploadedPhotoUrls((prev) => [...prev, url]);
+                Alert.alert(
+                    "Photo Added",
+                    "Would you like to add another photo or proceed?",
+                    [
+                        { text: "Add Another", onPress: () => setShowCamera(true) },
+                        { text: "Proceed", onPress: () => setCurrentStep(3) },
+                    ]
+                );
             }
         } catch (error) {
             console.error("Error uploading photo:", error);
@@ -216,7 +228,7 @@ export default function TreeFieldCaptureScreen() {
             setCurrentStep(2);
         } else if (currentStep === 2) {
             // Validate photo
-            if (!photo) {
+            if (photos.length === 0) {
                 Alert.alert("Photo Required", "Please take a photo of the tree.");
                 return;
             }
@@ -249,7 +261,7 @@ export default function TreeFieldCaptureScreen() {
             Alert.alert("Validation Error", "GPS location is required");
             return;
         }
-        // if (!uploadedPhotoUrl) {
+        // if (uploadedPhotoUrls.length === 0) {
         //     Alert.alert("Validation Error", "Photo upload is required");
         //     return;
         // }
@@ -277,7 +289,7 @@ export default function TreeFieldCaptureScreen() {
             planted_date: formattedDate,
             managed_by: managedBy.trim() || undefined,
             notes: notes.trim() || undefined,
-            photos: uploadedPhotoUrl ? [uploadedPhotoUrl] : [],
+            photos: uploadedPhotoUrls,
         };
 
         createMutation.mutate(data);
@@ -362,8 +374,8 @@ export default function TreeFieldCaptureScreen() {
                     text: "Skip",
                     style: "default",
                     onPress: () => {
-                        setPhoto(null);
-                        setUploadedPhotoUrl(null);
+                        setPhotos([]);
+                        setUploadedPhotoUrls([]);
                         setCurrentStep(3);
                     },
                 },
@@ -472,26 +484,46 @@ export default function TreeFieldCaptureScreen() {
                 </Text>
             </View>
 
-            {photo ? (
+            {photos.length > 0 ? (
                 <View style={styles.photoPreview}>
-                    <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                    <Image source={{ uri: photos[photos.length - 1].uri }} style={styles.photoImage} />
                     <View style={styles.photoOverlay}>
                         <Text style={styles.photoCoords}>
-                            📍 {photo.latitude.toFixed(6)}°N, {photo.longitude.toFixed(6)}°E
+                            📍 {photos[photos.length - 1].latitude.toFixed(6)}°N, {photos[photos.length - 1].longitude.toFixed(6)}°E
                         </Text>
-                        <Text style={styles.photoAccuracy}>±{photo.accuracy.toFixed(0)}m</Text>
+                        <Text style={styles.photoAccuracy}>±{photos[photos.length - 1].accuracy.toFixed(0)}m</Text>
                     </View>
-                    <TouchableOpacity
-                        style={styles.retakeButton}
-                        onPress={() => {
-                            setPhoto(null);
-                            setUploadedPhotoUrl(null);
-                            setShowCamera(true);
-                        }}
-                    >
-                        <Icon name="Camera" size={20} color="#FFFFFF" />
-                        <Text style={styles.retakeButtonText}>Retake Photo</Text>
-                    </TouchableOpacity>
+                    <View style={styles.photoActions}>
+                        <TouchableOpacity
+                            style={styles.addAnotherButton}
+                            onPress={() => setShowCamera(true)}
+                        >
+                            <Icon name="Plus" size={18} color="#FFFFFF" />
+                            <Text style={styles.addAnotherButtonText}>Add Another Photo</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.proceedButton}
+                            onPress={() => setCurrentStep(3)}
+                        >
+                            <Icon name="ArrowRight" size={18} color="#FFFFFF" />
+                            <Text style={styles.proceedButtonText}>Proceed</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {photos.length > 1 && (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.photoThumbs}
+                        >
+                            {photos.map((item, index) => (
+                                <Image
+                                    key={`${item.timestamp}-${index}`}
+                                    source={{ uri: item.uri }}
+                                    style={styles.photoThumb}
+                                />
+                            ))}
+                        </ScrollView>
+                    )}
                 </View>
             ) : (
                 <View style={{ gap: 16 }}>
@@ -784,7 +816,7 @@ export default function TreeFieldCaptureScreen() {
                     <Button
                         mode="contained"
                         onPress={handleNext}
-                        disabled={(currentStep === 1 && !gpsLocation) || (currentStep === 2 && !photo)}
+                        disabled={(currentStep === 1 && !gpsLocation) || (currentStep === 2 && photos.length === 0)}
                         style={styles.nextButton}
                         contentStyle={{ height: 50, flexDirection: 'row-reverse' }}
                         labelStyle={styles.nextButtonText}
@@ -1067,6 +1099,55 @@ const styles = StyleSheet.create({
         fontSize: 10,
         color: "#D1D5DB",
         marginTop: 2,
+    },
+    photoActions: {
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 12,
+        width: "100%",
+    },
+    addAnotherButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: "#2563EB",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    addAnotherButtonText: {
+        color: "#FFFFFF",
+        fontWeight: "600",
+        fontSize: 13,
+    },
+    proceedButton: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        backgroundColor: "#22c55e",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    proceedButtonText: {
+        color: "#FFFFFF",
+        fontWeight: "600",
+        fontSize: 13,
+    },
+    photoThumbs: {
+        gap: 8,
+        marginTop: 12,
+    },
+    photoThumb: {
+        width: 72,
+        height: 72,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
     retakeButton: {
         flexDirection: "row",

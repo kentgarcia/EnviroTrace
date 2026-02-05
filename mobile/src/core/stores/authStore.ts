@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiClient from "../api/api-client";
+import { checkNetworkConnectivity } from "../utils/network";
 
 interface User {
   id: string;
@@ -9,19 +10,133 @@ interface User {
   role?: string;
   roles?: string[];
   assigned_roles?: string[];
+  permissions?: string[];
+  is_super_admin?: boolean;
+  isSuperAdmin?: boolean;
+  is_approved?: boolean;
+  email_confirmed_at?: string | null;
   is_active?: boolean;
   full_name?: string;
   created_at?: string;
 }
+
+const USER_STORAGE_KEY = "auth_user_profile";
+
+const persistUserProfile = async (user: User | null) => {
+  try {
+    if (!user) {
+      await AsyncStorage.removeItem(USER_STORAGE_KEY);
+      return;
+    }
+    await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  } catch (error) {
+    console.warn("Failed to persist user profile:", error);
+  }
+};
+
+const loadPersistedUser = async (): Promise<User | null> => {
+  try {
+    const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as User;
+  } catch (error) {
+    console.warn("Failed to load persisted user profile:", error);
+    return null;
+  }
+};
+
+const persistTokens = async (tokens: {
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  expiresIn?: number | null;
+}) => {
+  if (tokens.accessToken !== undefined) {
+    if (tokens.accessToken) {
+      await AsyncStorage.setItem("access_token", tokens.accessToken);
+    } else {
+      await AsyncStorage.removeItem("access_token");
+    }
+  }
+  if (tokens.refreshToken !== undefined) {
+    if (tokens.refreshToken) {
+      await AsyncStorage.setItem("refresh_token", tokens.refreshToken);
+    } else {
+      await AsyncStorage.removeItem("refresh_token");
+    }
+  }
+  if (tokens.expiresIn !== undefined) {
+    if (tokens.expiresIn) {
+      const expiresAt = Date.now() + tokens.expiresIn * 1000;
+      await AsyncStorage.setItem("access_token_expires_at", `${expiresAt}`);
+    } else {
+      await AsyncStorage.removeItem("access_token_expires_at");
+    }
+  }
+};
+
+const refreshSession = async (): Promise<string | null> => {
+  try {
+    const refreshToken = await AsyncStorage.getItem("refresh_token");
+    if (!refreshToken) return null;
+
+    const response = await apiClient.post("/auth/refresh", {
+      refresh_token: refreshToken,
+    });
+
+    const { access_token, refresh_token, expires_in } = response.data || {};
+    if (!access_token) return null;
+
+    await persistTokens({
+      accessToken: access_token,
+      refreshToken: refresh_token || refreshToken,
+      expiresIn: expires_in || null,
+    });
+
+    return access_token as string;
+  } catch (error) {
+    console.warn("Failed to refresh session:", error);
+    return null;
+  }
+};
+
+const extractRoles = (user: User | null): string[] => {
+  if (!user) return [];
+  const single = (user as any).role;
+  const many = (user as any).roles;
+  const assigned = (user as any).assigned_roles;
+  if (Array.isArray(many) && many.length) return many as string[];
+  if (Array.isArray(assigned) && assigned.length) return assigned as string[];
+  if (typeof single === "string" && single) return [single];
+  if (typeof many === "string" && many) return [many];
+  return [];
+};
+
+const normalizePermissions = (user: User | null): string[] => {
+  if (!user?.permissions || !Array.isArray(user.permissions)) return [];
+  return user.permissions;
+};
+
+const resolveIsSuperAdmin = (user: User | null): boolean => {
+  if (!user) return false;
+  const flag = user.is_super_admin ?? user.isSuperAdmin;
+  if (typeof flag === "boolean") return flag;
+  const roles = extractRoles(user);
+  return roles.includes("admin") || roles.includes("super_admin");
+};
 
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  permissions: string[];
+  isSuperAdmin: boolean;
   selectedDashboard: string | null;
   setSelectedDashboard: (dashboard: string | null) => Promise<void>;
   getUserRoles: () => string[];
+  hasPermission: (permission: string) => boolean;
+  hasAnyPermission: (permissions: string[]) => boolean;
+  hasAllPermissions: (permissions: string[]) => boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -35,6 +150,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  permissions: [],
+  isSuperAdmin: false,
   selectedDashboard: null,
   finalizeLogin: () => {
     const { user } = get();
@@ -61,16 +178,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   getUserRoles: () => {
-    const user = get().user as User | null;
-    if (!user) return [];
-    const single = (user as any).role;
-    const many = (user as any).roles;
-    const assigned = (user as any).assigned_roles;
-    if (Array.isArray(many) && many.length) return many as string[];
-    if (Array.isArray(assigned) && assigned.length) return assigned as string[];
-    if (typeof single === "string" && single) return [single];
-    if (typeof many === "string" && many) return [many];
-    return [];
+    return extractRoles(get().user as User | null);
+  },
+
+  hasPermission: (permission: string) => {
+    if (get().isSuperAdmin) return true;
+    return get().permissions.includes(permission);
+  },
+
+  hasAnyPermission: (permissions: string[]) => {
+    if (get().isSuperAdmin) return true;
+    const userPermissions = get().permissions;
+    return permissions.some((perm) => userPermissions.includes(perm));
+  },
+
+  hasAllPermissions: (permissions: string[]) => {
+    if (get().isSuperAdmin) return true;
+    const userPermissions = get().permissions;
+    return permissions.every((perm) => userPermissions.includes(perm));
   },
 
   login: async (username: string, password: string): Promise<boolean> => {
@@ -103,14 +228,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       console.log("✅ Login response received:", response.status);
 
-      const { access_token } = response.data;
+      const { access_token, refresh_token, expires_in } = response.data;
 
       if (!access_token) {
         throw new Error("No access token received");
       }
 
       // Store token securely first
-      await AsyncStorage.setItem("access_token", access_token);
+      await persistTokens({
+        accessToken: access_token,
+        refreshToken: refresh_token || null,
+        expiresIn: expires_in || null,
+      });
       console.log("Token stored successfully");
 
       // Now fetch user profile with the token
@@ -125,8 +254,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         isLoading: false,
         error: null,
+        permissions: normalizePermissions(user),
+        isSuperAdmin: resolveIsSuperAdmin(user),
         selectedDashboard: null,
       });
+      await persistUserProfile(user);
 
       console.log("Login completed successfully");
       return true;
@@ -168,7 +300,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isAuthenticated: false,
         user: null,
+        permissions: [],
+        isSuperAdmin: false,
       });
+      await persistUserProfile(null);
       return false;
     }
   },
@@ -181,6 +316,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.multiRemove([
         "access_token",
         "refresh_token",
+        "access_token_expires_at",
         "selected_dashboard",
       ]);
       console.log("Tokens cleared from storage");
@@ -189,8 +325,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
         error: null,
+        permissions: [],
+        isSuperAdmin: false,
         selectedDashboard: null,
       });
+      await persistUserProfile(null);
 
       console.log("Logout completed");
     } catch (error) {
@@ -201,7 +340,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
         error: null,
+        permissions: [],
+        isSuperAdmin: false,
       });
+      await persistUserProfile(null);
     }
   },
 
@@ -218,9 +360,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
+      const network = await checkNetworkConnectivity();
+      if (!network.isConnected) {
+        const persisted = await loadPersistedUser();
+        set({
+          user: persisted,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          permissions: normalizePermissions(persisted),
+          isSuperAdmin: resolveIsSuperAdmin(persisted),
+        });
+        try {
+          const saved = await AsyncStorage.getItem("selected_dashboard");
+          if (saved) set({ selectedDashboard: saved });
+        } catch (e) {
+          console.warn("Failed to load selected dashboard:", e);
+        }
+        return;
+      }
+
       console.log("Token found, verifying with server");
-      const response = await apiClient.get("/auth/me");
-      const user = response.data;
+      let response = await apiClient.get("/auth/me");
+      let user = response.data;
+      if (response.status === 401) {
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          response = await apiClient.get("/auth/me");
+          user = response.data;
+        }
+      }
+
+      if (response.status !== 200) {
+        throw new Error("Unable to validate session");
+      }
 
       console.log("Profile retrieved. User role:", user.role);
 
@@ -229,7 +402,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        permissions: normalizePermissions(user),
+        isSuperAdmin: resolveIsSuperAdmin(user),
       });
+      await persistUserProfile(user);
 
       // Load previously selected dashboard if available
       try {
@@ -244,6 +420,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error("Auth check error:", error);
 
       // If auth check fails, logout the user
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        try {
+          const response = await apiClient.get("/auth/me");
+          const user = response.data;
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+            permissions: normalizePermissions(user),
+            isSuperAdmin: resolveIsSuperAdmin(user),
+          });
+          await persistUserProfile(user);
+          return;
+        } catch (retryError) {
+          console.error("Auth retry failed:", retryError);
+        }
+      }
       await get().logout();
       set({ isLoading: false });
     }
@@ -259,7 +454,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await apiClient.get("/auth/me");
       const user = response.data;
 
-      set({ user });
+      set({
+        user,
+        permissions: normalizePermissions(user),
+        isSuperAdmin: resolveIsSuperAdmin(user),
+      });
+      await persistUserProfile(user);
       console.log("Profile refreshed successfully");
     } catch (error) {
       console.error("Profile refresh error:", error);

@@ -94,7 +94,7 @@ export function useDashboardData(year?: number, quarter?: number) {
     try {
       const vehicleParams = {
         include_test_data: "true",
-        limit: 1000,
+        limit: 200,
       } as const;
 
       const complianceParams: Record<string, string | number> = {};

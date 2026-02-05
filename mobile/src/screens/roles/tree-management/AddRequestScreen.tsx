@@ -68,11 +68,14 @@ export default function AddRequestScreen() {
                 notes: notes.trim() || null,
             };
 
-            const createdRequest = await treeManagementService.createRequest(requestData);
+            const createdRequest: any = await treeManagementService.createRequest(requestData);
+            const isQueued = createdRequest?.queued === true;
 
             Alert.alert(
-                "Success",
-                `Tree management request ${createdRequest.request_number} has been submitted successfully`,
+                isQueued ? "Queued" : "Success",
+                isQueued
+                    ? "Request saved to queue and will send when you have a connection."
+                    : `Tree management request ${createdRequest.request_number} has been submitted successfully`,
                 [
                     {
                         text: "OK",

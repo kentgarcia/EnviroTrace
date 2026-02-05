@@ -1,4 +1,5 @@
 import apiClient from "./api-client";
+import { queueableRequest } from "../queue/offlineQueue";
 
 // Urban Greening Plantings
 export interface UrbanGreeningPlanting {
@@ -71,8 +72,17 @@ class UrbanGreeningAPI {
   }
 
   async createPlanting(data: Partial<UrbanGreeningPlanting>): Promise<UrbanGreeningPlanting> {
-    const response = await apiClient.post("/planting/urban-greening/", data);
-    return response.data;
+    return queueableRequest<UrbanGreeningPlanting>({
+      role: "urban_greening",
+      action: "urban_greening.planting.create",
+      method: "POST",
+      endpoint: "/planting/urban-greening/",
+      payload: data,
+      send: async () => {
+        const response = await apiClient.post("/planting/urban-greening/", data);
+        return response.data;
+      },
+    });
   }
 
   // Fee Records
@@ -96,8 +106,17 @@ class UrbanGreeningAPI {
   }
 
   async createFeeRecord(data: Partial<UrbanGreeningFeeRecord>): Promise<UrbanGreeningFeeRecord> {
-    const response = await apiClient.post("/fees/urban-greening", data);
-    return response.data;
+    return queueableRequest<UrbanGreeningFeeRecord>({
+      role: "urban_greening",
+      action: "urban_greening.fee.create",
+      method: "POST",
+      endpoint: "/fees/urban-greening",
+      payload: data,
+      send: async () => {
+        const response = await apiClient.post("/fees/urban-greening", data);
+        return response.data;
+      },
+    });
   }
 
   // Dashboard Overview (if backend provides aggregated endpoint)

@@ -8,6 +8,7 @@ import {
   useRegister,
   useLogout,
 } from "./auth-service";
+import apiClient from "./api-client";
 
 /**
  * Sign in with email and password
@@ -19,21 +20,11 @@ export async function signIn(email: string, password: string) {
     const tokenResponse = await loginMutation.mutateAsync({ email, password });
 
     // Since this is called outside of a component, we need to fetch user data manually
-    const response = await fetch(
-      `${
-        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-      }/auth/me`,
-      {
-        headers: {
-          Authorization: `Bearer ${tokenResponse.access_token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user data");
-    }
-    const user = await response.json();
+    const { data: user } = await apiClient.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${tokenResponse.access_token}`,
+      },
+    });
 
     // Extract and store user roles (handle both roles and assigned_roles)
     const roles = user.assigned_roles || user.roles || [];
@@ -95,21 +86,11 @@ export async function getCurrentUser(): Promise<UserData> {
     }
 
     // Fetch current user manually (for compatibility with old code)
-    const response = await fetch(
-      `${
-        import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1"
-      }/auth/me`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user data");
-    }
-    const data = await response.json();
+    const { data } = await apiClient.get<UserData>("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     // Extract and store user roles (handle both roles and assigned_roles)
     const roles = data.assigned_roles || data.roles || [];
