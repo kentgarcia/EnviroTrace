@@ -27,7 +27,7 @@ const ROUTE_ACTIONS: Record<string, { label: string; icon: any; action: string }
 };
 
 export const GlobalContextMenu: React.FC<GlobalContextMenuProps> = ({ children }) => {
-  const { refreshCurrentPage } = useRefresh();
+  const { refreshCurrentPage, getCurrentRoute } = useRefresh();
   const router = useRouter();
   const matches = useMatches();
   const isDevelopment = import.meta.env.DEV;
@@ -46,6 +46,10 @@ export const GlobalContextMenu: React.FC<GlobalContextMenuProps> = ({ children }
         try {
           const { listen } = await import('@tauri-apps/api/event');
           unlisten = await listen('shortcut-refresh', () => {
+            const event = new CustomEvent('context-menu-action', {
+              detail: { action: 'refresh', route: getCurrentRoute() }
+            });
+            window.dispatchEvent(event);
             refreshCurrentPage();
           });
         } catch (error) {
@@ -61,13 +65,17 @@ export const GlobalContextMenu: React.FC<GlobalContextMenuProps> = ({ children }
         unlisten();
       }
     };
-  }, [refreshCurrentPage]);
+  }, [getCurrentRoute, refreshCurrentPage]);
 
   const handleContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
     setClickedElement(e.target as HTMLElement);
   };
 
   const handleRefresh = () => {
+    const event = new CustomEvent('context-menu-action', {
+      detail: { action: 'refresh', route: currentRoute }
+    });
+    window.dispatchEvent(event);
     refreshCurrentPage();
   };
 

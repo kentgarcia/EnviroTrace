@@ -45,13 +45,16 @@ interface MenuItem {
   path: string;
   icon?: React.ReactNode;
   children?: { label: string; path: string }[];
-  permission?: string;
+  permission?: string | string[];
+  requireAll?: boolean;
   hidden?: boolean;
 }
 
 function getMenuItems(
   dashboardType: SideNavBarContainerProps["dashboardType"],
   hasPermission: (permission: string) => boolean,
+  hasAnyPermission: (permissions: string[]) => boolean,
+  hasAllPermissions: (permissions: string[]) => boolean,
   isSuperAdmin: boolean = false
 ): MenuItem[] {
   const basePath = `/${dashboardType}`;
@@ -95,86 +98,150 @@ function getMenuItems(
     ];
     
     // Filter menu items based on permissions and hidden flag
-    return adminMenuItems.filter(item => 
-      (!item.permission || hasPermission(item.permission)) && 
-      !item.hidden
-    );
+    return adminMenuItems.filter(item => {
+      if (item.hidden) return false;
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   } else if (dashboardType === "government-emission") {
-    return [
+    const emissionViewPermissions = [
+      PERMISSIONS.OFFICE.VIEW,
+      PERMISSIONS.VEHICLE.VIEW,
+      PERMISSIONS.TEST.VIEW,
+      PERMISSIONS.SCHEDULE.VIEW,
+    ];
+
+    const emissionMenuItems = [
       {
         label: "Dashboard",
         path: `${basePath}/overview`,
         icon: <LayoutDashboard size={18} />,
+        permission: emissionViewPermissions,
       },
       {
         label: "Vehicles",
         path: `${basePath}/vehicles`,
         icon: <Car size={18} />,
+        permission: PERMISSIONS.VEHICLE.VIEW,
       },
       {
         label: "Testing",
         path: `${basePath}/quarterly-testing`,
         icon: <TestTube size={18} />,
+        permission: [
+          PERMISSIONS.VEHICLE.VIEW,
+          PERMISSIONS.TEST.VIEW,
+          PERMISSIONS.OFFICE.VIEW,
+        ],
+        requireAll: true,
       },
       {
         label: "Offices",
         path: `${basePath}/offices`,
         icon: <Building2 size={18} />,
+        permission: PERMISSIONS.OFFICE.VIEW,
       },
       {
         label: "Reports",
         path: `${basePath}/reports`,
         icon: <FileText size={18} />,
+        permission: [
+          PERMISSIONS.VEHICLE.VIEW,
+          PERMISSIONS.TEST.VIEW,
+          PERMISSIONS.OFFICE.VIEW,
+        ],
+        requireAll: true,
       },
       {
         label: "Settings",
         path: `${basePath}/settings`,
         icon: <Settings size={18} />,
+        permission: PERMISSIONS.SCHEDULE.VIEW,
       },
     ];
+
+    return emissionMenuItems.filter((item) => {
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   } else if (dashboardType === "urban-greening") {
-    return [
+    const urbanGreeningMenuItems = [
       {
         label: "Dashboard",
         path: `${basePath}/overview`,
         icon: <LayoutDashboard size={18} />,
+        permission: PERMISSIONS.DASHBOARD.VIEW,
       },
       {
         label: "Tree Inventory",
         path: `${basePath}/tree-inventory`,
         icon: <Trees size={18} />,
+        permission: PERMISSIONS.TREE.VIEW,
       },
       {
         label: "Tree Requests",
         path: `${basePath}/tree-requests`,
         icon: <ClipboardList size={18} />,
+        permission: PERMISSIONS.TREE_REQUEST.VIEW,
       },
       {
         label: "Greening Projects",
         path: `${basePath}/greening-projects`,
         icon: <Sprout size={18} />,
+        permission: PERMISSIONS.URBAN_PROJECT.VIEW,
       },
       {
         label: "Species Management",
         path: `${basePath}/species`,
         icon: <Leaf size={18} />,
+        permission: PERMISSIONS.TREE_SPECIES.VIEW,
       },
       {
         label: "Fees",
         path: `${basePath}/fee-records`,
         icon: <Banknote size={18} />,
+        permission: PERMISSIONS.FEE.VIEW,
       },
       {
         label: "Reports",
         path: `${basePath}/reports`,
         icon: <FileText size={18} />,
+        permission: [
+          PERMISSIONS.TREE.VIEW,
+          PERMISSIONS.TREE_REQUEST.VIEW,
+          PERMISSIONS.PLANTING.VIEW,
+          PERMISSIONS.SAPLING_COLLECTION.VIEW,
+          PERMISSIONS.FEE.VIEW,
+        ],
+        requireAll: true,
       },
       {
         label: "Settings",
         path: `${basePath}/settings`,
         icon: <Settings size={18} />,
+        permission: PERMISSIONS.PROCESSING_STANDARD.VIEW,
       },
     ];
+
+    return urbanGreeningMenuItems.filter((item) => {
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   }
   // Default/common items
   return [
@@ -207,6 +274,8 @@ export default function SideNavBarContainer({
   const roles = useAuthStore(state => state.roles);
   const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
   const hasPermission = useAuthStore(state => state.hasPermission);
+  const hasAnyPermission = useAuthStore(state => state.hasAnyPermission);
+  const hasAllPermissions = useAuthStore(state => state.hasAllPermissions);
   const { data: profile } = useMyProfile();
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -245,7 +314,13 @@ export default function SideNavBarContainer({
   // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
   const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
-  const menuItems: NavItem[] = getMenuItems(dashboardType, hasPermission, isSuperAdmin).map(
+  const menuItems: NavItem[] = getMenuItems(
+    dashboardType,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+    isSuperAdmin
+  ).map(
     (item) => ({
       label: item.label,
       icon: item.icon,

@@ -123,6 +123,7 @@ interface GreeningProjectDetailsProps {
   onClose: () => void;
   onEdit: () => void;
   onRefresh: () => void;
+  canEdit?: boolean;
 }
 
 const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
@@ -130,6 +131,7 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
   onClose,
   onEdit,
   onRefresh,
+  canEdit = true,
 }) => {
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -174,8 +176,8 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
   const typeConfig = PROJECT_TYPE_CONFIG[project.project_type];
   const statusConfig = STATUS_CONFIG[project.status];
 
-  const canComplete = project.status === "in_progress";
-  const canTransfer = project.status === "completed";
+  const canComplete = canEdit && project.status === "in_progress";
+  const canTransfer = canEdit && project.status === "completed";
 
   // Calculate totals
   const totalPlants = project.plants?.reduce((sum, p) => sum + p.quantity, 0) || 0;
@@ -203,10 +205,12 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
           </div>
           <h2 className="text-xl font-bold text-gray-900">{project.project_code}</h2>
         </div>
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Edit className="w-4 h-4 mr-1" />
-          Edit
-        </Button>
+        {canEdit && (
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Edit className="w-4 h-4 mr-1" />
+            Edit
+          </Button>
+        )}
       </div>
 
       {project.description && (
@@ -507,7 +511,8 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
       </div>
 
       {/* Complete Project Dialog */}
-      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+      {canEdit && (
+        <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -550,10 +555,12 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      )}
 
       {/* Transfer to Inventory Dialog */}
-      <AlertDialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+      {canEdit && (
+        <AlertDialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -585,7 +592,8 @@ const GreeningProjectDetails: React.FC<GreeningProjectDetailsProps> = ({
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+        </AlertDialog>
+      )}
     </div>
   );
 };

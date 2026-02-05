@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -31,6 +31,8 @@ import {
 } from "@/presentation/components/shared/ui/alert-dialog";
 import { Loader2, Smartphone, Monitor, Tablet, HelpCircle, Power, PowerOff, Calendar, MapPin, Filter, X } from "lucide-react";
 import { useToast } from "@/core/hooks/ui/use-toast";
+import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 import {
     useAllSessions,
     useTerminateSession,
@@ -73,12 +75,18 @@ export function SessionManagement() {
     }, [deviceFilter, statusFilter, similarityFilter]);
 
     // Queries
-    const { data: allSessions = [], isLoading, error } = useAllSessions({
+    const { data: allSessions = [], isLoading, error, isFetching, refetch } = useAllSessions({
         device_type: deviceType,
         is_active: isActive,
         skip: (page - 1) * pageSize,
         limit: pageSize,
     });
+
+    const handleRefresh = useCallback(async () => {
+        await refetch();
+    }, [refetch]);
+
+    useContextMenuAction("refresh", handleRefresh);
 
     // Apply client-side similarity filtering
     const sessions = React.useMemo(() => {
@@ -252,8 +260,11 @@ export function SessionManagement() {
         <div className="flex flex-col h-full overflow-hidden">
             <div className="page-header-bg px-6 py-3">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Session Management</h1>
-                    <p className="text-gray-600 dark:text-gray-400">Monitor and manage user login sessions</p>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Session Management</h1>
+                        <p className="text-gray-600 dark:text-gray-400">Monitor and manage user login sessions</p>
+                    </div>
+                    <RefreshButton onClick={handleRefresh} isLoading={isFetching} />
                 </div>
             </div>
 

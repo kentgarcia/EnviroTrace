@@ -19,12 +19,17 @@ import {
     TestScheduleCreate,
     testScheduleService
 } from "@/core/api/test-schedule-service";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 interface QuarterInfoEditorProps {
     selectedYear: number;
 }
 
 export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYear }) => {
+    const canCreateSchedule = useAuthStore((state) => state.hasPermission(PERMISSIONS.SCHEDULE.CREATE));
+    const canUpdateSchedule = useAuthStore((state) => state.hasPermission(PERMISSIONS.SCHEDULE.UPDATE));
+    const canEditSchedule = canCreateSchedule || canUpdateSchedule;
     const [schedules, setSchedules] = useState<TestSchedule[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +64,7 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
     };
 
     const handleEdit = (quarter: number) => {
+        if (!canEditSchedule) return;
         const schedule = getScheduleForQuarter(quarter);
         if (schedule) {
             setFormData({
@@ -78,6 +84,15 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
 
     const handleSubmit = async () => {
         if (!editingQuarter || !selectedYear) return;
+        const existingSchedule = getScheduleForQuarter(editingQuarter);
+        if (existingSchedule && !canUpdateSchedule) {
+            alert("You do not have permission to update schedules.");
+            return;
+        }
+        if (!existingSchedule && !canCreateSchedule) {
+            alert("You do not have permission to create schedules.");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -174,15 +189,17 @@ export const QuarterInfoEditor: React.FC<QuarterInfoEditorProps> = ({ selectedYe
                         </div>
                     </div>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-slate-200 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider"
-                        onClick={() => handleEdit(quarter)}
-                    >
-                        <EditIcon className="h-3.5 w-3.5 mr-2" />
-                        {hasData ? "Edit Configuration" : "Set Up Quarter"}
-                    </Button>
+                    {canEditSchedule && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-slate-200 hover:bg-slate-50 font-bold text-xs uppercase tracking-wider"
+                            onClick={() => handleEdit(quarter)}
+                        >
+                            <EditIcon className="h-3.5 w-3.5 mr-2" />
+                            {hasData ? "Edit Configuration" : "Set Up Quarter"}
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
         );

@@ -20,6 +20,8 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-geosearch/dist/geosearch.css";
 import L from "leaflet";
 import { regions, provinces, cities, barangays } from "phil-reg-prov-mun-brgy";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Fix leaflet marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -140,6 +142,8 @@ const TreeForm: React.FC<TreeFormProps> = ({
   const [speciesSearch, setSpeciesSearch] = useState("");
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const [barangaySearch, setBarangaySearch] = useState("");
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreateSpecies = hasPermission(PERMISSIONS.TREE_SPECIES.CREATE);
   const initialTreeCode = (initialData?.tree_code ?? "").toUpperCase();
   const [treeCode, setTreeCode] = useState(initialTreeCode);
   const [isAutoCode, setIsAutoCode] = useState(() => {
@@ -388,6 +392,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
   };
 
   const handleAddCustomSpecies = async () => {
+    if (!canCreateSpecies) return;
     if (!customSpecies.common_name) return;
     
     try {
@@ -411,6 +416,12 @@ const TreeForm: React.FC<TreeFormProps> = ({
       // Error handled by mutation
     }
   };
+
+  useEffect(() => {
+    if (!canCreateSpecies && showCustomSpecies) {
+      setShowCustomSpecies(false);
+    }
+  }, [canCreateSpecies, showCustomSpecies]);
 
   const handlePhotosChange = useCallback((photos: UploadedImage[]) => {
     setFormData((prev) => ({ ...prev, photos }));
@@ -608,16 +619,18 @@ const TreeForm: React.FC<TreeFormProps> = ({
             )}
 
             {/* Custom Entry Option */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowCustomSpecies(true)}
-              className="w-full rounded-lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Species
-            </Button>
+            {canCreateSpecies && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCustomSpecies(true)}
+                className="w-full rounded-lg"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add New Species
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">

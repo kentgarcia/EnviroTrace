@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract, cast
 from sqlalchemy.types import Date
 
-from app.apis.deps import get_db
+from app.apis.deps import get_db, require_permissions_sync
+from app.models.auth_models import User
 from app.models.urban_greening_models import (
     FeeRecord, UrbanGreeningPlanting, TreeRequest, UrbanGreeningProject
 )
@@ -28,7 +29,8 @@ def month_labels():
 def get_urban_greening_dashboard(
     year: int | None = None,
     quarter: str | None = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permissions_sync(["dashboard.view"]))
 ):
     """
     Get urban greening dashboard overview data.

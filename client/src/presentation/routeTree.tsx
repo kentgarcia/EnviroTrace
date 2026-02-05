@@ -264,4 +264,4 @@ declare module "@tanstack/react-router" {
 // Router instance is ready to be used by RouterProvider
 
 // Export rootRoute, requireAuth, and requireRole for reuse
-export { rootRoute, requireAuth, requireRole };
+export { rootRoute, requireAuth, requireRole, requirePermission, requirePermissions };

@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { useAdminOverviewData } from "./logic/useAdminOverviewData";
 import { AdminStatsCards } from "./components/AdminStatsCards";
 import { AdminVisualDashboard } from "./components/AdminVisualDashboard";
 import { AdminQuickActions } from "./components/AdminQuickActions";
+import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 
 export const AdminOverview: React.FC = () => {
     const {
@@ -12,8 +14,16 @@ export const AdminOverview: React.FC = () => {
 
         // Loading states
         isLoading,
+        isRefreshing,
         error,
+        refreshAll,
     } = useAdminOverviewData();
+
+    const handleRefresh = useCallback(async () => {
+        await refreshAll();
+    }, [refreshAll]);
+
+    useContextMenuAction("refresh", handleRefresh);
 
     if (error) {
         return (
@@ -21,7 +31,10 @@ export const AdminOverview: React.FC = () => {
                 <div className="page-header-bg px-6 py-3">
                     <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">Error occurred</div>
+                        <div className="flex items-center gap-3">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Error occurred</div>
+                            <RefreshButton onClick={handleRefresh} isLoading={isRefreshing} />
+                        </div>
                     </div>
                 </div>
 
@@ -51,6 +64,7 @@ export const AdminOverview: React.FC = () => {
             <div className="page-header-bg px-6 py-3">
                 <div className="flex items-center justify-between">
                     <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Admin Dashboard</h1>
+                    <RefreshButton onClick={handleRefresh} isLoading={isRefreshing} />
                 </div>
             </div>
 

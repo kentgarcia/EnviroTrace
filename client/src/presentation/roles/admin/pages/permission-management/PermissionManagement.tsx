@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
@@ -23,8 +23,10 @@ import { Textarea } from "@/presentation/components/shared/ui/textarea";
 import { Shield, Users, Key, Lock, Eye, AlertCircle, Plus, Pencil, Trash2, Loader2, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/presentation/components/shared/ui/tooltip";
+import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
 
 interface Permission {
   id: string;
@@ -53,6 +55,7 @@ interface RoleSummary {
 const entityDisplayNames: Record<string, string> = {
   // Admin / Core
   user: "User Accounts",
+  user_account: "User Accounts",
   role: "System Roles",
   permission: "Access Controls",
   audit_log: "System Audit Logs",
@@ -67,9 +70,10 @@ const entityDisplayNames: Record<string, string> = {
   fee: "Service Fees & Billing",
   
   // Government Emission
+  office: "Government Offices",
   vehicle: "Vehicle Registry",
-  emission_test: "Emission Test Results",
-  test_schedule: "Inspection Schedules",
+  test: "Emission Test Results",
+  schedule: "Inspection Schedules",
 };
 
 const getEntityLabel = (entity: string) => {
@@ -80,6 +84,7 @@ const getModuleLabel = (module: string) => {
   const labels: Record<string, string> = {
     admin: "Administration & Security",
     urban_greening: "Urban Forestry Management",
+    emission: "Emission Control System",
     government_emission: "Emission Control System",
   };
   return labels[module] || module.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
@@ -131,11 +136,16 @@ export function PermissionManagementNew() {
   const [removeAllUsersDialogOpen, setRemoveAllUsersDialogOpen] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
   // Fetch all permissions (flat list)
-  const { data: allPermissions, isLoading: loadingPermissions } = useQuery({
+  const {
+    data: allPermissions,
+    isLoading: loadingPermissions,
+    refetch: refetchPermissions,
+  } = useQuery({
     queryKey: ["admin", "permissions-flat"],
     queryFn: async () => {
       const response = await fetch(`${apiUrl}/admin/permissions?grouped=false`, {
@@ -154,7 +164,11 @@ export function PermissionManagementNew() {
   });
 
   // Fetch available roles
-  const { data: availableRoles, isLoading: loadingRoles } = useQuery({
+  const {
+    data: availableRoles,
+    isLoading: loadingRoles,
+    refetch: refetchRoles,
+  } = useQuery({
     queryKey: ["admin", "roles"],
     queryFn: async () => {
       const response = await fetch(`${apiUrl}/admin/roles`, {
@@ -181,7 +195,11 @@ export function PermissionManagementNew() {
   }, [availableRoles, selectedRole]);
 
   // Fetch role permissions
-  const { data: rolePermissions, isLoading: loadingRolePerms } = useQuery({
+  const {
+    data: rolePermissions,
+    isLoading: loadingRolePerms,
+    refetch: refetchRolePermissions,
+  } = useQuery({
     queryKey: ["admin", "roles", selectedRole, "permissions"],
     queryFn: async () => {
       if (!selectedRole) {
@@ -201,7 +219,11 @@ export function PermissionManagementNew() {
   });
 
   // Fetch users by role
-  const { data: roleUsers, isLoading: loadingRoleUsers } = useQuery({
+  const {
+    data: roleUsers,
+    isLoading: loadingRoleUsers,
+    refetch: refetchRoleUsers,
+  } = useQuery({
     queryKey: ["admin", "roles", selectedRole, "users"],
     queryFn: async () => {
       if (!selectedRole) {
@@ -225,6 +247,34 @@ export function PermissionManagementNew() {
     : undefined;
 
   const totalPermissions = allPermissions?.length ?? 0;
+
+  const handleRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchPermissions(),
+        refetchRoles(),
+        refetchRolePermissions(),
+        viewUsersDialogOpen ? refetchRoleUsers() : Promise.resolve(),
+      ]);
+      toast.success("Permissions refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh permissions");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [
+    isRefreshing,
+    refetchPermissions,
+    refetchRoles,
+    refetchRolePermissions,
+    refetchRoleUsers,
+    viewUsersDialogOpen,
+  ]);
+
+  useContextMenuAction("refresh", handleRefresh);
 
   // Assign permission to role
   const assignPermission = useMutation({
@@ -477,97 +527,107 @@ export function PermissionManagementNew() {
               Manage role-based permissions and access control
             </p>
           </div>
+          <RefreshButton
+            onClick={handleRefresh}
+            isLoading={isRefreshing}
+            disabled={
+              loadingPermissions ||
+              loadingRoles ||
+              loadingRolePerms ||
+              loadingRoleUsers
+            }
+          />
         </div>
       </div>
 
       <div className="flex-1 overflow-hidden p-4">
-            <Card className="flex flex-col h-full border-none shadow-sm">
-              <CardHeader className="flex-shrink-0 pb-4 border-b dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Role Permission Matrix</CardTitle>
-                    <CardDescription>
-                      Select a role and toggle permissions on/off using the switches
-                    </CardDescription>
-                  </div>
-                <Dialog open={viewUsersDialogOpen} onOpenChange={setViewUsersDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Users ({roleUsers?.length ?? 0})
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>
-                        Users with {currentRole?.display_name ?? "Selected"} Role
-                      </DialogTitle>
-                      <DialogDescription>
-                        List of all users currently assigned to this role
-                      </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="max-h-[400px]">
-                      {loadingRoleUsers ? (
-                        <div className="text-center py-8">Loading...</div>
-                      ) : roleUsers && roleUsers.length > 0 ? (
-                        <div className="space-y-3">
-                          <div className="flex justify-end px-2">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => setRemoveAllUsersDialogOpen(true)}
-                              disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
-                            >
-                              <UserMinus className="mr-2 h-4 w-4" />
-                              Remove Role from All Users
-                            </Button>
-                          </div>
-                          {roleUsers.map((user) => (
-                            <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-                              <div className="flex-1">
-                                <p className="font-medium">
-                                  {user.profile?.first_name} {user.profile?.last_name}
-                                </p>
-                                <p className="text-sm text-muted-foreground">{user.email}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {user.is_super_admin && (
-                                  <Badge variant="destructive" title="Controlled by SUPER_ADMIN_EMAILS environment variable">
-                                    <Shield className="w-3 h-3 mr-1" />
-                                    Super Admin
-                                  </Badge>
-                                )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (selectedRole) {
-                                      removeRoleFromUser.mutate({ userId: user.id, roleSlug: selectedRole });
-                                    }
-                                  }}
-                                  disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
-                                >
-                                  {removeRoleFromUser.isPending ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <UserMinus className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No users found with this role
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </DialogContent>
-                </Dialog>
+        <Card className="flex flex-col h-full border-none shadow-sm">
+          <CardHeader className="flex-shrink-0 pb-4 border-b dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg text-gray-900 dark:text-gray-100">Role Permission Matrix</CardTitle>
+                <CardDescription>
+                  Select a role and toggle permissions on/off using the switches
+                </CardDescription>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden flex flex-col pt-4 px-0">
+              <Dialog open={viewUsersDialogOpen} onOpenChange={setViewUsersDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Users ({roleUsers?.length ?? 0})
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-gray-900 dark:text-gray-100">
+                      Users with {currentRole?.display_name ?? "Selected"} Role
+                    </DialogTitle>
+                    <DialogDescription className="text-gray-600 dark:text-gray-300">
+                      List of all users currently assigned to this role
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ScrollArea className="max-h-[400px]">
+                    {loadingRoleUsers ? (
+                      <div className="text-center py-8">Loading...</div>
+                    ) : roleUsers && roleUsers.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex justify-end px-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setRemoveAllUsersDialogOpen(true)}
+                            disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
+                          >
+                            <UserMinus className="mr-2 h-4 w-4" />
+                            Remove Role from All Users
+                          </Button>
+                        </div>
+                        {roleUsers.map((user) => (
+                          <div key={user.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            <div className="flex-1">
+                              <p className="font-medium">
+                                {user.profile?.first_name} {user.profile?.last_name}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {user.is_super_admin && (
+                                <Badge variant="destructive" title="Controlled by SUPER_ADMIN_EMAILS environment variable">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  Super Admin
+                                </Badge>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (selectedRole) {
+                                    removeRoleFromUser.mutate({ userId: user.id, roleSlug: selectedRole });
+                                  }
+                                }}
+                                disabled={removeRoleFromUser.isPending || removeRoleFromAllUsers.isPending}
+                              >
+                                {removeRoleFromUser.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <UserMinus className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No users found with this role
+                      </div>
+                    )}
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-hidden flex flex-col pt-4 px-0">
               {/* Role Selector */}
               <div className="flex flex-col gap-3 px-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -687,7 +747,6 @@ export function PermissionManagementNew() {
                               </TableHeader>
                               <TableBody>
                                 {Object.entries(entities).map(([entityType, permissions], index) => {
-                                  // Group permissions by action type for this entity
                                   const permissionsByAction = permissions.reduce((acc, perm) => {
                                     acc[perm.action] = perm;
                                     return acc;
@@ -700,16 +759,20 @@ export function PermissionManagementNew() {
                                   );
 
                                   return (
-                                    <TableRow key={entityType} className={`hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/30 dark:bg-gray-800/30'}`}>
+                                    <TableRow
+                                      key={entityType}
+                                      className={`hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors ${index % 2 === 0 ? "bg-white dark:bg-gray-900" : "bg-gray-50/30 dark:bg-gray-800/30"}`}
+                                    >
                                       <TableCell className="font-medium text-gray-700 dark:text-gray-200 pl-4">
-                                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{getEntityLabel(entityType)}</span>
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                          {getEntityLabel(entityType)}
+                                        </span>
                                       </TableCell>
                                       <TableCell className="text-sm text-muted-foreground align-top">
                                         {summaryDescription}
                                       </TableCell>
                                       {["view", "create", "update", "delete"].map((action) => {
-                                        // Hide "view" action for role and permission entities as requested
-                                        if (action === 'view' && (entityType === 'role' || entityType === 'permission')) {
+                                        if (action === "view" && (entityType === "role" || entityType === "permission")) {
                                           return (
                                             <TableCell key={action} className="text-center p-2">
                                               <div className="flex justify-center">
@@ -720,7 +783,7 @@ export function PermissionManagementNew() {
                                         }
 
                                         const permission = permissionsByAction[action];
-                                        
+
                                         if (!permission) {
                                           return (
                                             <TableCell key={action} className="text-center">
@@ -731,27 +794,28 @@ export function PermissionManagementNew() {
                                           );
                                         }
 
-                                        const isAssigned: boolean = hasPermission(permission.id);
+                                        const isAssigned = hasPermission(permission.id);
+
                                         return (
                                           <TableCell key={action} className="text-center p-2">
-                                            <div className="flex justify-center">
+                                            <div className="flex flex-col items-center gap-2">
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
                                                   <div>
                                                     <Switch
                                                       checked={isAssigned}
-                                                      onCheckedChange={() =>
-                                                        handlePermissionToggle(permission.id, isAssigned)
-                                                      }
-                                                      disabled={isPending || loadingRolePerms}
-                                                      className={`${isAssigned ? 'data-[state=checked]:bg-primary' : 'dark:bg-gray-700'}`}
+                                                      onCheckedChange={() => handlePermissionToggle(permission.id, isAssigned)}
+                                                      disabled={isPending}
                                                     />
                                                   </div>
                                                 </TooltipTrigger>
-                                                <TooltipContent side="left">
-                                                  <p>{isAssigned ? "Active" : "Inactive"}: {permission.description}</p>
+                                                <TooltipContent>
+                                                  <p>{permission.description || "No description provided"}</p>
                                                 </TooltipContent>
                                               </Tooltip>
+                                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${getActionColor(action)}`}>
+                                                {action.toUpperCase()}
+                                              </span>
                                             </div>
                                           </TableCell>
                                         );
@@ -775,8 +839,8 @@ export function PermissionManagementNew() {
       <Dialog open={createRoleDialogOpen} onOpenChange={setCreateRoleDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create New Role</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900 dark:text-gray-100">Create New Role</DialogTitle>
+            <DialogDescription className="text-gray-600 dark:text-gray-300">
               Create a custom role with specific permissions
             </DialogDescription>
           </DialogHeader>
@@ -839,8 +903,8 @@ export function PermissionManagementNew() {
       <AlertDialog open={deleteRoleDialogOpen} onOpenChange={setDeleteRoleDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Role</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">Delete Role</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
               Are you sure you want to delete the role "{currentRole?.display_name}"?
               {roleUsers && roleUsers.length > 0 ? (
                 <span className="block mt-2 text-red-600 font-medium">
@@ -876,8 +940,8 @@ export function PermissionManagementNew() {
       <AlertDialog open={removeAllUsersDialogOpen} onOpenChange={setRemoveAllUsersDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Role from All Users</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">Remove Role from All Users</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
               Are you sure you want to remove the "{currentRole?.display_name}" role from all {roleUsers?.length ?? 0} user(s)?
               This action cannot be undone.
             </AlertDialogDescription>

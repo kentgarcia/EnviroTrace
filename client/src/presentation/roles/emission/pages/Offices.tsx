@@ -7,6 +7,8 @@ import { YearSelector } from "@/presentation/roles/emission/components/offices/Y
 import { OfficeComplianceTable } from "@/presentation/roles/emission/components/offices/OfficeComplianceTable";
 import { OfficeModal } from "@/presentation/roles/emission/components/offices/OfficeModal";
 import { useOffices, OfficeWithCompliance } from "@/core/hooks/offices/useOffices";
+import { PERMISSIONS } from "@/core/utils/permissions";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 // Memoize the statistic cards to prevent unnecessary re-renders
 const StatCard = memo(
@@ -32,6 +34,9 @@ StatCard.displayName = "StatCard";
 export default function OfficesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOffice, setEditingOffice] = useState<OfficeWithCompliance | null>(null);
+  const canCreateOffice = useAuthStore((state) => state.hasPermission(PERMISSIONS.OFFICE.CREATE));
+  const canUpdateOffice = useAuthStore((state) => state.hasPermission(PERMISSIONS.OFFICE.UPDATE));
+  const canViewTests = useAuthStore((state) => state.hasPermission(PERMISSIONS.TEST.VIEW));
 
   const {
     officeData,
@@ -79,14 +84,16 @@ export default function OfficesPage() {
   }, [refetch]);
 
   const handleAddOffice = useCallback(() => {
+    if (!canCreateOffice) return;
     setEditingOffice(null);
     setIsModalOpen(true);
-  }, []);
+  }, [canCreateOffice]);
 
   const handleEditOffice = useCallback((office: OfficeWithCompliance) => {
+    if (!canUpdateOffice) return;
     setEditingOffice(office);
     setIsModalOpen(true);
-  }, []);
+  }, [canUpdateOffice]);
 
   const handleModalSuccess = useCallback(() => {
     refetch();
@@ -183,13 +190,15 @@ export default function OfficesPage() {
                           selectedQuarter={filters.quarter}
                           onQuarterChange={handleQuarterChange}
                         />
-                        <Button
-                          onClick={handleAddOffice}
-                          className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Office
-                        </Button>
+                        {canCreateOffice && (
+                          <Button
+                            onClick={handleAddOffice}
+                            className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Office
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -198,7 +207,9 @@ export default function OfficesPage() {
                         officeData={officeData}
                         errorMessage={errorMessage || undefined}
                         year={filters.year}
-                        onEdit={handleEditOffice}
+                        onEdit={canUpdateOffice ? handleEditOffice : undefined}
+                        canEdit={canUpdateOffice}
+                        canViewTests={canViewTests}
                       />
                     </div>
                   </Card>
@@ -209,12 +220,14 @@ export default function OfficesPage() {
       </div>
 
       {/* Office Modal */}
-      <OfficeModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        office={editingOffice}
-        onSuccess={handleModalSuccess}
-      />
+      {(canCreateOffice || canUpdateOffice) && (
+        <OfficeModal
+          open={isModalOpen}
+          onOpenChange={setIsModalOpen}
+          office={editingOffice}
+          onSuccess={handleModalSuccess}
+        />
+      )}
     </>
   );
 }

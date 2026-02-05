@@ -2,7 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.apis.deps import get_db
+from app.apis.deps import get_db, require_permissions_sync
 from app.crud.crud_test_schedule import crud_test_schedule
 from app.schemas.test_schedule_schemas import (
     TestScheduleCreate,
@@ -16,7 +16,8 @@ router = APIRouter()
 @router.get("/schedules/{year}", response_model=List[TestScheduleResponse])
 def get_schedules_by_year(
     year: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permissions_sync(["schedule.view"]))
 ):
     """Get all test schedules for a specific year"""
     schedules = crud_test_schedule.get_by_year_sync(db=db, year=year)
@@ -27,7 +28,8 @@ def get_schedules_by_year(
 def get_schedule_by_year_quarter(
     year: int,
     quarter: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permissions_sync(["schedule.view"]))
 ):
     """Get test schedule for a specific year and quarter"""
     if quarter not in [1, 2, 3, 4]:
@@ -52,7 +54,8 @@ def get_schedule_by_year_quarter(
 @router.post("/schedules", response_model=TestScheduleResponse)
 def create_or_update_schedule(
     schedule_in: TestScheduleCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permissions_sync(["schedule.create", "schedule.update"]))
 ):
     """Create a new test schedule or update existing one"""
     schedule = crud_test_schedule.create_or_update_schedule_sync(
@@ -66,7 +69,8 @@ def update_schedule(
     year: int,
     quarter: int,
     schedule_in: TestScheduleUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permissions_sync(["schedule.update"]))
 ):
     """Update an existing test schedule"""
     if quarter not in [1, 2, 3, 4]:
@@ -95,7 +99,8 @@ def update_schedule(
 def delete_schedule(
     year: int,
     quarter: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(require_permissions_sync(["schedule.delete"]))
 ):
     """Delete a test schedule"""
     if quarter not in [1, 2, 3, 4]:

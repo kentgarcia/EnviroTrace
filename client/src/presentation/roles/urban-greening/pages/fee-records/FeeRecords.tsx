@@ -28,6 +28,8 @@ import {
 } from "./logic/utils";
 import { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 const FeeRecords: React.FC = () => {
     const currentYear = new Date().getFullYear();
@@ -44,6 +46,20 @@ const FeeRecords: React.FC = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const { updateMutation, createMutation, deleteMutation, fullUpdateMutation } = useFeeRecordMutations();
+
+    const hasPermission = useAuthStore((state) => state.hasPermission);
+    const canCreateFee = hasPermission(PERMISSIONS.FEE.CREATE);
+    const canUpdateFee = hasPermission(PERMISSIONS.FEE.UPDATE);
+    const canDeleteFee = hasPermission(PERMISSIONS.FEE.DELETE);
+
+    React.useEffect(() => {
+        if (!canCreateFee && isFormOpen) {
+            setIsFormOpen(false);
+        }
+        if (!canUpdateFee && isEditingDetails) {
+            setIsEditingDetails(false);
+        }
+    }, [canCreateFee, canUpdateFee, isEditingDetails, isFormOpen]);
 
     // Use React Query for data fetching with year filter
     const { data: allRecords = [], isLoading, error, refetch } = useQuery({
@@ -127,6 +143,7 @@ const FeeRecords: React.FC = () => {
     }, []);
 
     const handleAddRecord = () => {
+        if (!canCreateFee) return;
         setFormMode("add");
         setSelectedRecord(null);
         setIsFormOpen(true);
@@ -140,15 +157,18 @@ const FeeRecords: React.FC = () => {
         setIsEditingDetails(false);
     };
     const handleStartInlineEdit = () => {
+        if (!canUpdateFee) return;
         if (selectedRowForDetails) setIsEditingDetails(true);
     };
 
     const handleDeleteSelected = () => {
+        if (!canDeleteFee) return;
         if (!selectedRowForDetails) return;
         setIsDeleteDialogOpen(true);
     };
 
     const confirmDelete = () => {
+        if (!canDeleteFee) return;
         if (!selectedRowForDetails) return;
         deleteMutation.mutate(selectedRowForDetails.id);
         setSelectedRowForDetails(null);
@@ -157,6 +177,7 @@ const FeeRecords: React.FC = () => {
 
     const handleFormSave = (data: any) => {
         if (formMode === "add") {
+            if (!canCreateFee) return;
             createMutation.mutate(data);
             setIsFormOpen(false);
         }
@@ -241,14 +262,16 @@ const FeeRecords: React.FC = () => {
                                     <div className="flex flex-col gap-4 w-full">
                                         <div className="flex items-center justify-between">
                                             <CardTitle>Fee Records</CardTitle>
-                                            <Button
-                                                onClick={handleAddRecord}
-                                                size="sm"
-                                                disabled={isLoading}
-                                                className="rounded-lg"
-                                            >
-                                                Add New Record
-                                            </Button>
+                                            {canCreateFee && (
+                                                <Button
+                                                    onClick={handleAddRecord}
+                                                    size="sm"
+                                                    disabled={isLoading}
+                                                    className="rounded-lg"
+                                                >
+                                                    Add New Record
+                                                </Button>
+                                            )}
                                         </div>
                                         
                                         {/* Tabs Design */}
@@ -394,8 +417,12 @@ const FeeRecords: React.FC = () => {
                                                     <div className="flex justify-between"><span className="text-gray-600 dark:text-gray-400">Payment Date</span><span className="font-medium">{selectedRowForDetails.payment_date}</span></div>
                                                 )}
                                                 <div className="pt-3 border-t flex gap-2">
-                                                    <Button variant="outline" size="sm" onClick={handleStartInlineEdit} className="rounded-lg">Edit</Button>
-                                                    <Button variant="outline" size="sm" className="text-red-600 rounded-lg" onClick={handleDeleteSelected}>Delete</Button>
+                                                    {canUpdateFee && (
+                                                        <Button variant="outline" size="sm" onClick={handleStartInlineEdit} className="rounded-lg">Edit</Button>
+                                                    )}
+                                                    {canDeleteFee && (
+                                                        <Button variant="outline" size="sm" className="text-red-600 rounded-lg" onClick={handleDeleteSelected}>Delete</Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         )
@@ -476,6 +503,7 @@ const FeeRecords: React.FC = () => {
                             <Button
                                 onClick={confirmDelete}
                                 className="bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                                disabled={!canDeleteFee}
                             >
                                 Delete
                             </Button>

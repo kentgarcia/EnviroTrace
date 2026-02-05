@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useVehicles, useOffices, EmissionTest, Vehicle, Office } from "@/core/api/emission-service";
 import { useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
 import apiClient from "@/core/api/api-client";
+import { usePermissions } from "@/core/hooks/auth/usePermissions";
 
 interface VehicleWithTests extends Vehicle {
     tests: {
@@ -36,6 +37,12 @@ interface TestFormData {
 
 export const useRevampedQuarterlyTesting = () => {
     const currentYear = new Date().getFullYear();
+    const { can } = usePermissions();
+
+    const canCreateTest = can("test", "create");
+    const canUpdateTest = can("test", "update");
+    const canDeleteTest = can("test", "delete");
+    const canUpdateRemarks = can("vehicle", "update");
 
     // State - Default to current year and all offices
     const [selectedYear, setSelectedYear] = useState<number>(currentYear);
@@ -142,6 +149,10 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleAddTest = (vehicleId: string, quarter: number) => {
+        if (!canCreateTest) {
+            toast.error("You do not have permission to add tests.");
+            return;
+        }
         const vehicle = vehicles.find(v => v.id === vehicleId);
         if (vehicle) {
             setSelectedVehicle(vehicle);
@@ -152,6 +163,10 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleEditTest = (test: EmissionTest) => {
+        if (!canUpdateTest) {
+            toast.error("You do not have permission to edit tests.");
+            return;
+        }
         const vehicle = vehicles.find(v => v.id === test.vehicle_id);
         if (vehicle) {
             setSelectedVehicle(vehicle);
@@ -162,6 +177,10 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleAddRemarks = async (vehicleId: string, remarks: string) => {
+        if (!canUpdateRemarks) {
+            toast.error("You do not have permission to update remarks.");
+            return;
+        }
         try {
             await apiClient.put(`/emission/vehicles/${vehicleId}/remarks/${selectedYear}`, {
                 remarks
@@ -175,6 +194,14 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleSubmitTest = async (data: TestFormData) => {
+        if (testToEdit && !canUpdateTest) {
+            toast.error("You do not have permission to edit tests.");
+            return;
+        }
+        if (!testToEdit && !canCreateTest) {
+            toast.error("You do not have permission to add tests.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const testData = {
@@ -225,11 +252,23 @@ export const useRevampedQuarterlyTesting = () => {
             );
 
             if (result === null) {
+                if (!canDeleteTest) {
+                    toast.error("You do not have permission to delete tests.");
+                    return;
+                }
                 // Delete the test if setting to "Not Tested"
                 if (existingTest) {
                     await apiClient.delete(`/emission/tests/${existingTest.id}`);
                 }
             } else {
+                if (existingTest && !canUpdateTest) {
+                    toast.error("You do not have permission to edit tests.");
+                    return;
+                }
+                if (!existingTest && !canCreateTest) {
+                    toast.error("You do not have permission to add tests.");
+                    return;
+                }
                 const testData = {
                     vehicle_id: vehicleId,
                     test_date: currentDate,
@@ -256,6 +295,14 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleBatchUpdateTests = async (vehicleIds: string[], quarter: number, result: boolean | null) => {
+        if (result === null && !canDeleteTest) {
+            toast.error("You do not have permission to delete tests.");
+            return;
+        }
+        if (result !== null && !canUpdateTest && !canCreateTest) {
+            toast.error("You do not have permission to edit tests.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const currentDate = new Date().toISOString().split('T')[0];
@@ -307,6 +354,10 @@ export const useRevampedQuarterlyTesting = () => {
     };
 
     const handleBatchAddTests = async (vehicleIds: string[], quarter: number, result: boolean) => {
+        if (!canCreateTest) {
+            toast.error("You do not have permission to add tests.");
+            return;
+        }
         setIsSubmitting(true);
         try {
             const currentDate = new Date().toISOString().split('T')[0];
@@ -430,6 +481,12 @@ export const useRevampedQuarterlyTesting = () => {
     }, [officeGroups]);
 
     return {
+        // Permissions
+        canCreateTest,
+        canUpdateTest,
+        canDeleteTest,
+        canUpdateRemarks,
+
         // State
         selectedYear,
         selectedOffices,

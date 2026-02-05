@@ -1,6 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
-import { rootRoute, requireAuth, requireRole } from "@/presentation/routeTree";
+import { rootRoute, requireAuth, requireRole, requirePermission, requirePermissions } from "@/presentation/routeTree";
 import DashboardLayout from "@/presentation/components/shared/layout/DashboardLayout";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 import { UrbanGreeningOverview } from "./pages/overview/UrbanGreeningOverview";
 import FeeRecords from "./pages/fee-records/FeeRecords";
@@ -26,54 +27,87 @@ const overviewRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "overview",
     component: UrbanGreeningOverview,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.DASHBOARD.VIEW);
+    },
 });
 
 const treeInventoryRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "tree-inventory",
     component: TreeInventoryPage,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.TREE.VIEW);
+    },
 });
 
 const treeRequestsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "tree-requests",
     component: ISOTreeRequestsPage,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.TREE_REQUEST.VIEW);
+    },
 });
 
 const processingStandardsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "processing-standards",
     component: ProcessingStandardsSettings,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.PROCESSING_STANDARD.VIEW);
+    },
 });
 
 const greeningProjectsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "greening-projects",
     component: GreeningProjectsPage,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.URBAN_PROJECT.VIEW);
+    },
 });
 
 const feeRecordsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "fee-records",
     component: FeeRecords,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.FEE.VIEW);
+    },
 });
 
 const settingsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "settings",
     component: UrbanGreeningSettings,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.PROCESSING_STANDARD.VIEW);
+    },
 });
 
 const speciesManagementRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "species",
     component: SpeciesManagementPage,
+    beforeLoad: () => {
+        requirePermission(PERMISSIONS.TREE_SPECIES.VIEW);
+    },
 });
 
 const reportsRoute = createRoute({
     getParentRoute: () => urbanGreeningLayout,
     path: "reports",
     component: UrbanGreeningReports,
+    beforeLoad: () => {
+        requirePermissions([
+            PERMISSIONS.TREE.VIEW,
+            PERMISSIONS.TREE_REQUEST.VIEW,
+            PERMISSIONS.PLANTING.VIEW,
+            PERMISSIONS.SAPLING_COLLECTION.VIEW,
+            PERMISSIONS.FEE.VIEW,
+        ], true);
+    },
 });
 
 urbanGreeningLayout.addChildren([

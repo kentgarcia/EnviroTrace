@@ -21,6 +21,7 @@ const ROUTE_QUERY_MAP: Record<string, string[]> = {
   '/admin/user-management': ['users'],
   '/admin/session-management': ['sessions'],
   '/admin/audit-logs': ['audit-logs'],
+  '/admin/permission-management': ['admin'],
 };
 
 // Friendly names for toast notifications
@@ -36,6 +37,7 @@ const ROUTE_NAMES: Record<string, string> = {
   '/admin/user-management': 'User Management',
   '/admin/session-management': 'Session Management',
   '/admin/audit-logs': 'Audit Logs',
+  '/admin/permission-management': 'Permission Management',
 };
 
 interface RefreshContextValue {

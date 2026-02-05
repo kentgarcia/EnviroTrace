@@ -4,7 +4,7 @@
  * Unified view for tracking all trees in the system
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -37,6 +37,8 @@ import TreeForm from "./components/TreeForm";
 import TreeDetailPanel from "./components/TreeDetailPanel";
 import TreeInventoryMap from "./components/TreeInventoryMap";
 import CarbonStatistics from "./components/CarbonStatistics";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Search params type
 interface TreeInventorySearch {
@@ -49,6 +51,13 @@ interface TreeInventorySearch {
 const TreeInventoryPage: React.FC = () => {
   // Get URL search params
   const search = useSearch({ strict: false }) as TreeInventorySearch;
+
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreateTree = hasPermission(PERMISSIONS.TREE.CREATE);
+  const canUpdateTree = hasPermission(PERMISSIONS.TREE.UPDATE);
+  const canDeleteTree = hasPermission(PERMISSIONS.TREE.DELETE);
+  const canViewMonitoring = hasPermission(PERMISSIONS.MONITORING_LOG.VIEW);
+  const canCreateMonitoring = hasPermission(PERMISSIONS.MONITORING_LOG.CREATE);
   
   const [activeTab, setActiveTab] = useState<"registry" | "map" | "stats">(search?.tab || "registry");
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,6 +81,12 @@ const TreeInventoryPage: React.FC = () => {
     is_archived: showArchived,
   });
   const { createMutation, updateMutation, archiveMutation, restoreMutation } = useTreeMutations();
+
+  useEffect(() => {
+    if (search?.action === "add" && !canCreateTree) {
+      setIsFormOpen(false);
+    }
+  }, [canCreateTree, search?.action]);
 
   // Table columns
   const columns: ColumnDef<TreeInventory>[] = useMemo(() => [
@@ -181,56 +196,64 @@ const TreeInventoryPage: React.FC = () => {
             >
               <Eye className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditTree(tree);
-              }}
-              className="h-8 w-8 p-0"
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
+            {canUpdateTree && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEditTree(tree);
+                }}
+                className="h-8 w-8 p-0"
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
             {!tree.is_archived ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleArchiveTree(tree);
-                }}
-                className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
-              >
-                <Archive className="h-4 w-4" />
-              </Button>
+              canDeleteTree && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleArchiveTree(tree);
+                  }}
+                  className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+              )
             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRestoreTree(tree);
-                }}
-                className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-              >
-                <ArchiveRestore className="h-4 w-4" />
-              </Button>
+              canUpdateTree && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRestoreTree(tree);
+                  }}
+                  className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                >
+                  <ArchiveRestore className="h-4 w-4" />
+                </Button>
+              )
             )}
           </div>
         );
       },
     },
-  ], []);
+  ], [canDeleteTree, canUpdateTree]);
 
   // Handlers
   const handleAddTree = () => {
+    if (!canCreateTree) return;
     setFormMode("add");
     setSelectedTree(null);
     setIsFormOpen(true);
   };
 
   const handleEditTree = (tree: TreeInventory) => {
+    if (!canUpdateTree) return;
     setFormMode("edit");
     setSelectedTree(tree);
     setIsFormOpen(true);
@@ -242,19 +265,23 @@ const TreeInventoryPage: React.FC = () => {
 
   const handleFormSave = async (data: any) => {
     if (formMode === "add") {
+      if (!canCreateTree) return;
       await createMutation.mutateAsync(data);
     } else if (selectedTree) {
+      if (!canUpdateTree) return;
       await updateMutation.mutateAsync({ id: selectedTree.id, data });
     }
     setIsFormOpen(false);
   };
 
   const handleArchiveTree = async (tree: TreeInventory) => {
+    if (!canDeleteTree) return;
     await archiveMutation.mutateAsync(tree.id);
     setDetailTree(null);
   };
 
   const handleRestoreTree = async (tree: TreeInventory) => {
+    if (!canUpdateTree) return;
     await restoreMutation.mutateAsync(tree.id);
     setDetailTree(null);
   };
@@ -382,13 +409,15 @@ const TreeInventoryPage: React.FC = () => {
                         {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                         {showArchived ? "Show Active" : "View Archived"}
                       </Button>
-                                    <Button
-                onClick={handleAddTree}
-                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Tree
-              </Button>
+                                    {canCreateTree && (
+                                      <Button
+                                        onClick={handleAddTree}
+                                        className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+                                      >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add Tree
+                                      </Button>
+                                    )}
                     </div>
 
                     {/* Data Table */}
@@ -424,6 +453,11 @@ const TreeInventoryPage: React.FC = () => {
                     isArchived={detailTree.is_archived}
                     isArchiving={archiveMutation.isPending}
                     isRestoring={restoreMutation.isPending}
+                    canEdit={canUpdateTree}
+                    canArchive={canDeleteTree}
+                    canRestore={canUpdateTree}
+                    canViewMonitoring={canViewMonitoring}
+                    canCreateMonitoring={canCreateMonitoring}
                   />
                 </div>
               )}

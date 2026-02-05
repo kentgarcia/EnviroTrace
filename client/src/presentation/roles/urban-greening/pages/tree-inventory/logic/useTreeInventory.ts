@@ -480,11 +480,11 @@ export const useTreeMutations = () => {
 
 // ==================== Monitoring Log Hooks ====================
 
-export const useMonitoringLogs = (treeId: string) => {
+export const useMonitoringLogs = (treeId: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["tree-inventory", treeId, "monitoring"],
     queryFn: () => fetchMonitoringLogs(treeId),
-    enabled: !!treeId,
+    enabled: options?.enabled ?? !!treeId,
   });
 };
 

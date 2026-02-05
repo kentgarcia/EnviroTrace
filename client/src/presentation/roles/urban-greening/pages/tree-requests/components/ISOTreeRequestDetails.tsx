@@ -343,14 +343,17 @@ interface ISOTreeRequestDetailsProps {
   request: TreeRequestWithAnalytics;
   onClose: () => void;
   onUpdate?: () => void;
+  canEdit?: boolean;
 }
 
 const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo(({
   request,
   onClose,
   onUpdate,
+  canEdit = true,
 }) => {
   const queryClient = useQueryClient();
+  const isReadOnly = !canEdit;
   const [displayData, setDisplayData] = useState<TreeRequestWithAnalytics>(request);
   const [initialData, setInitialData] = useState<TreeRequestCreate>(() => buildFormData(request));
   const [draftData, setDraftData] = useState<TreeRequestCreate>(() => buildFormData(request));
@@ -440,6 +443,7 @@ const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo((
 
   const handleFieldChange = useCallback(
     (field: keyof TreeRequestCreate, value: any, meta?: { type?: FieldRendererType }) => {
+      if (isReadOnly) return;
       setDraftData((prev) => {
         const next: TreeRequestCreate = { ...prev };
         let processedValue: any = value;
@@ -467,6 +471,7 @@ const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo((
 
   const handleRequirementChange = useCallback(
     (index: number, field: "is_checked" | "date_submitted", value: any) => {
+      if (isReadOnly) return;
       setDraftData((prev) => {
         const currentChecklist = cloneChecklist(prev.requirements_checklist);
         if (!currentChecklist[index]) {
@@ -535,12 +540,13 @@ const ISOTreeRequestDetails: React.FC<ISOTreeRequestDetailsProps> = React.memo((
   });
 
   const handleSave = useCallback(() => {
+    if (isReadOnly) return;
     const payload = cloneFormData(draftData);
     const fallbackStatus = (displayData.overall_status ?? request.overall_status ?? "receiving") as ISOOverallStatus;
     payload.overall_status = deriveOverallStatus(payload, fallbackStatus);
     setSaveState("saving");
     saveMutation.mutate(payload);
-  }, [draftData, displayData.overall_status, request.overall_status, saveMutation]);
+  }, [draftData, displayData.overall_status, isReadOnly, request.overall_status, saveMutation]);
 
   const applyInitialState = useCallback(() => {
     const reset = cloneFormData(initialDataRef.current);
@@ -721,24 +727,28 @@ Last Updated: ${displayData.updated_at ? new Date(displayData.updated_at).toLoca
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg"
-                onClick={handleDiscard}
-                disabled={!isDirty || isSaving}
-              >
-                Discard
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-lg bg-[#0033a0] hover:bg-[#002a80] text-white"
-                onClick={handleSave}
-                disabled={!isDirty || isSaving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save changes
-              </Button>
+              {!isReadOnly && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg"
+                    onClick={handleDiscard}
+                    disabled={!isDirty || isSaving}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="rounded-lg bg-[#0033a0] hover:bg-[#002a80] text-white"
+                    onClick={handleSave}
+                    disabled={!isDirty || isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save changes
+                  </Button>
+                </>
+              )}
               <Button
                 variant="secondary"
                 size="sm"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -16,9 +16,11 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/presentation/components/shared/ui/sheet";
-import { Search, Shield, User, Globe, Clock, Loader2, Download, CalendarIcon, RefreshCw } from "lucide-react";
+import { Search, Shield, User, Globe, Clock, Loader2, Download, CalendarIcon } from "lucide-react";
 import { useAuditLogs, AuditLog } from "@/core/api/admin-api";
 import { getAuditDescription } from "./auditDescriptions";
+import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 import {
     Pagination,
     PaginationContent,
@@ -172,6 +174,12 @@ export function AuditLogs() {
     const totalCount = logsResponse?.total || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
 
+    const handleRefresh = useCallback(async () => {
+        await refetch();
+    }, [refetch]);
+
+    useContextMenuAction("refresh", handleRefresh);
+
     // Find selected log from the list (no additional fetch needed)
     const selectedLog = React.useMemo(
         () => logs.find(log => log.id === selectedLogId),
@@ -272,15 +280,7 @@ export function AuditLogs() {
                         <p className="text-gray-600">ISO-compliant system activity audit trail</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => refetch()}
-                            disabled={isFetching}
-                        >
-                            <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-                            Refresh
-                        </Button>
+                        <RefreshButton onClick={handleRefresh} isLoading={isFetching} />
                         <Select onValueChange={(value) => handleDownload(value as 'txt' | 'json' | 'csv')}>
                             <SelectTrigger className="w-[180px]">
                                 <Download className="w-4 h-4 mr-2" />

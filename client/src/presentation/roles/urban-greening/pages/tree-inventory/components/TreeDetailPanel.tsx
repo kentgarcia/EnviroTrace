@@ -50,6 +50,11 @@ interface TreeDetailPanelProps {
   isArchived: boolean;
   isArchiving: boolean;
   isRestoring: boolean;
+  canEdit: boolean;
+  canArchive: boolean;
+  canRestore: boolean;
+  canViewMonitoring: boolean;
+  canCreateMonitoring: boolean;
 }
 
 const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
@@ -61,6 +66,11 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   isArchived,
   isArchiving,
   isRestoring,
+  canEdit,
+  canArchive,
+  canRestore,
+  canViewMonitoring,
+  canCreateMonitoring,
 }) => {
   const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -76,9 +86,12 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
   });
 
   // Fetch monitoring logs for this tree
-  const { data: monitoringLogs = [], isLoading: logsLoading } = useTreeMonitoringLogs(tree.id);
+  const { data: monitoringLogs = [], isLoading: logsLoading } = useTreeMonitoringLogs(tree.id, {
+    enabled: canViewMonitoring,
+  });
   const { createMutation } = useMonitoringMutations();
   const archiveActionPending = isArchived ? isRestoring : isArchiving;
+  const canArchiveAction = isArchived ? canRestore : canArchive;
 
   const statusColors: Record<string, string> = {
     alive: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700",
@@ -319,82 +332,97 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
         )}
 
         {/* Monitoring History */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <ClipboardCheck className="w-4 h-4" />
-              Monitoring History
+        {canViewMonitoring ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <ClipboardCheck className="w-4 h-4" />
+                Monitoring History
+              </div>
+              {canCreateMonitoring && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsLogDialogOpen(true)}
+                  className="text-xs rounded-lg"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Log
+                </Button>
+              )}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsLogDialogOpen(true)}
-              className="text-xs rounded-lg"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              Add Log
-            </Button>
-          </div>
 
-          {logsLoading ? (
-            <div className="text-sm text-gray-500 text-center py-4">Loading logs...</div>
-          ) : monitoringLogs.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
-              No monitoring logs yet
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {monitoringLogs.map((log) => (
-                <div key={log.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <Badge className={healthColors[log.health_status]} variant="outline">
-                      {log.health_status.replace("_", " ")}
-                    </Badge>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(log.inspection_date)}
-                    </span>
-                  </div>
-                  {log.notes && <div className="text-gray-600 mt-1">{log.notes}</div>}
-                  {log.recommendations && (
-                    <div className="text-blue-600 text-xs mt-1">
-                      Recommendation: {log.recommendations}
+            {logsLoading ? (
+              <div className="text-sm text-gray-500 text-center py-4">Loading logs...</div>
+            ) : monitoringLogs.length === 0 ? (
+              <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                No monitoring logs yet
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {monitoringLogs.map((log) => (
+                  <div key={log.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge className={healthColors[log.health_status]} variant="outline">
+                        {log.health_status.replace("_", " ")}
+                      </Badge>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(log.inspection_date)}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                    {log.notes && <div className="text-gray-600 mt-1">{log.notes}</div>}
+                    {log.recommendations && (
+                      <div className="text-blue-600 text-xs mt-1">
+                        Recommendation: {log.recommendations}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500 text-center py-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+            You do not have permission to view monitoring logs.
+          </div>
+        )}
 
         {/* Actions */}
-        <div className="flex gap-2 pt-4 border-t">
-          <Button
-            variant="outline"
-            className="flex-1 rounded-lg"
-            onClick={onEdit}
-            disabled={archiveActionPending}
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            className={`flex-1 rounded-lg ${
-              isArchived
-                ? "text-green-600 hover:text-green-700 hover:bg-green-50"
-                : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-            }`}
-            onClick={() => setArchiveDialogOpen(true)}
-            disabled={archiveActionPending}
-          >
-            {isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
-            {archiveActionPending ? "Processing..." : isArchived ? "Restore" : "Archive"}
-          </Button>
-        </div>
+        {(canEdit || canArchiveAction) && (
+          <div className="flex gap-2 pt-4 border-t">
+            {canEdit && (
+              <Button
+                variant="outline"
+                className="flex-1 rounded-lg"
+                onClick={onEdit}
+                disabled={archiveActionPending}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            )}
+            {canArchiveAction && (
+              <Button
+                variant="outline"
+                className={`flex-1 rounded-lg ${
+                  isArchived
+                    ? "text-green-600 hover:text-green-700 hover:bg-green-50"
+                    : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                }`}
+                onClick={() => setArchiveDialogOpen(true)}
+                disabled={archiveActionPending}
+              >
+                {isArchived ? <ArchiveRestore className="w-4 h-4 mr-2" /> : <Archive className="w-4 h-4 mr-2" />}
+                {archiveActionPending ? "Processing..." : isArchived ? "Restore" : "Archive"}
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
 
-      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+      {canArchiveAction && (
+        <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -430,10 +458,12 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+        </AlertDialog>
+      )}
 
       {/* Add Monitoring Log Dialog */}
-      <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
+      {canCreateMonitoring && (
+        <Dialog open={isLogDialogOpen} onOpenChange={setIsLogDialogOpen}>
         <DialogContent className="max-w-md p-0 rounded-2xl border-none overflow-hidden">
           <DialogHeader className="bg-[#0033a0] dark:bg-gray-800 p-4 m-0 border-none">
             <DialogTitle className="text-lg font-bold text-white">
@@ -495,7 +525,8 @@ const TreeDetailPanel: React.FC<TreeDetailPanelProps> = ({
             </div>
           </div>
         </DialogContent>
-      </Dialog>
+        </Dialog>
+      )}
 
       {/* Photo Preview Dialog */}
       <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>

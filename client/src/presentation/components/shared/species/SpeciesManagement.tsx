@@ -41,6 +41,8 @@ import {
 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import SpeciesForm from "./SpeciesForm";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 interface SpeciesManagementProps {
   title?: string;
@@ -72,6 +74,23 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
   const [selectedSpecies, setSelectedSpecies] = useState<TreeSpecies | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingSpecies, setDeletingSpecies] = useState<TreeSpecies | null>(null);
+
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreateSpecies = hasPermission(PERMISSIONS.TREE_SPECIES.CREATE);
+  const canUpdateSpecies = hasPermission(PERMISSIONS.TREE_SPECIES.UPDATE);
+  const canDeleteSpecies = hasPermission(PERMISSIONS.TREE_SPECIES.DELETE);
+
+  React.useEffect(() => {
+    if (!canCreateSpecies && formMode === "add" && isFormOpen) {
+      setIsFormOpen(false);
+    }
+    if (!canUpdateSpecies && formMode === "edit" && isFormOpen) {
+      setIsFormOpen(false);
+    }
+    if (!canDeleteSpecies && isDeleteDialogOpen) {
+      setIsDeleteDialogOpen(false);
+    }
+  }, [canCreateSpecies, canUpdateSpecies, canDeleteSpecies, formMode, isDeleteDialogOpen, isFormOpen]);
 
   // Fetch species
   const { data: species = [], isLoading } = useQuery({
@@ -136,23 +155,27 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
   });
 
   const handleAddSpecies = () => {
+    if (!canCreateSpecies) return;
     setFormMode("add");
     setSelectedSpecies(null);
     setIsFormOpen(true);
   };
 
   const handleEditSpecies = (species: TreeSpecies) => {
+    if (!canUpdateSpecies) return;
     setFormMode("edit");
     setSelectedSpecies(species);
     setIsFormOpen(true);
   };
 
   const handleDeleteClick = (species: TreeSpecies) => {
+    if (!canDeleteSpecies) return;
     setDeletingSpecies(species);
     setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
+    if (!canDeleteSpecies) return;
     if (deletingSpecies) {
       deleteMutation.mutate(deletingSpecies.id);
     }
@@ -160,8 +183,10 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
 
   const handleFormSave = async (data: TreeSpeciesCreate) => {
     if (formMode === "add") {
+      if (!canCreateSpecies) return;
       await createMutation.mutateAsync(data);
     } else if (selectedSpecies) {
+      if (!canUpdateSpecies) return;
       await updateMutation.mutateAsync({ id: selectedSpecies.id, data });
     }
   };
@@ -292,25 +317,29 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex gap-1 justify-end">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleEditSpecies(row.original)}
-            className="h-8 w-8 p-0"
-          >
-            <Edit className="h-4 w-4 text-blue-600" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleDeleteClick(row.original)}
-            className="h-8 w-8 p-0"
-            disabled={!row.original.is_active}
-          >
-            <Trash2
-              className={`h-4 w-4 ${row.original.is_active ? "text-red-600" : "text-gray-400"}`}
-            />
-          </Button>
+          {canUpdateSpecies && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleEditSpecies(row.original)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4 text-blue-600" />
+            </Button>
+          )}
+          {canDeleteSpecies && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleDeleteClick(row.original)}
+              className="h-8 w-8 p-0"
+              disabled={!row.original.is_active}
+            >
+              <Trash2
+                className={`h-4 w-4 ${row.original.is_active ? "text-red-600" : "text-gray-400"}`}
+              />
+            </Button>
+          )}
         </div>
       ),
     },
@@ -414,13 +443,15 @@ const SpeciesManagement: React.FC<SpeciesManagementProps> = ({
             <Leaf className="w-5 h-5 text-green-600" />
             {title}
           </CardTitle>
-          <Button
-            onClick={handleAddSpecies}
-            className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Species
-          </Button>
+          {canCreateSpecies && (
+            <Button
+              onClick={handleAddSpecies}
+              className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Species
+            </Button>
+          )}
         </CardHeader>
 
         <CardContent className="flex-1 flex flex-col overflow-hidden">

@@ -25,6 +25,12 @@ export default function QuarterlyTesting() {
     testToEdit,
     isSubmitting,
 
+    // Permissions
+    canCreateTest,
+    canUpdateTest,
+    canDeleteTest,
+    canUpdateRemarks,
+
     // Data
     officeGroups,
     offices,
@@ -49,6 +55,9 @@ export default function QuarterlyTesting() {
     setIsQuickTestOpen,
     refetchTests,
   } = useRevampedQuarterlyTesting();
+
+  const canManageTests = canCreateTest || canUpdateTest;
+  const canQuickUpdateTests = canCreateTest || canUpdateTest || canDeleteTest;
 
   const handleRefresh = () => {
     refetchTests();
@@ -166,15 +175,19 @@ export default function QuarterlyTesting() {
                           officeGroups={officeGroups}
                           selectedYear={selectedYear}
                           isLoading={isLoading}
-                          onUpdateTest={handleUpdateTest}
-                          onAddRemarks={handleAddRemarks}
-                          onLaunchQuickTest={(vehicleId, quarter, existingTest) => {
-                            if (existingTest) {
-                              handleEditTest(existingTest);
-                            } else {
-                              handleAddTest(vehicleId, quarter);
+                            onUpdateTest={canQuickUpdateTests ? handleUpdateTest : undefined}
+                            onAddRemarks={canUpdateRemarks ? handleAddRemarks : undefined}
+                            onLaunchQuickTest={
+                              canManageTests
+                                ? (vehicleId, quarter, existingTest) => {
+                                    if (existingTest) {
+                                      handleEditTest(existingTest);
+                                    } else {
+                                      handleAddTest(vehicleId, quarter);
+                                    }
+                                  }
+                                : undefined
                             }
-                          }}
                         />
                       </div>
                     </Card>

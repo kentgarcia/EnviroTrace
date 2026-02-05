@@ -62,6 +62,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/presentation/components/shared/ui/accordion";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Sortable item component for drag and drop
 interface SortableItemProps {
@@ -69,9 +71,11 @@ interface SortableItemProps {
   option: DropdownOption;
   onDelete: (id: string) => void;
   onEdit: (option: DropdownOption) => void;
+  canUpdate: boolean;
+  canDelete: boolean;
 }
 
-const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdit }) => {
+const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdit, canUpdate, canDelete }) => {
   const {
     attributes,
     listeners,
@@ -79,13 +83,15 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdi
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled: !canUpdate });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const canSaveOption = editingOption ? canUpdate : canCreate;
 
   return (
     <TableRow ref={setNodeRef} style={style}>
@@ -102,6 +108,7 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdi
           onClick={() => onEdit(option)}
           className="h-8 w-8 text-muted-foreground hover:text-foreground"
           title="Edit option"
+          disabled={!canUpdate}
         >
           <Pencil className="w-4 h-4" />
         </Button>
@@ -111,6 +118,7 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdi
           onClick={() => onDelete(option.id)}
           className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
           title="Delete option"
+          disabled={!canDelete}
         >
           <Trash2 className="w-4 h-4" />
         </Button>
@@ -121,6 +129,10 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, option, onDelete, onEdi
 
 const ProcessingStandardsSettings: React.FC = () => {
   const queryClient = useQueryClient();
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreate = hasPermission(PERMISSIONS.PROCESSING_STANDARD.CREATE);
+  const canUpdate = hasPermission(PERMISSIONS.PROCESSING_STANDARD.UPDATE);
+  const canDelete = hasPermission(PERMISSIONS.PROCESSING_STANDARD.DELETE);
   const [editingStandards, setEditingStandards] = useState<Record<string, Partial<ProcessingStandards>>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isAddStandardOpen, setIsAddStandardOpen] = useState(false);
@@ -231,6 +243,10 @@ const ProcessingStandardsSettings: React.FC = () => {
   });
 
   const confirmDelete = () => {
+    if (!canDelete) {
+      setDeleteDialog((prev) => ({ ...prev, isOpen: false }));
+      return;
+    }
     if (deleteDialog.type === 'standard') {
       deleteStandardMutation.mutate(deleteDialog.id as ISORequestType);
     } else {
@@ -240,6 +256,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleDeleteStandard = (requestType: ISORequestType) => {
+    if (!canDelete) return;
     setDeleteDialog({
       isOpen: true,
       type: 'standard',
@@ -251,6 +268,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   
   // Handle drag end for reordering
   const handleAddStandard = () => {
+    if (!canCreate) return;
     if (!newStandardName.trim()) {
       toast.error("Request type name is required");
       return;
@@ -270,6 +288,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleDragEnd = (event: DragEndEvent, fieldName: 'received_through' | 'status') => {
+    if (!canUpdate) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -300,6 +319,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleFieldChange = (requestType: string, field: string, value: string) => {
+    if (!canUpdate) return;
     setEditingStandards(prev => ({
       ...prev,
       [requestType]: {
@@ -310,6 +330,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleSave = (standard: ProcessingStandards) => {
+    if (!canUpdate) return;
     const updates = editingStandards[standard.request_type];
     if (!updates || Object.keys(updates).length === 0) {
       toast.info("No changes to save");
@@ -336,6 +357,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleOpenDialog = (field: 'received_through' | 'status', option?: DropdownOption) => {
+    if (option ? !canUpdate : !canCreate) return;
     setSelectedField(field);
     if (option) {
       setEditingOption(option);
@@ -348,6 +370,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleSaveOption = () => {
+    if (editingOption ? !canUpdate : !canCreate) return;
     if (!formData.option_value.trim()) {
       toast.error("Option value is required");
       return;
@@ -366,6 +389,7 @@ const ProcessingStandardsSettings: React.FC = () => {
   };
 
   const handleDeleteOption = (id: string) => {
+    if (!canDelete) return;
     setDeleteDialog({
       isOpen: true,
       type: 'option',
@@ -403,14 +427,16 @@ const ProcessingStandardsSettings: React.FC = () => {
                     Requests exceeding these timeframes will be flagged as delayed.
                   </CardDescription>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setIsAddStandardOpen(true)}
-                  className="w-full md:w-auto"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Request Type
-                </Button>
+                {canCreate && (
+                  <Button
+                    size="sm"
+                    onClick={() => setIsAddStandardOpen(true)}
+                    className="w-full md:w-auto"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Request Type
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -457,6 +483,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 value={receiving}
                                 onChange={(e) => handleFieldChange(standard.request_type, 'receiving_standard_days', e.target.value)}
                                 className="w-20 mx-auto text-center h-8"
+                                disabled={!canUpdate}
                               />
                             </TableCell>
                             <TableCell>
@@ -466,6 +493,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 value={inspection}
                                 onChange={(e) => handleFieldChange(standard.request_type, 'inspection_standard_days', e.target.value)}
                                 className="w-20 mx-auto text-center h-8"
+                                disabled={!canUpdate}
                               />
                             </TableCell>
                             <TableCell>
@@ -475,6 +503,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 value={requirements}
                                 onChange={(e) => handleFieldChange(standard.request_type, 'requirements_standard_days', e.target.value)}
                                 className="w-20 mx-auto text-center h-8"
+                                disabled={!canUpdate}
                               />
                             </TableCell>
                             <TableCell>
@@ -484,6 +513,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 value={clearance}
                                 onChange={(e) => handleFieldChange(standard.request_type, 'clearance_standard_days', e.target.value)}
                                 className="w-20 mx-auto text-center h-8"
+                                disabled={!canUpdate}
                               />
                             </TableCell>
                             <TableCell className="text-center font-semibold text-muted-foreground">
@@ -495,7 +525,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                                   <Button
                                     size="sm"
                                     onClick={() => handleSave(standard)}
-                                    disabled={updateMutation.isPending}
+                                    disabled={!canUpdate || updateMutation.isPending}
                                     className="h-8"
                                   >
                                     <Save className="w-3.5 h-3.5 mr-1" />
@@ -504,16 +534,18 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 ) : (
                                     <div className="w-[68px]" /> // Spacer to keep layout stable when save button hides
                                 )}
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteStandard(standard.request_type)}
-                                  disabled={deleteStandardMutation.isPending}
-                                  className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
-                                  title="Delete Configuration"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
+                                {canDelete && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteStandard(standard.request_type)}
+                                    disabled={deleteStandardMutation.isPending}
+                                    className="h-8 w-8 text-destructive hover:text-destructive/90 hover:bg-destructive/10"
+                                    title="Delete Configuration"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -525,10 +557,12 @@ const ProcessingStandardsSettings: React.FC = () => {
               ) : (
                 <div className="text-center py-12 border border-dashed rounded-lg">
                   <p className="text-muted-foreground mb-4">No processing standards found</p>
-                  <Button onClick={() => setIsAddStandardOpen(true)} variant="outline">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Your First Request Type
-                  </Button>
+                  {canCreate && (
+                    <Button onClick={() => setIsAddStandardOpen(true)} variant="outline">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Request Type
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -578,6 +612,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                     size="sm"
                     onClick={() => handleOpenDialog('received_through')}
                     className="h-8"
+                    disabled={!canCreate}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Option
@@ -621,6 +656,8 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 option={option}
                                 onDelete={handleDeleteOption}
                                 onEdit={(opt) => handleOpenDialog('received_through', opt)}
+                                canUpdate={canUpdate}
+                                canDelete={canDelete}
                               />
                             ))
                           )}
@@ -644,6 +681,7 @@ const ProcessingStandardsSettings: React.FC = () => {
                     size="sm"
                     onClick={() => handleOpenDialog('status')}
                     className="h-8"
+                    disabled={!canCreate}
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Add Option
@@ -687,6 +725,8 @@ const ProcessingStandardsSettings: React.FC = () => {
                                 option={option}
                                 onDelete={handleDeleteOption}
                                 onEdit={(opt) => handleOpenDialog('status', opt)}
+                                canUpdate={canUpdate}
+                                canDelete={canDelete}
                               />
                             ))
                           )}
@@ -726,7 +766,7 @@ const ProcessingStandardsSettings: React.FC = () => {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveOption}>
+            <Button onClick={handleSaveOption} disabled={!canSaveOption}>
               {editingOption ? 'Update' : 'Create'}
             </Button>
           </DialogFooter>
@@ -756,7 +796,7 @@ const ProcessingStandardsSettings: React.FC = () => {
             <Button variant="outline" onClick={() => setIsAddStandardOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddStandard}>
+            <Button onClick={handleAddStandard} disabled={!canCreate}>
               Add Request Type
             </Button>
           </DialogFooter>
@@ -785,6 +825,7 @@ const ProcessingStandardsSettings: React.FC = () => {
             <Button
               variant="destructive"
               onClick={confirmDelete}
+              disabled={!canDelete}
             >
               Confirm Delete
             </Button>

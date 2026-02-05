@@ -81,12 +81,16 @@ const OfficeDetailsView = memo(
     office, 
     onBack, 
     year, 
-    onEdit 
+    onEdit,
+    canEdit,
+    canViewTests,
   }: { 
     office: OfficeWithCompliance; 
     onBack: () => void; 
     year?: number; 
-    onEdit: (office: OfficeWithCompliance) => void 
+    onEdit?: (office: OfficeWithCompliance) => void;
+    canEdit: boolean;
+    canViewTests: boolean;
   }) => {
     return (
       <div className="space-y-6">
@@ -104,15 +108,17 @@ const OfficeDetailsView = memo(
              <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
               Office Detail View {year ? `(${year})` : ""}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(office)}
-              className="flex items-center gap-2 rounded-lg border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Office
-            </Button>
+            {canEdit && onEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEdit(office)}
+                className="flex items-center gap-2 rounded-lg border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400"
+              >
+                <Edit className="h-4 w-4" />
+                Edit Office
+              </Button>
+            )}
           </div>
         </div>
 
@@ -257,15 +263,17 @@ const OfficeDetailsView = memo(
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
-                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
-                  <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
-                  Emission Tests
+              {canViewTests && (
+                <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                  <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
+                    <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
+                    Emission Tests
+                  </div>
+                  <div className="p-0">
+                    <OfficeEmissionTests officeName={office.name} year={year} canViewTests={canViewTests} />
+                  </div>
                 </div>
-                <div className="p-0">
-                  <OfficeEmissionTests officeName={office.name} year={year} />
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -280,7 +288,9 @@ interface OfficeComplianceTableProps {
   officeData: OfficeWithCompliance[];
   errorMessage?: string;
   year?: number;
-  onEdit: (office: OfficeWithCompliance) => void;
+  onEdit?: (office: OfficeWithCompliance) => void;
+  canEdit: boolean;
+  canViewTests: boolean;
 }
 
 export function OfficeComplianceTable({
@@ -288,6 +298,8 @@ export function OfficeComplianceTable({
   errorMessage,
   year,
   onEdit,
+  canEdit,
+  canViewTests,
 }: OfficeComplianceTableProps) {
   // State for sorting
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -395,6 +407,8 @@ export function OfficeComplianceTable({
         onBack={handleBackToTable} 
         year={year}
         onEdit={onEdit}
+        canEdit={canEdit}
+        canViewTests={canViewTests}
       />
     );
   }
@@ -420,8 +434,8 @@ ComplianceCell.displayName = "ComplianceCell";
 StatusCell.displayName = "StatusCell";
 
 // Office Emission Tests Component
-const OfficeEmissionTests = memo(({ officeName, year }: { officeName: string; year?: number }) => {
-  const { data, isLoading: loading, isError: hasError } = useEmissionTests({});
+const OfficeEmissionTests = memo(({ officeName, year, canViewTests }: { officeName: string; year?: number; canViewTests: boolean }) => {
+  const { data, isLoading: loading, isError: hasError } = useEmissionTests({}, { enabled: canViewTests });
 
   const tests = useMemo(() => {
     if (!data) return [];
@@ -443,6 +457,14 @@ const OfficeEmissionTests = memo(({ officeName, year }: { officeName: string; ye
         return matchesOffice && matchesYear;
     });
   }, [data, officeName, year]);
+
+  if (!canViewTests) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        You do not have permission to view emission tests.
+      </div>
+    );
+  }
 
   if (loading) {
     return (

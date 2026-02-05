@@ -89,8 +89,8 @@ const StatusCell = React.memo(({
 
   return (
     <div 
-      className={`relative w-full group/cell cursor-pointer ${bgClass} rounded h-7 flex items-center justify-center transition-all hover:brightness-95`}
-      onClick={onDoubleClick}
+      className={`relative w-full group/cell ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${bgClass} rounded h-7 flex items-center justify-center transition-all ${disabled ? "" : "hover:brightness-95"}`}
+      onClick={disabled ? undefined : onDoubleClick}
     >
       <div className="text-[11px] font-semibold uppercase">
         {status === "pass" ? "PASS" : status === "fail" ? "FAIL" : "PENDING"}
@@ -336,9 +336,11 @@ export const VehicleTestingSpreadsheet: React.FC<VehicleTestingSpreadsheetProps>
         </div>
       </div>
 
-      <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
-        Click any quarter cell to enter detailed test results with CO/HC measurements
-      </p>
+      {onLaunchQuickTest && (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 px-1">
+          Click any quarter cell to enter detailed test results with CO/HC measurements
+        </p>
+      )}
     </div>
   );
 };

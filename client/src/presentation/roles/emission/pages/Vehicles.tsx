@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { formatDate } from "@/core/utils/dateUtils";
 import {
@@ -12,6 +12,7 @@ import {
   Vehicle,
   VehicleFilters,
   VehicleFormInput,
+  fetchVehicles,
 } from "@/core/api/emission-service";
 import { useDebounce } from "@/core/hooks/useDebounce";
 import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
@@ -24,6 +25,7 @@ import { VehicleDetails } from "@/presentation/roles/emission/components/vehicle
 import { FileDown, Plus, AlertTriangle, Search, Filter, X, Loader2, RefreshCw } from "lucide-react";
 import { PaginationState } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +59,8 @@ import {
   SelectValue,
 } from "@/presentation/components/shared/ui/select";
 import { useSettingsStore } from "@/core/hooks/useSettingsStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 type PageCursor = {
   after?: string | null;
@@ -64,6 +68,12 @@ type PageCursor = {
 };
 
 export default function Vehicles() {
+  const queryClient = useQueryClient();
+  const prefetchTokenRef = useRef(0);
+  const canCreateVehicle = useAuthStore((state) => state.hasPermission(PERMISSIONS.VEHICLE.CREATE));
+  const canUpdateVehicle = useAuthStore((state) => state.hasPermission(PERMISSIONS.VEHICLE.UPDATE));
+  const canDeleteVehicle = useAuthStore((state) => state.hasPermission(PERMISSIONS.VEHICLE.DELETE));
+  const canViewTests = useAuthStore((state) => state.hasPermission(PERMISSIONS.TEST.VIEW));
   // Modal and dialog states
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -73,6 +83,7 @@ export default function Vehicles() {
 
   // Listen for context menu "Add Vehicle" action
   useContextMenuAction('add-vehicle', () => {
+    if (!canCreateVehicle) return;
     setAddModalOpen(true);
   });
   // Pagination state
@@ -89,6 +100,7 @@ export default function Vehicles() {
     "forward" | "backward" | null
   >(null);
   const [lastKnownTotal, setLastKnownTotal] = useState<number | null>(null);
+  const prefetchPages = 5;
 
   useEffect(() => {
     setPagination((prev) => {
@@ -167,25 +179,21 @@ export default function Vehicles() {
       beforeCursor: beforeCursorToUse,
     }
   );
-  useEffect(() => {
-    if (!vehiclesData) {
-      return;
-    }
-
+  const updatePageCursors = useCallback((pageIndex: number, data: any) => {
     setPageCursors((prev) => {
       let changed = false;
       const next = { ...prev };
 
-      if (!next[pagination.pageIndex]) {
-        next[pagination.pageIndex] = {};
+      if (!next[pageIndex]) {
+        next[pageIndex] = {};
         changed = true;
       }
 
-      const nextPageIndex = pagination.pageIndex + 1;
-      if (vehiclesData.next_cursor) {
+      const nextPageIndex = pageIndex + 1;
+      if (data.next_cursor) {
         const existingNext = next[nextPageIndex] ?? {};
-        if (existingNext.after !== vehiclesData.next_cursor) {
-          next[nextPageIndex] = { ...existingNext, after: vehiclesData.next_cursor };
+        if (existingNext.after !== data.next_cursor) {
+          next[nextPageIndex] = { ...existingNext, after: data.next_cursor };
           changed = true;
         }
       } else if (next[nextPageIndex]?.after) {
@@ -198,14 +206,14 @@ export default function Vehicles() {
         changed = true;
       }
 
-      const previousPageIndex = pagination.pageIndex - 1;
+      const previousPageIndex = pageIndex - 1;
       if (previousPageIndex >= 0) {
-        if (vehiclesData.prev_cursor) {
+        if (data.prev_cursor) {
           const existingPrev = next[previousPageIndex] ?? {};
-          if (existingPrev.before !== vehiclesData.prev_cursor) {
+          if (existingPrev.before !== data.prev_cursor) {
             next[previousPageIndex] = {
               ...existingPrev,
-              before: vehiclesData.prev_cursor,
+              before: data.prev_cursor,
             };
             changed = true;
           }
@@ -222,9 +230,84 @@ export default function Vehicles() {
 
       return changed ? next : prev;
     });
+  }, []);
 
+  useEffect(() => {
+    if (!vehiclesData) {
+      return;
+    }
+
+    updatePageCursors(pagination.pageIndex, vehiclesData);
     setPaginationDirection(null);
-  }, [vehiclesData, pagination.pageIndex]);
+  }, [vehiclesData, pagination.pageIndex, updatePageCursors]);
+
+  useEffect(() => {
+    if (!vehiclesData?.next_cursor) {
+      return;
+    }
+
+    const token = ++prefetchTokenRef.current;
+    const startCursor = vehiclesData.next_cursor;
+    const basePageIndex = pagination.pageIndex;
+
+    const runPrefetch = async () => {
+      let cursor = startCursor;
+
+      for (let i = 1; i <= prefetchPages; i += 1) {
+        if (!cursor) break;
+        if (prefetchTokenRef.current !== token) return;
+
+        const pageIndex = basePageIndex + i;
+        const queryKey = [
+          "vehicles",
+          filters,
+          0,
+          pagination.pageSize,
+          false,
+          false,
+          cursor,
+          null,
+        ] as const;
+
+        const cached = queryClient.getQueryData(queryKey);
+        let data = cached as any;
+
+        if (!data) {
+          data = await queryClient.fetchQuery({
+            queryKey,
+            queryFn: () =>
+              fetchVehicles(
+                filters,
+                0,
+                pagination.pageSize,
+                false,
+                false,
+                cursor,
+                undefined
+              ),
+            staleTime: 5 * 60 * 1000,
+          });
+        }
+
+        if (!data || prefetchTokenRef.current !== token) {
+          return;
+        }
+
+        updatePageCursors(pageIndex, data);
+        cursor = data.next_cursor ?? null;
+      }
+    };
+
+    runPrefetch();
+  }, [
+    vehiclesData?.next_cursor,
+    pagination.pageIndex,
+    pagination.pageSize,
+    filters,
+    queryClient,
+    prefetchPages,
+    updatePageCursors,
+  ]);
   // Get filter options from the API
   const {
     data: filterOptions,
@@ -334,6 +417,7 @@ export default function Vehicles() {
     setPageCursors({ 0: {} });
     setPaginationDirection(null);
     setLastKnownTotal(null);
+    prefetchTokenRef.current += 1;
   }, [debouncedSearch, office, vehicleType, engineType]);
 
   // Get unique values for filters
@@ -361,16 +445,23 @@ export default function Vehicles() {
 
   // Handler for editing vehicle
   const handleEditVehicle = useCallback((vehicle: Vehicle) => {
+    if (!canUpdateVehicle) return;
     setSelectedVehicle(vehicle);
     setEditModalOpen(true);
-  }, []);
+  }, [canUpdateVehicle]);
 
   // Handler for deleting vehicle
   const handleDeleteConfirm = useCallback((vehicle: Vehicle) => {
+    if (!canDeleteVehicle) return;
     setSelectedVehicle(vehicle);
     setDeleteDialogOpen(true);
-  }, []);// Handler for saving edited vehicle
+  }, [canDeleteVehicle]);
+  // Handler for saving edited vehicle
   const handleSaveEdit = async (vehicleData: VehicleFormInput) => {
+    if (!canUpdateVehicle) {
+      toast.error("You do not have permission to edit vehicles.");
+      return;
+    }
     if (!selectedVehicle) return;
 
     // Find the office ID by office name
@@ -419,6 +510,10 @@ export default function Vehicles() {
     }
   };  // Handler for adding new vehicle
   const handleAddVehicle = async (vehicle: VehicleFormInput) => {
+    if (!canCreateVehicle) {
+      toast.error("You do not have permission to add vehicles.");
+      return;
+    }
     // Find the office ID by office name
     const officeId = getOfficeIdByName(vehicle.officeName);
     if (!officeId) {
@@ -463,6 +558,10 @@ export default function Vehicles() {
 
   // Handler for deleting vehicle
   const handleDeleteVehicle = async () => {
+    if (!canDeleteVehicle) {
+      toast.error("You do not have permission to delete vehicles.");
+      return;
+    }
     if (!selectedVehicle) return;
 
     try {
@@ -743,13 +842,15 @@ export default function Vehicles() {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    <Button
-                  onClick={() => setAddModalOpen(true)}
-                  className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Vehicle
-                </Button>
+                    {canCreateVehicle && (
+                      <Button
+                        onClick={() => setAddModalOpen(true)}
+                        className="bg-[#0033a0] hover:bg-[#002a80] text-white border-none shadow-none rounded-lg px-4 h-9 text-sm font-medium transition-colors"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Vehicle
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -762,6 +863,9 @@ export default function Vehicles() {
                       onView={handleViewVehicle}
                       onEdit={handleEditVehicle}
                       onDelete={handleDeleteConfirm}
+                      canEdit={canUpdateVehicle}
+                      canDelete={canDeleteVehicle}
+                      canViewTests={canViewTests}
                       manualPagination
                       pageCount={pageCount}
                       paginationState={pagination}
@@ -774,24 +878,26 @@ export default function Vehicles() {
           </div>
         </div>
       </div>      {/* Modals and Dialogs */}
-      <VehicleModals
-        isAddModalOpen={addModalOpen}
-        onAddModalClose={() => setAddModalOpen(false)}
-        onAddVehicle={handleAddVehicle}
-        isEditModalOpen={editModalOpen}
-        onEditModalClose={() => {
-          setEditModalOpen(false);
-          setSelectedVehicle(null);
-        }}
-        onEditVehicle={handleSaveEdit}
-        selectedVehicle={selectedVehicle}
-        isLoading={isLoading}
-        vehicleTypes={vehicleTypes}
-        engineTypes={engineTypes}
-        wheelCounts={wheelCounts.map((w) => w.toString())}
-        offices={availableOfficeNames}
-        onRefreshOffices={refetchOffices}
-      />
+      {(canCreateVehicle || canUpdateVehicle) && (
+        <VehicleModals
+          isAddModalOpen={addModalOpen}
+          onAddModalClose={() => setAddModalOpen(false)}
+          onAddVehicle={handleAddVehicle}
+          isEditModalOpen={editModalOpen}
+          onEditModalClose={() => {
+            setEditModalOpen(false);
+            setSelectedVehicle(null);
+          }}
+          onEditVehicle={handleSaveEdit}
+          selectedVehicle={selectedVehicle}
+          isLoading={isLoading}
+          vehicleTypes={vehicleTypes}
+          engineTypes={engineTypes}
+          wheelCounts={wheelCounts.map((w) => w.toString())}
+          offices={availableOfficeNames}
+          onRefreshOffices={refetchOffices}
+        />
+      )}
 
       {viewModalOpen && (
         <VehicleDetails
@@ -802,32 +908,37 @@ export default function Vehicles() {
             setSelectedVehicle(null);
           }}
           onStartEdit={handleEditVehicle}
+          canEdit={canUpdateVehicle}
+          canViewTests={canViewTests}
         />
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              vehicle
-              {selectedVehicle && ` (${selectedVehicle.plate_number || selectedVehicle.chassis_number || selectedVehicle.registration_number})`} and
-              remove its data from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedVehicle(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteVehicle}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteVehicle && (
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the
+                vehicle
+                {selectedVehicle && ` (${selectedVehicle.plate_number || selectedVehicle.chassis_number || selectedVehicle.registration_number})`} and
+                remove its data from the system.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setSelectedVehicle(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteVehicle}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

@@ -12,16 +12,21 @@ export const useAdminOverviewData = () => {
     data: keyStatsData,
     isLoading: statsLoading,
     error: statsError,
+    isFetching: statsFetching,
+    refetch: refetchStats,
   } = useAdminDashboardStats();
 
   const {
     data: userActivityData,
     isLoading: activityLoading,
     error: activityError,
+    isFetching: activityFetching,
+    refetch: refetchActivity,
   } = useUserActivityData();
 
   // Combine loading states
   const isLoading = statsLoading || activityLoading;
+  const isRefreshing = statsFetching || activityFetching;
 
   // Combine errors (prioritize the first error encountered)
   const error = statsError || activityError;
@@ -43,7 +48,11 @@ export const useAdminOverviewData = () => {
 
     // Loading states
     isLoading,
+    isRefreshing,
     error,
+    refreshAll: async () => {
+      await Promise.all([refetchStats(), refetchActivity()]);
+    },
   };
 };
 export type { UserActivityData };

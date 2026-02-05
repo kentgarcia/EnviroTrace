@@ -84,8 +84,6 @@ export const PERMISSIONS = {
   MONITORING_LOG: {
     CREATE: "monitoring_log.create",
     VIEW: "monitoring_log.view",
-    UPDATE: "monitoring_log.update",
-    DELETE: "monitoring_log.delete",
   },
   URBAN_PROJECT: {
     CREATE: "urban_project.create",

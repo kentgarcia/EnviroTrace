@@ -55,6 +55,8 @@ import GreeningProjectForm from "./components/GreeningProjectForm";
 import GreeningProjectDetails from "./components/GreeningProjectDetails";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 const PROJECT_TYPE_CONFIG: Record<ProjectType, { label: string; icon: React.ReactNode; color: string }> = {
   replacement: { label: "Replacement", icon: <TreePine className="w-4 h-4" />, color: "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200" },
@@ -85,18 +87,24 @@ const GreeningProjectsPage: React.FC = () => {
   const [projectDeleteConfirmOpen, setProjectDeleteConfirmOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<UrbanGreeningProject | null>(null);
 
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreateProject = hasPermission(PERMISSIONS.URBAN_PROJECT.CREATE);
+  const canUpdateProject = hasPermission(PERMISSIONS.URBAN_PROJECT.UPDATE);
+  const canDeleteProject = hasPermission(PERMISSIONS.URBAN_PROJECT.DELETE);
+
   // Check URL params for action
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("action") === "add") {
+    if (params.get("action") === "add" && canCreateProject) {
       setFormMode("add");
       setSelectedProject(null);
       setIsFormOpen(true);
     }
-  }, []);
+  }, [canCreateProject]);
 
   // Listen for context menu "add-project" action
   useContextMenuAction("add-project", () => {
+    if (!canCreateProject) return;
     setFormMode("add");
     setSelectedProject(null);
     setIsFormOpen(true);
@@ -111,6 +119,15 @@ const GreeningProjectsPage: React.FC = () => {
 
   const { data: apiStats } = useProjectStats();
   const { deleteMutation } = useUrbanGreeningProjectMutations();
+
+  React.useEffect(() => {
+    if (isFormOpen && formMode === "add" && !canCreateProject) {
+      setIsFormOpen(false);
+    }
+    if (isFormOpen && formMode === "edit" && !canUpdateProject) {
+      setIsFormOpen(false);
+    }
+  }, [canCreateProject, canUpdateProject, formMode, isFormOpen]);
 
   // Extract available years from projects based on date_received
   const availableYears = useMemo(() => {
@@ -158,11 +175,13 @@ const GreeningProjectsPage: React.FC = () => {
 
   // Delete handlers
   const handleDeleteProject = (project: UrbanGreeningProject) => {
+    if (!canDeleteProject) return;
     setProjectToDelete(project);
     setProjectDeleteConfirmOpen(true);
   };
 
   const confirmDeleteProject = async () => {
+    if (!canDeleteProject) return;
     if (!projectToDelete) return;
     
     try {
@@ -269,31 +288,35 @@ const GreeningProjectsPage: React.FC = () => {
             >
               <Eye className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteProject(row.original);
-              }}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            {canDeleteProject && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteProject(row.original);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         ),
       },
     ],
-    []
+    [canDeleteProject]
   );
 
   const handleAddProject = (type?: ProjectType) => {
+    if (!canCreateProject) return;
     setFormMode("add");
     setSelectedProject(null);
     setIsFormOpen(true);
   };
 
   const handleEditProject = (project: UrbanGreeningProject) => {
+    if (!canUpdateProject) return;
     setFormMode("edit");
     setSelectedProject(project);
     setIsFormOpen(true);
@@ -492,13 +515,15 @@ const GreeningProjectsPage: React.FC = () => {
                       </option>
                     )}
                   </select>
-                                  <Button
-                  onClick={() => handleAddProject()}
-                  className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Project
-                </Button>
+                                  {canCreateProject && (
+                                    <Button
+                                      onClick={() => handleAddProject()}
+                                      className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+                                    >
+                                      <Plus className="w-4 h-4 mr-2" />
+                                      New Project
+                                    </Button>
+                                  )}
                 </div>
               </div>
             </div>
@@ -552,6 +577,7 @@ const GreeningProjectsPage: React.FC = () => {
                   handleEditProject(selectedProject);
                 }}
                 onRefresh={() => refetch()}
+                canEdit={canUpdateProject}
               />
             )}
           </div>

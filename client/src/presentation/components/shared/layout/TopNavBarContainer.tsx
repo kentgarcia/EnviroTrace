@@ -23,13 +23,16 @@ interface MenuItem {
   label: string;
   path: string;
   children?: { label: string; path: string }[];
-  permission?: string;
+  permission?: string | string[];
+  requireAll?: boolean;
 }
 
 function getMenuItems(
   dashboardType: TopNavBarContainerProps["dashboardType"],
   matchRoute: ReturnType<typeof useMatchRoute>,
   hasPermission: (permission: string) => boolean,
+  hasAnyPermission: (permissions: string[]) => boolean,
+  hasAllPermissions: (permissions: string[]) => boolean,
 ): MenuItem[] {
   const basePath = `/${dashboardType}`;
   if (dashboardType === "admin") {
@@ -54,53 +57,108 @@ function getMenuItems(
     ];
     
     // Filter menu items based on permissions
-    return adminMenuItems.filter(item => !item.permission || hasPermission(item.permission));
+    return adminMenuItems.filter(item => {
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   } else if (dashboardType === "government-emission") {
-    return [
+    const emissionViewPermissions = [
+      PERMISSIONS.OFFICE.VIEW,
+      PERMISSIONS.VEHICLE.VIEW,
+      PERMISSIONS.TEST.VIEW,
+      PERMISSIONS.SCHEDULE.VIEW,
+    ];
+
+    const emissionMenuItems = [
       {
         label: "Dashboard",
         path: `${basePath}/overview`,
+        permission: emissionViewPermissions,
       },
       {
         label: "Vehicles",
         path: `${basePath}/vehicles`,
+        permission: PERMISSIONS.VEHICLE.VIEW,
       },
       {
         label: "Testing",
         path: `${basePath}/quarterly-testing`,
+        permission: [
+          PERMISSIONS.VEHICLE.VIEW,
+          PERMISSIONS.TEST.VIEW,
+          PERMISSIONS.OFFICE.VIEW,
+        ],
+        requireAll: true,
       },
       {
         label: "Offices",
         path: `${basePath}/offices`,
+        permission: PERMISSIONS.OFFICE.VIEW,
       },
       {
         label: "Reports",
         path: `${basePath}/reports`,
+        permission: [
+          PERMISSIONS.VEHICLE.VIEW,
+          PERMISSIONS.TEST.VIEW,
+          PERMISSIONS.OFFICE.VIEW,
+        ],
+        requireAll: true,
       },
     ];
+
+    return emissionMenuItems.filter((item) => {
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   } else if (dashboardType === "urban-greening") {
-    return [
+    const urbanGreeningMenuItems = [
       {
         label: "Dashboard",
         path: `${basePath}/overview`,
+        permission: PERMISSIONS.DASHBOARD.VIEW,
       },
       {
         label: "Tree Inventory",
         path: `${basePath}/tree-inventory`,
+        permission: PERMISSIONS.TREE.VIEW,
       },
       {
         label: "Tree Requests",
         path: `${basePath}/tree-requests`,
+        permission: PERMISSIONS.TREE_REQUEST.VIEW,
       },
       {
         label: "Greening Projects",
         path: `${basePath}/greening-projects`,
+        permission: PERMISSIONS.URBAN_PROJECT.VIEW,
       },
       {
         label: "Fees",
         path: `${basePath}/fee-records`,
+        permission: PERMISSIONS.FEE.VIEW,
       },
     ];
+
+    return urbanGreeningMenuItems.filter((item) => {
+      if (!item.permission) return true;
+      if (typeof item.permission === "string") {
+        return hasPermission(item.permission);
+      }
+      return item.requireAll
+        ? hasAllPermissions(item.permission)
+        : hasAnyPermission(item.permission);
+    });
   }
   // Default/common items
   return [
@@ -129,6 +187,8 @@ export default function TopNavBarContainer({
   const roles = useAuthStore(state => state.roles);
   const isSuperAdmin = useAuthStore(state => state.isSuperAdmin);
   const hasPermission = useAuthStore(state => state.hasPermission);
+  const hasAnyPermission = useAuthStore(state => state.hasAnyPermission);
+  const hasAllPermissions = useAuthStore(state => state.hasAllPermissions);
 
   const handleSignOut = async () => {
     await signOut();
@@ -157,7 +217,13 @@ export default function TopNavBarContainer({
   // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
   const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
 
-  const menuItems: NavItem[] = getMenuItems(dashboardType, matchRoute, hasPermission).map(
+  const menuItems: NavItem[] = getMenuItems(
+    dashboardType,
+    matchRoute,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions
+  ).map(
     (item) => {
       if (item.children) {
         return {

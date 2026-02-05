@@ -30,6 +30,9 @@ interface VehicleTableProps {
   onView: (vehicle: Vehicle) => void;
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicle: Vehicle) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canViewTests?: boolean;
   vehicleTypes?: string[];
   engineTypes?: string[];
   wheelCounts?: string[];
@@ -92,6 +95,9 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
   onView,
   onEdit,
   onDelete,
+  canEdit = true,
+  canDelete = true,
+  canViewTests = true,
   vehicleTypes = [],
   engineTypes = [],
   wheelCounts = [],
@@ -271,26 +277,30 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
                 <Eye className="mr-2 h-4 w-4" />
                 <span>View Details</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(row.original);
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                <span>Edit</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(row.original);
-                }}
-                className="text-red-600"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                <span>Delete</span>
-              </DropdownMenuItem>
+              {canEdit && (
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(row.original);
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  <span>Edit</span>
+                </DropdownMenuItem>
+              )}
+              {canEdit && canDelete && <DropdownMenuSeparator />}
+              {canDelete && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(row.original);
+                  }}
+                  className="text-red-600"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -341,9 +351,15 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
             onRegisterRefetch={(fn) => {
               detailsRefetchRef.current = fn;
             }}
-            onStartEdit={(vehicle) => {
-              onEdit(vehicle);
-            }}
+            onStartEdit={
+              canEdit
+                ? (vehicle) => {
+                    onEdit(vehicle);
+                  }
+                : undefined
+            }
+            canEdit={canEdit}
+            canViewTests={canViewTests}
           />
         </div>
       </div>

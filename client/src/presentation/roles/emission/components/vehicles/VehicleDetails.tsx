@@ -29,6 +29,8 @@ interface VehicleDetailsProps {
   onClose: () => void;
   onRegisterRefetch?: (refetch: () => void) => void;
   onStartEdit?: (vehicle: Vehicle) => void;
+  canEdit?: boolean;
+  canViewTests?: boolean;
 }
 
 export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
@@ -37,6 +39,8 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   onClose,
   onRegisterRefetch,
   onStartEdit,
+  canEdit = true,
+  canViewTests = true,
 }) => {
   const [activeTab, setActiveTab] = useState("info");
 
@@ -63,7 +67,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
   } = useEmissionTests({
     vehicleId: vehicle?.id
   }, {
-    enabled: isOpen && !!vehicle && !vehicle.id.startsWith("pending-"),
+    enabled: isOpen && !!vehicle && !vehicle.id.startsWith("pending-") && canViewTests,
   });
 
   const testHistory = testData || [];
@@ -101,18 +105,18 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white"
-            onClick={() => {
-              if (!fullVehicle) return;
-              if (onStartEdit) {
+          {canEdit && onStartEdit && (
+            <Button
+              size="sm"
+              className="rounded-lg bg-[#0033a0] hover:bg-[#00267a] text-white"
+              onClick={() => {
+                if (!fullVehicle) return;
                 onStartEdit(fullVehicle);
-              }
-            }}
-          >
-            Edit Details
-          </Button>
+              }}
+            >
+              Edit Details
+            </Button>
+          )}
         </div>
       </div>
 
@@ -125,7 +129,7 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
           </TabsTrigger>
           <TabsTrigger
             value="history"
-            disabled={fullVehicle?.id.startsWith("pending-")}
+            disabled={fullVehicle?.id.startsWith("pending-") || !canViewTests}
           >
             Test History
           </TabsTrigger>
@@ -172,7 +176,13 @@ export const VehicleDetails: React.FC<VehicleDetailsProps> = ({
         </TabsContent>
 
         <TabsContent value="history" className="mt-0 outline-none">
-          {isPendingVehicle ? (
+          {!canViewTests ? (
+            <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700">
+              <div className="text-slate-500 dark:text-slate-400 font-medium">
+                You do not have permission to view test history.
+              </div>
+            </div>
+          ) : isPendingVehicle ? (
             <div className="text-center py-12 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700">
               <div className="text-slate-500 dark:text-slate-400 font-medium">
                 Test history will be available after syncing this vehicle.

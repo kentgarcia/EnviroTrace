@@ -54,6 +54,8 @@ import { ColumnDef } from "@tanstack/react-table";
 import ISOTreeRequestForm from "./components/ISOTreeRequestForm";
 import ISOTreeRequestDetails from "./components/ISOTreeRequestDetails";
 import EnhancedISODashboard from "./components/EnhancedISODashboard";
+import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
+import { PERMISSIONS } from "@/core/utils/permissions";
 
 // Extend ColumnMeta to support group property for category headers
 declare module '@tanstack/react-table' {
@@ -96,6 +98,16 @@ const ISOTreeRequestsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isArchiveConfirmationOpen, setIsArchiveConfirmationOpen] = useState(false);
   const [requestToArchive, setRequestToArchive] = useState<TreeRequestWithAnalytics | null>(null);
+
+  const hasPermission = useAuthStore((state) => state.hasPermission);
+  const canCreateRequest = hasPermission(PERMISSIONS.TREE_REQUEST.CREATE);
+  const canUpdateRequest = hasPermission(PERMISSIONS.TREE_REQUEST.UPDATE);
+
+  React.useEffect(() => {
+    if (!canCreateRequest && showCreateForm) {
+      setShowCreateForm(false);
+    }
+  }, [canCreateRequest, showCreateForm]);
 
   const { data: requests, isLoading, refetch } = useQuery({
     queryKey: ["tree-requests", statusFilter, typeFilter, showArchived],
@@ -600,28 +612,30 @@ const ISOTreeRequestsPage: React.FC = () => {
         size: 80,
         cell: ({ row }) => (
           <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                setRequestToArchive(row.original);
-                setIsArchiveConfirmationOpen(true);
-              }}
-              title={row.original.is_archived ? "Restore request" : "Archive request"}
-            >
-              {row.original.is_archived ? (
-                <ArchiveRestore className="h-4 w-4" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-            </Button>
+            {canUpdateRequest && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setRequestToArchive(row.original);
+                  setIsArchiveConfirmationOpen(true);
+                }}
+                title={row.original.is_archived ? "Restore request" : "Archive request"}
+              >
+                {row.original.is_archived ? (
+                  <ArchiveRestore className="h-4 w-4" />
+                ) : (
+                  <Archive className="h-4 w-4" />
+                )}
+              </Button>
+            )}
           </div>
         ),
         meta: { group: "Actions" },
       },
     ],
-    [updateTypeMutation, updateReceivingMutation, updateRequirementsMutation, updateClearanceMutation, updateDENRMutation, updateArchiveMutation]
+    [canUpdateRequest, updateTypeMutation, updateReceivingMutation, updateRequirementsMutation, updateClearanceMutation, updateDENRMutation, updateArchiveMutation]
   );
 
   return (
@@ -760,13 +774,15 @@ const ISOTreeRequestsPage: React.FC = () => {
                           <option key={year} value={year}>{year}</option>
                         ))}
                       </select>
-                                    <Button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Request
-              </Button>
+                                    {canCreateRequest && (
+                                      <Button
+                                        onClick={() => setShowCreateForm(true)}
+                                        className="bg-[#0033a0] hover:bg-[#002a80] text-white rounded-lg"
+                                      >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        New Request
+                                      </Button>
+                                    )}
                     </div>
                   </div>
                 </CardHeader>
@@ -801,6 +817,7 @@ const ISOTreeRequestsPage: React.FC = () => {
           request={selectedRequest}
           onClose={handleCloseDetails}
           onUpdate={handleCloseDetails}
+          canEdit={canUpdateRequest}
         />
       )}
 
@@ -816,17 +833,22 @@ const ISOTreeRequestsPage: React.FC = () => {
             </DialogHeader>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsArchiveConfirmationOpen(false)}>Cancel</Button>
-                <Button variant={requestToArchive?.is_archived ? "default" : "destructive"} onClick={() => {
+                <Button
+                  variant={requestToArchive?.is_archived ? "default" : "destructive"}
+                  onClick={() => {
+                    if (!canUpdateRequest) return;
                     if (requestToArchive) {
-                         updateArchiveMutation.mutate({ 
-                            id: requestToArchive.id, 
-                            is_archived: !requestToArchive.is_archived 
-                          });
-                          setIsArchiveConfirmationOpen(false);
-                          setRequestToArchive(null);
+                      updateArchiveMutation.mutate({
+                        id: requestToArchive.id,
+                        is_archived: !requestToArchive.is_archived,
+                      });
+                      setIsArchiveConfirmationOpen(false);
+                      setRequestToArchive(null);
                     }
-                }}>
-                    {requestToArchive?.is_archived ? "Restore" : "Archive"}
+                  }}
+                  disabled={!canUpdateRequest}
+                >
+                  {requestToArchive?.is_archived ? "Restore" : "Archive"}
                 </Button>
             </DialogFooter>
         </DialogContent>

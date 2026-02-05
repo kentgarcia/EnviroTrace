@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Input } from "@/presentation/components/shared/ui/input";
@@ -43,8 +43,9 @@ import {
 import { MultiSelect } from "@/presentation/components/shared/ui/multi-select";
 import { ScrollArea } from "@/presentation/components/shared/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
-import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon, Eye, EyeOff, KeyRound, RefreshCw } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, Edit, Shield, Mail, Calendar, User as UserIcon, Eye, EyeOff, KeyRound } from "lucide-react";
 import { useToast } from "@/core/hooks/ui/use-toast";
+import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
 import {
     useUsers,
     useCreateUser,
@@ -66,6 +67,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import { PERMISSIONS } from "@/core/utils/permissions";
+import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 
 interface UserFormData {
     email: string;
@@ -120,11 +122,17 @@ export function UserManagement() {
     }, [search]);
 
     // Queries
-    const { data: users = [], isLoading, error, refetch: refetchUsers } = useUsers({ 
+    const { data: users = [], isLoading, error, refetch: refetchUsers, isFetching } = useUsers({ 
         search: debouncedSearch || undefined,
         status: status 
     });
-    const { data: availableRoles = [], isLoading: isLoadingRoles, error: rolesError } = useAvailableRoles();
+    const { data: availableRoles = [], isLoading: isLoadingRoles, error: rolesError, refetch: refetchRoles } = useAvailableRoles();
+
+    const handleRefresh = useCallback(async () => {
+        await Promise.all([refetchUsers(), refetchRoles()]);
+    }, [refetchUsers, refetchRoles]);
+
+    useContextMenuAction("refresh", handleRefresh);
 
     useEffect(() => {
         if (rolesError) {
@@ -654,15 +662,7 @@ export function UserManagement() {
                         </Tabs>
 
                         <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => refetchUsers()}
-                                disabled={isLoading}
-                                title="Refresh user list"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                            </Button>
+                            <RefreshButton onClick={handleRefresh} isLoading={isFetching} />
                             {canCreateUsers && (
                                 <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#0033a0] hover:bg-[#002a80] text-white dark:bg-[#0033a0] dark:hover:bg-[#002a80]">
                                     <Plus className="w-4 h-4 mr-2" />
