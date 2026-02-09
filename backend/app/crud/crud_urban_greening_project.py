@@ -118,6 +118,9 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
     
     def create(self, db: Session, *, obj_in) -> UrbanGreeningProject:
         data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump()
+
+        if "date_received" in data and "date_received_of_request" not in data:
+            data["date_received_of_request"] = data.pop("date_received")
         
         # Auto-generate project_code based on date_received_of_request
         if not data.get("project_code"):
@@ -175,6 +178,9 @@ class CRUDUrbanGreeningProject(CRUDBase[UrbanGreeningProject, UrbanGreeningProje
     
     def update(self, db: Session, *, db_obj: UrbanGreeningProject, obj_in: UrbanGreeningProjectUpdate) -> UrbanGreeningProject:
         update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
+
+        if "date_received" in update_data and "date_received_of_request" not in update_data:
+            update_data["date_received_of_request"] = update_data.pop("date_received")
         
         # Serialize complex fields
         if "plants" in update_data and update_data["plants"] is not None:

@@ -389,6 +389,7 @@ class CRUDTreeRequest(CRUDBase[TreeRequest, TreeRequestCreate, TreeRequestUpdate
             'receiving_received_through': obj.receiving_received_through,
             'receiving_date_received_by_dept_head': obj.receiving_date_received_by_dept_head,
             'receiving_name': obj.receiving_name,
+            'receiving_organization': obj.receiving_organization,
             'receiving_address': obj.receiving_address,
             'receiving_contact': obj.receiving_contact,
             'receiving_request_status': obj.receiving_request_status,

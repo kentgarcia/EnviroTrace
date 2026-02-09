@@ -375,6 +375,7 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
   const [barangaySearch, setBarangaySearch] = useState("");
   const [addSpeciesTarget, setAddSpeciesTarget] = useState<{plantIndex: number} | null>(null);
   const [isAddSpeciesOpen, setIsAddSpeciesOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   const [newSpeciesForm, setNewSpeciesForm] = useState<TreeSpeciesCreate>({
     common_name: "",
     scientific_name: "",
@@ -450,6 +451,28 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
   });
 
   const projectType = form.watch("project_type");
+
+  const requiredFieldConfig = useMemo(() => ([
+    { field: "project_type", label: "Project Type", tab: "details" },
+    { field: "status", label: "Status", tab: "details" },
+    { field: "plants", label: "Plants", tab: "plants" },
+    { field: "location", label: "Location / Address", tab: "location" },
+  ]), []);
+
+  const getNestedError = useCallback((path: string) => {
+    return path.split(".").reduce((acc: any, key) => acc?.[key], form.formState.errors as any);
+  }, [form.formState.errors]);
+
+  const missingRequiredFields = useMemo(() => {
+    return requiredFieldConfig.filter((item) => Boolean(getNestedError(item.field)));
+  }, [getNestedError, requiredFieldConfig]);
+
+  const focusFirstErrorTab = useCallback(() => {
+    const firstError = missingRequiredFields[0];
+    if (firstError) {
+      setActiveTab(firstError.tab);
+    }
+  }, [missingRequiredFields]);
 
   // Initialize form with existing data
   useEffect(() => {
@@ -649,6 +672,10 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
+  const handleInvalidSubmit = () => {
+    focusFirstErrorTab();
+  };
+
 
 
   const handleCreateSpecies = (e: React.FormEvent) => {
@@ -738,8 +765,25 @@ const GreeningProjectForm: React.FC<GreeningProjectFormProps> = ({
       </Dialog>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Tabs defaultValue="details" className="w-full">
+        <form onSubmit={form.handleSubmit(onSubmit, handleInvalidSubmit)} className="space-y-6">
+        {missingRequiredFields.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="font-semibold">Please complete required fields</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {missingRequiredFields.map((item) => (
+                <button
+                  key={item.field}
+                  type="button"
+                  onClick={() => setActiveTab(item.tab)}
+                  className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Project Details</TabsTrigger>
             <TabsTrigger value="plants">Plants</TabsTrigger>

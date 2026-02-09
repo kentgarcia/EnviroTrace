@@ -541,7 +541,7 @@ const GreeningProjectsPage: React.FC = () => {
 
     {/* Project Form Dialog */}
     <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-4xl overflow-visible">
           <DialogHeader>
             <DialogTitle>
               {formMode === "add" ? "New Urban Greening Project" : "Edit Project"}
