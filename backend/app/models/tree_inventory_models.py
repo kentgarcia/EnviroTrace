@@ -81,7 +81,7 @@ class TreeInventory(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
     
     # Identity
-    tree_code = Column(String(50), unique=True, nullable=False)  # TAG-2024-000001
+    tree_code = Column(String(50), unique=True, nullable=False)  # 2024-0001
     species = Column(String(100), nullable=False)
     common_name = Column(String(100), nullable=True)
     

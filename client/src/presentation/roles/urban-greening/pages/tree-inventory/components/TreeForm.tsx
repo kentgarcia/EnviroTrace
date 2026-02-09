@@ -504,7 +504,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
             <Input
               value={treeCode}
               onChange={(e) => handleTreeCodeChange(e.target.value)}
-              placeholder="2027-0001"
+              placeholder="2027-0000"
               className="mt-1"
             />
           </div>
@@ -530,7 +530,7 @@ const TreeForm: React.FC<TreeFormProps> = ({
               `Automatically generated using ${suggestedYear}.`
             )
           ) : (
-            <span className="text-amber-600">Manual override active. Ensure the code follows YYYY-NNNN format.</span>
+            <span className="text-amber-600">Manual override active. Ensure the code follows YYYY-0000 format.</span>
           )}
         </div>
         {suggestionQuery.isError && (

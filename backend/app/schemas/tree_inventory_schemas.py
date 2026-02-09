@@ -147,7 +147,7 @@ class TreeInventoryBase(BaseModel):
     notes: Optional[str] = None
 
 
-TREE_CODE_PATTERN = re.compile(r"^TAG-\d{4}-\d{6}$")
+TREE_CODE_PATTERN = re.compile(r"^\d{4}-\d{4}$")
 
 
 class TreeInventoryCreate(BaseModel):
@@ -180,7 +180,7 @@ class TreeInventoryCreate(BaseModel):
             if clean_value == "":
                 return None
             if not TREE_CODE_PATTERN.match(clean_value):
-                raise ValueError("Tree code must follow TAG-YYYY-XXXXXX format")
+                raise ValueError("Tree code must follow YYYY-0000 format")
             return clean_value
         raise ValueError("Tree code must be a string")
 
@@ -222,7 +222,7 @@ class TreeInventoryUpdate(BaseModel):
             if clean_value == "":
                 return None
             if not TREE_CODE_PATTERN.match(clean_value):
-                raise ValueError("Tree code must follow TAG-YYYY-XXXXXX format")
+                raise ValueError("Tree code must follow YYYY-0000 format")
             return clean_value
         raise ValueError("Tree code must be a string")
 
