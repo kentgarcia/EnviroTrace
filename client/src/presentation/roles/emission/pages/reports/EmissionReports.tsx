@@ -4,18 +4,19 @@ import { Button } from "@/presentation/components/shared/ui/button";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
 import { Checkbox } from "@/presentation/components/shared/ui/checkbox";
-import { Eye, Loader2, FileSpreadsheet, Printer } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
     useOffices,
     useEmissionTests,
     fetchVehicles,
     type Vehicle,
+    type EmissionTest,
+    type Office,
 } from "@/core/api/emission-service";
 import { generateReportHTML, generateComprehensiveTestingReportHTML } from "./utils/reportHTMLGenerator";
-import { generateComprehensiveTestingReport } from "./utils/excelReportGenerator";
-import { exportHTMLToWord } from "@/core/utils/htmlToWordConverter";
-import { ReportPreviewEditor } from "@/presentation/components/shared/reports/ReportPreviewEditor";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { ExportDropdown } from "@/presentation/components/shared/reports/ExportDropdown";
 
 type ReportType = 'quarterly-testing' | 'vehicle-registry' | 'testing-result' | 'office-compliance';
 
@@ -28,6 +29,10 @@ export const EmissionReports: React.FC = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [previewContent, setPreviewContent] = useState<string>("");
+    const [exportHeaders, setExportHeaders] = useState<string[]>([]);
+    const [exportRows, setExportRows] = useState<Array<Array<string | number | boolean | null>>>([]);
+    const [exportFileName, setExportFileName] = useState<string>("");
+    const [exportTitle, setExportTitle] = useState<string>("");
     
     // Comprehensive report filters
     const [comprehensiveStatus, setComprehensiveStatus] = useState<string>("all");
@@ -52,24 +57,32 @@ export const EmissionReports: React.FC = () => {
         }
 
         const loader = (async () => {
-            const pageSize = 1000;
+            const pageSize = 200;
             let skip = 0;
             let allVehicles: Vehicle[] = [];
-            let total = 0;
+            let total: number | null = null;
 
             while (true) {
                 const response = await fetchVehicles(undefined, skip, pageSize);
                 allVehicles = allVehicles.concat(response.vehicles);
-                total = response.total;
+                total = typeof response.total === "number" && response.total > 0 ? response.total : null;
                 skip += response.vehicles.length;
 
-                if (allVehicles.length >= total || response.vehicles.length === 0) {
+                if (response.vehicles.length === 0) {
+                    break;
+                }
+
+                if (total !== null && allVehicles.length >= total) {
+                    break;
+                }
+
+                if (total === null && response.vehicles.length < pageSize) {
                     break;
                 }
             }
 
             setVehicles(allVehicles);
-            setVehiclesTotal(total);
+            setVehiclesTotal(total ?? allVehicles.length);
             return allVehicles;
         })();
 
@@ -142,6 +155,129 @@ export const EmissionReports: React.FC = () => {
         } else {
             setSelectedOffices(officesData?.offices.map(o => o.id) || []);
         }
+    };
+
+    const buildFileName = (label: string) => {
+        const safeLabel = label.replace(/\s+/g, "_");
+        return `${safeLabel}_${selectedYear}_${selectedQuarter}_${Date.now()}`;
+    };
+
+    const buildTestingResultExport = (
+        year: number,
+        offices: Office[],
+        selectedOfficeIds: string[],
+        vehiclesForReport: Vehicle[],
+        tests: EmissionTest[]
+    ) => {
+        const headers = ["Office", "Plate Number", "Driver", "Q1", "Q2", "Q3", "Q4"];
+        const rows: Array<Array<string | number | boolean | null>> = [];
+        const quarters = [1, 2, 3, 4];
+
+        const getQuarterResult = (vehicleId: string, quarter: number) => {
+            const test = tests.find(
+                (t) => t.vehicle_id === vehicleId && t.year === year && t.quarter === quarter
+            );
+            if (!test) return "-";
+            return test.result ? "PASSED" : "FAILED";
+        };
+
+        selectedOfficeIds.forEach((officeId) => {
+            const office = offices.find((o) => o.id === officeId);
+            if (!office) return;
+
+            const officeVehicles = vehiclesForReport.filter((v) => v.office_id === officeId);
+            officeVehicles.forEach((vehicle) => {
+                const row = [
+                    office.name,
+                    vehicle.plate_number || "N/A",
+                    vehicle.driver_name || "N/A",
+                    ...quarters.map((q) => getQuarterResult(vehicle.id, q)),
+                ];
+                rows.push(row);
+            });
+        });
+
+        return { headers, rows, title: "Testing Result Report" };
+    };
+
+    const buildOfficeComplianceExport = (
+        year: number,
+        quarter: string,
+        offices: Office[],
+        selectedOfficeIds: string[],
+        vehiclesForReport: Vehicle[],
+        tests: EmissionTest[]
+    ) => {
+        const headers = [
+            "Office",
+            "Total Vehicles",
+            "Tested",
+            "Passed",
+            "Compliance Rate",
+        ];
+        const rows: Array<Array<string | number | boolean | null>> = [];
+        const quarterNum = parseInt(quarter.replace("Q", ""));
+
+        let totalVehicles = 0;
+        let totalTested = 0;
+        let totalPassed = 0;
+
+        selectedOfficeIds.forEach((officeId) => {
+            const office = offices.find((o) => o.id === officeId);
+            if (!office) return;
+
+            const officeVehicles = vehiclesForReport.filter((v) => v.office_id === officeId);
+            const officeTests = tests.filter(
+                (t) =>
+                    t.year === year &&
+                    t.quarter === quarterNum &&
+                    officeVehicles.some((v) => v.id === t.vehicle_id)
+            );
+
+            const tested = officeTests.length;
+            const passed = officeTests.filter((t) => t.result === true).length;
+            const complianceRate = tested > 0 ? ((passed / tested) * 100).toFixed(1) : "0.0";
+
+            totalVehicles += officeVehicles.length;
+            totalTested += tested;
+            totalPassed += passed;
+
+            rows.push([
+                office.name,
+                officeVehicles.length,
+                tested,
+                passed,
+                `${complianceRate}%`,
+            ]);
+        });
+
+        const overallCompliance = totalTested > 0 ? ((totalPassed / totalTested) * 100).toFixed(1) : "0.0";
+        rows.push(["TOTAL", totalVehicles, totalTested, totalPassed, `${overallCompliance}%`]);
+
+        return { headers, rows, title: "Office Compliance Summary" };
+    };
+
+    const buildVehicleRegistryExport = (vehiclesForReport: Vehicle[]) => {
+        const headers = [
+            "Plate Number",
+            "Driver",
+            "Contact",
+            "Office",
+            "Vehicle Type",
+            "Engine Type",
+            "Wheels",
+        ];
+        const rows = vehiclesForReport.map((vehicle) => [
+            vehicle.plate_number || "N/A",
+            vehicle.driver_name || "N/A",
+            vehicle.contact_number || "N/A",
+            vehicle.office?.name || "N/A",
+            vehicle.vehicle_type || "N/A",
+            vehicle.engine_type || "N/A",
+            vehicle.wheels || "N/A",
+        ]);
+
+        return { headers, rows, title: "Vehicle Registry Report" };
     };
 
     const handleGenerateReport = async () => {
@@ -295,6 +431,42 @@ export const EmissionReports: React.FC = () => {
                     data: reportData,
                 });
 
+                const exportPayload = {
+                    headers: [
+                        "Driver Name",
+                        "Office",
+                        "Identifier",
+                        "Category",
+                        "Description",
+                        "Year Acquired",
+                        "CO (%)",
+                        "HC (ppm)",
+                        "Opacimeter (%)",
+                        "Engine Type",
+                        "Test Result",
+                        "Test Date",
+                    ],
+                    rows: reportData.map((row) => [
+                        row.driverName,
+                        row.office,
+                        row.identifier,
+                        row.category,
+                        row.description || "-",
+                        row.yearAcquired ?? "-",
+                        row.co ?? "-",
+                        row.hc ?? "-",
+                        row.opacimeter ?? "-",
+                        row.engineType || "-",
+                        row.testResult,
+                        row.testDate || "-",
+                    ]),
+                    title: " ",
+                };
+
+                setExportHeaders(exportPayload.headers);
+                setExportRows(exportPayload.rows);
+                setExportTitle(exportPayload.title);
+                setExportFileName(buildFileName("Quarterly_Testing_Report"));
                 setPreviewContent(html);
                 setShowPreview(true);
             } else {
@@ -310,6 +482,44 @@ export const EmissionReports: React.FC = () => {
 
                 // Generate HTML for preview
                 const html = generateReportHTML(reportConfig);
+
+                if (reportType === "vehicle-registry") {
+                    const exportPayload = buildVehicleRegistryExport(vehiclesForReport);
+                    setExportHeaders(exportPayload.headers);
+                    setExportRows(exportPayload.rows);
+                    setExportTitle(exportPayload.title);
+                    setExportFileName(buildFileName("Vehicle_Registry"));
+                }
+
+                if (reportType === "testing-result") {
+                    const exportPayload = buildTestingResultExport(
+                        parseInt(selectedYear),
+                        officesData?.offices || [],
+                        selectedOffices,
+                        vehiclesForReport,
+                        emissionTests || []
+                    );
+                    setExportHeaders(exportPayload.headers);
+                    setExportRows(exportPayload.rows);
+                    setExportTitle(exportPayload.title);
+                    setExportFileName(buildFileName("Testing_Result_Report"));
+                }
+
+                if (reportType === "office-compliance") {
+                    const exportPayload = buildOfficeComplianceExport(
+                        parseInt(selectedYear),
+                        selectedQuarter,
+                        officesData?.offices || [],
+                        selectedOffices,
+                        vehiclesForReport,
+                        emissionTests || []
+                    );
+                    setExportHeaders(exportPayload.headers);
+                    setExportRows(exportPayload.rows);
+                    setExportTitle(exportPayload.title);
+                    setExportFileName(buildFileName("Office_Compliance_Summary"));
+                }
+
                 setPreviewContent(html);
                 setShowPreview(true);
             }
@@ -318,18 +528,6 @@ export const EmissionReports: React.FC = () => {
             toast.error("Failed to generate report. Please try again.");
         } finally {
             setIsGenerating(false);
-        }
-    };
-
-    const handleExport = async (format: "word" | "excel", content: string) => {
-        try {
-            const fileName = `${reportTypes.find(r => r.id === reportType)?.label.replace(/\s+/g, '_')}_${selectedYear}_${selectedQuarter}_${Date.now()}.docx`;
-            await exportHTMLToWord(content, fileName);
-            toast.success("Report exported successfully");
-            setShowPreview(false);
-        } catch (error) {
-            console.error("Error exporting report:", error);
-            toast.error("Failed to export report");
         }
     };
 
@@ -343,124 +541,6 @@ export const EmissionReports: React.FC = () => {
         }
     }, [ensureVehiclesLoaded]);
 
-    const handleExportToExcel = async () => {
-        if (reportType !== "quarterly-testing") {
-            toast.error("Excel export is only available for Quarterly Testing Report");
-            return;
-        }
-
-        try {
-            const vehiclesForReport = await ensureVehiclesLoaded();
-
-            if (vehiclesForReport.length === 0) {
-                toast.info("No vehicles available to export.");
-                return;
-            }
-
-            // Create vehicle test map, preferring latest tests with diesel opacimeter data
-            const vehicleTestMap = new Map();
-            (emissionTests || []).forEach(test => {
-                const existing = vehicleTestMap.get(test.vehicle_id);
-                if (!existing) {
-                    vehicleTestMap.set(test.vehicle_id, test);
-                    return;
-                }
-
-                const existingDate = existing?.test_date ? new Date(existing.test_date).getTime() : null;
-                const incomingDate = test?.test_date ? new Date(test.test_date).getTime() : null;
-
-                if (incomingDate === null && existingDate === null) {
-                    const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
-                    const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
-
-                    if (!existingHasOpacimeter && newHasOpacimeter) {
-                        vehicleTestMap.set(test.vehicle_id, test);
-                    }
-                    return;
-                }
-
-                if (existingDate === null && incomingDate !== null) {
-                    vehicleTestMap.set(test.vehicle_id, test);
-                    return;
-                }
-
-                if (incomingDate === null) {
-                    return;
-                }
-
-                if (existingDate === null || incomingDate > existingDate) {
-                    vehicleTestMap.set(test.vehicle_id, test);
-                    return;
-                }
-
-                if (incomingDate === existingDate) {
-                    const existingHasOpacimeter = existing.opacimeter_result !== undefined && existing.opacimeter_result !== null;
-                    const newHasOpacimeter = test.opacimeter_result !== undefined && test.opacimeter_result !== null;
-
-                    if (!existingHasOpacimeter && newHasOpacimeter) {
-                        vehicleTestMap.set(test.vehicle_id, test);
-                    }
-                }
-            });
-
-            // Filter vehicles
-            let filteredVehicles = vehiclesForReport;
-
-            if (selectedYear !== "all") {
-                filteredVehicles = filteredVehicles.filter(v => {
-                    const test = vehicleTestMap.get(v.id);
-                    return test && new Date(test.test_date).getFullYear() === parseInt(selectedYear);
-                });
-            }
-
-            if (selectedQuarter !== "all") {
-                filteredVehicles = filteredVehicles.filter(v => {
-                    const test = vehicleTestMap.get(v.id);
-                    if (!test) return false;
-                    const testQuarter = Math.ceil((new Date(test.test_date).getMonth() + 1) / 3);
-                    return testQuarter === parseInt(selectedQuarter.replace("Q", ""));
-                });
-            }
-
-            if (comprehensiveOffice !== "all") {
-                filteredVehicles = filteredVehicles.filter(v => v.office_id === comprehensiveOffice);
-            }
-
-            if (comprehensiveStatus !== "all") {
-                filteredVehicles = filteredVehicles.filter(v => {
-                    const test = vehicleTestMap.get(v.id);
-                    if (comprehensiveStatus === "not-tested") return !test;
-                    if (comprehensiveStatus === "passed") return test?.result === true;
-                    if (comprehensiveStatus === "failed") return test?.result === false;
-                    return true;
-                });
-            }
-
-            if (comprehensiveEngineType !== "all") {
-                const selectedEngine = comprehensiveEngineType.trim().toLowerCase();
-                filteredVehicles = filteredVehicles.filter(v => {
-                    const vehicleEngine = v.engine_type?.trim().toLowerCase() || "";
-                    return vehicleEngine === selectedEngine;
-                });
-            }
-
-            await generateComprehensiveTestingReport({
-                year: selectedYear !== "all" ? parseInt(selectedYear) : undefined,
-                quarter: selectedQuarter !== "all" ? parseInt(selectedQuarter.replace("Q", "")) : undefined,
-                office: comprehensiveOffice !== "all" ? comprehensiveOffice : undefined,
-                status: comprehensiveStatus,
-                engineType: comprehensiveEngineType !== "all" ? comprehensiveEngineType : undefined,
-                vehicles: filteredVehicles,
-                tests: emissionTests || [],
-            });
-
-            toast.success("Excel report generated successfully");
-        } catch (error) {
-            console.error("Error exporting to Excel:", error);
-            toast.error("Failed to export to Excel");
-        }
-    };
-
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
     const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
@@ -469,17 +549,62 @@ export const EmissionReports: React.FC = () => {
     const showOfficeSelection = reportType === "testing-result" || reportType === "office-compliance";
     const showComprehensiveFilters = reportType === "quarterly-testing";
     const showYearSelection = reportType !== "vehicle-registry";
+    const yearDisplay = selectedYear === "all" ? "All Years" : selectedYear;
+    const quarterDisplay = selectedQuarter === "all" ? "All Quarters" : selectedQuarter;
+    const officeFilterLabel = comprehensiveOffice === "all"
+        ? "All Offices"
+        : (officesData?.offices.find((office) => office.id === comprehensiveOffice)?.name || "Selected Office");
+    const statusLabelMap: Record<string, string> = {
+        all: "All Vehicles",
+        passed: "Passed Only",
+        failed: "Failed Only",
+        "not-tested": "Not Tested",
+    };
+    const statusDisplay = statusLabelMap[comprehensiveStatus] || "All Vehicles";
+    const engineDisplay = comprehensiveEngineType === "all" ? "All Engine Types" : comprehensiveEngineType;
+    const selectedOfficeLabel = selectedOffices.length === 0
+        ? "None selected"
+        : selectedOffices.length === (officesData?.offices.length || 0)
+            ? "All offices"
+            : `${selectedOffices.length} office(s)`;
 
     return (
         <React.Fragment>
-            {showPreview && (
-                <ReportPreviewEditor
-                    content={previewContent}
-                    onClose={() => setShowPreview(false)}
-                    onExport={handleExport}
-                    reportFormat="word"
-                />
-            )}
+            <Dialog open={showPreview} onOpenChange={setShowPreview}>
+                <DialogContent className="max-w-6xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                    <DialogHeader className="px-6 pt-6 pb-4">
+                        <DialogTitle>Report Preview</DialogTitle>
+                        <DialogDescription>
+                            Review the report before exporting.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="px-6 pb-6 flex-1 flex flex-col overflow-hidden min-h-0">
+                        <div className="flex items-center justify-end gap-2 mb-4">
+                            <Button variant="outline" onClick={() => setShowPreview(false)}>
+                                Close
+                            </Button>
+                            <ExportDropdown
+                                data={exportRows}
+                                headers={exportHeaders}
+                                fileName={exportFileName}
+                                title={exportTitle}
+                                onSuccess={() => toast.success("Report exported successfully")}
+                                onError={(error) => {
+                                    console.error("Error exporting report:", error);
+                                    toast.error("Failed to export report");
+                                }}
+                            />
+                        </div>
+                        <div className="border border-slate-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 flex-1 overflow-hidden min-h-0">
+                            <div
+                                className="h-full overflow-y-auto p-6 prose prose-sm sm:prose lg:prose-lg max-w-none"
+                                style={{ maxHeight: "calc(90vh - 220px)" }}
+                                dangerouslySetInnerHTML={{ __html: previewContent }}
+                            />
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Header Section */}
@@ -688,19 +813,6 @@ export const EmissionReports: React.FC = () => {
                                             )}
                                         </Button>
 
-                                        {/* Export to Excel Button - Only for Quarterly Testing */}
-                                        {showComprehensiveFilters && (
-                                            <Button
-                                                className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-none rounded-lg hover:bg-slate-50 dark:hover:bg-gray-700"
-                                                size="lg"
-                                                variant="outline"
-                                                onClick={handleExportToExcel}
-                                                disabled={isGenerating}
-                                            >
-                                                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                                                Export to Excel
-                                            </Button>
-                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
@@ -847,21 +959,28 @@ export const EmissionReports: React.FC = () => {
                                             </h4>
                                             <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                                                 <p><span className="font-medium">Report Type:</span> {reportTypes.find(t => t.id === reportType)?.label}</p>
-                                                <p><span className="font-medium">Year:</span> {selectedYear}</p>
+                                                {showYearSelection && (
+                                                    <p><span className="font-medium">Year:</span> {yearDisplay}</p>
+                                                )}
                                                 {showQuarterSelection && (
-                                                    <p><span className="font-medium">Quarter:</span> {selectedQuarter}</p>
+                                                    <p><span className="font-medium">Quarter:</span> {quarterDisplay}</p>
+                                                )}
+                                                {showComprehensiveFilters && (
+                                                    <p><span className="font-medium">Office Filter:</span> {officeFilterLabel}</p>
+                                                )}
+                                                {showComprehensiveFilters && (
+                                                    <p><span className="font-medium">Status Filter:</span> {statusDisplay}</p>
+                                                )}
+                                                {showComprehensiveFilters && (
+                                                    <p><span className="font-medium">Engine Type:</span> {engineDisplay}</p>
                                                 )}
                                                 {showOfficeSelection && (
                                                     <p>
                                                         <span className="font-medium">Offices:</span>{" "}
-                                                        {selectedOffices.length === 0
-                                                            ? "None selected"
-                                                            : selectedOffices.length === officesData?.offices.length
-                                                                ? "All offices"
-                                                                : `${selectedOffices.length} office(s)`}
+                                                        {selectedOfficeLabel}
                                                     </p>
                                                 )}
-                                                <p><span className="font-medium">Format:</span> Microsoft Word (.docx)</p>
+                                                <p><span className="font-medium">Format:</span> PDF, CSV, Excel</p>
                                             </div>
                                         </div>
                                     </div>

@@ -3,28 +3,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/pre
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Label } from "@/presentation/components/shared/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/presentation/components/shared/ui/select";
-import { Eye, Loader2, FileSpreadsheet, Download } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTrees } from "@/core/api/tree-inventory-api";
 import { fetchTreeRequests } from "@/core/api/tree-management-request-api";
-import { fetchUrbanGreeningPlantings, fetchSaplingCollections } from "@/core/api/planting-api";
+import { fetchUrbanGreeningPlantings } from "@/core/api/planting-api";
 import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
 import { generateUrbanGreeningReportHTML } from "./utils/reportHTMLGenerator";
-import { exportHTMLToWord } from "@/core/utils/htmlToWordConverter";
-import { ReportPreviewEditor } from "@/presentation/components/shared/reports/ReportPreviewEditor";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
+import { ExportDropdown } from "@/presentation/components/shared/reports/ExportDropdown";
+import { MultiSelect } from "@/presentation/components/shared/ui/multi-select";
 
-type ReportType = 'tree-inventory' | 'tree-requests' | 'planting-projects' | 'sapling-collections' | 'fee-records';
+type ReportType = 'tree-inventory' | 'tree-requests' | 'urban-greening-projects' | 'fee-records';
 
 export const UrbanGreeningReports: React.FC = () => {
     const currentYear = new Date().getFullYear();
     const [reportType, setReportType] = useState<ReportType>("tree-inventory");
     const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
-    const [selectedMonth, setSelectedMonth] = useState<string>("all");
+    const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+    const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
+    const [selectedRequestType, setSelectedRequestType] = useState<string>("all");
     const [isGenerating, setIsGenerating] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [previewContent, setPreviewContent] = useState<string>("");
+    const [exportHeaders, setExportHeaders] = useState<string[]>([]);
+    const [exportRows, setExportRows] = useState<Array<Array<string | number | boolean | null>>>([]);
+    const [exportFileName, setExportFileName] = useState<string>("");
+    const [exportTitle, setExportTitle] = useState<string>("");
 
     // Fetch data for reports
     const { data: treeInventoryData, isLoading: isLoadingTrees, error: treeError } = useQuery({
@@ -46,19 +53,10 @@ export const UrbanGreeningReports: React.FC = () => {
     });
 
     const { data: plantingData, isLoading: isLoadingPlantings, error: plantingError } = useQuery({
-        queryKey: ["planting-projects", "all"],
+        queryKey: ["urban-greening-projects", "all"],
         queryFn: async () => {
             const data = await fetchUrbanGreeningPlantings({ skip: 0, limit: 1000 });
             console.log('Planting Data:', data);
-            return data;
-        },
-    });
-
-    const { data: saplingData, isLoading: isLoadingSaplings, error: saplingError } = useQuery({
-        queryKey: ["sapling-collections", "all"],
-        queryFn: async () => {
-            const data = await fetchSaplingCollections({ skip: 0, limit: 1000 });
-            console.log('Sapling Data:', data);
             return data;
         },
     });
@@ -84,14 +82,9 @@ export const UrbanGreeningReports: React.FC = () => {
             description: "Tree cutting and planting permit applications with processing status",
         },
         {
-            id: "planting-projects" as ReportType,
-            label: "Planting Projects Report",
-            description: "Urban greening planting initiatives and project details",
-        },
-        {
-            id: "sapling-collections" as ReportType,
-            label: "Sapling Collections Report",
-            description: "Sapling distribution and collection records",
+            id: "urban-greening-projects" as ReportType,
+            label: "Urban Greening Projects Report",
+            description: "Urban greening initiatives and project details",
         },
         {
             id: "fee-records" as ReportType,
@@ -100,8 +93,84 @@ export const UrbanGreeningReports: React.FC = () => {
         },
     ];
 
+    const buildFileName = (label: string) => {
+        const safeLabel = label.replace(/\s+/g, "_");
+        const monthPart = selectedMonths.length > 0 ? `Months_${selectedMonths.join("-")}` : "All_Months";
+        return `${safeLabel}_${selectedYear}_${monthPart}_${Date.now()}`;
+    };
+
+    const buildExportPayload = (type: ReportType, data: any[]) => {
+        const buildAllFieldsPayload = (
+            rows: any[],
+            options?: { omitKeys?: string[]; dateOnlyKeys?: string[] }
+        ) => {
+            if (rows.length === 0) {
+                return { headers: [] as string[], rows: [] as Array<Array<string | number | boolean | null>>, title: "" };
+            }
+
+            const omitKeys = new Set((options?.omitKeys || []).map((key) => key.toLowerCase()));
+            const dateOnlyKeys = new Set((options?.dateOnlyKeys || []).map((key) => key.toLowerCase()));
+            const keys = Object.keys(rows[0]).filter((key) => !omitKeys.has(key.toLowerCase()));
+            const headers = keys.map((key) =>
+                key
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (char) => char.toUpperCase())
+            );
+            const tableRows = rows.map((row) =>
+                keys.map((key) => {
+                    const value = row[key];
+                    if (dateOnlyKeys.has(key.toLowerCase()) && value) {
+                        const parsed = new Date(value);
+                        if (!Number.isNaN(parsed.getTime())) {
+                            return parsed.toISOString().slice(0, 10);
+                        }
+                    }
+                    if (value === null || value === undefined) return "N/A";
+                    if (typeof value === "object") return JSON.stringify(value);
+                    return value;
+                })
+            );
+
+            return { headers, rows: tableRows, title: "" };
+        };
+
+        switch (type) {
+            case "tree-inventory":
+                return {
+                    headers: [
+                        "Tree ID",
+                        "Status",
+                        "Health",
+                        "Species",
+                        "Address",
+                        "Planted",
+                    ],
+                    rows: data.map((tree: any) => [
+                        tree.tree_code || "N/A",
+                        tree.status || tree.tree_status || "N/A",
+                        tree.health || "N/A",
+                        tree.species?.common_name || tree.common_name || tree.species?.scientific_name || tree.scientific_name || "N/A",
+                        tree.address || tree.location || "N/A",
+                        tree.planting_date ? new Date(tree.planting_date).toLocaleDateString() : "N/A",
+                    ]),
+                    title: "",
+                };
+            case "tree-requests":
+                return buildAllFieldsPayload(data);
+            case "urban-greening-projects":
+                return buildAllFieldsPayload(data);
+            case "fee-records":
+                return buildAllFieldsPayload(data, {
+                    omitKeys: ["id", "fee_id"],
+                    dateOnlyKeys: ["created_at", "updated_at"],
+                });
+            default:
+                return { headers: [], rows: [], title: "" };
+        }
+    };
+
     const handleGenerateReport = async () => {
-        const isLoading = isLoadingTrees || isLoadingRequests || isLoadingPlantings || isLoadingSaplings || isLoadingFees;
+        const isLoading = isLoadingTrees || isLoadingRequests || isLoadingPlantings || isLoadingFees;
         
         if (isLoading) {
             toast.error("Please wait, data is still loading...");
@@ -117,38 +186,45 @@ export const UrbanGreeningReports: React.FC = () => {
             console.log('=== Report Generation Debug ===');
             console.log('Report Type:', reportType);
             console.log('Selected Year:', selectedYear);
-            console.log('Selected Month:', selectedMonth);
+            console.log('Selected Months:', selectedMonths);
             console.log('Raw Data Lengths:', {
                 treeInventory: treeInventoryData?.length,
                 treeRequests: treeRequestsData?.length,
                 planting: plantingData?.length,
-                sapling: saplingData?.length,
                 fee: feeData?.length,
             });
             
             // Filter data based on report type
             switch (reportType) {
                 case "tree-inventory":
-                    filteredData = filterDataByDateTime(treeInventoryData || [], "created_at");
+                    filteredData = treeInventoryData || [];
                     reportTitle = "Tree Inventory Report";
                     break;
                 case "tree-requests":
-                    filteredData = filterDataByDateTime(treeRequestsData || [], "receiving_date_received");
+                    filteredData = filterDataByPeriod(treeRequestsData || [], "receiving_date_received", {
+                        year: selectedYear,
+                        month: selectedMonths,
+                    });
                     if (selectedStatus !== "all") {
                         filteredData = filteredData.filter((item: any) => item.status_receiving === selectedStatus);
                     }
+                    if (selectedRequestType !== "all") {
+                        filteredData = filteredData.filter((item: any) => item.request_type === selectedRequestType);
+                    }
                     reportTitle = "Tree Requests Report";
                     break;
-                case "planting-projects":
-                    filteredData = filterDataByDateTime(plantingData || [], "planting_date");
-                    reportTitle = "Planting Projects Report";
-                    break;
-                case "sapling-collections":
-                    filteredData = filterDataByDateTime(saplingData || [], "collection_date");
-                    reportTitle = "Sapling Collections Report";
+                case "urban-greening-projects":
+                    filteredData = filterDataByPeriod(plantingData || [], "planting_date", {
+                        year: selectedYear,
+                        month: selectedMonths,
+                    });
+                    reportTitle = "Urban Greening Projects Report";
                     break;
                 case "fee-records":
-                    filteredData = filterDataByDateTime(feeData || [], "date");
+                    filteredData = filterDataByPeriod(feeData || [], "date", {
+                        year: selectedYear,
+                        quarter: selectedQuarter,
+                    });
                     reportTitle = "Fee Records Report";
                     break;
             }
@@ -160,13 +236,18 @@ export const UrbanGreeningReports: React.FC = () => {
                 reportType,
                 reportTitle,
                 year: selectedYear !== "all" ? parseInt(selectedYear) : undefined,
-                month: selectedMonth !== "all" ? parseInt(selectedMonth) : undefined,
+                month: selectedMonths.length === 1 ? parseInt(selectedMonths[0]) : undefined,
                 status: selectedStatus,
                 data: filteredData,
             };
 
             // Generate HTML for preview
             const html = generateUrbanGreeningReportHTML(reportConfig);
+            const exportPayload = buildExportPayload(reportType, filteredData);
+            setExportHeaders(exportPayload.headers);
+            setExportRows(exportPayload.rows);
+            setExportTitle(exportPayload.title);
+            setExportFileName(buildFileName(reportTitle));
             setPreviewContent(html);
             setShowPreview(true);
         } catch (error) {
@@ -177,44 +258,46 @@ export const UrbanGreeningReports: React.FC = () => {
         }
     };
 
-    const filterDataByDateTime = (data: any[], dateField: string) => {
-        // If both year and month are "all", return all data
-        if (selectedYear === "all" && selectedMonth === "all") {
+    const filterDataByPeriod = (
+        data: any[],
+        dateField: string,
+        options: { year?: string; month?: string | string[]; quarter?: string }
+    ) => {
+        const { year, month, quarter } = options;
+        const monthValues = Array.isArray(month) ? month : month ? [month] : [];
+
+        if (year === "all" && monthValues.length === 0 && quarter === "all") {
             return data;
         }
 
         return data.filter((item: any) => {
-            // If no date field exists, exclude only if filtering by date
             if (!item[dateField]) return false;
-            
+
             const itemDate = new Date(item[dateField]);
             const itemYear = itemDate.getFullYear();
             const itemMonth = itemDate.getMonth() + 1;
+            const itemQuarter = Math.ceil(itemMonth / 3);
 
-            // Filter by year if specified
-            if (selectedYear !== "all" && itemYear !== parseInt(selectedYear)) {
+            if (year !== undefined && year !== "all" && itemYear !== parseInt(year)) {
                 return false;
             }
 
-            // Filter by month if specified
-            if (selectedMonth !== "all" && itemMonth !== parseInt(selectedMonth)) {
-                return false;
+            if (monthValues.length > 0) {
+                const monthMatches = monthValues.some((value) => itemMonth === parseInt(value));
+                if (!monthMatches) {
+                    return false;
+                }
+            }
+
+            if (quarter !== undefined && quarter !== "all") {
+                const quarterValue = parseInt(quarter.replace("Q", ""));
+                if (itemQuarter !== quarterValue) {
+                    return false;
+                }
             }
 
             return true;
         });
-    };
-
-    const handleExport = async (format: "word" | "excel", content: string) => {
-        try {
-            const fileName = `${reportTypes.find(r => r.id === reportType)?.label.replace(/\s+/g, '_')}_${selectedYear}_${selectedMonth !== "all" ? `Month_${selectedMonth}` : "All_Months"}_${Date.now()}.docx`;
-            await exportHTMLToWord(content, fileName);
-            toast.success("Report exported successfully");
-            setShowPreview(false);
-        } catch (error) {
-            console.error("Error exporting report:", error);
-            toast.error("Failed to export report");
-        }
     };
 
     const years = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -232,19 +315,76 @@ export const UrbanGreeningReports: React.FC = () => {
         { value: "11", label: "November" },
         { value: "12", label: "December" },
     ];
+    const quarters = ["Q1", "Q2", "Q3", "Q4"];
 
     const showStatusFilter = reportType === "tree-requests";
+    const showYearFilter = reportType !== "tree-inventory";
+    const showMonthFilter = reportType === "tree-requests" || reportType === "urban-greening-projects";
+    const showQuarterFilter =
+        reportType === "fee-records";
+    const showRequestTypeFilter = reportType === "tree-requests";
+    const yearDisplay = selectedYear === "all" ? "All Years" : selectedYear;
+    const monthDisplay = selectedMonths.length === 0
+        ? "All Months"
+        : selectedMonths
+            .map((monthValue) => months.find((month) => month.value === monthValue)?.label || monthValue)
+            .join(", ");
+    const quarterDisplay = selectedQuarter === "all" ? "All Quarters" : selectedQuarter;
+    const statusLabelMap: Record<string, string> = {
+        all: "All Statuses",
+        pending: "Pending",
+        approved: "Approved",
+        rejected: "Rejected",
+        completed: "Completed",
+    };
+    const statusDisplay = statusLabelMap[selectedStatus] || "All Statuses";
+    const requestTypeOptions = React.useMemo(() => {
+        const options = new Set<string>();
+        (treeRequestsData || []).forEach((request: any) => {
+            if (request?.request_type) {
+                options.add(request.request_type);
+            }
+        });
+        return Array.from(options).sort((a, b) => a.localeCompare(b));
+    }, [treeRequestsData]);
 
     return (
         <React.Fragment>
-            {showPreview && (
-                <ReportPreviewEditor
-                    content={previewContent}
-                    onClose={() => setShowPreview(false)}
-                    onExport={handleExport}
-                    reportFormat="word"
-                />
-            )}
+            <Dialog open={showPreview} onOpenChange={setShowPreview}>
+                <DialogContent className="max-w-6xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+                    <DialogHeader className="px-6 pt-6 pb-4">
+                        <DialogTitle>Report Preview</DialogTitle>
+                        <DialogDescription>
+                            Review the report before exporting.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="px-6 pb-6 flex-1 flex flex-col overflow-hidden min-h-0">
+                        <div className="flex items-center justify-end gap-2 mb-4">
+                            <Button variant="outline" onClick={() => setShowPreview(false)}>
+                                Close
+                            </Button>
+                            <ExportDropdown
+                                data={exportRows}
+                                headers={exportHeaders}
+                                fileName={exportFileName}
+                                title={exportTitle}
+                                onSuccess={() => toast.success("Report exported successfully")}
+                                onError={(error) => {
+                                    console.error("Error exporting report:", error);
+                                    toast.error("Failed to export report");
+                                }}
+                            />
+                        </div>
+                        <div className="border border-slate-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 flex-1 overflow-hidden min-h-0">
+                            <div
+                                className="h-full overflow-y-auto p-6 prose prose-sm sm:prose lg:prose-lg max-w-none"
+                                style={{ maxHeight: "calc(90vh - 220px)" }}
+                                dangerouslySetInnerHTML={{ __html: previewContent }}
+                            />
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <div className="flex flex-col h-full overflow-hidden">
                 {/* Header Section */}
@@ -295,53 +435,71 @@ export const UrbanGreeningReports: React.FC = () => {
                                             </p>
                                             
                                             {/* Display any data loading errors */}
-                                            {(treeError || requestsError || plantingError || saplingError || feeError) && (
+                                            {(treeError || requestsError || plantingError || feeError) && (
                                                 <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
                                                     <p className="font-medium">Data Loading Errors:</p>
                                                     {treeError && <p>• Tree Inventory: {(treeError as any).message}</p>}
                                                     {requestsError && <p>• Tree Requests: {(requestsError as any).message}</p>}
-                                                    {plantingError && <p>• Planting Projects: {(plantingError as any).message}</p>}
-                                                    {saplingError && <p>• Sapling Collections: {(saplingError as any).message}</p>}
+                                                    {plantingError && <p>• Urban Greening Projects: {(plantingError as any).message}</p>}
                                                     {feeError && <p>• Fee Records: {(feeError as any).message}</p>}
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Year Selection */}
-                                        <div className="space-y-2">
-                                            <Label>Year</Label>
-                                            <Select value={selectedYear} onValueChange={setSelectedYear}>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All Years</SelectItem>
-                                                    {years.map(year => (
-                                                        <SelectItem key={year} value={year.toString()}>
-                                                            {year}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                        {showYearFilter && (
+                                            <div className="space-y-2">
+                                                <Label>Year</Label>
+                                                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Years</SelectItem>
+                                                        {years.map(year => (
+                                                            <SelectItem key={year} value={year.toString()}>
+                                                                {year}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
+                                        {/* Quarter Selection */}
+                                        {showQuarterFilter && (
+                                            <div className="space-y-2">
+                                                <Label>Quarter</Label>
+                                                <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Quarters</SelectItem>
+                                                        {quarters.map(quarter => (
+                                                            <SelectItem key={quarter} value={quarter}>
+                                                                {quarter}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
 
                                         {/* Month Selection */}
-                                        <div className="space-y-2">
-                                            <Label>Month</Label>
-                                            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                                                <SelectTrigger>
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">All Months</SelectItem>
-                                                    {months.map(month => (
-                                                        <SelectItem key={month.value} value={month.value}>
-                                                            {month.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                        {showMonthFilter && (
+                                            <div className="space-y-2">
+                                                <Label>Months</Label>
+                                                <MultiSelect
+                                                    items={months}
+                                                    selectedValues={selectedMonths}
+                                                    onChange={setSelectedMonths}
+                                                    placeholder="Select months..."
+                                                    emptyMessage="No months available."
+                                                    maxDisplayItems={2}
+                                                />
+                                            </div>
+                                        )}
 
                                         {/* Status Filter for Tree Requests */}
                                         {showStatusFilter && (
@@ -357,6 +515,25 @@ export const UrbanGreeningReports: React.FC = () => {
                                                         <SelectItem value="approved">Approved</SelectItem>
                                                         <SelectItem value="rejected">Rejected</SelectItem>
                                                         <SelectItem value="completed">Completed</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
+                                        {showRequestTypeFilter && (
+                                            <div className="space-y-2">
+                                                <Label>Request Type</Label>
+                                                <Select value={selectedRequestType} onValueChange={setSelectedRequestType}>
+                                                    <SelectTrigger>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Types</SelectItem>
+                                                        {requestTypeOptions.map((type) => (
+                                                            <SelectItem key={type} value={type}>
+                                                                {type}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -417,22 +594,12 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-600">Planting Projects</p>
+                                                <p className="text-sm text-gray-600">Urban Greening Projects</p>
                                                 <p className="text-2xl font-bold text-emerald-600">
                                                     {isLoadingPlantings ? (
                                                         <Loader2 className="w-6 h-6 animate-spin inline" />
                                                     ) : (
                                                         plantingData?.length || 0
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-600">Sapling Collections</p>
-                                                <p className="text-2xl font-bold text-teal-600">
-                                                    {isLoadingSaplings ? (
-                                                        <Loader2 className="w-6 h-6 animate-spin inline" />
-                                                    ) : (
-                                                        saplingData?.length || 0
                                                     )}
                                                 </p>
                                             </div>
@@ -497,7 +664,7 @@ export const UrbanGreeningReports: React.FC = () => {
                                                     </div>
                                                 )}
 
-                                                {reportType === "planting-projects" && (
+                                                {reportType === "urban-greening-projects" && (
                                                     <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
                                                         <h4 className="font-semibold text-emerald-900 dark:text-emerald-300 mb-2">Report Contents:</h4>
                                                         <ul className="list-disc list-inside text-emerald-800 dark:text-emerald-400 space-y-1">
@@ -507,20 +674,6 @@ export const UrbanGreeningReports: React.FC = () => {
                                                             <li>Species Planted</li>
                                                             <li>Project Status</li>
                                                             <li>Organization Details</li>
-                                                        </ul>
-                                                    </div>
-                                                )}
-
-                                                {reportType === "sapling-collections" && (
-                                                    <div className="bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 rounded-lg p-4">
-                                                        <h4 className="font-semibold text-teal-900 dark:text-teal-300 mb-2">Report Contents:</h4>
-                                                        <ul className="list-disc list-inside text-teal-800 dark:text-teal-400 space-y-1">
-                                                            <li>Collection Date and Location</li>
-                                                            <li>Sapling Species</li>
-                                                            <li>Quantity Collected/Distributed</li>
-                                                            <li>Recipient Information</li>
-                                                            <li>Purpose of Collection</li>
-                                                            <li>Collection Method</li>
                                                         </ul>
                                                     </div>
                                                 )}
@@ -547,12 +700,25 @@ export const UrbanGreeningReports: React.FC = () => {
                                                 </h4>
                                                 <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                                                     <p><span className="font-medium">Report Type:</span> {reportTypes.find(t => t.id === reportType)?.label}</p>
-                                                    <p><span className="font-medium">Year:</span> {selectedYear === "all" ? "All Years" : selectedYear}</p>
-                                                    <p><span className="font-medium">Month:</span> {selectedMonth === "all" ? "All Months" : months.find(m => m.value === selectedMonth)?.label}</p>
-                                                    {showStatusFilter && (
-                                                        <p><span className="font-medium">Status:</span> {selectedStatus === "all" ? "All Statuses" : selectedStatus}</p>
+                                                    {showYearFilter && (
+                                                        <p><span className="font-medium">Year:</span> {yearDisplay}</p>
                                                     )}
-                                                    <p><span className="font-medium">Format:</span> Microsoft Word (.docx)</p>
+                                                    {showQuarterFilter && (
+                                                        <p><span className="font-medium">Quarter:</span> {quarterDisplay}</p>
+                                                    )}
+                                                    {showMonthFilter && (
+                                                        <p><span className="font-medium">Month:</span> {monthDisplay}</p>
+                                                    )}
+                                                    {showRequestTypeFilter && (
+                                                        <p><span className="font-medium">Request Type:</span> {selectedRequestType === "all" ? "All Types" : selectedRequestType}</p>
+                                                    )}
+                                                    {showStatusFilter && (
+                                                        <p><span className="font-medium">Status:</span> {statusDisplay}</p>
+                                                    )}
+                                                    {!showYearFilter && !showQuarterFilter && !showMonthFilter && (
+                                                        <p><span className="font-medium">Filters:</span> None</p>
+                                                    )}
+                                                    <p><span className="font-medium">Format:</span> PDF, CSV, Excel</p>
                                                 </div>
                                             </div>
                                         </div>

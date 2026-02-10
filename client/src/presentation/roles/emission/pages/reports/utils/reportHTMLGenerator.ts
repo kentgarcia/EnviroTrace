@@ -57,21 +57,6 @@ const generateVehicleRegistryReport = (
   vehicles: Vehicle[]
 ): string => {
   let html = `
-    <div style="text-align: center; margin: 60px 0;">
-      <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 20px;">
-        VEHICLE REGISTRY REPORT
-      </h1>
-      <p style="font-size: 16px; margin: 10px 0;">Year: ${year}</p>
-      <p style="font-size: 14px; margin: 10px 0; color: #666;">
-        Generated: ${new Date().toLocaleDateString()}
-      </p>
-    </div>
-    <hr style="margin: 40px 0;" />
-
-    <h2 style="font-size: 20px; font-weight: 600; margin: 20px 0 10px 0;">
-      Vehicle Registry - ${vehicles.length} Vehicles
-    </h2>
-
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px;">
       <thead>
         <tr style="background-color: #1e3a8a; color: white;">
@@ -149,18 +134,7 @@ const generateTestingResultReport = (
     return test ? test.result : null;
   };
 
-  let html = `
-    <div style="text-align: center; margin: 60px 0;">
-      <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 20px;">
-        TESTING RESULT REPORT
-      </h1>
-      <p style="font-size: 16px; margin: 10px 0;">Year: ${year}</p>
-      <p style="font-size: 14px; margin: 10px 0; color: #666;">
-        Generated: ${new Date().toLocaleDateString()}
-      </p>
-    </div>
-    <hr style="margin: 40px 0;" />
-  `;
+  let html = ``;
 
   // Generate a table for each selected office
   selectedOfficeIds.forEach((officeId) => {
@@ -170,10 +144,6 @@ const generateTestingResultReport = (
     const officeVehicles = vehicles.filter((v) => v.office_id === officeId);
 
     html += `
-      <h2 style="font-size: 20px; font-weight: 600; margin: 30px 0 10px 0;">
-        ${office.name} - ${officeVehicles.length} Vehicles
-      </h2>
-
       <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px;">
         <thead>
           <tr style="background-color: #059669; color: white;">
@@ -258,22 +228,6 @@ const generateOfficeComplianceReport = (
   const quarterNum = parseInt(quarter.replace("Q", ""));
 
   let html = `
-    <div style="text-align: center; margin: 60px 0;">
-      <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 20px;">
-        OFFICE COMPLIANCE SUMMARY
-      </h1>
-      <p style="font-size: 16px; margin: 10px 0;">Year: ${year}</p>
-      <p style="font-size: 16px; margin: 10px 0;">Quarter: ${quarter}</p>
-      <p style="font-size: 14px; margin: 10px 0; color: #666;">
-        Generated: ${new Date().toLocaleDateString()}
-      </p>
-    </div>
-    <hr style="margin: 40px 0;" />
-
-    <h2 style="font-size: 20px; font-weight: 600; margin: 20px 0 10px 0;">
-      Compliance Summary by Office
-    </h2>
-
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px;">
       <thead>
         <tr style="background-color: #7c3aed; color: white;">

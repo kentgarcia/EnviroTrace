@@ -27,7 +27,8 @@
     "withGlobalTauri": true
   },
   "plugins": {
-    "store": null
+    "store": null,
+    "opener": null
   },
   "bundle": {
     "active": true,

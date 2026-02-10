@@ -404,7 +404,7 @@ export function OfficeComplianceTable({
         header: "Status",
         cell: (info) => {
           const row = info.row.original;
-          const hasData = row.total_vehicles > 0 || row.tested_vehicles > 0;
+          const hasData = row.tested_vehicles > 0;
           const isCompliant = row.compliance_rate >= 80;
           return <StatusCell isCompliant={isCompliant} hasData={hasData} />;
         },
