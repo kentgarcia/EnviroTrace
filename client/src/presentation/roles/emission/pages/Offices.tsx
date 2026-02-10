@@ -1,8 +1,9 @@
-import { useState, useCallback, memo, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Input } from "@/presentation/components/shared/ui/input";
 import { Card } from "@/presentation/components/shared/ui/card";
+import { StatCard } from "@/presentation/components/shared/StatCard";
 import { Button } from "@/presentation/components/shared/ui/button";
-import { Search, RefreshCw, FileSpreadsheet, Plus, Building2, Car, CheckCircle2, BarChart3 } from "lucide-react";
+import { Search, RefreshCw, FileSpreadsheet, Plus, Building2, CheckCircle2, BarChart3 } from "lucide-react";
 import { YearSelector } from "@/presentation/roles/emission/components/offices/YearSelector";
 import { OfficeComplianceTable } from "@/presentation/roles/emission/components/offices/OfficeComplianceTable";
 import { OfficeModal } from "@/presentation/roles/emission/components/offices/OfficeModal";
@@ -10,33 +11,13 @@ import { useOffices, OfficeWithCompliance } from "@/core/hooks/offices/useOffice
 import { PERMISSIONS } from "@/core/utils/permissions";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
-// Memoize the statistic cards to prevent unnecessary re-renders
-const StatCard = memo(
-  ({ title, value, icon: Icon }: { title: string; value: string | number; icon?: any }) => (
-    <Card className="p-6 border border-slate-200 dark:border-gray-700 shadow-none rounded-xl bg-white dark:bg-gray-900 overflow-hidden relative">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{title}</span>
-          <span className="text-2xl font-bold text-slate-900 dark:text-gray-100">{value}</span>
-        </div>
-        {Icon && (
-          <div className="h-10 w-10 rounded-lg bg-slate-50 dark:bg-gray-800 flex items-center justify-center border border-slate-100 dark:border-gray-700">
-            <Icon className="h-5 w-5 text-slate-400 dark:text-slate-500" />
-          </div>
-        )}
-      </div>
-    </Card>
-  )
-);
-
-StatCard.displayName = "StatCard";
-
 export default function OfficesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOffice, setEditingOffice] = useState<OfficeWithCompliance | null>(null);
   const canCreateOffice = useAuthStore((state) => state.hasPermission(PERMISSIONS.OFFICE.CREATE));
   const canUpdateOffice = useAuthStore((state) => state.hasPermission(PERMISSIONS.OFFICE.UPDATE));
   const canViewTests = useAuthStore((state) => state.hasPermission(PERMISSIONS.TEST.VIEW));
+  const canViewVehicles = useAuthStore((state) => state.hasPermission(PERMISSIONS.VEHICLE.VIEW));
 
   const {
     officeData,
@@ -144,26 +125,36 @@ export default function OfficesPage() {
 
 
                 <div className="space-y-8 mt-0 outline-none">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
                     <StatCard
-                      title="Total Offices"
+                      label="Total Offices"
                       value={summaryStats.totalOffices}
-                      icon={Building2}
+                      Icon={Building2}
+                      colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0",
+                      }}
                     />
                     <StatCard
-                      title="Total Vehicles"
-                      value={summaryStats.totalVehicles}
-                      icon={Car}
-                    />
-                    <StatCard
-                      title="Compliant Offices"
+                      label="Compliant Offices"
                       value={summaryStats.totalCompliant}
-                      icon={CheckCircle2}
+                      Icon={CheckCircle2}
+                      colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0",
+                      }}
                     />
                     <StatCard
-                      title="Overall Compliance"
+                      label="Overall Compliance"
                       value={`${summaryStats.overallComplianceRate}%`}
-                      icon={BarChart3}
+                      Icon={BarChart3}
+                      colors={{
+                        circleFill: "#0033a0",
+                        labelBg: "#0033a0",
+                        valueText: "#0033a0",
+                      }}
                     />
                   </div>
 
@@ -210,6 +201,7 @@ export default function OfficesPage() {
                         onEdit={canUpdateOffice ? handleEditOffice : undefined}
                         canEdit={canUpdateOffice}
                         canViewTests={canViewTests}
+                        canViewVehicles={canViewVehicles}
                       />
                     </div>
                   </Card>

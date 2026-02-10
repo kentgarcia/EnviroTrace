@@ -17,6 +17,7 @@ from app.schemas.emission_schemas import (
     VehicleDriverHistoryCreate, VehicleDriverHistoryListResponse,
     VehicleRemarks, VehicleRemarksCreate, VehicleRemarksUpdate,
     OfficeComplianceResponse,
+    OfficeVehicleCountsResponse,
     EmissionDashboardSummary
 )
 
@@ -98,6 +99,63 @@ def get_office_compliance(
         )
     except Exception as e:
         print(f"Error in get_office_compliance: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
+
+
+@router.get("/offices/vehicle-counts", response_model=OfficeVehicleCountsResponse)
+def get_office_vehicle_counts(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+    search_term: Optional[str] = None,
+    current_user: User = Depends(require_permissions_sync(['office.view', 'vehicle.view']))
+):
+    """
+    Get per-office vehicle counts.
+    """
+    try:
+        office_base_query = db.query(OfficeModel)
+        if search_term:
+            office_base_query = office_base_query.filter(
+                OfficeModel.name.ilike(f"%{search_term}%")
+            )
+
+        total_offices = office_base_query.count()
+
+        counts = (
+            db.query(
+                OfficeModel.id.label("office_id"),
+                OfficeModel.name.label("office_name"),
+                func.count(VehicleModel.id).label("total_vehicles"),
+            )
+            .outerjoin(VehicleModel, VehicleModel.office_id == OfficeModel.id)
+            .filter(OfficeModel.id.in_(
+                office_base_query.with_entities(OfficeModel.id)
+            ))
+            .group_by(OfficeModel.id, OfficeModel.name)
+            .order_by(OfficeModel.name)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        return {
+            "counts": [
+                {
+                    "office_id": row.office_id,
+                    "office_name": row.office_name,
+                    "total_vehicles": int(row.total_vehicles or 0),
+                }
+                for row in counts
+            ],
+            "total": total_offices,
+        }
+    except Exception as e:
+        print(f"Error in get_office_vehicle_counts: {str(e)}")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

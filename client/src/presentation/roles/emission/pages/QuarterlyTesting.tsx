@@ -22,6 +22,7 @@ export default function QuarterlyTesting() {
     isQuickTestOpen,
     selectedVehicle,
     selectedQuarter,
+    selectedQuarterFilter,
     testToEdit,
     isSubmitting,
 
@@ -41,6 +42,7 @@ export default function QuarterlyTesting() {
 
     // Handlers
     handleYearChange,
+    handleQuarterChange,
     handleOfficeChange,
     setSearch,
     handleAddTest,
@@ -135,6 +137,8 @@ export default function QuarterlyTesting() {
                   selectedYear={selectedYear}
                   availableYears={availableYears}
                   onYearChange={handleYearChange}
+                  selectedQuarter={selectedQuarterFilter}
+                  onQuarterChange={handleQuarterChange}
                   selectedOffices={selectedOffices}
                   offices={offices}
                   onOfficeChange={handleOfficeChange}
@@ -147,6 +151,7 @@ export default function QuarterlyTesting() {
                 <QuarterlyOverview
                   stats={summaryStats}
                   selectedYear={selectedYear}
+                  selectedQuarter={selectedQuarterFilter || "all"}
                   officeGroups={officeGroups}
                   selectedOffices={selectedOffices}
                 />

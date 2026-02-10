@@ -51,6 +51,7 @@ export const useRevampedQuarterlyTesting = () => {
     const [isQuickTestOpen, setIsQuickTestOpen] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
     const [selectedQuarter, setSelectedQuarter] = useState(1);
+    const [selectedQuarterFilter, setSelectedQuarterFilter] = useState<string>("all");
     const [testToEdit, setTestToEdit] = useState<EmissionTest | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -142,6 +143,10 @@ export const useRevampedQuarterlyTesting = () => {
     // Handlers
     const handleYearChange = (year: string) => {
         setSelectedYear(parseInt(year, 10));
+    };
+
+    const handleQuarterChange = (quarter: string) => {
+        setSelectedQuarterFilter(quarter);
     };
 
     const handleOfficeChange = (officeIds: string[]) => {
@@ -440,6 +445,10 @@ export const useRevampedQuarterlyTesting = () => {
             }
         };
 
+        const activeQuarters = selectedQuarterFilter === "all"
+            ? ["Q1", "Q2", "Q3", "Q4"]
+            : [selectedQuarterFilter];
+
         officeGroups.forEach(office => {
             office.vehicles.forEach(vehicle => {
                 stats.totalVehicles++;
@@ -449,6 +458,9 @@ export const useRevampedQuarterlyTesting = () => {
                 let hasFailedTest = false;
 
                 Object.entries(vehicle.tests).forEach(([quarter, test]) => {
+                    if (!activeQuarters.includes(quarter)) {
+                        return;
+                    }
                     if (test) {
                         hasAnyTest = true;
                         const quarterKey = quarter as keyof typeof stats.byQuarter;
@@ -478,7 +490,7 @@ export const useRevampedQuarterlyTesting = () => {
         });
 
         return stats;
-    }, [officeGroups]);
+    }, [officeGroups, selectedQuarterFilter]);
 
     return {
         // Permissions
@@ -494,6 +506,7 @@ export const useRevampedQuarterlyTesting = () => {
         isQuickTestOpen,
         selectedVehicle,
         selectedQuarter,
+        selectedQuarterFilter,
         testToEdit,
         isSubmitting,
 
@@ -508,6 +521,7 @@ export const useRevampedQuarterlyTesting = () => {
 
         // Handlers
         handleYearChange,
+        handleQuarterChange,
         handleOfficeChange,
         setSearch,
         handleAddTest,

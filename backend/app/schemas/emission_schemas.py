@@ -211,6 +211,17 @@ class OfficeComplianceResponse(BaseModel):
     total: int
 
 
+class OfficeVehicleCount(BaseModel):
+    office_id: UUID4
+    office_name: str
+    total_vehicles: int
+
+
+class OfficeVehicleCountsResponse(BaseModel):
+    counts: List[OfficeVehicleCount]
+    total: int
+
+
 # Dashboard summary schemas
 class EmissionDashboardTopOffice(BaseModel):
     office_name: str

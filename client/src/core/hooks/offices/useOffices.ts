@@ -9,6 +9,7 @@ import {
   useOfficeCompliance,
   Office,
   OfficeData,
+  useOfficeVehicleCounts,
 } from "@/core/api/emission-service";
 
 // Types that match the expected interface from the Offices page
@@ -59,7 +60,7 @@ export function useOffices(): UseOfficesReturn {
     isLoading: officesLoading,
     error: officesError,
     refetch: refetchOffices,
-  } = useOfficesAPI(filters.searchTerm);
+  } = useOfficesAPI(filters.searchTerm, 0, 100);
 
   // Fetch office compliance data with proper stats
   const {
@@ -72,6 +73,16 @@ export function useOffices(): UseOfficesReturn {
     year: filters.year,
     quarter: filters.quarter,
   });
+
+  const {
+    data: vehicleCountsResponse,
+    isLoading: vehicleCountsLoading,
+    refetch: refetchVehicleCounts,
+  } = useOfficeVehicleCounts(
+    { search_term: filters.searchTerm },
+    0,
+    100
+  );
 
   // Handle filter changes
   const handleFilterChange = useCallback(
@@ -88,7 +99,8 @@ export function useOffices(): UseOfficesReturn {
   const refetch = useCallback(() => {
     refetchOffices();
     refetchCompliance();
-  }, [refetchOffices, refetchCompliance]);
+    refetchVehicleCounts();
+  }, [refetchOffices, refetchCompliance, refetchVehicleCounts]);
 
   // Combine office data with compliance data
   const officeData = useMemo<OfficeWithCompliance[]>(() => {
@@ -102,14 +114,20 @@ export function useOffices(): UseOfficesReturn {
       complianceMap.set(complianceOffice.office_name, complianceOffice);
     });
 
+    const vehiclesByOfficeId = new Map<string, number>();
+    vehicleCountsResponse?.counts?.forEach((count) => {
+      vehiclesByOfficeId.set(count.office_id, count.total_vehicles);
+    });
+
     // Combine office information with compliance data
     return officesResponse.offices.map((office) => {
       const complianceData = complianceMap.get(office.name);
+      const actualVehicleCount = vehiclesByOfficeId.get(office.id);
 
       if (complianceData) {
         return {
           ...office,
-          total_vehicles: complianceData.total_vehicles,
+          total_vehicles: actualVehicleCount !== undefined ? actualVehicleCount : complianceData.total_vehicles,
           tested_vehicles: complianceData.tested_vehicles,
           compliant_vehicles: complianceData.compliant_vehicles,
           non_compliant_vehicles: complianceData.non_compliant_vehicles,
@@ -120,7 +138,7 @@ export function useOffices(): UseOfficesReturn {
         // If no compliance data, return office with zero stats
         return {
           ...office,
-          total_vehicles: 0,
+          total_vehicles: actualVehicleCount !== undefined ? actualVehicleCount : 0,
           tested_vehicles: 0,
           compliant_vehicles: 0,
           non_compliant_vehicles: 0,
@@ -129,11 +147,11 @@ export function useOffices(): UseOfficesReturn {
         };
       }
     });
-  }, [officesResponse?.offices, complianceResponse?.offices]);
+  }, [officesResponse?.offices, complianceResponse?.offices, vehicleCountsResponse?.counts]);
 
-  // Use summary stats from the compliance API
+  // Derive summary stats from the merged office data for accuracy
   const summaryStats: SummaryStats = useMemo(() => {
-    if (!complianceResponse?.summary) {
+    if (officeData.length === 0) {
       return {
         totalOffices: 0,
         totalVehicles: 0,
@@ -142,17 +160,38 @@ export function useOffices(): UseOfficesReturn {
       };
     }
 
-    const summary = complianceResponse.summary;
+    const totals = officeData.reduce(
+      (acc, office) => {
+        acc.totalOffices += 1;
+        acc.totalVehicles += office.total_vehicles;
+        acc.totalCompliantVehicles += office.compliant_vehicles;
+        if (office.total_vehicles > 0 && office.compliance_rate >= 80) {
+          acc.totalCompliantOffices += 1;
+        }
+        return acc;
+      },
+      {
+        totalOffices: 0,
+        totalVehicles: 0,
+        totalCompliantOffices: 0,
+        totalCompliantVehicles: 0,
+      }
+    );
+
+    const overallComplianceRate = totals.totalVehicles
+      ? Math.round((totals.totalCompliantVehicles / totals.totalVehicles) * 100)
+      : 0;
+
     return {
-      totalOffices: summary.total_offices,
-      totalVehicles: summary.total_vehicles,
-      totalCompliant: summary.total_compliant,
-      overallComplianceRate: summary.overall_compliance_rate,
+      totalOffices: totals.totalOffices,
+      totalVehicles: totals.totalVehicles,
+      totalCompliant: totals.totalCompliantOffices,
+      overallComplianceRate,
     };
-  }, [complianceResponse?.summary]);
+  }, [officeData]);
 
   // Determine loading and error states
-  const isLoading = officesLoading || complianceLoading;
+  const isLoading = officesLoading || complianceLoading || vehicleCountsLoading;
   const error = officesError || complianceError;
   const errorMessage = error ? (error as Error).message : null;
 

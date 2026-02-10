@@ -1,8 +1,5 @@
 import React, { useMemo } from "react";
 import {
-    Sparkles,
-    Clock,
-    AlertTriangle,
     Car,
     Target,
     CheckCircle,
@@ -10,7 +7,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/presentation/components/shared/ui/card";
 import { Progress } from "@/presentation/components/shared/ui/progress";
 import { Badge } from "@/presentation/components/shared/ui/badge";
-import { Button } from "@/presentation/components/shared/ui/button";
 import { StatCard } from "@/presentation/components/shared/StatCard";
 import { EChartsPieChart } from "@/presentation/components/shared/dashboard/EChartsPieChart";
 import { EChartsBarChart } from "@/presentation/components/shared/dashboard/EChartsBarChart";
@@ -47,6 +43,7 @@ interface OfficeGroup {
 interface QuarterlyOverviewProps {
     stats: SummaryStats;
     selectedYear: number;
+    selectedQuarter: string;
     officeGroups: OfficeGroup[];
     selectedOffices: string[];
 }
@@ -85,15 +82,18 @@ const formatNumber = (value: number) => value.toLocaleString();
 export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
     stats,
     selectedYear,
+    selectedQuarter,
     officeGroups,
     selectedOffices,
 }) => {
+    const safeQuarter = selectedQuarter || "all";
     const overview = useMemo(() => {
+        const activeQuarters = safeQuarter === "all" ? quarterKeys : [safeQuarter as QuarterKey];
         const totalVehicles = officeGroups.reduce(
             (total, office) => total + office.vehicles.length,
             0
         );
-        const expectedTests = totalVehicles * quarterKeys.length;
+        const expectedTests = totalVehicles * activeQuarters.length;
 
         const quarterTotals = quarterKeys.reduce(
             (acc, quarter) => {
@@ -117,6 +117,10 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
 
             office.vehicles.forEach((vehicle) => {
                 quarterKeys.forEach((quarterKey) => {
+                    if (!activeQuarters.includes(quarterKey)) {
+                        return;
+                    }
+
                     const test = vehicle.tests?.[quarterKey] ?? null;
                     if (!test) {
                         return;
@@ -187,7 +191,7 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             quarterList,
             officeBreakdown: officeBreakdown.sort((a, b) => b.completionRate - a.completionRate),
         };
-    }, [officeGroups]);
+    }, [officeGroups, safeQuarter]);
 
     const selectedOfficeLabel = useMemo(() => {
         if (selectedOffices.includes("all") || selectedOffices.length === 0) {
@@ -198,42 +202,6 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
         }
         return `${selectedOffices.length} Offices Selected`;
     }, [selectedOffices, officeGroups]);
-
-    const statusState = useMemo(() => {
-        if (overview.expectedTests === 0) {
-            return {
-                label: "No data",
-                message: "No vehicles found for the selected filters.",
-                tone: "bg-slate-50 text-slate-600 ring-1 ring-inset ring-slate-200",
-                Icon: AlertTriangle,
-            } as const;
-        }
-
-        if (overview.completionRate >= 90) {
-            return {
-                label: "Excellent",
-                message: "Testing is nearly complete for the year. Great job maintaining compliance!",
-                tone: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200",
-                Icon: Sparkles,
-            } as const;
-        }
-
-        if (overview.completionRate >= 60) {
-            return {
-                label: "Making progress",
-                message: "You're over halfway there. Focus on the remaining vehicles to stay compliant.",
-                tone: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200",
-                Icon: Clock,
-            } as const;
-        }
-
-        return {
-            label: "Needs attention",
-            message: "A large portion of tests are still pending. Schedule inspections soon.",
-            tone: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
-            Icon: AlertTriangle,
-        } as const;
-    }, [overview.expectedTests, overview.completionRate, overview.passRate]);
 
     const pieData = [
         { id: "passed", label: "Passed", value: overview.passCount },
@@ -254,7 +222,7 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             {/* Top Summary Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard 
-                    label="Annual Completion" 
+                    label={safeQuarter === "all" ? "Annual Completion" : `${safeQuarter} Completion`} 
                     value={formatPercent(overview.completionRate)} 
                     Icon={Target}
                     colors={{
@@ -264,7 +232,7 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                     }}
                 />
                 <StatCard 
-                    label="Pass Rate" 
+                    label={safeQuarter === "all" ? "Pass Rate" : `${safeQuarter} Pass Rate`} 
                     value={formatPercent(overview.passRate)} 
                     Icon={CheckCircle}
                     colors={{
@@ -284,9 +252,9 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                     }}
                 />
                 <StatCard 
-                    label="Status" 
-                    value={statusState.label} 
-                    Icon={statusState.Icon}
+                    label="Pending Tests" 
+                    value={formatNumber(overview.pendingCount)} 
+                    Icon={Target}
                     colors={{
                         circleFill: "#0033a0",
                         labelBg: "#0033a0",
@@ -299,7 +267,7 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-1 sticky top-24">
                     <EChartsPieChart 
-                        title="Overall Test Results" 
+                        title={`Test Results ${safeQuarter === "all" ? "(All Quarters)" : `(${safeQuarter})`}`} 
                         data={pieData} 
                         colors={["#10b981", "#ee1c25", "#e2e8f0"]}
                         height={350}
@@ -308,7 +276,9 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                 <div className="lg:col-span-2">
                     <Card className="border-none shadow-sm bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
                         <CardHeader className="pb-0">
-                            <CardTitle className="text-lg font-bold text-slate-900 dark:text-gray-100">Office Completion Rates (%)</CardTitle>
+                            <CardTitle className="text-lg font-bold text-slate-900 dark:text-gray-100">
+                                Office Completion Rates {safeQuarter === "all" ? "(All Quarters)" : `(${safeQuarter})`}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className={cn(
@@ -338,7 +308,10 @@ export const QuarterlyOverview: React.FC<QuarterlyOverviewProps> = ({
                     </CardHeader>
                     <CardContent className="pt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-                            {overview.quarterList.map((q) => (
+                            {(safeQuarter === "all"
+                                ? overview.quarterList
+                                : overview.quarterList.filter((q) => q.key === safeQuarter)
+                            ).map((q) => (
                                 <div key={q.key} className="space-y-4 p-4 rounded-xl bg-slate-50/50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-700">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">

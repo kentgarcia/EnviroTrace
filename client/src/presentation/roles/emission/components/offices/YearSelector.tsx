@@ -25,7 +25,13 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
 }) => {
   const getQuarterLabel = () => {
     if (!selectedQuarter) return "All Quarters";
-    return `Q${selectedQuarter}`;
+    const quarterLabelMap: Record<number, string> = {
+      1: "Q1 (Jan-Mar)",
+      2: "Q2 (Apr-Jun)",
+      3: "Q3 (Jul-Sep)",
+      4: "Q4 (Oct-Dec)",
+    };
+    return quarterLabelMap[selectedQuarter] || `Q${selectedQuarter}`;
   };
 
   return (
@@ -76,25 +82,25 @@ export const YearSelector: React.FC<YearSelectorProps> = ({
             onClick={() => onQuarterChange("1")} 
             className="rounded-md cursor-pointer"
           >
-            Q1
+            Q1 (Jan-Mar)
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => onQuarterChange("2")} 
             className="rounded-md cursor-pointer"
           >
-            Q2
+            Q2 (Apr-Jun)
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => onQuarterChange("3")} 
             className="rounded-md cursor-pointer"
           >
-            Q3
+            Q3 (Jul-Sep)
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => onQuarterChange("4")} 
             className="rounded-md cursor-pointer"
           >
-            Q4
+            Q4 (Oct-Dec)
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

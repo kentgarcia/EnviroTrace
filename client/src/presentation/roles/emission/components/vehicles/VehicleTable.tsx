@@ -1,15 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ColumnDef, Row, PaginationState, OnChangeFn } from "@tanstack/react-table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/presentation/components/shared/ui/dropdown-menu";
 import { Button } from "@/presentation/components/shared/ui/button";
 import { Skeleton } from "@/presentation/components/shared/ui/skeleton";
-import { ArrowUpDown, MoreHorizontal, Eye, Edit, Trash2, X } from "lucide-react";
+import { Eye, Edit, Trash2, X } from "lucide-react";
 import { Vehicle } from "@/core/api/emission-service";
 import { Badge } from "@/presentation/components/shared/ui/badge";
 import { VehicleDetails } from "./VehicleDetails";
@@ -137,14 +130,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
       id: "identifier",
       accessorFn: (row) => row.plate_number || row.chassis_number || row.registration_number || "N/A",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Vehicle ID
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <div className="flex flex-col">
@@ -163,14 +155,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     {
       accessorKey: "office.name",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Office
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
@@ -183,14 +174,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     {
       accessorKey: "driver_name",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Driver
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
@@ -201,14 +191,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     {
       accessorKey: "vehicle_type",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Type
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <Badge variant="outline" className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 text-[10px] font-bold uppercase tracking-tight px-2 py-0">
@@ -219,14 +208,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     {
       accessorKey: "engine_type",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Engine
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <span className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase">
@@ -237,14 +225,13 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     {
       accessorKey: "wheels",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="flex items-center p-0 font-bold text-white uppercase text-[10px] tracking-wider hover:bg-transparent"
+          className="p-0 text-left"
         >
           Wheels
-          <ArrowUpDown className="ml-1 h-3 w-3" />
-        </Button>
+        </button>
       ),
       cell: ({ row }) => (
         <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -254,55 +241,46 @@ export const VehicleTable: React.FC<VehicleTableProps> = ({
     },
     {
       id: "actions",
-      header: () => <div className="text-right text-white font-bold uppercase text-[10px] tracking-wider">Actions</div>,
+      header: () => <div className="text-right">Actions</div>,
       cell: ({ row }) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 vehicle-action-btn"
-              >
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDetailsVehicle(row.original);
-                }}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                <span>View Details</span>
-              </DropdownMenuItem>
-              {canEdit && (
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(row.original);
-                  }}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  <span>Edit</span>
-                </DropdownMenuItem>
-              )}
-              {canEdit && canDelete && <DropdownMenuSeparator />}
-              {canDelete && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(row.original);
-                  }}
-                  className="text-red-600"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setDetailsVehicle(row.original)}
+            title="View"
+            aria-label="View"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          {canEdit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => onEdit(row.original)}
+              title="Edit"
+              aria-label="Edit"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
+          {canDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+              onClick={() => onDelete(row.original)}
+              title="Delete"
+              aria-label="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       ),
     },

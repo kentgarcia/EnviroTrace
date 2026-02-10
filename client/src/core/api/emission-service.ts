@@ -680,6 +680,17 @@ export interface OfficeComplianceResponse {
   total: number;
 }
 
+export interface OfficeVehicleCount {
+  office_id: string;
+  office_name: string;
+  total_vehicles: number;
+}
+
+export interface OfficeVehicleCountsResponse {
+  counts: OfficeVehicleCount[];
+  total: number;
+}
+
 export interface EmissionDashboardTopOffice {
   office_name: string;
   compliance_rate: number;
@@ -708,6 +719,7 @@ export interface OfficeFilters {
 const OFFICE_API_ENDPOINTS = {
   COMPLIANCE: "/emission/offices/compliance",
   FILTER_OPTIONS: "/emission/offices/filters/options",
+  VEHICLE_COUNTS: "/emission/offices/vehicle-counts",
 };
 
 // Hooks for office compliance
@@ -736,6 +748,33 @@ export function useOfficeCompliance(
 
       const { data } = await apiClient.get<OfficeComplianceResponse>(
         `${OFFICE_API_ENDPOINTS.COMPLIANCE}?${params.toString()}`
+      );
+      return data;
+    },
+    ...options,
+  });
+}
+
+export function useOfficeVehicleCounts(
+  filters?: OfficeFilters,
+  skip = 0,
+  limit = 100,
+  options?: UseQueryOptions<OfficeVehicleCountsResponse>
+) {
+  return useQuery<OfficeVehicleCountsResponse>({
+    queryKey: ["officeVehicleCounts", filters, skip, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+
+      if (skip) params.append("skip", skip.toString());
+      if (limit) params.append("limit", limit.toString());
+
+      if (filters?.search_term) {
+        params.append("search_term", filters.search_term);
+      }
+
+      const { data } = await apiClient.get<OfficeVehicleCountsResponse>(
+        `${OFFICE_API_ENDPOINTS.VEHICLE_COUNTS}?${params.toString()}`
       );
       return data;
     },

@@ -17,6 +17,8 @@ interface QuarterlyTestingFiltersProps {
     selectedYear: number;
     availableYears: number[];
     onYearChange: (year: string) => void;
+    selectedQuarter: string;
+    onQuarterChange: (quarter: string) => void;
     selectedOffices: string[];
     offices: Office[];
     onOfficeChange: (officeIds: string[]) => void;
@@ -29,16 +31,27 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
     selectedYear,
     availableYears,
     onYearChange,
+    selectedQuarter,
+    onQuarterChange,
     selectedOffices,
     offices,
     onOfficeChange,
     compact = false,
 }) => {
-    const hasFilters = search || selectedOffices.length > 0 && !selectedOffices.includes("all");
+        const quarterLabelMap: Record<string, string> = {
+            all: "All Quarters",
+            Q1: "Q1 (Jan-Mar)",
+            Q2: "Q2 (Apr-Jun)",
+            Q3: "Q3 (Jul-Sep)",
+            Q4: "Q4 (Oct-Dec)",
+        };
+        const safeQuarter = selectedQuarter || "all";
+    const hasFilters = search || (selectedOffices.length > 0 && !selectedOffices.includes("all")) || selectedQuarter !== "all";
     
     const clearFilters = () => {
         onSearchChange("");
         onOfficeChange(["all"]);
+        onQuarterChange("all");
     };
 
     const getOfficeLabel = () => {
@@ -132,6 +145,38 @@ export const QuarterlyTestingFilters: React.FC<QuarterlyTestingFiltersProps> = (
                                 className="rounded-md cursor-pointer"
                             >
                                 {year}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Quarter Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-10 px-4 justify-between bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 shadow-none rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors min-w-[140px]"
+                        >
+                            <span className="truncate">
+                                {quarterLabelMap[safeQuarter] || "All Quarters"}
+                            </span>
+                            <Filter className="ml-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40 p-1">
+                        <DropdownMenuItem
+                            onClick={() => onQuarterChange("all")}
+                            className="rounded-md cursor-pointer"
+                        >
+                            All Quarters
+                        </DropdownMenuItem>
+                        {(["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => (
+                            <DropdownMenuItem
+                                key={quarter}
+                                onClick={() => onQuarterChange(quarter)}
+                                className="rounded-md cursor-pointer"
+                            >
+                                {quarterLabelMap[quarter]}
                             </DropdownMenuItem>
                         ))}
                     </DropdownMenuContent>

@@ -9,6 +9,8 @@ import {
   TableRow,
 } from "@/presentation/components/shared/ui/table";
 import { Progress } from "@/presentation/components/shared/ui/progress";
+import { Input } from "@/presentation/components/shared/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/components/shared/ui/tabs";
 import { Button } from "@/presentation/components/shared/ui/button";
 import {
   AlertCircle,
@@ -30,6 +32,7 @@ import { SortingState, ColumnDef, Row } from "@tanstack/react-table";
 import { DataTable } from "@/presentation/components/shared/ui/data-table";
 import { EmissionTest, useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
 import { OfficeWithCompliance } from "@/core/hooks/offices/useOffices";
+import { useVehicles, Vehicle } from "@/core/api/emission-service";
 
 // Augment the @tanstack/react-table module to include 'align' in ColumnMeta
 declare module "@tanstack/react-table" {
@@ -67,11 +70,32 @@ const ComplianceCell = memo(
   }
 );
 
-const StatusCell = memo(({ isCompliant }: { isCompliant: boolean }) => {
+const StatusCell = memo(({
+  isCompliant,
+  hasData,
+}: {
+  isCompliant: boolean;
+  hasData: boolean;
+}) => {
+  if (!hasData) {
+    return (
+      <div className="flex items-center justify-end gap-2 text-slate-500">
+        <Info className="h-5 w-5" />
+        <span className="text-xs font-semibold uppercase tracking-wide">No Data</span>
+      </div>
+    );
+  }
+
   return isCompliant ? (
-    <CheckCircle2 className="ml-auto h-5 w-5 text-green-500" />
+    <div className="flex items-center justify-end gap-2 text-green-600">
+      <CheckCircle2 className="h-5 w-5" />
+      <span className="text-xs font-semibold uppercase tracking-wide">Compliant</span>
+    </div>
   ) : (
-    <XCircle className="ml-auto h-5 w-5 text-red-500" />
+    <div className="flex items-center justify-end gap-2 text-red-600">
+      <XCircle className="h-5 w-5" />
+      <span className="text-xs font-semibold uppercase tracking-wide">Non-Compliant</span>
+    </div>
   );
 });
 
@@ -84,6 +108,7 @@ const OfficeDetailsView = memo(
     onEdit,
     canEdit,
     canViewTests,
+    canViewVehicles,
   }: { 
     office: OfficeWithCompliance; 
     onBack: () => void; 
@@ -91,7 +116,10 @@ const OfficeDetailsView = memo(
     onEdit?: (office: OfficeWithCompliance) => void;
     canEdit: boolean;
     canViewTests: boolean;
+    canViewVehicles: boolean;
   }) => {
+    const tabCount = (canViewTests ? 1 : 0) + (canViewVehicles ? 1 : 0);
+    const defaultTab = canViewTests ? "tests" : "vehicles";
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -174,29 +202,13 @@ const OfficeDetailsView = memo(
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="md:col-span-2 border border-slate-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900 shadow-none">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                  <FileBarChart className="h-5 w-5 text-[#0033a0] dark:text-blue-400" />
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-gray-100">Detailed Information</h3>
+            <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+              <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700">
+                Detailed Information
               </div>
-              <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                office.compliance_rate >= 80 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-              }`}>
-                {office.compliance_rate >= 80 ? 'COMPLIANT' : 'NON-COMPLIANT'}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
-                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700">
-                  Compliance Status
-                </div>
-                <div className="p-4 flex items-center justify-between">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-gray-100">
                       {office.compliance_rate >= 80
@@ -209,7 +221,7 @@ const OfficeDetailsView = memo(
                         : "This office does not meet the minimum 80% compliance threshold."}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-full ${office.compliance_rate >= 80 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                  <div className={`p-3 rounded-full ${office.compliance_rate >= 80 ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
                     {office.compliance_rate >= 80 ? (
                       <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                     ) : (
@@ -217,64 +229,86 @@ const OfficeDetailsView = memo(
                     )}
                   </div>
                 </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
-                <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
-                  <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
-                  Vehicle Compliance
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Compliance Rate</span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-gray-100">
+                      {office.compliance_rate}%
+                    </span>
+                  </div>
+                  <Progress
+                    value={office.compliance_rate}
+                    className={`h-3 rounded-full ${office.compliance_rate >= 80
+                      ? "bg-green-100 dark:bg-green-900/30"
+                      : "bg-red-100 dark:bg-red-900/30"
+                      }`}
+                  />
                 </div>
-                <div className="p-6">
-                  <div className="flex flex-col space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Compliance Rate</span>
-                      <span className="text-lg font-bold text-slate-900 dark:text-gray-100">
-                        {office.compliance_rate}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={office.compliance_rate}
-                      className={`h-3 rounded-full ${office.compliance_rate >= 80
-                        ? "bg-green-100 dark:bg-green-900/30"
-                        : "bg-red-100 dark:bg-red-900/30"
-                        }`}
-                    />
-                    <div className="grid grid-cols-3 gap-4 pt-2">
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
-                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Total</span>
-                        <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
-                          {office.total_vehicles}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
-                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Tested</span>
-                        <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
-                          {office.tested_vehicles}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
-                        <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Passed</span>
-                        <span className="font-bold text-green-600 dark:text-green-400 text-lg">
-                          {office.compliant_vehicles}
-                        </span>
-                      </div>
-                    </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                    <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Total</span>
+                    <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
+                      {office.total_vehicles}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                    <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Tested</span>
+                    <span className="font-bold text-slate-900 dark:text-gray-100 text-lg">
+                      {office.tested_vehicles}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-xl bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-700 shadow-sm">
+                    <span className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase">Passed</span>
+                    <span className="font-bold text-green-600 dark:text-green-400 text-lg">
+                      {office.compliant_vehicles}
+                    </span>
                   </div>
                 </div>
               </div>
-
-              {canViewTests && (
-                <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
-                  <div className="bg-slate-50 dark:bg-gray-800 px-4 py-3 font-bold text-slate-700 dark:text-slate-300 text-sm border-b border-slate-100 dark:border-gray-700 flex items-center">
-                    <Car className="h-4 w-4 mr-2 text-slate-400 dark:text-slate-500" />
-                    Emission Tests
-                  </div>
-                  <div className="p-0">
-                    <OfficeEmissionTests officeName={office.name} year={year} canViewTests={canViewTests} />
-                  </div>
-                </div>
-              )}
             </div>
+          </div>
+
+          <div className="md:col-span-2 border border-slate-200 dark:border-gray-700 rounded-xl p-6 bg-white dark:bg-gray-900 shadow-none">
+            {tabCount > 0 ? (
+              <Tabs defaultValue={defaultTab} className="w-full">
+                <TabsList className={`grid ${tabCount === 1 ? "grid-cols-1" : "grid-cols-2"} mb-4`}>
+                  {canViewTests && (
+                    <TabsTrigger value="tests" className="gap-2">
+                      <Car className="h-4 w-4" />
+                      Emission Tests
+                    </TabsTrigger>
+                  )}
+                  {canViewVehicles && (
+                    <TabsTrigger value="vehicles" className="gap-2">
+                      <Car className="h-4 w-4" />
+                      Office Vehicles
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+                {canViewTests && (
+                  <TabsContent value="tests" className="mt-0 outline-none">
+                    <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                      <div className="p-0">
+                        <OfficeEmissionTests officeName={office.name} year={year} canViewTests={canViewTests} />
+                      </div>
+                    </div>
+                  </TabsContent>
+                )}
+                {canViewVehicles && (
+                  <TabsContent value="vehicles" className="mt-0 outline-none">
+                    <div className="rounded-xl border border-slate-100 dark:border-gray-700 overflow-hidden bg-slate-50/30 dark:bg-gray-800/30">
+                      <div className="p-0">
+                        <OfficeVehicles officeId={office.id} canViewVehicles={canViewVehicles} />
+                      </div>
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground py-6">
+                You do not have permission to view office tests or vehicles.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -291,6 +325,7 @@ interface OfficeComplianceTableProps {
   onEdit?: (office: OfficeWithCompliance) => void;
   canEdit: boolean;
   canViewTests: boolean;
+  canViewVehicles: boolean;
 }
 
 export function OfficeComplianceTable({
@@ -300,6 +335,7 @@ export function OfficeComplianceTable({
   onEdit,
   canEdit,
   canViewTests,
+  canViewVehicles,
 }: OfficeComplianceTableProps) {
   // State for sorting
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -329,14 +365,14 @@ export function OfficeComplianceTable({
       {
         accessorKey: "total_vehicles",
         id: "vehicles",
-        header: "Vehicles",
+        header: "Total Vehicles",
         cell: (info) => info.getValue(),
         enableSorting: true,
       },
       {
         accessorKey: "tested_vehicles",
         id: "tested",
-        header: "Tested",
+        header: "Tested Vehicles",
         cell: (info) => info.getValue(),
         enableSorting: true,
       },
@@ -357,7 +393,7 @@ export function OfficeComplianceTable({
             <ComplianceCell
               value={row.compliance_rate}
               passedCount={row.compliant_vehicles}
-              vehicleCount={row.total_vehicles}
+              vehicleCount={row.tested_vehicles}
             />
           );
         },
@@ -367,8 +403,10 @@ export function OfficeComplianceTable({
         id: "status",
         header: "Status",
         cell: (info) => {
-          const isCompliant = info.row.original.compliance_rate >= 80;
-          return <StatusCell isCompliant={isCompliant} />;
+          const row = info.row.original;
+          const hasData = row.total_vehicles > 0 || row.tested_vehicles > 0;
+          const isCompliant = row.compliance_rate >= 80;
+          return <StatusCell isCompliant={isCompliant} hasData={hasData} />;
         },
         enableSorting: false,
       },
@@ -409,6 +447,7 @@ export function OfficeComplianceTable({
         onEdit={onEdit}
         canEdit={canEdit}
         canViewTests={canViewTests}
+        canViewVehicles={canViewVehicles}
       />
     );
   }
@@ -554,3 +593,120 @@ const OfficeEmissionTests = memo(({ officeName, year, canViewTests }: { officeNa
 });
 
 OfficeEmissionTests.displayName = "OfficeEmissionTests";
+
+const OfficeVehicles = memo(({ officeId, canViewVehicles }: { officeId: string; canViewVehicles: boolean }) => {
+  const { data, isLoading: loading, isError: hasError } = useVehicles(
+    { office_id: officeId },
+    0,
+    200,
+    { includeTotal: false, enabled: canViewVehicles }
+  );
+  const [searchTerm, setSearchTerm] = useState("");
+  const vehicles = data?.vehicles ?? [];
+  const filteredVehicles = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return vehicles;
+
+    return vehicles.filter((vehicle) => {
+      const plate = vehicle.plate_number?.toLowerCase() || "";
+      const driver = vehicle.driver_name?.toLowerCase() || "";
+      const type = vehicle.vehicle_type?.toLowerCase() || "";
+      const engine = vehicle.engine_type?.toLowerCase() || "";
+      const year = vehicle.year_acquired?.toString() || "";
+
+      return [plate, driver, type, engine, year].some((value) =>
+        value.includes(term)
+      );
+    });
+  }, [vehicles, searchTerm]);
+
+  if (!canViewVehicles) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        You do not have permission to view vehicles.
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+        <span className="dark:text-gray-300">Loading vehicles...</span>
+      </div>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <Alert variant="destructive" className="mb-2">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>Failed to load vehicles.</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!vehicles.length) {
+    return (
+      <div className="text-center py-4 text-muted-foreground">
+        No vehicles found for this office.
+      </div>
+    );
+  }
+
+  if (!filteredVehicles.length) {
+    return (
+      <div className="p-4">
+        <Input
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search vehicles by plate, driver, type, engine, year..."
+          className="bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 rounded-lg h-9 text-sm"
+        />
+        <div className="text-center py-6 text-muted-foreground">
+          No vehicles match your search.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="p-4">
+        <Input
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder="Search vehicles by plate, driver, type, engine, year..."
+          className="bg-white dark:bg-gray-900 border-slate-200 dark:border-gray-700 rounded-lg h-9 text-sm"
+        />
+      </div>
+      <Table className="text-xs">
+        <TableHeader>
+          <TableRow className="h-8">
+            <TableHead>Plate Number</TableHead>
+            <TableHead>Driver</TableHead>
+            <TableHead>Vehicle Type</TableHead>
+            <TableHead>Engine Type</TableHead>
+            <TableHead>Wheels</TableHead>
+            <TableHead>Year Acquired</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredVehicles.map((vehicle: Vehicle) => (
+            <TableRow key={vehicle.id} className="h-8">
+              <TableCell>{vehicle.plate_number || "Unknown"}</TableCell>
+              <TableCell>{vehicle.driver_name || "Unknown"}</TableCell>
+              <TableCell>{vehicle.vehicle_type}</TableCell>
+              <TableCell>{vehicle.engine_type}</TableCell>
+              <TableCell>{vehicle.wheels}</TableCell>
+              <TableCell>{vehicle.year_acquired ?? "N/A"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+});
+
+OfficeVehicles.displayName = "OfficeVehicles";

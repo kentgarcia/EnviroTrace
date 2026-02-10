@@ -70,6 +70,16 @@ export interface DashboardData {
     passedCount: number;
   }>;
 
+  // Vehicle list for dialogs
+  vehicleStatusList: Array<{
+    id: string;
+    plateNumber: string;
+    driverName: string;
+    officeName: string;
+    result: "Passed" | "Failed" | "Pending";
+    testDate?: string | null;
+  }>;
+
   // Additional data for chatbot
   vehicleSummaries?: Array<{
     vehicleType: string;
@@ -300,6 +310,20 @@ export function useDashboardData(
       wheelCountData,
       vehicleTypeData,
       officeComplianceData,
+      vehicleStatusList: vehicles.map((vehicle) => {
+        const latestTest = latestTestsByVehicle.get(vehicle.id);
+        const result = latestTest?.result;
+        const resultLabel = result === true ? "Passed" : result === false ? "Failed" : "Pending";
+
+        return {
+          id: vehicle.id,
+          plateNumber: vehicle.plate_number || "Unassigned",
+          driverName: vehicle.driver_name || "Unknown",
+          officeName: vehicle.office?.name || "Unknown Office",
+          result: resultLabel,
+          testDate: latestTest?.test_date ?? null,
+        };
+      }),
       topOffice: summaryData?.top_office
         ? {
             officeName: summaryData.top_office.office_name,
