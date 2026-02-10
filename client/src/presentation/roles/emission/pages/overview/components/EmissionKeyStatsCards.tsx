@@ -12,16 +12,19 @@ interface EmissionKeyStatsCardsProps {
         pendingTests: number;
         complianceRate: number;
     };
+    selectedYear?: number;
     isLoading?: boolean;
 }
 
 const EmissionKeyStatsCards: React.FC<EmissionKeyStatsCardsProps> = ({
     data,
+    selectedYear,
     isLoading = false
 }) => {
     const navigate = useNavigate();
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
+    const displayYear = selectedYear ?? currentYear;
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4 mb-6">
@@ -61,7 +64,7 @@ const EmissionKeyStatsCards: React.FC<EmissionKeyStatsCardsProps> = ({
                 onClick={() => navigate({ to: "/government-emission/quarterly-testing" })}
             />
             <StatCard
-                label={`Compliance Rate (${currentYear})`}
+                label={`Compliance Rate (${displayYear})`}
                 value={`${data.complianceRate}%`}
                 Icon={BarChart3}
                 loading={isLoading}

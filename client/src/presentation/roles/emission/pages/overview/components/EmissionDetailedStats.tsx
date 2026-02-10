@@ -19,6 +19,12 @@ interface EmissionDetailedStatsProps {
             passedCount: number;
             vehicleCount: number;
         }>;
+        topOffice?: {
+            officeName: string;
+            complianceRate: number;
+            passedCount: number;
+            vehicleCount: number;
+        } | null;
         vehicleTypeBreakdown: Array<{
             type: string;
             count: number;
@@ -67,11 +73,18 @@ const EmissionDetailedStats: React.FC<EmissionDetailedStatsProps> = ({
         ? Math.min(Math.max(Math.round(((safeData.passedTests + safeData.failedTests) / safeData.totalVehicles) * 100), 0), 100)
         : 0;
 
-    const topOffice = safeData.officeComplianceData.length > 0
-        ? safeData.officeComplianceData.reduce((prev, current) =>
-            ((prev?.value || 0) > (current?.value || 0)) ? prev : current
-        )
-        : null;
+    const topOffice = data.topOffice
+        ? {
+            label: data.topOffice.officeName,
+            value: data.topOffice.complianceRate,
+            passedCount: data.topOffice.passedCount,
+            vehicleCount: data.topOffice.vehicleCount,
+        }
+        : safeData.officeComplianceData.length > 0
+            ? safeData.officeComplianceData.reduce((prev, current) =>
+                ((prev?.value || 0) > (current?.value || 0)) ? prev : current
+            )
+            : null;
 
     const averageVehiclesPerOffice = safeData.totalOffices > 0
         ? Math.round(safeData.totalVehicles / safeData.totalOffices)

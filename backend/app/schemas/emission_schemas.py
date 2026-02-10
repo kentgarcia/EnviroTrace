@@ -210,6 +210,25 @@ class OfficeComplianceResponse(BaseModel):
     summary: OfficeComplianceSummary
     total: int
 
+
+# Dashboard summary schemas
+class EmissionDashboardTopOffice(BaseModel):
+    office_name: str
+    compliance_rate: float
+    passed_count: int
+    vehicle_count: int
+
+
+class EmissionDashboardSummary(BaseModel):
+    total_vehicles: int
+    total_offices: int
+    tested_vehicles: int
+    passed_tests: int
+    failed_tests: int
+    pending_tests: int
+    compliance_rate: float
+    top_office: Optional[EmissionDashboardTopOffice] = None
+
 # Response models
 class OfficeListResponse(BaseModel):
     offices: List[Office]

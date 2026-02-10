@@ -36,9 +36,7 @@ export const useAdminOverviewData = () => {
     totalUsers: 0,
     activeUsers: 0,
     totalRoles: 0,
-    systemUptime: "0d 0h 0m",
     totalSessions: 0,
-    failedLogins: 0,
   };
 
   return {

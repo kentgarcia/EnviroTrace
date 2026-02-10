@@ -1,7 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
 import {
-    Activity,
     Users,
     Monitor,
     Shield,
@@ -71,19 +70,6 @@ export const AdminQuickActions: React.FC = () => {
             onClick: () => navigate({ to: "/admin/audit-logs" }),
             color: "bg-red-100 dark:bg-red-900/30",
         },
-        {
-            title: "View System Health",
-            description: "Monitor system performance and health metrics",
-            icon: <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />,
-            onClick: () => {
-                // Scroll to system health section on the same page
-                const element = document.querySelector('[data-section="system-health"]');
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                }
-            },
-            color: "bg-purple-100 dark:bg-purple-900/30",
-        },
     ];
 
     return (
@@ -94,7 +80,7 @@ export const AdminQuickActions: React.FC = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {quickActions.map((action, index) => (
                         <motion.div
                             key={action.title}

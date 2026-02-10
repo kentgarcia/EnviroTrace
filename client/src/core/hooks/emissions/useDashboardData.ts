@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   useVehicles,
   useOfficeCompliance,
+  useEmissionDashboardSummary,
   type Vehicle,
 } from "@/core/api/emission-service";
 import { useEmissionTests } from "@/core/hooks/emission/useQuarterlyTesting";
@@ -55,6 +56,12 @@ export interface DashboardData {
     vehicleCount: number;
     complianceRate: number;
   }>;
+  topOffice?: {
+    officeName: string;
+    complianceRate: number;
+    passedCount: number;
+    vehicleCount: number;
+  } | null;
 
   // Vehicle type breakdown for detailed stats
   vehicleTypeBreakdown: Array<{
@@ -87,6 +94,7 @@ export function useDashboardData(
   const canViewVehicles = hasPermission(PERMISSIONS.VEHICLE.VIEW);
   const canViewOffices = hasPermission(PERMISSIONS.OFFICE.VIEW);
   const canViewTests = hasPermission(PERMISSIONS.TEST.VIEW);
+  const canViewSummary = canViewVehicles || canViewOffices || canViewTests;
 
   // Fetch vehicles data
   const {
@@ -110,10 +118,29 @@ export function useDashboardData(
     data: testsData,
     isLoading: testsLoading,
     error: testsError,
-  } = useEmissionTests({}, { enabled: canViewTests });
+  } = useEmissionTests(
+    {
+      year: selectedYear,
+      quarter: selectedQuarter,
+      limit: 1000,
+    },
+    { enabled: canViewTests }
+  );
+
+  const {
+    data: summaryData,
+    isLoading: summaryLoading,
+    error: summaryError,
+  } = useEmissionDashboardSummary(
+    {
+      year: selectedYear,
+      quarter: selectedQuarter,
+    },
+    { enabled: canViewSummary }
+  );
 
   // Calculate loading state
-  const loading = vehiclesLoading || officeLoading || testsLoading;
+  const loading = vehiclesLoading || officeLoading || testsLoading || summaryLoading;
 
   const isPermissionError = (err: unknown) => {
     const status = (err as any)?.response?.status;
@@ -121,7 +148,7 @@ export function useDashboardData(
   };
 
   // Calculate error state
-  const error = [vehiclesError, officeError, testsError].find(
+  const error = [vehiclesError, officeError, testsError, summaryError].find(
     (err) => err && !isPermissionError(err)
   );
 
@@ -134,35 +161,30 @@ export function useDashboardData(
 
     // Filter tests by selected quarter if specified
     const filteredTests = selectedQuarter
-      ? tests.filter((test) => {
-          return test.quarter === selectedQuarter && test.year === selectedYear;
-        })
-      : tests.filter((test) => {
-          return test.year === selectedYear;
-        });
+      ? tests.filter((test) => test.quarter === selectedQuarter && test.year === selectedYear)
+      : tests.filter((test) => test.year === selectedYear);
 
-    // Create vehicle-test lookup
-    const vehicleTestMap = new Map<
-      string,
-      { passed: boolean; tested: boolean }
-    >();
+    // Build latest test map per vehicle for the selected period
+    const latestTestsByVehicle = new Map<string, (typeof filteredTests)[number]>();
     filteredTests.forEach((test) => {
-      if (test.result !== null) {
-        vehicleTestMap.set(test.vehicle_id, {
-          passed: test.result,
-          tested: true,
-        });
+      const existing = latestTestsByVehicle.get(test.vehicle_id);
+      if (!existing) {
+        latestTestsByVehicle.set(test.vehicle_id, test);
+        return;
+      }
+
+      const existingDate = new Date(existing.test_date).getTime();
+      const currentDate = new Date(test.test_date).getTime();
+      if (currentDate > existingDate) {
+        latestTestsByVehicle.set(test.vehicle_id, test);
       }
     });
 
-    // Calculate test results
-    const passedTests = filteredTests.filter(
-      (test) => test.result === true
-    ).length;
-    const failedTests = filteredTests.filter(
-      (test) => test.result === false
-    ).length;
-    const pendingTests = vehicles.length - passedTests - failedTests;
+    const latestTests = Array.from(latestTestsByVehicle.values());
+
+    // Calculate test results based on latest test per vehicle in the period
+    const passedTests = latestTests.filter((test) => test.result === true).length;
+    const failedTests = latestTests.filter((test) => test.result === false).length;
 
     // Helper function to categorize vehicles by type with pass/fail stats
     const categorizeVehicles = (
@@ -190,10 +212,10 @@ export function useDashboardData(
         }
 
         const stats = categoryMap.get(label)!;
-        const testResult = vehicleTestMap.get(vehicle.id);
+        const latestTest = latestTestsByVehicle.get(vehicle.id);
 
-        if (testResult?.tested) {
-          if (testResult.passed) {
+        if (latestTest && latestTest.result !== null && latestTest.result !== undefined) {
+          if (latestTest.result) {
             stats.passed++;
           } else {
             stats.failed++;
@@ -212,11 +234,14 @@ export function useDashboardData(
     };
 
     // Calculate basic statistics
-    const totalVehicles = summary?.total_vehicles || vehicles.length;
-    const totalOffices = summary?.total_offices || offices.length;
-    const testedVehicles = filteredTests.length;
-    const complianceRate = summary?.overall_compliance_rate || 0;
-    const officeDepartments = summary?.total_offices || offices.length;
+    const totalVehicles = summaryData?.total_vehicles || vehiclesData?.total || vehicles.length;
+    const totalOffices = summaryData?.total_offices || officeData?.total || offices.length;
+    const testedVehicles = summaryData?.tested_vehicles || latestTests.length;
+    const passedTestsValue = summaryData?.passed_tests ?? passedTests;
+    const failedTestsValue = summaryData?.failed_tests ?? failedTests;
+    const pendingTests = summaryData?.pending_tests ?? Math.max(totalVehicles - testedVehicles, 0);
+    const complianceRate = summaryData?.compliance_rate ?? summary?.overall_compliance_rate ?? 0;
+    const officeDepartments = totalOffices;
 
     // Process engine type data with pass/fail breakdown
     const engineTypeData = categorizeVehicles("engine_type");
@@ -250,20 +275,24 @@ export function useDashboardData(
     }));
 
     // Create vehicle summaries for chatbot
-    const vehicleSummaries = vehicles.map((vehicle) => ({
+    const vehicleSummaries = vehicles.map((vehicle) => {
+      const latestTest = latestTestsByVehicle.get(vehicle.id);
+
+      return {
       vehicleType: vehicle.vehicle_type || "Unknown",
       engineType: vehicle.engine_type || "Unknown",
       wheels: vehicle.wheels || 0,
       officeName: vehicle.office?.name || "Unknown",
-      latestTestResult: vehicle.latest_test_result ?? null, // Convert undefined to null
-    }));
+      latestTestResult: latestTest?.result ?? null, // Convert undefined to null
+    };
+    });
 
     return {
       totalVehicles,
       totalOffices,
       testedVehicles,
-      passedTests,
-      failedTests,
+      passedTests: passedTestsValue,
+      failedTests: failedTestsValue,
       pendingTests,
       complianceRate,
       officeDepartments,
@@ -271,6 +300,14 @@ export function useDashboardData(
       wheelCountData,
       vehicleTypeData,
       officeComplianceData,
+      topOffice: summaryData?.top_office
+        ? {
+            officeName: summaryData.top_office.office_name,
+            complianceRate: summaryData.top_office.compliance_rate,
+            passedCount: summaryData.top_office.passed_count,
+            vehicleCount: summaryData.top_office.vehicle_count,
+          }
+        : null,
       vehicleTypeBreakdown,
       vehicleSummaries,
     };

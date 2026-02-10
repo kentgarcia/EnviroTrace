@@ -107,6 +107,7 @@ const API_ENDPOINTS = {
   SCHEDULES: "/emission/test-schedules",
   DRIVER_HISTORY: "/emission/vehicles/driver-history",
   OFFICE_COMPLIANCE: "/emission/offices/compliance",
+  DASHBOARD_SUMMARY: "/emission/dashboard/summary",
 };
 
 // Hooks for offices
@@ -543,7 +544,13 @@ export interface DriverHistory {
 
 // Emission tests queries
 export function useEmissionTests(
-  params: { vehicleId?: string } = {},
+  params: {
+    vehicleId?: string;
+    year?: number;
+    quarter?: number;
+    skip?: number;
+    limit?: number;
+  } = {},
   options = {}
 ) {
   return useQuery<EmissionTest[]>({
@@ -552,6 +559,18 @@ export function useEmissionTests(
       const queryParams = new URLSearchParams();
       if (params.vehicleId) {
         queryParams.append("vehicle_id", params.vehicleId);
+      }
+      if (typeof params.year === "number") {
+        queryParams.append("year", params.year.toString());
+      }
+      if (typeof params.quarter === "number") {
+        queryParams.append("quarter", params.quarter.toString());
+      }
+      if (typeof params.skip === "number") {
+        queryParams.append("skip", params.skip.toString());
+      }
+      if (typeof params.limit === "number") {
+        queryParams.append("limit", params.limit.toString());
       }
 
       const { data } = await apiClient.get<{
@@ -661,6 +680,24 @@ export interface OfficeComplianceResponse {
   total: number;
 }
 
+export interface EmissionDashboardTopOffice {
+  office_name: string;
+  compliance_rate: number;
+  passed_count: number;
+  vehicle_count: number;
+}
+
+export interface EmissionDashboardSummary {
+  total_vehicles: number;
+  total_offices: number;
+  tested_vehicles: number;
+  passed_tests: number;
+  failed_tests: number;
+  pending_tests: number;
+  compliance_rate: number;
+  top_office?: EmissionDashboardTopOffice | null;
+}
+
 export interface OfficeFilters {
   search_term?: string;
   year?: number;
@@ -699,6 +736,30 @@ export function useOfficeCompliance(
 
       const { data } = await apiClient.get<OfficeComplianceResponse>(
         `${OFFICE_API_ENDPOINTS.COMPLIANCE}?${params.toString()}`
+      );
+      return data;
+    },
+    ...options,
+  });
+}
+
+export function useEmissionDashboardSummary(
+  filters?: { year?: number; quarter?: number },
+  options?: UseQueryOptions<EmissionDashboardSummary>
+) {
+  return useQuery<EmissionDashboardSummary>({
+    queryKey: ["emissionDashboardSummary", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filters?.year) {
+        params.append("year", filters.year.toString());
+      }
+      if (filters?.quarter) {
+        params.append("quarter", filters.quarter.toString());
+      }
+
+      const { data } = await apiClient.get<EmissionDashboardSummary>(
+        `${API_ENDPOINTS.DASHBOARD_SUMMARY}?${params.toString()}`
       );
       return data;
     },

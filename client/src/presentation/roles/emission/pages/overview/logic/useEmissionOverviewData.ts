@@ -72,19 +72,9 @@ export const useEmissionOverviewData = (
 
     const totalVehicles = safeNumber(data.totalVehicles, 0);
     const totalOffices = safeNumber(data.officeDepartments, 0);
-
-    // Calculate passed, failed, and pending from vehicleSummaries with safety checks
-    const vehicleSummaries = Array.isArray(data.vehicleSummaries)
-      ? data.vehicleSummaries
-      : [];
-    const passedTests =
-      vehicleSummaries.filter((v) => v?.latestTestResult === true).length || 0;
-    const failedTests =
-      vehicleSummaries.filter((v) => v?.latestTestResult === false).length || 0;
-    const pendingTests =
-      vehicleSummaries.filter(
-        (v) => v?.latestTestResult === null || v?.latestTestResult === undefined
-      ).length || 0;
+    const passedTests = safeNumber(data.passedTests, 0);
+    const failedTests = safeNumber(data.failedTests, 0);
+    const pendingTests = safeNumber(data.pendingTests, 0);
 
     const complianceRate = Math.max(
       Math.min(safeNumber(data.complianceRate, 0), 100),

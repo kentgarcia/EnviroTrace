@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEmissionOverviewData } from "./logic/useEmissionOverviewData";
@@ -6,13 +6,34 @@ import EmissionKeyStatsCards from "./components/EmissionKeyStatsCards";
 import EmissionDetailedStats from "./components/EmissionDetailedStats";
 import EmissionVisualDashboard from "./components/EmissionVisualDashboard";
 import { Button } from "@/presentation/components/shared/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/presentation/components/shared/ui/select";
+
+const QUARTERS = [
+    { value: "all", label: "All Quarters" },
+    { value: "1", label: "Q1 (Jan-Mar)" },
+    { value: "2", label: "Q2 (Apr-Jun)" },
+    { value: "3", label: "Q3 (Jul-Sep)" },
+    { value: "4", label: "Q4 (Oct-Dec)" },
+];
+
+const getYearOptions = (): number[] => {
+    const currentYear = new Date().getFullYear();
+    return [0, 1, 2, 3, 4].map((i) => currentYear - i);
+};
 
 export const EmissionOverview: React.FC = () => {
     const queryClient = useQueryClient();
     const currentYear = new Date().getFullYear();
-    // Use current year (2025) to get the latest test data
-    const selectedYear = currentYear;
-    const selectedQuarter = undefined; // Show all quarters
+    const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+    const [selectedQuarter, setSelectedQuarter] = useState("all");
+    const selectedQuarterValue =
+        selectedQuarter === "all" ? undefined : parseInt(selectedQuarter, 10);
 
     const {
         // Data
@@ -27,7 +48,7 @@ export const EmissionOverview: React.FC = () => {
         // Loading states
         isLoading,
         error,
-    } = useEmissionOverviewData(selectedYear, selectedQuarter);
+    } = useEmissionOverviewData(parseInt(selectedYear, 10), selectedQuarterValue);
 
     const handleRefresh = () => {
         queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -79,6 +100,30 @@ export const EmissionOverview: React.FC = () => {
                 <div className="flex items-center justify-between">
                         <h1 className="text-xl font-semibold">Government Emission Dashboard</h1>
                         <div className="flex items-center gap-3">
+                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger className="w-[120px] h-9">
+                                    <SelectValue placeholder="Year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {getYearOptions().map((year) => (
+                                        <SelectItem key={year} value={year.toString()}>
+                                            {year}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
+                                <SelectTrigger className="w-[150px] h-9">
+                                    <SelectValue placeholder="Quarter" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {QUARTERS.map((q) => (
+                                        <SelectItem key={q.value} value={q.value}>
+                                            {q.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -97,6 +142,7 @@ export const EmissionOverview: React.FC = () => {
                     {/* Key Stats Cards */}
                     <EmissionKeyStatsCards
                         data={keyStatsData}
+                        selectedYear={parseInt(selectedYear, 10)}
                         isLoading={isLoading}
                     />
 

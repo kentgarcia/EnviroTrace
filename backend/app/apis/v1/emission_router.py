@@ -1,14 +1,14 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func, case
 from uuid import UUID
 import traceback
 
 from app.apis.deps import get_db, require_permissions_sync
 from app.crud import crud_emission
 from app.models.auth_models import User
-from app.models.emission_models import VehicleDriverHistory, Test as TestModel
+from app.models.emission_models import Office, Vehicle, VehicleDriverHistory, Test as TestModel
 from app.schemas.emission_schemas import (
     Office, OfficeCreate, OfficeUpdate, OfficeListResponse,
     Vehicle, VehicleCreate, VehicleUpdate, VehicleListResponse,
@@ -16,7 +16,8 @@ from app.schemas.emission_schemas import (
     TestSchedule, TestScheduleCreate, TestScheduleUpdate, TestScheduleListResponse,
     VehicleDriverHistoryCreate, VehicleDriverHistoryListResponse,
     VehicleRemarks, VehicleRemarksCreate, VehicleRemarksUpdate,
-    OfficeComplianceResponse
+    OfficeComplianceResponse,
+    EmissionDashboardSummary
 )
 
 router = APIRouter()
@@ -97,6 +98,128 @@ def get_office_compliance(
         )
     except Exception as e:
         print(f"Error in get_office_compliance: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server Error: {str(e)}"
+        )
+
+
+# Dashboard summary endpoint
+@router.get("/dashboard/summary", response_model=EmissionDashboardSummary)
+def get_emission_dashboard_summary(
+    db: Session = Depends(get_db),
+    year: Optional[int] = None,
+    quarter: Optional[int] = None,
+    current_user: User = Depends(require_permissions_sync(['office.view', 'vehicle.view', 'test.view']))
+):
+    """
+    Get aggregated dashboard metrics for emission overview.
+    Uses latest test per vehicle for the selected period.
+    """
+    try:
+        filters = []
+        if year is not None:
+            filters.append(TestModel.year == year)
+        if quarter is not None:
+            filters.append(TestModel.quarter == quarter)
+
+        latest_tests_subquery = (
+            db.query(
+                TestModel.vehicle_id.label("vehicle_id"),
+                TestModel.result.label("result"),
+                TestModel.test_date.label("test_date"),
+                func.row_number()
+                .over(
+                    partition_by=TestModel.vehicle_id,
+                    order_by=TestModel.test_date.desc()
+                )
+                .label("rn"),
+            )
+            .filter(*filters)
+        ).subquery()
+
+        latest_tests = (
+            db.query(
+                latest_tests_subquery.c.vehicle_id,
+                latest_tests_subquery.c.result,
+                latest_tests_subquery.c.test_date,
+            )
+            .filter(latest_tests_subquery.c.rn == 1)
+        ).subquery()
+
+        total_vehicles = db.query(func.count(Vehicle.id)).scalar() or 0
+        total_offices = db.query(func.count(Office.id)).scalar() or 0
+        tested_vehicles = db.query(func.count(latest_tests.c.vehicle_id)).scalar() or 0
+        passed_tests = (
+            db.query(func.count())
+            .select_from(latest_tests)
+            .filter(latest_tests.c.result.is_(True))
+            .scalar()
+            or 0
+        )
+        failed_tests = (
+            db.query(func.count())
+            .select_from(latest_tests)
+            .filter(latest_tests.c.result.is_(False))
+            .scalar()
+            or 0
+        )
+        pending_tests = max(total_vehicles - tested_vehicles, 0)
+        compliance_rate = round((passed_tests / total_vehicles * 100) if total_vehicles > 0 else 0, 2)
+
+        tested_count_expr = func.count(latest_tests.c.vehicle_id)
+        passed_count_expr = func.sum(
+            case(
+                (latest_tests.c.result.is_(True), 1),
+                else_=0
+            )
+        )
+        compliance_expr = case(
+            (tested_count_expr > 0, passed_count_expr * 100.0 / tested_count_expr),
+            else_=0.0
+        )
+
+        top_office_row = (
+            db.query(
+                Office.name.label("office_name"),
+                func.count(func.distinct(Vehicle.id)).label("vehicle_count"),
+                tested_count_expr.label("tested_count"),
+                passed_count_expr.label("passed_count"),
+                compliance_expr.label("compliance_rate"),
+            )
+            .join(Vehicle, Vehicle.office_id == Office.id)
+            .outerjoin(latest_tests, latest_tests.c.vehicle_id == Vehicle.id)
+            .group_by(Office.name)
+            .order_by(
+                compliance_expr.desc(),
+                tested_count_expr.desc(),
+                func.count(func.distinct(Vehicle.id)).desc(),
+            )
+            .first()
+        )
+
+        top_office = None
+        if top_office_row:
+            top_office = {
+                "office_name": top_office_row.office_name,
+                "compliance_rate": round(float(top_office_row.compliance_rate or 0), 2),
+                "passed_count": int(top_office_row.passed_count or 0),
+                "vehicle_count": int(top_office_row.vehicle_count or 0),
+            }
+
+        return {
+            "total_vehicles": int(total_vehicles),
+            "total_offices": int(total_offices),
+            "tested_vehicles": int(tested_vehicles),
+            "passed_tests": int(passed_tests),
+            "failed_tests": int(failed_tests),
+            "pending_tests": int(pending_tests),
+            "compliance_rate": float(compliance_rate),
+            "top_office": top_office,
+        }
+    except Exception as e:
+        print(f"Error in get_emission_dashboard_summary: {str(e)}")
         traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

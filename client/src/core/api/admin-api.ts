@@ -5,9 +5,7 @@ export interface AdminDashboardStats {
   totalUsers: number;
   activeUsers: number;
   totalRoles: number;
-  systemUptime: string;
   totalSessions: number;
-  failedLogins: number;
 }
 
 export interface UserActivityData {
@@ -17,11 +15,6 @@ export interface UserActivityData {
   activeUsers: number;
 }
 
-export interface SystemHealthData {
-  metric: string;
-  value: number;
-  status: "good" | "warning" | "critical";
-}
 
 export interface UserRole {
   value: string;
@@ -138,10 +131,6 @@ class AdminApiService extends ApiService {
 
   async getUserActivityData(): Promise<UserActivityData[]> {
     return this.get<UserActivityData[]>("/admin/dashboard/user-activity");
-  }
-
-  async getSystemHealthData(): Promise<SystemHealthData[]> {
-    return this.get<SystemHealthData[]>("/admin/dashboard/system-health");
   }
 
   // User management endpoints
@@ -278,13 +267,6 @@ export const useUserActivityData = () => {
   });
 };
 
-export const useSystemHealthData = () => {
-  return useQuery({
-    queryKey: ["admin", "dashboard", "system-health"],
-    queryFn: () => adminApiService.getSystemHealthData(),
-    refetchInterval: 15000, // Refetch every 15 seconds
-  });
-};
 
 // React Query hooks for user management
 export const useUsers = (params?: {

@@ -50,6 +50,35 @@ interface MenuItem {
   hidden?: boolean;
 }
 
+const adminViewPermissions = [
+  PERMISSIONS.USER_ACCOUNT.VIEW,
+  PERMISSIONS.ROLE.VIEW,
+  PERMISSIONS.PERMISSION.VIEW,
+  PERMISSIONS.AUDIT_LOG.VIEW,
+  PERMISSIONS.SESSION.VIEW,
+  PERMISSIONS.DASHBOARD.VIEW,
+];
+
+const emissionViewPermissions = [
+  PERMISSIONS.OFFICE.VIEW,
+  PERMISSIONS.VEHICLE.VIEW,
+  PERMISSIONS.TEST.VIEW,
+  PERMISSIONS.SCHEDULE.VIEW,
+];
+
+const urbanGreeningViewPermissions = [
+  PERMISSIONS.DASHBOARD.VIEW,
+  PERMISSIONS.TREE.VIEW,
+  PERMISSIONS.TREE_REQUEST.VIEW,
+  PERMISSIONS.URBAN_PROJECT.VIEW,
+  PERMISSIONS.TREE_SPECIES.VIEW,
+  PERMISSIONS.FEE.VIEW,
+  PERMISSIONS.PROCESSING_STANDARD.VIEW,
+  PERMISSIONS.PLANTING.VIEW,
+  PERMISSIONS.SAPLING_COLLECTION.VIEW,
+  PERMISSIONS.MONITORING_LOG.VIEW,
+];
+
 function getMenuItems(
   dashboardType: SideNavBarContainerProps["dashboardType"],
   hasPermission: (permission: string) => boolean,
@@ -65,6 +94,7 @@ function getMenuItems(
         label: "Overview",
         path: `${basePath}/overview`,
         icon: <LayoutDashboard size={18} />,
+        permission: adminViewPermissions,
       },
       {
         label: "Users",
@@ -76,7 +106,7 @@ function getMenuItems(
         label: "Permissions",
         path: `${basePath}/permission-management`,
         icon: <KeyRound size={18} />,
-        hidden: !isSuperAdmin,
+        permission: [PERMISSIONS.ROLE.VIEW, PERMISSIONS.PERMISSION.VIEW],
       },
       {
         label: "Sessions",
@@ -94,6 +124,7 @@ function getMenuItems(
         label: "Settings",
         path: `${basePath}/settings`,
         icon: <Settings size={18} />,
+        permission: adminViewPermissions,
       },
     ];
     
@@ -109,13 +140,6 @@ function getMenuItems(
         : hasAnyPermission(item.permission);
     });
   } else if (dashboardType === "government-emission") {
-    const emissionViewPermissions = [
-      PERMISSIONS.OFFICE.VIEW,
-      PERMISSIONS.VEHICLE.VIEW,
-      PERMISSIONS.TEST.VIEW,
-      PERMISSIONS.SCHEDULE.VIEW,
-    ];
-
     const emissionMenuItems = [
       {
         label: "Dashboard",
@@ -180,7 +204,7 @@ function getMenuItems(
         label: "Dashboard",
         path: `${basePath}/overview`,
         icon: <LayoutDashboard size={18} />,
-        permission: PERMISSIONS.DASHBOARD.VIEW,
+        permission: urbanGreeningViewPermissions,
       },
       {
         label: "Tree Inventory",
@@ -295,6 +319,7 @@ export default function SideNavBarContainer({
   };
 
   const userRoles: string[] = roles || [];
+  const isAdminRole = userRoles.includes("admin");
 
   const dashboardRoleMap = [
     { role: "admin", label: "Admin Dashboard", path: "/admin/overview" },
@@ -310,9 +335,30 @@ export default function SideNavBarContainer({
     },
   ];
 
-  const userDashboards = dashboardRoleMap.filter(d => userRoles.includes(d.role));
-  // Super admins and admins see all dashboards, otherwise only user's assigned dashboards
-  const dashboardsToShow = isSuperAdmin || userRoles.includes("admin") ? dashboardRoleMap : userDashboards;
+  const canAccessDashboard = (role: "admin" | "urban_greening" | "government_emission") => {
+    if (isSuperAdmin || isAdminRole || userRoles.includes(role)) {
+      return true;
+    }
+
+    if (role === "admin") {
+      return hasAnyPermission(adminViewPermissions);
+    }
+
+    if (role === "urban_greening") {
+      return hasAnyPermission(urbanGreeningViewPermissions);
+    }
+
+    if (role === "government_emission") {
+      return hasAnyPermission(emissionViewPermissions);
+    }
+
+    return false;
+  };
+
+  // Super admins and admins see all dashboards, otherwise only dashboards backed by roles or permissions
+  const dashboardsToShow = isSuperAdmin || isAdminRole
+    ? dashboardRoleMap
+    : dashboardRoleMap.filter(d => canAccessDashboard(d.role));
 
   const menuItems: NavItem[] = getMenuItems(
     dashboardType,
