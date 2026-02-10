@@ -8,7 +8,7 @@ import traceback
 from app.apis.deps import get_db, require_permissions_sync
 from app.crud import crud_emission
 from app.models.auth_models import User
-from app.models.emission_models import Office, Vehicle, VehicleDriverHistory, Test as TestModel
+from app.models.emission_models import Office as OfficeModel, Vehicle as VehicleModel, VehicleDriverHistory, Test as TestModel
 from app.schemas.emission_schemas import (
     Office, OfficeCreate, OfficeUpdate, OfficeListResponse,
     Vehicle, VehicleCreate, VehicleUpdate, VehicleListResponse,
@@ -148,8 +148,8 @@ def get_emission_dashboard_summary(
             .filter(latest_tests_subquery.c.rn == 1)
         ).subquery()
 
-        total_vehicles = db.query(func.count(Vehicle.id)).scalar() or 0
-        total_offices = db.query(func.count(Office.id)).scalar() or 0
+        total_vehicles = db.query(func.count(VehicleModel.id)).scalar() or 0
+        total_offices = db.query(func.count(OfficeModel.id)).scalar() or 0
         tested_vehicles = db.query(func.count(latest_tests.c.vehicle_id)).scalar() or 0
         passed_tests = (
             db.query(func.count())
@@ -182,19 +182,19 @@ def get_emission_dashboard_summary(
 
         top_office_row = (
             db.query(
-                Office.name.label("office_name"),
-                func.count(func.distinct(Vehicle.id)).label("vehicle_count"),
+                OfficeModel.name.label("office_name"),
+                func.count(func.distinct(VehicleModel.id)).label("vehicle_count"),
                 tested_count_expr.label("tested_count"),
                 passed_count_expr.label("passed_count"),
                 compliance_expr.label("compliance_rate"),
             )
-            .join(Vehicle, Vehicle.office_id == Office.id)
-            .outerjoin(latest_tests, latest_tests.c.vehicle_id == Vehicle.id)
-            .group_by(Office.name)
+            .join(VehicleModel, VehicleModel.office_id == OfficeModel.id)
+            .outerjoin(latest_tests, latest_tests.c.vehicle_id == VehicleModel.id)
+            .group_by(OfficeModel.name)
             .order_by(
                 compliance_expr.desc(),
                 tested_count_expr.desc(),
-                func.count(func.distinct(Vehicle.id)).desc(),
+                func.count(func.distinct(VehicleModel.id)).desc(),
             )
             .first()
         )
