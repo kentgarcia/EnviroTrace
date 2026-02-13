@@ -5,7 +5,7 @@
   "identifier": "com.epnro.management",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "https://localhost:8080",
+    "devUrl": "http://localhost:8080",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },

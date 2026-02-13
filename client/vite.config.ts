@@ -5,16 +5,19 @@ import path from "path";
 import fs from "fs";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const useHttps = mode === "development" && process.env.VITE_DEV_HTTPS === "true";
+  const httpsConfig = useHttps
+    ? {
+        key: fs.readFileSync("./cert/key.pem"),
+        cert: fs.readFileSync("./cert/cert.pem"),
+      }
+    : undefined;
+
+  return {
   clearScreen: false,
   server: {
-    https:
-      mode === "development"
-        ? {
-            key: fs.readFileSync("./cert/key.pem"),
-            cert: fs.readFileSync("./cert/cert.pem"),
-          }
-        : undefined,
+    https: httpsConfig,
     host: "::",
     port: 8080,
     strictPort: true,
@@ -50,4 +53,5 @@ export default defineConfig(({ mode }) => ({
     minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_DEBUG,
   },
-}));
+  };
+});

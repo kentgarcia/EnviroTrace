@@ -47,7 +47,7 @@ app.add_middleware(CORSExceptionMiddleware)
 # Add the standard CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development, allow all origins
+    allow_origins=origins,
     allow_origin_regex="https?://localhost:.*",  # Allow all localhost ports with both http and https
     allow_credentials=True,
     allow_methods=["*"],
