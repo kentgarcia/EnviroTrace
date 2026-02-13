@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None
       # CORS settings
-    BACKEND_CORS_ORIGINS: List[str] = [
+    BACKEND_CORS_ORIGINS: Union[str, List[str]] = [
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000",
@@ -64,6 +64,13 @@ class Settings(BaseSettings):
         if not self.SUPER_ADMIN_EMAILS:
             return []
         return [email.strip().lower() for email in self.SUPER_ADMIN_EMAILS.split(",") if email.strip()]
+
+    def get_cors_origins(self) -> List[str]:
+        """Normalize CORS origins from env (comma-separated string or list)."""
+        value = self.BACKEND_CORS_ORIGINS
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return list(value)
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', extra='ignore')
 

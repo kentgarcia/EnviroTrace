@@ -38,7 +38,7 @@ app = FastAPI(
 )
 
 # CORS Middleware
-origins = settings.BACKEND_CORS_ORIGINS
+origins = settings.get_cors_origins()
 localhost_origins = [
     "http://localhost:8080",
     "https://localhost:8080",
