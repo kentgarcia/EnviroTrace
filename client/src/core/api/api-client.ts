@@ -3,8 +3,10 @@ import axios, { AxiosError, AxiosInstance } from "axios";
 import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 
 // API base URL - will default to localhost:8000 if env variable is not set
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://envirotrace.up.railway.app/api/v1";
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "https://envirotrace-production.up.railway.app/api/v1";
 
 // Log the API URL for debugging
 console.log("Using API URL:", API_BASE_URL);

@@ -1,10 +1,16 @@
+import {
+  expandTreeRequestRequirementsColumns,
+  formatDateTimeForReport,
+  formatProjectPlantsForHTML,
+} from "./reportFormatters";
+
 interface ReportConfig {
-    reportType: string;
-    reportTitle: string;
-    year?: number;
-    month?: number;
-    status?: string;
-    data: any[];
+  reportType: string;
+  reportTitle: string;
+  year?: number;
+  month?: number;
+  status?: string;
+  data: any[];
 }
 
 export const  generateUrbanGreeningReportHTML = (config: ReportConfig): string => {
@@ -17,10 +23,26 @@ export const  generateUrbanGreeningReportHTML = (config: ReportConfig): string =
         html += generateTreeInventoryTable(data);
         break;
       case "tree-requests":
-        html += generateAllFieldsTable(data, "#16a34a");
+        html += generateAllFieldsTable(expandTreeRequestRequirementsColumns(data), "#16a34a", {
+          omitKeys: [
+            "id",
+            "created_by",
+            "editors",
+            "created_at",
+            "updated_at",
+            "requirements_checklist",
+          ],
+        });
         break;
       case "urban-greening-projects":
-        html += generateAllFieldsTable(data, "#16a34a");
+        html += generateAllFieldsTable(data, "#16a34a", {
+          omitKeys: ["id", "photos", "linked_cutting_request_id", "linked_cut_tree_ids"],
+          renderers: {
+            plants: formatProjectPlantsForHTML,
+            created_at: formatDateTimeForReport,
+            updated_at: formatDateTimeForReport,
+          },
+        });
         break;
       case "fee-records":
         html += generateAllFieldsTable(data, "#16a34a", {
@@ -57,6 +79,7 @@ function generateTreeInventoryTable(data: any[]): string {
 
   data.forEach((tree, index) => {
     const bgColor = index % 2 === 0 ? "#f9fafb" : "white";
+    const plantedDateDisplay = getTreePlantingDate(tree) ?? "N/A";
     html += `
       <tr style="background-color: ${bgColor};">
         <td style="padding: 10px 8px; border: 1px solid #ddd;">${tree.tree_code || "N/A"}</td>
@@ -64,7 +87,7 @@ function generateTreeInventoryTable(data: any[]): string {
         <td style="padding: 10px 8px; border: 1px solid #ddd;">${tree.health || "N/A"}</td>
         <td style="padding: 10px 8px; border: 1px solid #ddd;">${tree.species?.common_name || tree.common_name || tree.species?.scientific_name || tree.scientific_name || "N/A"}</td>
         <td style="padding: 10px 8px; border: 1px solid #ddd;">${tree.address || tree.location || "N/A"}</td>
-        <td style="padding: 10px 8px; border: 1px solid #ddd;">${tree.planting_date ? new Date(tree.planting_date).toLocaleDateString() : "N/A"}</td>
+        <td style="padding: 10px 8px; border: 1px solid #ddd;">${plantedDateDisplay}</td>
       </tr>
     `;
   });
@@ -78,6 +101,18 @@ function generateTreeInventoryTable(data: any[]): string {
 }
 
 
+function getTreePlantingDate(tree: any): string | null {
+  const plantingValue = tree?.planted_date || tree?.planting_date;
+  if (!plantingValue) {
+    return null;
+  }
+  const parsed = new Date(plantingValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed.toLocaleDateString();
+}
+
 function formatDateOnly(value: any): string | null {
   if (!value) return null;
   const parsed = new Date(value);
@@ -85,15 +120,29 @@ function formatDateOnly(value: any): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
+type TableRenderer = (value: any, row?: any) => string | null | undefined;
+
+type TableOptions = {
+  omitKeys?: string[];
+  dateOnlyKeys?: string[];
+  renderers?: Record<string, TableRenderer>;
+};
+
 function generateAllFieldsTable(
   data: any[],
   headerColor: string,
-  options?: { omitKeys?: string[]; dateOnlyKeys?: string[] }
+  options?: TableOptions
 ): string {
     if (data.length === 0) return '<p>No records found for the selected period.</p>';
 
     const omitKeys = new Set((options?.omitKeys || []).map((key) => key.toLowerCase()));
     const dateOnlyKeys = new Set((options?.dateOnlyKeys || []).map((key) => key.toLowerCase()));
+    const rendererMap = Object.entries(options?.renderers || {}).reduce<
+      Record<string, TableRenderer>
+    >((acc, [key, renderer]) => {
+      acc[key.toLowerCase()] = renderer;
+      return acc;
+    }, {});
     const keys = Object.keys(data[0]).filter((key) => !omitKeys.has(key.toLowerCase()));
     const headers = keys.map((key) =>
         key
@@ -122,15 +171,27 @@ function generateAllFieldsTable(
       <tr style="background-color: ${bgColor};">
         ${keys
           .map((key) => {
-            const value = item[key];
-            const dateOnly = dateOnlyKeys.has(key.toLowerCase()) ? formatDateOnly(value) : null;
-            const text = dateOnly !== null
-              ? dateOnly
-              : value === null || value === undefined
-                ? "N/A"
-                : typeof value === "object"
-                  ? JSON.stringify(value)
-                  : value;
+            const normalizedKey = key.toLowerCase();
+            const renderer = rendererMap[normalizedKey];
+            let text: string | number;
+
+            if (renderer) {
+              const rendered = renderer(item[key], item);
+              text = rendered ?? "N/A";
+            } else {
+              const value = item[key];
+              if (dateOnlyKeys.has(normalizedKey)) {
+                const formattedDate = formatDateOnly(value);
+                text = formattedDate ?? "N/A";
+              } else if (value === null || value === undefined) {
+                text = "N/A";
+              } else if (typeof value === "object") {
+                text = JSON.stringify(value);
+              } else {
+                text = value;
+              }
+            }
+
             return `<td style="padding: 10px 8px; border: 1px solid #ddd;">${text}</td>`;
           })
           .join("")}

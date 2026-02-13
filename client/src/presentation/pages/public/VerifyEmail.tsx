@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, Mail, RefreshCw } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/presentation/components/shared/ui/input-otp";
+import { API_BASE_URL } from "@/core/api/api-client";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export default function VerifyEmail() {
     setIsVerifying(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/verify-otp`, {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, token: otp }),
@@ -102,7 +103,7 @@ export default function VerifyEmail() {
         requestBody.password = password;
       }
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/resend-otp`, {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),

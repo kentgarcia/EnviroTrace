@@ -20,6 +20,7 @@ export interface ExportDropdownProps {
   fileName: string;
   title?: string;
   disabled?: boolean;
+  disablePdf?: boolean;
   onError?: (error: Error) => void;
   onSuccess?: () => void;
 }
@@ -30,6 +31,7 @@ export const ExportDropdown: React.FC<ExportDropdownProps> = ({
   fileName,
   title,
   disabled,
+  disablePdf,
   onError,
   onSuccess,
 }) => {
@@ -83,30 +85,32 @@ export const ExportDropdown: React.FC<ExportDropdownProps> = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <ExportAsPdf
-            data={data}
-            headers={headers}
-            title={title}
-            fileName={fileName}
-            orientation="landscape"
-            headerStyles={{ fillColor: "#0033a0", textColor: "#ffffff" }}
-            margin={{ top: 12, right: 10, bottom: 10, left: 10 }}
-            onError={onError}
-            onSuccess={handleExportSuccess}
-          >
-            {(props) => (
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault();
-                  props.onClick?.();
-                }}
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                Export PDF
-              </DropdownMenuItem>
-            )}
-          </ExportAsPdf>
+          {!disablePdf && (
+            <ExportAsPdf
+              data={data}
+              headers={headers}
+              title={title}
+              fileName={fileName}
+              orientation="landscape"
+              headerStyles={{ fillColor: "#0033a0", textColor: "#ffffff" }}
+              margin={{ top: 12, right: 10, bottom: 10, left: 10 }}
+              onError={onError}
+              onSuccess={handleExportSuccess}
+            >
+              {(props) => (
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    props.onClick?.();
+                  }}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Export PDF
+                </DropdownMenuItem>
+              )}
+            </ExportAsPdf>
+          )}
           <ExportAsCsv
             data={data}
             fileName={fileName}

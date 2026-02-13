@@ -27,6 +27,7 @@ import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/presentation/components/shared/ui/tooltip";
 import { RefreshButton } from "@/presentation/components/shared/buttons/RefreshButton";
+import { API_BASE_URL } from "@/core/api/api-client";
 
 interface Permission {
   id: string;
@@ -138,7 +139,7 @@ export function PermissionManagementNew() {
   const [newRoleDescription, setNewRoleDescription] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+  const apiUrl = API_BASE_URL;
 
   // Fetch all permissions (flat list)
   const {

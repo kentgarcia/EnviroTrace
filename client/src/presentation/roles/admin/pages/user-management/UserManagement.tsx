@@ -68,6 +68,7 @@ import { useAuthStore } from "@/core/hooks/auth/useAuthStore";
 import { Alert, AlertDescription } from "@/presentation/components/shared/ui/alert";
 import { PERMISSIONS } from "@/core/utils/permissions";
 import { useContextMenuAction } from "@/core/hooks/useContextMenuAction";
+import { API_BASE_URL } from "@/core/api/api-client";
 
 interface UserFormData {
     email: string;
@@ -105,7 +106,7 @@ export function UserManagement() {
     const [permanentDeleteConfirmText, setPermanentDeleteConfirmText] = useState("");
     const [userToPermanentlyDelete, setUserToPermanentlyDelete] = useState<User | null>(null);
     const { toast } = useToast();
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+    const apiUrl = API_BASE_URL;
 
     // Permission checks
     const canViewUsers = useAuthStore((state) => state.hasPermission(PERMISSIONS.USER_ACCOUNT.VIEW));

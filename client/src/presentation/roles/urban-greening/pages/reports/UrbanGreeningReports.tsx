@@ -8,19 +8,25 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTrees } from "@/core/api/tree-inventory-api";
 import { fetchTreeRequests } from "@/core/api/tree-management-request-api";
+import { fetchUrbanGreeningProjects } from "@/core/api/urban-greening-project-api";
 import { fetchUrbanGreeningPlantings } from "@/core/api/planting-api";
 import { fetchUrbanGreeningFeeRecords } from "@/core/api/fee-api";
 import { generateUrbanGreeningReportHTML } from "./utils/reportHTMLGenerator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/presentation/components/shared/ui/dialog";
 import { ExportDropdown } from "@/presentation/components/shared/reports/ExportDropdown";
 import { MultiSelect } from "@/presentation/components/shared/ui/multi-select";
+import {
+    expandTreeRequestRequirementsColumns,
+    formatDateTimeForReport,
+    formatProjectPlantsForText,
+} from "./utils/reportFormatters";
 
 type ReportType = 'tree-inventory' | 'tree-requests' | 'urban-greening-projects' | 'fee-records';
 
 export const UrbanGreeningReports: React.FC = () => {
     const currentYear = new Date().getFullYear();
     const [reportType, setReportType] = useState<ReportType>("tree-inventory");
-    const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
+    const [selectedYear, setSelectedYear] = useState<string>("all");
     const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
     const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -52,12 +58,26 @@ export const UrbanGreeningReports: React.FC = () => {
         },
     });
 
-    const { data: plantingData, isLoading: isLoadingPlantings, error: plantingError } = useQuery({
+    const { data: urbanGreeningProjectsData, isLoading: isLoadingUrbanProjects, error: urbanProjectsError } = useQuery({
         queryKey: ["urban-greening-projects", "all"],
         queryFn: async () => {
-            const data = await fetchUrbanGreeningPlantings({ skip: 0, limit: 1000 });
-            console.log('Planting Data:', data);
-            return data;
+            const [projectsData, plantingData] = await Promise.all([
+                fetchUrbanGreeningProjects(),
+                fetchUrbanGreeningPlantings({ skip: 0, limit: 1000 }),
+            ]);
+
+            if (projectsData.length > 0) {
+                console.log('Urban Greening Projects Data (projects endpoint):', projectsData);
+                return projectsData;
+            }
+
+            if (plantingData.length > 0) {
+                console.warn('Urban greening projects endpoint returned no data; using planting records fallback for reports.');
+                console.log('Urban Greening Projects Data (planting fallback):', plantingData);
+                return plantingData;
+            }
+
+            return [];
         },
     });
 
@@ -99,10 +119,24 @@ export const UrbanGreeningReports: React.FC = () => {
         return `${safeLabel}_${selectedYear}_${monthPart}_${Date.now()}`;
     };
 
+    const getTreePlantingDateForExport = (tree: any): string => {
+        const plantingValue = tree?.planted_date || tree?.planting_date;
+        if (!plantingValue) return "N/A";
+        const parsed = new Date(plantingValue);
+        if (Number.isNaN(parsed.getTime())) return "N/A";
+        return parsed.toLocaleDateString();
+    };
+
     const buildExportPayload = (type: ReportType, data: any[]) => {
+        type ValueTransformer = (value: any, row?: any) => string | number | boolean | null | undefined;
+
         const buildAllFieldsPayload = (
             rows: any[],
-            options?: { omitKeys?: string[]; dateOnlyKeys?: string[] }
+            options?: {
+                omitKeys?: string[];
+                dateOnlyKeys?: string[];
+                valueTransformers?: Record<string, ValueTransformer>;
+            }
         ) => {
             if (rows.length === 0) {
                 return { headers: [] as string[], rows: [] as Array<Array<string | number | boolean | null>>, title: "" };
@@ -110,6 +144,10 @@ export const UrbanGreeningReports: React.FC = () => {
 
             const omitKeys = new Set((options?.omitKeys || []).map((key) => key.toLowerCase()));
             const dateOnlyKeys = new Set((options?.dateOnlyKeys || []).map((key) => key.toLowerCase()));
+            const normalizedTransformers = Object.entries(options?.valueTransformers || {}).reduce<Record<string, ValueTransformer>>((acc, [key, transformer]) => {
+                acc[key.toLowerCase()] = transformer;
+                return acc;
+            }, {});
             const keys = Object.keys(rows[0]).filter((key) => !omitKeys.has(key.toLowerCase()));
             const headers = keys.map((key) =>
                 key
@@ -118,8 +156,14 @@ export const UrbanGreeningReports: React.FC = () => {
             );
             const tableRows = rows.map((row) =>
                 keys.map((key) => {
+                    const normalizedKey = key.toLowerCase();
+                    const transformer = normalizedTransformers[normalizedKey];
+                    if (transformer) {
+                        const transformedValue = transformer(row[key], row);
+                        return transformedValue === null || transformedValue === undefined ? "N/A" : transformedValue;
+                    }
                     const value = row[key];
-                    if (dateOnlyKeys.has(key.toLowerCase()) && value) {
+                    if (dateOnlyKeys.has(normalizedKey) && value) {
                         const parsed = new Date(value);
                         if (!Number.isNaN(parsed.getTime())) {
                             return parsed.toISOString().slice(0, 10);
@@ -151,14 +195,30 @@ export const UrbanGreeningReports: React.FC = () => {
                         tree.health || "N/A",
                         tree.species?.common_name || tree.common_name || tree.species?.scientific_name || tree.scientific_name || "N/A",
                         tree.address || tree.location || "N/A",
-                        tree.planting_date ? new Date(tree.planting_date).toLocaleDateString() : "N/A",
+                        getTreePlantingDateForExport(tree),
                     ]),
                     title: "",
                 };
             case "tree-requests":
-                return buildAllFieldsPayload(data);
+                return buildAllFieldsPayload(expandTreeRequestRequirementsColumns(data), {
+                    omitKeys: [
+                        "id",
+                        "created_by",
+                        "editors",
+                        "created_at",
+                        "updated_at",
+                        "requirements_checklist",
+                    ],
+                });
             case "urban-greening-projects":
-                return buildAllFieldsPayload(data);
+                return buildAllFieldsPayload(data, {
+                    omitKeys: ["id", "photos", "linked_cutting_request_id", "linked_cut_tree_ids"],
+                    valueTransformers: {
+                        plants: formatProjectPlantsForText,
+                        created_at: formatDateTimeForReport,
+                        updated_at: formatDateTimeForReport,
+                    },
+                });
             case "fee-records":
                 return buildAllFieldsPayload(data, {
                     omitKeys: ["id", "fee_id"],
@@ -170,7 +230,7 @@ export const UrbanGreeningReports: React.FC = () => {
     };
 
     const handleGenerateReport = async () => {
-        const isLoading = isLoadingTrees || isLoadingRequests || isLoadingPlantings || isLoadingFees;
+        const isLoading = isLoadingTrees || isLoadingRequests || isLoadingUrbanProjects || isLoadingFees;
         
         if (isLoading) {
             toast.error("Please wait, data is still loading...");
@@ -190,7 +250,7 @@ export const UrbanGreeningReports: React.FC = () => {
             console.log('Raw Data Lengths:', {
                 treeInventory: treeInventoryData?.length,
                 treeRequests: treeRequestsData?.length,
-                planting: plantingData?.length,
+                urbanGreeningProjects: urbanGreeningProjectsData?.length,
                 fee: feeData?.length,
             });
             
@@ -214,9 +274,10 @@ export const UrbanGreeningReports: React.FC = () => {
                     reportTitle = "Tree Requests Report";
                     break;
                 case "urban-greening-projects":
-                    filteredData = filterDataByPeriod(plantingData || [], "planting_date", {
+                    filteredData = filterDataByPeriod(urbanGreeningProjectsData || [], "planting_date", {
                         year: selectedYear,
                         month: selectedMonths,
+                        fallbackDateFields: ["date_received", "date_sapling_received", "created_at"],
                     });
                     reportTitle = "Urban Greening Projects Report";
                     break;
@@ -261,9 +322,9 @@ export const UrbanGreeningReports: React.FC = () => {
     const filterDataByPeriod = (
         data: any[],
         dateField: string,
-        options: { year?: string; month?: string | string[]; quarter?: string }
+        options: { year?: string; month?: string | string[]; quarter?: string; fallbackDateFields?: string[] }
     ) => {
-        const { year, month, quarter } = options;
+        const { year, month, quarter, fallbackDateFields = [] } = options;
         const monthValues = Array.isArray(month) ? month : month ? [month] : [];
 
         if (year === "all" && monthValues.length === 0 && quarter === "all") {
@@ -271,9 +332,18 @@ export const UrbanGreeningReports: React.FC = () => {
         }
 
         return data.filter((item: any) => {
-            if (!item[dateField]) return false;
+            const primaryDate = item?.[dateField];
+            const fallbackDate = fallbackDateFields
+                .map((field) => item?.[field])
+                .find((value) => !!value);
+            const sourceDate = primaryDate || fallbackDate;
 
-            const itemDate = new Date(item[dateField]);
+            if (!sourceDate) return false;
+
+            const itemDate = new Date(sourceDate);
+            if (Number.isNaN(itemDate.getTime())) {
+                return false;
+            }
             const itemYear = itemDate.getFullYear();
             const itemMonth = itemDate.getMonth() + 1;
             const itemQuarter = Math.ceil(itemMonth / 3);
@@ -352,12 +422,14 @@ export const UrbanGreeningReports: React.FC = () => {
         <React.Fragment>
             <Dialog open={showPreview} onOpenChange={setShowPreview}>
                 <DialogContent className="max-w-6xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
-                    <DialogHeader className="px-6 pt-6 pb-4">
-                        <DialogTitle>Report Preview</DialogTitle>
-                        <DialogDescription>
-                            Review the report before exporting.
-                        </DialogDescription>
-                    </DialogHeader>
+                    <div className="px-6 pt-6 pb-4">
+                        <DialogHeader>
+                            <DialogTitle>Report Preview</DialogTitle>
+                            <DialogDescription>
+                                Review the report before exporting.
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
                     <div className="px-6 pb-6 flex-1 flex flex-col overflow-hidden min-h-0">
                         <div className="flex items-center justify-end gap-2 mb-4">
                             <Button variant="outline" onClick={() => setShowPreview(false)}>
@@ -368,6 +440,7 @@ export const UrbanGreeningReports: React.FC = () => {
                                 headers={exportHeaders}
                                 fileName={exportFileName}
                                 title={exportTitle}
+                                disablePdf={reportType === "tree-requests"}
                                 onSuccess={() => toast.success("Report exported successfully")}
                                 onError={(error) => {
                                     console.error("Error exporting report:", error);
@@ -435,12 +508,12 @@ export const UrbanGreeningReports: React.FC = () => {
                                             </p>
                                             
                                             {/* Display any data loading errors */}
-                                            {(treeError || requestsError || plantingError || feeError) && (
+                                            {(treeError || requestsError || urbanProjectsError || feeError) && (
                                                 <div className="p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
                                                     <p className="font-medium">Data Loading Errors:</p>
                                                     {treeError && <p>• Tree Inventory: {(treeError as any).message}</p>}
                                                     {requestsError && <p>• Tree Requests: {(requestsError as any).message}</p>}
-                                                    {plantingError && <p>• Urban Greening Projects: {(plantingError as any).message}</p>}
+                                                    {urbanProjectsError && <p>• Urban Greening Projects: {(urbanProjectsError as any).message}</p>}
                                                     {feeError && <p>• Fee Records: {(feeError as any).message}</p>}
                                                 </div>
                                             )}
@@ -596,10 +669,10 @@ export const UrbanGreeningReports: React.FC = () => {
                                             <div>
                                                 <p className="text-sm text-gray-600">Urban Greening Projects</p>
                                                 <p className="text-2xl font-bold text-emerald-600">
-                                                    {isLoadingPlantings ? (
+                                                    {isLoadingUrbanProjects ? (
                                                         <Loader2 className="w-6 h-6 animate-spin inline" />
                                                     ) : (
-                                                        plantingData?.length || 0
+                                                        urbanGreeningProjectsData?.length || 0
                                                     )}
                                                 </p>
                                             </div>
@@ -718,7 +791,10 @@ export const UrbanGreeningReports: React.FC = () => {
                                                     {!showYearFilter && !showQuarterFilter && !showMonthFilter && (
                                                         <p><span className="font-medium">Filters:</span> None</p>
                                                     )}
-                                                    <p><span className="font-medium">Format:</span> PDF, CSV, Excel</p>
+                                                    <p>
+                                                        <span className="font-medium">Format:</span>{" "}
+                                                        {reportType === "tree-requests" ? "CSV, Excel" : "PDF, CSV, Excel"}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
