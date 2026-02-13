@@ -39,6 +39,15 @@ app = FastAPI(
 
 # CORS Middleware
 origins = settings.BACKEND_CORS_ORIGINS
+localhost_origins = [
+    "http://localhost:8080",
+    "https://localhost:8080",
+    "http://127.0.0.1:8080",
+    "https://127.0.0.1:8080",
+]
+for origin in localhost_origins:
+    if origin not in origins:
+        origins.append(origin)
 print(f"Configured CORS origins: {origins}")
 
 # Add our custom CORS exception middleware first
