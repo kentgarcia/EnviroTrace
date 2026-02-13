@@ -57,7 +57,7 @@ app.add_middleware(CORSExceptionMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex="https?://localhost:.*",  # Allow all localhost ports with both http and https
+    allow_origin_regex=r"(https?://(localhost|127\.0\.0\.1|tauri\.localhost)(:\d+)?)|(tauri://localhost)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

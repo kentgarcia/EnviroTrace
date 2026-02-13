@@ -30,9 +30,17 @@ class Settings(BaseSettings):
     # For Alembic, if you want to reference the sync URL:
     # ALEMBIC_DATABASE_URL: Optional[str] = None
       # CORS settings
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", 
-                                       "http://127.0.0.1:3000", "http://127.0.0.1:5173",
-                                       "http://localhost:8080", "https://localhost:8080"]
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://localhost:8080",
+        "https://localhost:8080",
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "https://tauri.localhost",
+    ]
 
     # Audit logging
     # If enabled, every request is recorded (see AuditLoggingMiddleware).
